@@ -1,0 +1,36 @@
+/* Basic responsive styles for ATIERA login */
+@media (max-width: 768px) {
+    .grid.md\\:grid-cols-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .md\\:ml-auto {
+        margin-left: auto;
+    }
+
+    .hidden.md\\:flex {
+        display: none !important;
+    }
+
+    .md\\:hidden {
+        display: block;
+    }
+}
+
+@media (min-width: 769px) {
+    .md\\:grid-cols-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .md\\:flex {
+        display: flex;
+    }
+
+    .md\\:hidden {
+        display: none;
+    }
+
+    .md\\:ml-auto {
+        margin-left: auto;
+    }
+}

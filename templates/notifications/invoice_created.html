@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice from ATIERA Finance</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #1e2936;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1e2936;
+            margin-bottom: 10px;
+        }
+        .invoice-details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .amount {
+            font-size: 28px;
+            font-weight: bold;
+            color: #28a745;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #1e2936 0%, #2c3e50 100%);
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            font-size: 14px;
+            color: #6c757d;
+            text-align: center;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">ATIERA Finance</div>
+            <h2>Invoice Notification</h2>
+        </div>
+
+        <p>Dear {{customer_name}},</p>
+
+        <p>We have created a new invoice for your recent services. Please find the details below:</p>
+
+        <div class="invoice-details">
+            <h3>Invoice Details</h3>
+            <p><strong>Invoice Number:</strong> {{invoice_number}}</p>
+            <p><strong>Invoice Date:</strong> {{invoice_date}}</p>
+            <p><strong>Due Date:</strong> {{due_date}}</p>
+        </div>
+
+        <div class="amount">
+            Total Amount: ₱{{amount}}
+        </div>
+
+        <div class="warning">
+            <strong>Payment Due:</strong> Please ensure payment is made by the due date to avoid any late fees.
+        </div>
+
+        <p>You can view and download your invoice by logging into your account or contacting our billing department.</p>
+
+        <p>If you have any questions about this invoice, please don't hesitate to contact us.</p>
+
+        <p>Thank you for your business!</p>
+
+        <p>Best regards,<br>
+        ATIERA Finance Team</p>
+
+        <div class="footer">
+            <p>This is an automated message from ATIERA Financial Management System.<br>
+            Please do not reply to this email.</p>
+            <p>For support, contact: support@atiera.com | Phone: (02) 123-4567</p>
+        </div>
+    </div>
+</body>
+</html>
