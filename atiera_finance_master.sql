@@ -1298,13 +1298,147 @@ CREATE INDEX idx_integration_sync_logs_system_code ON integration_sync_logs(syst
 CREATE INDEX idx_integration_sync_logs_sync_date ON integration_sync_logs(sync_date);
 
 -- ========================================================================================================
+-- ========================================================================================================
+-- APPROVAL WORKFLOW SYSTEM (Added for Disbursements Module)
+-- Multi-level approval for financial transactions and disbursements
+-- ========================================================================================================
+
+-- Approval Workflows (Define approval rules by amount/department)
+CREATE TABLE IF NOT EXISTS approval_workflows (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    workflow_name VARCHAR(100) NOT NULL,
+    workflow_type ENUM('disbursement', 'purchase_order', 'invoice') DEFAULT 'disbursement',
+    department_id INT NULL COMMENT 'Specific department, NULL for all',
+    min_amount DECIMAL(15,2) DEFAULT 0 COMMENT 'Minimum amount requiring approval',
+    max_amount DECIMAL(15,2) DEFAULT 0 COMMENT 'Maximum amount covered by this rule',
+    currency VARCHAR(10) DEFAULT 'PHP',
+    requires_approval BOOLEAN DEFAULT TRUE,
+    approval_levels INT DEFAULT 1 COMMENT 'Number of approval levels required',
+    is_active BOOLEAN DEFAULT TRUE,
+
+    -- Level 1 approvers
+    level1_role VARCHAR(50) NULL COMMENT 'Role required for level 1 approval',
+    level1_department_id INT NULL COMMENT 'Department required for level 1',
+
+    -- Level 2 approvers (if needed)
+    level2_role VARCHAR(50) NULL COMMENT 'Role required for level 2 approval',
+    level2_department_id INT NULL COMMENT 'Department required for level 2',
+
+    -- Timeout settings
+    approval_timeout_hours INT DEFAULT 48 COMMENT 'Hours before approval request times out',
+
+    created_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (department_id) REFERENCES departments(id),
+    FOREIGN KEY (level1_department_id) REFERENCES departments(id),
+    FOREIGN KEY (level2_department_id) REFERENCES departments(id),
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+-- Disbursement Approvals (Track individual approval instances)
+CREATE TABLE IF NOT EXISTS disbursement_approvals (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    disbursement_id INT NOT NULL,
+    workflow_id INT NOT NULL,
+    current_level INT DEFAULT 1 COMMENT 'Current approval level needed',
+    total_levels INT DEFAULT 1 COMMENT 'Total levels required',
+
+    -- Status tracking
+    status ENUM('pending', 'approved', 'rejected', 'timed_out', 'cancelled') DEFAULT 'pending',
+    submit_reason TEXT COMMENT 'Reason for submission',
+    rejection_reason TEXT COMMENT 'Reason for rejection if rejected',
+
+    -- Current approver
+    current_approver_id INT NULL,
+    assigned_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    due_by TIMESTAMP NULL COMMENT 'When approval is due',
+
+    -- Final approval info
+    final_approved_at TIMESTAMP NULL,
+    final_approved_by INT NULL,
+
+    -- Audit fields
+    created_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (disbursement_id) REFERENCES disbursements(id),
+    FOREIGN KEY (workflow_id) REFERENCES approval_workflows(id),
+    FOREIGN KEY (current_approver_id) REFERENCES users(id),
+    FOREIGN KEY (final_approved_by) REFERENCES users(id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+
+    UNIQUE KEY unique_disbursement_approval (disbursement_id)
+);
+
+-- Approval History (Track all approval/rejection actions)
+CREATE TABLE IF NOT EXISTS approval_history (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    disbursement_approval_id INT NOT NULL,
+    approval_level INT NOT NULL,
+    action ENUM('submitted', 'approved', 'rejected', 'timed_out', 'escalated') NOT NULL,
+    action_by INT NOT NULL,
+    action_reason TEXT,
+    action_notes TEXT,
+    action_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (disbursement_approval_id) REFERENCES disbursement_approvals(id),
+    FOREIGN KEY (action_by) REFERENCES users(id)
+);
+
+-- Insert default approval workflows
+INSERT INTO approval_workflows (
+    workflow_name, workflow_type, min_amount, max_amount,
+    approval_levels, level1_role, level1_department_id,
+    level2_role, level2_department_id, created_by
+) VALUES
+-- Small disbursements (auto-approve under ₱5,000)
+('Small Disbursements Auto-Approval', 'disbursement', 0, 5000,
+ 0, NULL, NULL, NULL, NULL, 1),
+
+-- Medium disbursements (₱5,001 - ₱25,000: Dept Manager approval)
+('Medium Disbursements - Manager Approval', 'disbursement', 5000.01, 25000,
+ 1, 'manager', NULL, NULL, NULL, 1),
+
+-- Large disbursements (₱25,001 - ₱100,000: Dept Manager + Finance)
+('Large Disbursements - Double Approval', 'disbursement', 25000.01, 100000,
+ 2, 'manager', NULL, 'finance_head', NULL, 1),
+
+-- Very Large disbursements (over ₱100,000: Triple approval)
+('Executive Disbursements - Triple Approval', 'disbursement', 100000.01, 9999999,
+ 3, 'manager', NULL, 'finance_head', NULL, 1);
+
+-- Index approval tables for performance
+CREATE INDEX idx_approval_workflows_department ON approval_workflows(department_id);
+CREATE INDEX idx_approval_workflows_active ON approval_workflows(is_active);
+CREATE INDEX idx_disbursement_approvals_disbursement ON disbursement_approvals(disbursement_id);
+CREATE INDEX idx_disbursement_approvals_status ON disbursement_approvals(status);
+CREATE INDEX idx_disbursement_approvals_current_approver ON disbursement_approvals(current_approver_id);
+CREATE INDEX idx_approval_history_approval ON approval_history(disbursement_approval_id);
+
+-- Add approval_needed status to disbursements table
+ALTER TABLE disbursements
+ADD COLUMN needs_approval BOOLEAN DEFAULT FALSE,
+ADD COLUMN approval_id INT NULL,
+ADD COLUMN approval_status ENUM('not_required', 'pending', 'approved', 'rejected') DEFAULT 'not_required',
+ADD INDEX idx_disbursements_approval_status (approval_status),
+ADD FOREIGN KEY (approval_id) REFERENCES disbursement_approvals(id);
+
+-- ========================================================================================================
 -- INSTALLATION COMPLETE
 -- ========================================================================================================
 -- The ATIERA Financial Management System database has been successfully created!
 --
+-- New Features Added:
+-- ✅ Approval Workflow System for Disbursements
+-- ✅ Multi-level approvals based on amount thresholds
+-- ✅ Department-based approval routing
+--
 -- Next Steps:
 -- 1. Login with default credentials: username=admin, password=admin123
--- 2. Navigate to Financials > Departments to manage cost/revenue centers
+-- 2. Navigate to Financials > Disbursements > Approval Workflow tab
 -- 3. Set up integration mappings for external systems (Hotel PMS, Restaurant POS, etc.)
 -- 4. Configure user roles and permissions
 --

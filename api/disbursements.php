@@ -296,9 +296,84 @@ try {
             break;
 
         case 'GET':
-            // Handle voucher operations if action is present
+            // Handle approval workflow operations
             $action = $_GET['action'] ?? '';
-            if ($action === 'get_vouchers') {
+            if ($action === 'get_approvals') {
+                // Get pending approvals for current user based on their role/department
+                $currentUserId = $_SESSION['user']['id'];
+                $userRole = $_SESSION['user']['role'] ?? 'user';
+                $userDepartment = $_SESSION['user']['department'] ?? null;
+
+                // Build complex query to find approvals where current user is the designated approver
+                $whereConditions = [];
+                $params = [];
+
+                // If user is admin, they can see all approvals
+                if ($userRole === 'admin') {
+                    // Admins can see all pending approvals
+                } else {
+                    // Filter by approver role/department
+                    $approverConditions = [];
+
+                    if ($userDepartment) {
+                        $approverConditions[] = "(w.level1_department_id = ? OR w.level2_department_id = ?)";
+                        $params[] = $userDepartment;
+                        $params[] = $userDepartment;
+                    }
+
+                    // Add role-based conditions
+                    $approverConditions[] = "(w.level1_role = ? OR w.level2_role = ?)";
+
+                    $params[] = $userRole;
+                    $params[] = $userRole;
+
+                    $whereConditions[] = "(" . implode(" OR ", $approverConditions) . ")";
+                }
+
+                // Always filter by pending status and current approver assignment
+                $whereConditions[] = "da.status = 'pending'";
+                $whereConditions[] = "(da.current_approver_id = ? OR da.current_approver_id IS NULL)";
+
+                $params[] = $currentUserId;
+
+                $whereClause = $whereConditions ? "WHERE " . implode(" AND ", $whereConditions) : "";
+
+                $stmt = $db->prepare("
+                    SELECT
+                        da.*,
+                        d.disbursement_number,
+                        d.payee,
+                        d.amount,
+                        d.purpose,
+                        d.disbursement_date,
+                        d.payment_method,
+                        w.workflow_name,
+                        w.approval_levels,
+                        w.level1_role,
+                        w.level1_department_id,
+                        u.full_name as submitter_name,
+                        ua.full_name as approver_name
+                    FROM disbursement_approvals da
+                    INNER JOIN disbursements d ON da.disbursement_id = d.id
+                    INNER JOIN approval_workflows w ON da.workflow_id = w.id
+                    INNER JOIN users u ON da.created_by = u.id
+                    LEFT JOIN users ua ON da.current_approver_id = ua.id
+                    $whereClause
+                    ORDER BY da.created_at DESC
+                ");
+
+                $stmt->execute($params);
+                $approvals = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($approvals as &$approval) {
+                    $approval['amount_formatted'] = '₱' . number_format($approval['amount'], 2);
+                    $approval['due_by_formatted'] = $approval['due_by'] ? date('M j, Y H:i', strtotime($approval['due_by'])) : null;
+                    $approval['created_at_formatted'] = date('M j, Y', strtotime($approval['created_at']));
+                }
+
+                echo json_encode($approvals);
+                exit;
+            } elseif ($action === 'get_vouchers') {
                 $disbursementId = $_GET['disbursement_id'] ?? null;
 
                 // If specific disbursement ID is provided, show vouchers for that disbursement
@@ -339,8 +414,158 @@ try {
             break;
 
         case 'POST':
-            // Handle voucher upload
-            if (isset($_GET['action']) && $_GET['action'] === 'upload_voucher') {
+            // Handle approval actions
+            $action = $_GET['action'] ?? '';
+            if ($action === 'approve' || $action === 'reject') {
+                $approvalId = $_GET['id'] ?? null;
+                $input = json_decode(file_get_contents('php://input'), true);
+                $comments = $input['comments'] ?? '';
+
+                if (!$approvalId) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'error' => 'Approval ID required']);
+                    exit;
+                }
+
+                // Get approval details
+                $stmt = $db->prepare("
+                    SELECT
+                        da.*,
+                        d.disbursement_number,
+                        d.payee,
+                        d.amount,
+                        w.approval_levels,
+                        w.level1_role,
+                        w.level2_role,
+                        d.recorded_by as disbursement_creator
+                    FROM disbursement_approvals da
+                    INNER JOIN disbursements d ON da.disbursement_id = d.id
+                    INNER JOIN approval_workflows w ON da.workflow_id = w.id
+                    WHERE da.id = ?
+                ");
+                $stmt->execute([$approvalId]);
+                $approval = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$approval) {
+                    http_response_code(404);
+                    echo json_encode(['success' => false, 'error' => 'Approval not found']);
+                    exit;
+                }
+
+                // Verify user has permission to act on this approval
+                $currentUserId = $_SESSION['user']['id'];
+                $userRole = $_SESSION['user']['role'] ?? 'user';
+                $userDepartment = $_SESSION['user']['department'] ?? null;
+
+                $canApprove = false;
+
+                // Admin can approve everything
+                if ($userRole === 'admin') {
+                    $canApprove = true;
+                } elseif ($approval['current_approver_id'] == $currentUserId) {
+                    $canApprove = true;
+                } elseif ($approval['status'] === 'pending' && $approval['current_approver_id'] === null) {
+                    // Check if user matches the required level criteria
+                    $currentLevel = $approval['current_level'];
+                    $levelRole = $approval["level{$currentLevel}_role"];
+                    $levelDept = $approval["level{$currentLevel}_department_id"];
+
+                    if ($levelRole && $levelRole === $userRole) {
+                        $canApprove = true;
+                    } elseif ($levelDept && $levelDept == $userDepartment) {
+                        $canApprove = true;
+                    }
+                }
+
+                if (!$canApprove) {
+                    http_response_code(403);
+                    echo json_encode(['success' => false, 'error' => 'You do not have permission to act on this approval']);
+                    exit;
+                }
+
+                // Determine next steps based on action
+                if ($action === 'approve') {
+                    if ($approval['current_level'] < $approval['total_levels']) {
+                        // Move to next approval level
+                        $nextLevel = $approval['current_level'] + 1;
+                        $updateData = [
+                            'current_level' => $nextLevel,
+                            'current_approver_id' => null, // Next approver needs to be assigned
+                            'assigned_at' => date('Y-m-d H:i:s'),
+                            'due_by' => date('Y-m-d H:i:s', strtotime('+48 hours'))
+                        ];
+                        $message = 'Approval escalated to next level';
+                    } else {
+                        // Final approval - mark as approved and update disbursement
+                        $updateData = [
+                            'status' => 'approved',
+                            'final_approved_at' => date('Y-m-d H:i:s'),
+                            'final_approved_by' => $currentUserId
+                        ];
+
+                        // Update disbursement status to approved
+                        $stmt = $db->prepare("
+                            UPDATE disbursements
+                            SET approval_status = 'approved', needs_approval = FALSE
+                            WHERE id = ?
+                        ");
+                        $stmt->execute([$approval['disbursement_id']]);
+
+                        $message = 'Disbursement fully approved and ready for payment';
+                    }
+                } else { // reject
+                    $updateData = [
+                        'status' => 'rejected',
+                        'rejection_reason' => $comments
+                    ];
+
+                    // Update disbursement status to rejected
+                    $stmt = $db->prepare("
+                        UPDATE disbursements
+                        SET approval_status = 'rejected', needs_approval = FALSE
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$approval['disbursement_id']]);
+
+                    $message = 'Disbursement rejected';
+                }
+
+                // Update approval record
+                $fields = array_keys($updateData);
+                $placeholders = array_map(function($field) { return $field . ' = ?'; }, $fields);
+                $stmt = $db->prepare("
+                    UPDATE disbursement_approvals
+                    SET " . implode(', ', $placeholders) . ", updated_at = NOW()
+                    WHERE id = ?
+                ");
+
+                $stmt->execute(array_merge(array_values($updateData), [$approvalId]));
+
+                // Log approval action to history
+                $stmt = $db->prepare("
+                    INSERT INTO approval_history (
+                        disbursement_approval_id, approval_level, action, action_by,
+                        action_reason, action_notes, action_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, NOW())
+                ");
+
+                $stmt->execute([
+                    $approvalId,
+                    $approval['current_level'],
+                    $action,
+                    $currentUserId,
+                    $comments,
+                    $message
+                ]);
+
+                echo json_encode([
+                    'success' => true,
+                    'message' => $message,
+                    'action' => $action,
+                    'next_level' => $action === 'approve' && $approval['current_level'] < $approval['total_levels'] ? $nextLevel : null
+                ]);
+                exit;
+            } elseif (isset($_GET['action']) && $_GET['action'] === 'upload_voucher') {
                 $disbursementId = $_POST['disbursement_id'] ?? 0;
                 $voucherType = $_POST['voucher_type'] ?? 'receipt';
 
@@ -448,7 +673,6 @@ try {
                 }
                 exit;
             }
-            break;
             break;
 
         default:
