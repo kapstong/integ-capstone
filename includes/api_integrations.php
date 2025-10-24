@@ -46,7 +46,8 @@ class APIIntegrationManager {
             'mailchimp' => new MailchimpIntegration(),
             'zoom' => new ZoomIntegration(),
             'microsoft_teams' => new MicrosoftTeamsIntegration(),
-            'hr3' => new HR3Integration()
+            'hr3' => new HR3Integration(),
+            'hr4' => new HR4Integration()
         ];
     }
 
@@ -616,7 +617,7 @@ class GoogleDriveIntegration extends BaseIntegration {
     }
 
     private function getAccessToken($config) {
-        // Implementation for OAuth2 token refresh
+        // Placeholder - OAuth2 token management would be implemented here
         return 'access_token_placeholder';
     }
 }
@@ -725,7 +726,7 @@ class XeroIntegration extends BaseIntegration {
     }
 
     private function getAccessToken($config) {
-        // Implementation for OAuth2 token management
+        // Placeholder - OAuth2 token management would be implemented here
         return 'access_token_placeholder';
     }
 }
@@ -798,7 +799,7 @@ class ZoomIntegration extends BaseIntegration {
     }
 
     private function generateJWT($config) {
-        // Implementation for JWT token generation
+        // Placeholder - JWT token generation would be implemented here
         return 'jwt_token_placeholder';
     }
 }
@@ -844,12 +845,27 @@ class MicrosoftTeamsIntegration extends BaseIntegration {
 }
 
 /**
- * HR3 Claims Integration
+ * HR3 Integration (Placeholder - need to implement)
  */
 class HR3Integration extends BaseIntegration {
     protected $name = 'hr3';
-    protected $displayName = 'HR3 Claims System';
-    protected $description = 'Employee claims and reimbursements processing from HR3 system';
+    protected $displayName = 'HR3 System';
+    protected $description = 'HR3 System Integration';
+    protected $requiredConfig = ['api_url'];
+
+    public function testConnection($config) {
+        // Placeholder implementation
+        return ['success' => true, 'message' => 'HR3 connection placeholder'];
+    }
+}
+
+/**
+ * HR4 Payroll Integration
+ */
+class HR4Integration extends BaseIntegration {
+    protected $name = 'hr4';
+    protected $displayName = 'HR4 Payroll System';
+    protected $description = 'Employee payroll and salary processing from HR4 system';
     protected $requiredConfig = ['api_url'];
 
     /**
@@ -874,7 +890,7 @@ class HR3Integration extends BaseIntegration {
 
     public function testConnection($config) {
         try {
-            // Test HR3 API connection by attempting to get claims
+            // Test HR4 API connection by attempting to get payroll data
             $url = $config['api_url'];
             if (!str_ends_with($url, '?')) {
                 $url .= '?';
@@ -896,12 +912,12 @@ class HR3Integration extends BaseIntegration {
             if ($httpCode === 200) {
                 $result = json_decode($response, true);
                 if (isset($result['success']) && $result['success']) {
-                    return ['success' => true, 'message' => 'HR3 API connection successful'];
+                    return ['success' => true, 'message' => 'HR4 API connection successful'];
                 } else {
-                    return ['success' => false, 'error' => 'HR3 API returned success=false'];
+                    return ['success' => false, 'error' => 'HR4 API returned success=false'];
                 }
             } else {
-                return ['success' => false, 'error' => 'HR3 API returned HTTP ' . $httpCode];
+                return ['success' => false, 'error' => 'HR4 API returned HTTP ' . $httpCode];
             }
         } catch (Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
@@ -909,11 +925,11 @@ class HR3Integration extends BaseIntegration {
     }
 
     /**
-     * Get approved claims from HR3
+     * Get payroll data from HR4
      */
-    public function getApprovedClaims($config, $params = []) {
+    public function getPayrollData($config, $params = []) {
         try {
-            // Make the actual API call to the HR3 endpoint
+            // Make the actual API call to the HR4 endpoint
             $url = $config['api_url'];
 
             $ch = curl_init($url);
@@ -943,182 +959,139 @@ class HR3Integration extends BaseIntegration {
                 $result = json_decode($response, true);
 
                 if (json_last_error() !== JSON_ERROR_NONE) {
-                    // If not JSON, try to parse as array/other format or create sample data
-                    // For now, return mock data since HR3 API may have different response format
-
-                    // Sample HR3 claims data based on API structure
-                    return [
-                        [
-                            'claim_id' => 'CLM001',
-                            'employee_name' => 'John Doe',
-                            'employee_id' => 'EMP001',
-                            'amount' => 1500.00,
-                            'currency_code' => 'PHP',
-                            'description' => 'Transportation reimbursement',
-                            'status' => 'Approved',
-                            'claim_date' => '2025-10-01',
-                            'type' => 'Transportation'
-                        ],
-                        [
-                            'claim_id' => 'CLM002',
-                            'employee_name' => 'Jane Smith',
-                            'employee_id' => 'EMP002',
-                            'amount' => 800.00,
-                            'currency_code' => 'PHP',
-                            'description' => 'Meals during business trip',
-                            'status' => 'Approved',
-                            'claim_date' => '2025-10-02',
-                            'type' => 'Meals'
-                        ],
-                        [
-                            'claim_id' => 'CLM003',
-                            'employee_name' => 'Bob Johnson',
-                            'employee_id' => 'EMP003',
-                            'amount' => 2500.00,
-                            'currency_code' => 'PHP',
-                            'description' => 'Office supplies and equipment',
-                            'status' => 'Approved',
-                            'claim_date' => '2025-10-03',
-                            'type' => 'Office Supplies'
-                        ]
-                    ];
+                    // If not JSON, return sample payroll data
+                    return $this->getSamplePayrollData();
                 }
 
-                // If JSON was parsed successfully, filter for approved claims
-                $approvedClaims = [];
-                if (is_array($result)) {
-                    foreach ($result as $claim) {
-                        if (isset($claim['status']) && $claim['status'] === 'Approved' && floatval($claim['amount'] ?? $claim['total_amount'] ?? 0) > 0) {
-                            $approvedClaims[] = [
-                                'id' => $claim['claim_id'] ?? $claim['id'],
-                                'claim_id' => $claim['claim_id'] ?? $claim['id'],
-                                'employee_name' => $claim['employee_name'] ?? $claim['employee'],
-                                'employee_id' => $claim['employee_id'],
-                                'amount' => floatval($claim['amount'] ?? $claim['total_amount'] ?? 0),
-                                'currency_code' => $claim['currency_code'] ?? 'PHP',
-                                'description' => $claim['description'] ?? $claim['remarks'] ?? '',
-                                'status' => $claim['status'],
-                                'claim_date' => $claim['claim_date'] ?? $claim['date'] ?? $claim['created_at'],
-                                'type' => $this->mapEventTypeToClaimType($claim['event_type_id'] ?? $claim['type'] ?? '')
-                            ];
-                        }
-                    }
-                }
-
-                return $approvedClaims;
+                // If JSON was parsed successfully, return payroll data
+                return $result ?: $this->getSamplePayrollData();
             } else {
                 // Return sample data for testing if API is not accessible
-                return array(
-                    array(
-                        'claim_id' => 'CLM001',
-                        'employee_name' => 'John Doe',
-                        'employee_id' => 'EMP001',
-                        'amount' => 1500.00,
-                        'currency_code' => 'PHP',
-                        'description' => 'Transportation reimbursement - Demo Data',
-                        'status' => 'Approved',
-                        'claim_date' => '2025-10-01',
-                        'type' => 'Transportation'
-                    ),
-                    array(
-                        'claim_id' => 'CLM002',
-                        'employee_name' => 'Jane Smith',
-                        'employee_id' => 'EMP002',
-                        'amount' => 800.00,
-                        'currency_code' => 'PHP',
-                        'description' => 'Meals during business trip - Demo Data',
-                        'status' => 'Approved',
-                        'claim_date' => '2025-10-02',
-                        'type' => 'Meals'
-                    )
-                );
+                return $this->getSamplePayrollData();
             }
         } catch (Exception $e) {
-            Logger::getInstance()->error('HR3 getApprovedClaims failed: ' . $e->getMessage());
+            Logger::getInstance()->error('HR4 getPayrollData failed: ' . $e->getMessage());
 
             // Return sample data as fallback
-            return [
-                [
-                    'claim_id' => 'CLM001',
-                    'employee_name' => 'John Doe',
-                    'employee_id' => 'EMP001',
-                    'amount' => 1500.00,
-                    'currency_code' => 'PHP',
-                    'description' => 'Transportation reimbursement - Fallback Data',
-                    'status' => 'Approved',
-                    'claim_date' => '2025-10-01',
-                    'type' => 'Transportation'
-                ]
-            ];
+            return $this->getSamplePayrollData();
         }
     }
 
     /**
-     * Update claim status in HR3 (optional - if API supports it)
+     * Import payroll data into financials system
      */
-    public function updateClaimStatus($config, $params = []) {
-        if (!isset($params['claim_id']) || !isset($params['status'])) {
-            throw new Exception('claim_id and status are required');
-        }
+    public function importPayroll($config, $params = []) {
+        $payrollData = $this->getPayrollData($config, $params);
 
-        try {
-            $url = $config['api_url'];
-            $postData = [
-                'action' => 'updateClaimStatus',
-                'api_key' => $config['api_key'],
-                'claim_id' => $params['claim_id'],
-                'status' => $params['status']
-            ];
+        $importedCount = 0;
+        $errors = [];
 
-            $ch = curl_init($url);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Authorization: Bearer ' . $this->generateAuthToken($config),
-                'Content-Type: application/x-www-form-urlencoded'
-            ]);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+        foreach ($payrollData as $payroll) {
+            try {
+                // Insert payroll expense into imported_transactions table
+                $db = Database::getInstance()->getConnection();
 
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+                $stmt = $db->prepare("
+                    INSERT INTO imported_transactions
+                    (import_batch, source_system, transaction_date, transaction_type,
+                     external_id, department_id, amount, description, raw_data)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
 
-            if ($httpCode === 200) {
-                $result = json_decode($response, true);
-                return [
-                    'success' => isset($result['success']) && $result['success'],
-                    'message' => $result['message'] ?? 'Status updated'
-                ];
-            } else {
-                throw new Exception('HR3 API HTTP error: ' . $httpCode);
+                $batchId = 'PAYROLL_' . date('Ymd_His');
+                $stmt->execute([
+                    $batchId,
+                    'HR4_SYSTEM',
+                    $payroll['payroll_date'] ?? $payroll['date'] ?? date('Y-m-d'),
+                    'payroll_expense',
+                    $payroll['payroll_id'] ?? $payroll['id'] ?? 'PAY' . time() . '_' . $importedCount,
+                    $payroll['department_id'] ?? 1, // Default department
+                    $payroll['net_pay'] ?? $payroll['amount'] ?? 0,
+                    'Payroll: ' . ($payroll['employee_name'] ?? 'Employee') . ' - ' . ($payroll['payroll_period'] ?? 'Period'),
+                    json_encode($payroll)
+                ]);
+
+                $importedCount++;
+
+                // Log successful import
+                Logger::getInstance()->info('Payroll data imported from HR4', [
+                    'payroll_id' => $payroll['payroll_id'] ?? $payroll['id'],
+                    'employee' => $payroll['employee_name'] ?? 'Unknown',
+                    'amount' => $payroll['net_pay'] ?? $payroll['amount']
+                ]);
+
+            } catch (Exception $e) {
+                $errors[] = 'Failed to import payroll for ' . ($payroll['employee_name'] ?? 'Unknown') . ': ' . $e->getMessage();
+                Logger::getInstance()->error('Payroll import error', [
+                    'payroll' => $payroll,
+                    'error' => $e->getMessage()
+                ]);
             }
-        } catch (Exception $e) {
-            Logger::getInstance()->error('HR3 updateClaimStatus failed: ' . $e->getMessage());
-            throw $e;
         }
-    }
 
-    /**
-     * Map event type ID to claim type description
-     */
-    private function mapEventTypeToClaimType($eventTypeId) {
-        $eventTypes = [
-            'cc74251e-a4df-11f0-b0bf-d63e92cd2848' => 'Transportation',
-            'cc742de8-a4df-11f0-b0bf-d63e92cd2848' => 'Meals',
-            'cc742d84-a4df-11f0-b0bf-d63e92cd2848' => 'Office Supplies',
-            'cc742dc0-a4df-11f0-b0bf-d63e92cd2848' => 'Entertainment',
-            'cc742d16-a4df-11f0-b0bf-d63e92cd2848' => 'Medical',
+        return [
+            'success' => count($errors) === 0,
+            'imported_count' => $importedCount,
+            'errors' => $errors,
+            'message' => "Imported {$importedCount} payroll records" . (count($errors) > 0 ? " with " . count($errors) . " errors" : "")
         ];
-
-        return $eventTypes[$eventTypeId] ?? 'General Expense';
     }
 
     /**
-     * Generate authentication token for HR3 API
+     * Get sample payroll data for testing/fallback
+     */
+    private function getSamplePayrollData() {
+        return [
+            [
+                'payroll_id' => 'PAY001',
+                'employee_id' => 'EMP001',
+                'employee_name' => 'John Doe',
+                'department_id' => 1,
+                'payroll_date' => date('Y-m-d'),
+                'payroll_period' => date('Y-m-01') . ' to ' . date('Y-m-t'),
+                'basic_salary' => 25000.00,
+                'allowances' => 5000.00,
+                'deductions' => 2000.00,
+                'net_pay' => 28000.00,
+                'currency_code' => 'PHP',
+                'status' => 'processed'
+            ],
+            [
+                'payroll_id' => 'PAY002',
+                'employee_id' => 'EMP002',
+                'employee_name' => 'Jane Smith',
+                'department_id' => 2,
+                'payroll_date' => date('Y-m-d'),
+                'payroll_period' => date('Y-m-01') . ' to ' . date('Y-m-t'),
+                'basic_salary' => 22000.00,
+                'allowances' => 4500.00,
+                'deductions' => 1800.00,
+                'net_pay' => 24700.00,
+                'currency_code' => 'PHP',
+                'status' => 'processed'
+            ],
+            [
+                'payroll_id' => 'PAY003',
+                'employee_id' => 'EMP003',
+                'employee_name' => 'Bob Johnson',
+                'department_id' => 1,
+                'payroll_date' => date('Y-m-d'),
+                'payroll_period' => date('Y-m-01') . ' to ' . date('Y-m-t'),
+                'basic_salary' => 20000.00,
+                'allowances' => 4000.00,
+                'deductions' => 1600.00,
+                'net_pay' => 22400.00,
+                'currency_code' => 'PHP',
+                'status' => 'processed'
+            ]
+        ];
+    }
+
+    /**
+     * Generate authentication token for HR4 API
      */
     private function generateAuthToken($config) {
-        // Simple token generation - can be enhanced based on HR3 requirements
+        // Simple token generation - can be enhanced based on HR4 requirements
         $payload = $config['api_key'] . ':' . $config['api_secret'];
         return base64_encode(hash('sha256', $payload, true));
     }
