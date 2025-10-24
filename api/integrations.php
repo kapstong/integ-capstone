@@ -11,6 +11,8 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-W
 
 // Require only the essential files for basic testing
 require_once '../config.php';
+require_once '../includes/logger.php';
+require_once '../includes/database.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -97,6 +99,22 @@ try {
                         ];
                     }
                 }
+            }
+
+            // Log HR3 claims access to audit trail
+            if (count($approvedClaims) > 0) {
+                Logger::getInstance()->logUserAction(
+                    'loaded_claims',
+                    'hr3_integrations',
+                    null,
+                    null,
+                    [
+                        'claims_count' => count($approvedClaims),
+                        'total_amount' => array_sum(array_column($approvedClaims, 'amount')),
+                        'source' => 'HR3 API',
+                        'status_filter' => 'Approved'
+                    ]
+                );
             }
 
             echo json_encode([
@@ -195,6 +213,21 @@ try {
 
         // Check for 405 Method Not Allowed error (very specific configuration issue)
         if ($httpCode === 405) {
+            // Log failed HR3 claim status update due to 405 error
+            Logger::getInstance()->logUserAction(
+                'failed_hr3_claim_status_update',
+                'hr3_integrations',
+                $claimId,
+                ['status' => 'Approved'],
+                [
+                    'attempted_status' => $newStatus,
+                    'sync_result' => 'failed',
+                    'error_type' => 'method_not_allowed_405',
+                    'http_code' => $httpCode,
+                    'note' => 'HR3 server configured to block PUT requests'
+                ]
+            );
+
             echo json_encode([
                 'success' => false,
                 'error' => 'HR3 API returns HTTP 405 (Method Not Allowed) for PUT requests',
@@ -208,6 +241,21 @@ try {
                 ]
             ]);
         } elseif ($isClaimsList) {
+            // Log failed HR3 claim status update attempt
+            Logger::getInstance()->logUserAction(
+                'failed_hr3_claim_status_update',
+                'hr3_integrations',
+                $claimId,
+                ['status' => 'Approved'],
+                [
+                    'attempted_status' => $newStatus,
+                    'sync_result' => 'failed',
+                    'error_type' => 'server_config_issue',
+                    'http_code' => $httpCode,
+                    'note' => 'HR3 server returning claims list instead of processing PUT requests'
+                ]
+            );
+
             // HR3 is returning claims list instead of processing PUT
             echo json_encode([
                 'success' => false,
@@ -225,6 +273,19 @@ try {
 
             // HR3 API returns success message on successful update
             if ($result && isset($result['status']) && $result['status'] === 'success') {
+                // Log successful HR3 claim status update
+                Logger::getInstance()->logUserAction(
+                    'updated_hr3_claim_status',
+                    'hr3_integrations',
+                    $claimId,
+                    ['status' => 'Approved'],
+                    [
+                        'status' => $newStatus,
+                        'sync_result' => 'successful',
+                        'hr3_response' => $result
+                    ]
+                );
+
                 echo json_encode([
                     'success' => true,
                     'message' => 'HR3 claim status successfully updated to "' . $newStatus . '"',
@@ -243,6 +304,22 @@ try {
                 ]);
             }
         } else {
+            // Log failed HR3 claim status update due to network/HTTP error
+            Logger::getInstance()->logUserAction(
+                'failed_hr3_claim_status_update',
+                'hr3_integrations',
+                $claimId,
+                ['status' => 'Approved'],
+                [
+                    'attempted_status' => $newStatus,
+                    'sync_result' => 'failed',
+                    'error_type' => 'connection_error',
+                    'http_code' => $httpCode,
+                    'curl_error' => $curlError,
+                    'note' => 'Network or HTTP error connecting to HR3 API'
+                ]
+            );
+
             // Network or HTTP error
             $errorMsg = $curlError ?: "HTTP $httpCode";
             echo json_encode([

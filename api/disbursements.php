@@ -11,6 +11,7 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-W
 
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
+require_once '../includes/logger.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -145,6 +146,22 @@ try {
                 // Get the auto-generated ID
                 $disbursement_id = $db->lastInsertId();
 
+                // Log disbursement creation to audit trail
+                Logger::getInstance()->logUserAction(
+                    'created',
+                    'disbursements',
+                    $disbursement_id,
+                    null,
+                    [
+                        'disbursement_number' => $disbursement_number,
+                        'payee' => $payee,
+                        'amount' => $amount,
+                        'payment_method' => $payment_method,
+                        'purpose' => $purpose,
+                        'reference_number' => $reference_number
+                    ]
+                );
+
                 echo json_encode([
                     'success' => true,
                     'disbursement_id' => $disbursement_id,
@@ -193,10 +210,11 @@ try {
                 exit;
             }
 
-            // Check if disbursement exists
-            $stmt = $db->prepare("SELECT id FROM disbursements WHERE id = ?");
+            // Check if disbursement exists and capture old values
+            $stmt = $db->prepare("SELECT * FROM disbursements WHERE id = ?");
             $stmt->execute([$id]);
-            if (!$stmt->fetch()) {
+            $existingDisbursement = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$existingDisbursement) {
                 http_response_code(404);
                 echo json_encode(['success' => false, 'error' => 'Disbursement not found']);
                 exit;
@@ -206,6 +224,22 @@ try {
             $stmt = $db->prepare("UPDATE disbursements SET " . implode(", ", $updateFields) . " WHERE id = ?");
 
             if ($stmt->execute($params)) {
+                // Log disbursement update to audit trail
+                Logger::getInstance()->logUserAction(
+                    'updated',
+                    'disbursements',
+                    $id,
+                    [
+                        'payee' => $existingDisbursement['payee'] ?? null,
+                        'amount' => $existingDisbursement['amount'] ?? null,
+                        'payment_method' => $existingDisbursement['payment_method'] ?? null,
+                        'reference_number' => $existingDisbursement['reference_number'] ?? null,
+                        'purpose' => $existingDisbursement['purpose'] ?? null,
+                        'disbursement_date' => $existingDisbursement['disbursement_date'] ?? null
+                    ],
+                    $input
+                );
+
                 echo json_encode(['success' => true, 'message' => 'Disbursement updated successfully']);
             } else {
                 echo json_encode(['success' => false, 'error' => 'Failed to update disbursement']);
@@ -222,7 +256,7 @@ try {
             }
 
             // Check if disbursement exists and get its details for audit trail
-            $stmt = $db->prepare("SELECT disbursement_number FROM disbursements WHERE id = ?");
+            $stmt = $db->prepare("SELECT * FROM disbursements WHERE id = ?");
             $stmt->execute([$id]);
             $disbursement = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -235,6 +269,22 @@ try {
             // Delete the disbursement
             $stmt = $db->prepare("DELETE FROM disbursements WHERE id = ?");
             if ($stmt->execute([$id])) {
+                // Log disbursement deletion to audit trail
+                Logger::getInstance()->logUserAction(
+                    'deleted',
+                    'disbursements',
+                    $id,
+                    [
+                        'disbursement_number' => $disbursement['disbursement_number'],
+                        'payee' => $disbursement['payee'],
+                        'amount' => $disbursement['amount'],
+                        'payment_method' => $disbursement['payment_method'],
+                        'purpose' => $disbursement['purpose'],
+                        'reference_number' => $disbursement['reference_number']
+                    ],
+                    null
+                );
+
                 echo json_encode([
                     'success' => true,
                     'message' => 'Disbursement deleted successfully',
