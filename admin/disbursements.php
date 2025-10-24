@@ -729,10 +729,10 @@ body {
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">Approval Workflow Management</h6>
                     <div>
-                        <button class="btn btn-success me-2" onclick="loadApprovalWorkflow()">
+                        <button class="btn btn-success me-2" onclick="loadApprovals()">
                             <i class="fas fa-refresh me-1"></i>Load Approvals
                         </button>
-                        <button class="btn btn-outline-primary" onclick="setupApprovals()">
+                        <button class="btn btn-outline-primary" onclick="loadApprovals()">
                             <i class="fas fa-cog me-1"></i>Configure Workflow
                         </button>
                     </div>
