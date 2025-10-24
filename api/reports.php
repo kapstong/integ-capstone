@@ -36,6 +36,38 @@ try {
 
     // Handle income statement generation
     if ($reportType === 'income_statement') {
+        // Check if we need to fetch recent HR4 payroll data
+        // If daily_expense_summary has no recent data, try to import from HR4
+        $recentDataCheck = $db->prepare("
+            SELECT COUNT(*) as record_count
+            FROM daily_expense_summary
+            WHERE business_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+        ");
+        $recentDataCheck->execute();
+        $recordCount = $recentDataCheck->fetch(PDO::FETCH_ASSOC)['record_count'];
+
+        // If no recent expense data, try to import from HR4 payroll
+        if ($recordCount == 0) {
+            try {
+                require_once '../includes/api_integrations.php';
+                $integrationManager = APIIntegrationManager::getInstance();
+
+                // Get HR4 configuration
+                $hr4Config = $integrationManager->getIntegrationConfig('hr4');
+                if ($hr4Config && !empty($hr4Config['api_url'])) {
+                    // Try to execute payroll import
+                    $result = $integrationManager->executeIntegrationAction('hr4', 'importPayroll', []);
+                    Logger::getInstance()->info('Income statement report triggered HR4 payroll import', [
+                        'result' => $result
+                    ]);
+                }
+            } catch (Exception $e) {
+                Logger::getInstance()->warning('HR4 payroll import failed during income statement generation', [
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
         // Get revenue data (from journal entries - placeholder for now)
         $revenueQuery = $db->prepare("
             SELECT
@@ -253,95 +285,107 @@ try {
     if ($reportType === 'cash_flow') {
         $period = $_GET['period'] ?? 'last_quarter';
 
-        // Calculate date range based on period
-        switch ($period) {
-            case 'last_quarter':
-                $endDate = date('Y-m-d');
-                $startDate = date('Y-m-d', strtotime('-3 months'));
-                break;
-            case 'last_6_months':
-                $endDate = date('Y-m-d');
-                $startDate = date('Y-m-d', strtotime('-6 months'));
-                break;
-            case 'year_to_date':
-                $endDate = date('Y-m-d');
-                $startDate = date('Y-m-01', strtotime('this year'));
-                break;
-            default:
-                $endDate = $dateTo ?: date('Y-m-d');
-                $startDate = $dateFrom ?: date('Y-m-d', strtotime('-3 months'));
-        }
+        try {
+            // Calculate date range based on period
+            switch ($period) {
+                case 'last_quarter':
+                    $endDate = date('Y-m-d');
+                    $startDate = date('Y-m-d', strtotime('-3 months'));
+                    break;
+                case 'last_6_months':
+                    $endDate = date('Y-m-d');
+                    $startDate = date('Y-m-d', strtotime('-6 months'));
+                    break;
+                case 'year_to_date':
+                    $endDate = date('Y-m-d');
+                    $startDate = date('Y-m-01', strtotime('this year'));
+                    break;
+                default:
+                    $endDate = $dateTo ?: date('Y-m-d');
+                    $startDate = $dateFrom ?: date('Y-m-d', strtotime('-3 months'));
+            }
 
-        // Operating activities - from daily expenses mostly (cash basis approximation)
-        $operatingQuery = $db->prepare("
-            SELECT
-                department,
-                SUM(daily_expenses) as amount
-            FROM daily_expense_summary
-            WHERE expense_date BETWEEN :start_date AND :end_date
-            GROUP BY department
-        ");
-        $operatingQuery->execute(['start_date' => $startDate, 'end_date' => $endDate]);
-        $operatingData = $operatingQuery->fetchAll(PDO::FETCH_ASSOC);
+            // Operating activities - from daily expenses mostly (cash basis approximation)
+            $operatingQuery = $db->prepare("
+                SELECT
+                    department,
+                    SUM(daily_expenses) as amount
+                FROM daily_expense_summary
+                WHERE expense_date BETWEEN :start_date AND :end_date
+                GROUP BY department
+            ");
+            $operatingQuery->execute(['start_date' => $startDate, 'end_date' => $endDate]);
+            $operatingData = $operatingQuery->fetchAll(PDO::FETCH_ASSOC);
 
-        // Investing activities (simplified - from journal entries)
-        $investingQuery = $db->prepare("
-            SELECT
-                coa.account_name,
-                SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as amount
-            FROM chart_of_accounts coa
-            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-            WHERE coa.category IN ('fixed_assets', 'investments')
-                AND coa.is_active = 1
-                AND je.status = 'posted'
-                AND je.entry_date BETWEEN :start_date AND :end_date
-            GROUP BY coa.id, coa.account_name
-        ");
-        $investingQuery->execute(['start_date' => $startDate, 'end_date' => $endDate]);
-        $investingData = $investingQuery->fetchAll(PDO::FETCH_ASSOC);
+            // Investing activities (simplified - from journal entries)
+            $investingQuery = $db->prepare("
+                SELECT
+                    coa.account_name,
+                    SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as amount
+                FROM chart_of_accounts coa
+                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+                WHERE coa.category IN ('fixed_assets', 'investments')
+                    AND coa.is_active = 1
+                    AND je.status = 'posted'
+                    AND je.entry_date BETWEEN :start_date AND :end_date
+                GROUP BY coa.id, coa.account_name
+            ");
+            $investingQuery->execute(['start_date' => $startDate, 'end_date' => $endDate]);
+            $investingData = $investingQuery->fetchAll(PDO::FETCH_ASSOC);
 
-        // Financing activities (loans, equity, etc.)
-        $financingQuery = $db->prepare("
-            SELECT
-                coa.account_name,
-                SUM(COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)) as amount
-            FROM chart_of_accounts coa
-            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-            WHERE coa.account_type = 'liability'
-                AND coa.category IN ('long_term_liabilities', 'current_liabilities')
-                AND coa.is_active = 1
-                AND je.status = 'posted'
-                AND je.entry_date BETWEEN :start_date AND :end_date
-            GROUP BY coa.id, coa.account_name
-        ");
-        $financingQuery->execute(['start_date' => $startDate, 'end_date' => $endDate]);
-        $financingData = $financingQuery->fetchAll(PDO::FETCH_ASSOC);
+            // Financing activities (loans, equity, etc.)
+            $financingQuery = $db->prepare("
+                SELECT
+                    coa.account_name,
+                    SUM(COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)) as amount
+                FROM chart_of_accounts coa
+                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+                WHERE coa.account_type = 'liability'
+                    AND coa.category IN ('long_term_liabilities', 'current_liabilities')
+                    AND coa.is_active = 1
+                    AND je.status = 'posted'
+                    AND je.entry_date BETWEEN :start_date AND :end_date
+                GROUP BY coa.id, coa.account_name
+            ");
+            $financingQuery->execute(['start_date' => $startDate, 'end_date' => $endDate]);
+            $financingData = $financingQuery->fetchAll(PDO::FETCH_ASSOC);
 
-        $operatingCash = array_sum(array_column($operatingData, 'amount')) ?: 0;
-        $investingCash = -array_sum(array_column($investingData, 'amount')) ?: 0; // Usually negative for purchases
-        $financingCash = array_sum(array_column($financingData, 'amount')) ?: 0;
+            $operatingCash = array_sum(array_column($operatingData, 'amount')) ?: 0;
+            $investingCash = -array_sum(array_column($investingData, 'amount')) ?: 0; // Usually negative for purchases
+            $financingCash = array_sum(array_column($financingData, 'amount')) ?: 0;
 
-        echo json_encode([
-            'success' => true,
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'cash_flow' => [
-                'operating_activities' => [
-                    'amount' => $operatingCash,
-                    'accounts' => $operatingData
-                ],
-                'investing_activities' => [
-                    'amount' => $investingCash,
-                    'accounts' => $investingData
-                ],
-                'financing_activities' => [
-                    'amount' => $financingCash,
-                    'accounts' => $financingData
+            echo json_encode([
+                'success' => true,
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'cash_flow' => [
+                    'operating_activities' => [
+                        'amount' => intval($operatingCash),
+                        'accounts' => $operatingData
+                    ],
+                    'investing_activities' => [
+                        'amount' => intval($investingCash),
+                        'accounts' => $investingData
+                    ],
+                    'financing_activities' => [
+                        'amount' => intval($financingCash),
+                        'accounts' => $financingData
+                    ]
                 ]
-            ]
-        ]);
+            ]);
+        } catch (Exception $e) {
+            echo json_encode([
+                'success' => false,
+                'error' => 'Cash flow generation failed: ' . $e->getMessage(),
+                'debug' => [
+                    'period' => $period,
+                    'start_date' => $startDate ?? 'not set',
+                    'end_date' => $endDate ?? 'not set'
+                ]
+            ]);
+        }
         exit;
     }
 

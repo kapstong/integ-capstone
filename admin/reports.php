@@ -1763,10 +1763,48 @@ $db = Database::getInstance()->getConnection();
         function renderCashFlow(data) {
             const container = document.getElementById('cashFlowContainer');
 
+            // Check if we have cash_flow data
+            if (!data.cash_flow) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error: Invalid cash flow data format. Missing cash flow information.
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
             const operating = data.cash_flow.operating_activities;
             const investing = data.cash_flow.investing_activities;
             const financing = data.cash_flow.financing_activities;
-            const netCashFlow = operating.amount + investing.amount + financing.amount;
+
+            // Default values if data is missing
+            const operatingAmount = operating?.amount || 0;
+            const investingAmount = investing?.amount || 0;
+            const financingAmount = financing?.amount || 0;
+            const netCashFlow = operatingAmount + investingAmount + financingAmount;
+
+            // Check if all activities have the expected structure
+            if (!operating || !investing || !financing ||
+                typeof operating.amount !== 'number' ||
+                typeof investing.amount !== 'number' ||
+                typeof financing.amount !== 'number') {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Cash flow data is incomplete. Some activities may not be available.
+                        </div>
+                    <div class="text-center py-3">
+                        <div class="alert alert-info">
+                            Net Cash Flow: ₱${parseFloat(netCashFlow).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                        </div>
+                    </div>
+                `;
+                return; // Exit early for incomplete data
+            }
 
             let html = `
                 <div class="statement-header">
