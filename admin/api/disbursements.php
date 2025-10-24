@@ -37,19 +37,8 @@ if (!isset($_SESSION['user'])) {
     echo json_encode(['error' => 'Unauthorized - Session not found']);
     exit;
 }
-?>
 
-<?php
-$db = null;
-
-try {
-    $db = Database::getInstance()->getConnection();
-} catch (Exception $e) {
-    error_log("Database connection error in disbursements API: " . $e->getMessage());
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Database connection failed. Please check your configuration.']);
-    exit;
-}
+$db = Database::getInstance()->getConnection();
 
 // Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -59,13 +48,187 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $method = $_SERVER['REQUEST_METHOD'];
 
+function processPayment($db, $data) {
+    try {
+        // Validate required fields
+        $required = ['payee', 'amount', 'payment_method', 'payment_date'];
+        foreach ($required as $field) {
+            if (!isset($data[$field]) || empty($data[$field])) {
+                throw new Exception("Missing required field: $field");
+            }
+        }
+
+        $db->beginTransaction();
+
+        // Generate disbursement number
+        $stmt = $db->query("SELECT COUNT(*) as count FROM disbursements WHERE DATE(disbursement_date) = CURDATE()");
+        $count = $stmt->fetch()['count'] + 1;
+        $disbursementNumber = 'DISB-' . date('Ymd') . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+
+        // Insert disbursement
+        $stmt = $db->prepare("
+            INSERT INTO disbursements (
+                disbursement_number, disbursement_date, payee, amount,
+                payment_method, reference_number, purpose, account_id,
+                approved_by, recorded_by, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')
+        ");
+
+        $stmt->execute([
+            $disbursementNumber,
+            $data['payment_date'],
+            $data['payee'],
+            $data['amount'],
+            $data['payment_method'],
+            $data['reference_number'] ?? null,
+            $data['description'] ?? 'Payment processed',
+            1, // Default account ID (Cash on Hand)
+            $_SESSION['user']['id'] ?? 1,
+            $_SESSION['user']['id'] ?? 1
+        ]);
+
+        $disbursementId = $db->lastInsertId();
+
+        // Create journal entry for the disbursement
+        createDisbursementJournalEntry($db, $disbursementId, $data);
+
+        $db->commit();
+
+        return [
+            'success' => true,
+            'message' => 'Payment processed successfully',
+            'disbursement_id' => $disbursementId,
+            'disbursement_number' => $disbursementNumber
+        ];
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+// Voucher and Documentation API functions
+function createVoucher($db, $data) {
+    try {
+        // Validate required fields
+        $required = ['disbursement_id', 'voucher_type'];
+        foreach ($required as $field) {
+            if (!isset($data[$field]) || empty($data[$field])) {
+                throw new Exception("Missing required field: $field");
+            }
+        }
+
+        $db->beginTransaction();
+
+        // Generate voucher number
+        $stmt = $db->query("SELECT COUNT(*) as count FROM uploaded_files WHERE category = 'vouchers'");
+        $count = $stmt->fetch()['count'] + 1;
+        $voucherNumber = strtoupper($data['voucher_type']) . '-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+
+        // Create voucher record in uploaded_files or a separate vouchers table
+        // For now, we'll store voucher metadata in uploaded_files with category 'vouchers'
+
+        $stmt = $db->prepare("
+            INSERT INTO uploaded_files (
+                original_name, file_name, file_path, file_size, mime_type, category,
+                reference_id, reference_type, uploaded_by
+            ) VALUES (?, ?, ?, ?, ?, 'vouchers', ?, 'disbursement', ?)
+        ");
+
+        $originalName = $data['file_name'] ?? 'voucher_' . $voucherNumber . '.pdf';
+        $fileName = $voucherNumber . '.pdf';
+        $filePath = 'uploads/vouchers/' . $fileName;
+
+        $stmt->execute([
+            $originalName,
+            $fileName,
+            $filePath,
+            $data['file_size'] ?? 0,
+            $data['mime_type'] ?? 'application/pdf',
+            $data['disbursement_id'],
+            $_SESSION['user']['id'] ?? 1
+        ]);
+
+        $voucherId = $db->lastInsertId();
+
+        // Update disbursement with voucher reference
+        $stmt = $db->prepare("
+            UPDATE disbursements SET
+                voucher_id = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ");
+        $stmt->execute([$voucherId, $data['disbursement_id']]);
+
+        $db->commit();
+
+        return [
+            'success' => true,
+            'message' => 'Voucher created successfully',
+            'voucher_id' => $voucherId,
+            'voucher_number' => $voucherNumber
+        ];
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+function getVouchers($db, $disbursementId = null) {
+    try {
+        $where = $disbursementId ? "WHERE uf.reference_type = 'disbursement' AND uf.reference_id = ?" : "";
+        $params = $disbursementId ? [$disbursementId] : [];
+
+        $stmt = $db->prepare("
+            SELECT uf.*,
+                   d.disbursement_number,
+                   u.full_name as uploaded_by_name
+            FROM uploaded_files uf
+            LEFT JOIN disbursements d ON uf.reference_id = d.id AND uf.reference_type = 'disbursement'
+            LEFT JOIN users u ON uf.uploaded_by = u.id
+            WHERE uf.category = 'vouchers' $where
+            ORDER BY uf.uploaded_at DESC
+        ");
+        $stmt->execute($params);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    } catch (Exception $e) {
+        error_log("Error fetching vouchers: " . $e->getMessage());
+        return [];
+    }
+}
+
 try {
     switch ($method) {
         case 'GET':
-            handleGet($db);
-            break;
+            if (isset($_GET['action']) && $_GET['action'] === 'get_vouchers') {
+                $disbursementId = isset($_GET['disbursement_id']) ? (int)$_GET['disbursement_id'] : null;
+                $vouchers = getVouchers($db, $disbursementId);
+                echo json_encode($vouchers);
+                break;
+            } else {
+                handleGet($db);
+                break;
+            }
         case 'POST':
-            handlePost($db);
+            $input = json_decode(file_get_contents('php://input'), true);
+            if (isset($input['action'])) {
+                switch ($input['action']) {
+                    case 'process_payment':
+                        $result = processPayment($db, $input);
+                        break;
+                    case 'create_voucher':
+                        $result = createVoucher($db, $input);
+                        break;
+                    default:
+                        $result = ['error' => 'Unknown action'];
+                }
+                echo json_encode($result);
+            } else {
+                handlePost($db);
+            }
             break;
         case 'PUT':
             handlePut($db);
@@ -162,7 +325,7 @@ function handlePost($db) {
         }
 
         // Validate required fields
-        $required = ['vendor_id', 'amount', 'payment_method', 'disbursement_date'];
+        $required = ['payee', 'amount', 'payment_method', 'disbursement_date'];
         foreach ($required as $field) {
             if (!isset($data[$field]) || empty($data[$field])) {
                 http_response_code(400);
@@ -178,12 +341,6 @@ function handlePost($db) {
 
         $db->beginTransaction();
 
-        // Get vendor name for payee
-        $stmt = $db->prepare("SELECT company_name FROM vendors WHERE id = ?");
-        $stmt->execute([$data['vendor_id']]);
-        $vendor = $stmt->fetch();
-        $payeeName = $vendor ? $vendor['company_name'] : 'Unknown Vendor';
-
         // Insert disbursement
         $stmt = $db->prepare("
             INSERT INTO disbursements (
@@ -196,11 +353,11 @@ function handlePost($db) {
         $stmt->execute([
             $disbursementNumber,
             $data['disbursement_date'],
-            $payeeName,
+            $data['payee'],
             $data['amount'],
             $data['payment_method'],
             $data['reference_number'] ?? null,
-            $data['notes'] ?? null,
+            $data['purpose'] ?? $data['notes'] ?? null,
             1, // Default account ID (Cash on Hand)
             $_SESSION['user']['id'] ?? 1, // approved_by
             $_SESSION['user']['id'] ?? 1  // recorded_by
@@ -259,7 +416,7 @@ function handlePut($db) {
                 amount = ?,
                 payment_method = ?,
                 reference_number = ?,
-                notes = ?,
+                purpose = ?,
                 disbursement_date = ?,
                 status = ?,
                 updated_at = CURRENT_TIMESTAMP
@@ -270,7 +427,7 @@ function handlePut($db) {
             $data['amount'],
             $data['payment_method'],
             $data['reference_number'] ?? null,
-            $data['notes'] ?? null,
+            $data['purpose'] ?? $data['notes'] ?? null,
             $data['disbursement_date'],
             $data['status'] ?? 'completed',
             $id
@@ -335,8 +492,8 @@ function createDisbursementJournalEntry($db, $disbursementId, $data) {
     $maxNum = $stmt->fetch()['max_num'] ?? 0;
     $entryNumber = 'JE-' . str_pad($maxNum + 1, 6, '0', STR_PAD_LEFT);
 
-    $entryDate = $data['disbursement_date'];
-    $description = "Disbursement: Payment to vendor - " . ($data['reference_number'] ?? 'N/A');
+    $entryDate = $data['disbursement_date'] ?? $data['payment_date'];
+    $description = "Disbursement: Payment to " . ($data['payee'] ?? 'vendor') . " - " . ($data['reference_number'] ?? 'N/A');
 
     // Determine account codes based on payment method
     switch ($data['payment_method']) {
@@ -349,6 +506,9 @@ function createDisbursementJournalEntry($db, $disbursementId, $data) {
         case 'bank_transfer':
             $debitAccount = 'CASH-IN-BANK';
             break;
+        case 'ewallet':
+            $debitAccount = 'CASH-IN-BANK';
+            break;
         default:
             $debitAccount = 'CASH-IN-BANK';
     }
@@ -358,14 +518,10 @@ function createDisbursementJournalEntry($db, $disbursementId, $data) {
     // Get account IDs
     $stmt = $db->prepare("SELECT id FROM chart_of_accounts WHERE account_code = ?");
     $stmt->execute([$debitAccount]);
-    $debitAccountId = $stmt->fetch()['id'] ?? null;
+    $debitAccountId = $stmt->fetch()['id'] ?? 1; // Default to cash if not found
 
     $stmt->execute([$creditAccount]);
-    $creditAccountId = $stmt->fetch()['id'] ?? null;
-
-    if (!$debitAccountId || !$creditAccountId) {
-        throw new Exception("Required accounts not found in chart of accounts");
-    }
+    $creditAccountId = $stmt->fetch()['id'] ?? 2; // Default if not found
 
     // Insert journal entry header
     $stmt = $db->prepare("

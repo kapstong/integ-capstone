@@ -24,11 +24,31 @@ try {
     // Paid this month
     $paidThisMonth = $db->query("SELECT COALESCE(SUM(amount), 0) as total FROM payments_made WHERE YEAR(payment_date) = YEAR(CURDATE()) AND MONTH(payment_date) = MONTH(CURDATE())")->fetch()['total'];
 
+    // Total payables (from bills API data)
+    $totalPayablesStmt = $db->query("SELECT COALESCE(SUM(balance), 0) as total FROM bills WHERE status IN ('draft', 'approved')");
+    $totalPayables = $totalPayablesStmt->fetch()['total'];
+
+    // Overdue payables
+    $overduePayablesStmt = $db->query("SELECT COALESCE(SUM(balance), 0) as total FROM bills WHERE status = 'overdue' AND due_date < CURDATE()");
+    $overduePayables = $overduePayablesStmt->fetch()['total'];
+
+    // Average payment period (days to pay bills)
+    $avgPaymentPeriodStmt = $db->query("
+        SELECT COALESCE(AVG(DATEDIFF(payment_date, bill_date)), 0) as avg_days
+        FROM payments_made p
+        JOIN bills b ON p.bill_id = b.id
+        WHERE p.payment_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+    ");
+    $avgPaymentPeriod = round($avgPaymentPeriodStmt->fetch()['avg_days']);
+
 } catch (Exception $e) {
     $totalVendors = 0;
     $outstandingBills = 0;
     $overdueAmount = 0;
     $paidThisMonth = 0;
+    $totalPayables = 0;
+    $overduePayables = 0;
+    $avgPaymentPeriod = 0;
 }
 ?>
 <!DOCTYPE html>
@@ -613,7 +633,7 @@ try {
             <hr style="border-top: 2px solid white; margin: 10px 0;">
         </div>
         <nav class="nav flex-column">
-            <a class="nav-link" href="dashboard.php">
+            <a class="nav-link" href="index.php">
                 <i class="fas fa-tachometer-alt me-2"></i><span>Dashboard</span>
             </a>
             <div class="nav-item">
@@ -1002,7 +1022,7 @@ try {
                                     <div class="card-body text-center">
                                         <i class="fas fa-peso-sign fa-2x mb-3 text-muted"></i>
                                         <h6>Total Payables</h6>
-                                        <h3 id="totalPayables">$0.00</h3>
+                                        <h3>₱<?php echo number_format($totalPayables, 2); ?></h3>
                                     </div>
                                 </div>
                             </div>
@@ -1011,7 +1031,7 @@ try {
                                     <div class="card-body text-center">
                                         <i class="fas fa-exclamation-triangle fa-2x mb-3 text-warning"></i>
                                         <h6>Overdue Amount</h6>
-                                        <h3 id="overdueAmount">$0.00</h3>
+                                        <h3>₱<?php echo number_format($overduePayables, 2); ?></h3>
                                     </div>
                                 </div>
                             </div>
@@ -1020,7 +1040,7 @@ try {
                                     <div class="card-body text-center">
                                         <i class="fas fa-clock fa-2x mb-3 text-info"></i>
                                         <h6>Avg Payment Period</h6>
-                                        <h3 id="avgPaymentPeriod">0 days</h3>
+                                        <h3><?php echo $avgPaymentPeriod; ?> days</h3>
                                     </div>
                                 </div>
                             </div>
@@ -1101,7 +1121,328 @@ try {
         </div>
     </footer>
 
-    <!-- Collection Modal -->
+    <!-- Add Vendor Modal -->
+    <div class="modal fade" id="addVendorModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addVendorModalTitle">Add New Vendor</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addVendorForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="companyName" class="form-label">Company Name *</label>
+                                    <input type="text" class="form-control" id="companyName" name="companyName" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="contactPerson" class="form-label">Contact Person *</label>
+                                    <input type="text" class="form-control" id="contactPerson" name="contactPerson" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="vendorEmail" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="vendorEmail" name="vendorEmail">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="vendorPhone" class="form-label">Phone</label>
+                                    <input type="tel" class="form-control" id="vendorPhone" name="vendorPhone">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="vendorAddress" class="form-label">Address</label>
+                            <textarea class="form-control" id="vendorAddress" name="vendorAddress" rows="3"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="paymentTerms" class="form-label">Payment Terms</label>
+                                    <select class="form-select" id="paymentTerms" name="paymentTerms">
+                                        <option value="Net 30">Net 30</option>
+                                        <option value="Net 60">Net 60</option>
+                                        <option value="Net 90">Net 90</option>
+                                        <option value="Cash on Delivery">Cash on Delivery</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="vendorStatus" class="form-label">Status</label>
+                                    <select class="form-select" id="vendorStatus" name="vendorStatus">
+                                        <option value="active">Active</option>
+                                        <option value="inactive">Inactive</option>
+                                        <option value="suspended">Suspended</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" form="addVendorForm">Add Vendor</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Bill Modal -->
+    <div class="modal fade" id="addBillModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Bill</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addBillForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="billVendor" class="form-label">Vendor *</label>
+                                    <select class="form-select" id="billVendor" name="vendor_id" required>
+                                        <option value="">Select Vendor</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="billNumber" class="form-label">Bill Number *</label>
+                                    <input type="text" class="form-control" id="billNumber" name="bill_number" readonly>
+                                    <div class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Bill number will be auto-generated (e.g., BILL-2025-001)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="billDate" class="form-label">Bill Date *</label>
+                                    <input type="date" class="form-control" id="billDate" name="bill_date" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="dueDate" class="form-label">Due Date *</label>
+                                    <input type="date" class="form-control" id="dueDate" name="due_date" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="billAmount" class="form-label">Amount *</label>
+                            <input type="number" class="form-control" id="billAmount" name="amount" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="billDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="billDescription" name="description" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" form="addBillForm">Add Bill</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Payment Modal -->
+    <div class="modal fade" id="addPaymentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Record Payment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addPaymentForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="paymentVendor" class="form-label">Vendor *</label>
+                                    <select class="form-select" id="paymentVendor" name="vendor_id" required>
+                                        <option value="">Select Vendor</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="paymentBill" class="form-label">Bill (Optional)</label>
+                                    <select class="form-select" id="paymentBill" name="bill_id">
+                                        <option value="">Select Bill</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="paymentDate" class="form-label">Payment Date *</label>
+                                    <input type="date" class="form-control" id="paymentDate" name="payment_date" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="paymentAmount" class="form-label">Amount *</label>
+                                    <input type="number" class="form-control" id="paymentAmount" name="amount" step="0.01" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="paymentMethod" class="form-label">Payment Method *</label>
+                            <select class="form-select" id="paymentMethod" name="payment_method" required>
+                                <option value="check">Check</option>
+                                <option value="transfer">Bank Transfer</option>
+                                <option value="cash">Cash</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="paymentNotes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="paymentNotes" name="notes" rows="3" placeholder="Auto-generated reference number: Will be displayed after submission"></textarea>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Reference Number:</strong> Automatically generated based on payment method (CHK/TRF/CSH + Year + Number)
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" form="addPaymentForm">Record Payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Collection Modal -->
+    <div class="modal fade" id="addCollectionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Record Collection</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addCollectionForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="collectionVendor" class="form-label">Vendor *</label>
+                                    <select class="form-select" id="collectionVendor" name="vendor_id" required>
+                                        <option value="">Select Vendor</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="collectionType" class="form-label">Collection Type *</label>
+                                    <select class="form-select" id="collectionType" name="collection_type" required>
+                                        <option value="refund">Refund</option>
+                                        <option value="credit">Credit Note</option>
+                                        <option value="adjustment">Adjustment</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="collectionDate" class="form-label">Collection Date *</label>
+                                    <input type="date" class="form-control" id="collectionDate" name="collection_date" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="collectionAmount" class="form-label">Amount *</label>
+                                    <input type="number" class="form-control" id="collectionAmount" name="amount" step="0.01" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="collectionReason" class="form-label">Reason *</label>
+                            <textarea class="form-control" id="collectionReason" name="reason" rows="3" required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" form="addCollectionForm">Record Collection</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Adjustment Modal -->
+    <div class="modal fade" id="addAdjustmentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addAdjustmentModalTitle">Add Adjustment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addAdjustmentForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="adjustmentVendor" class="form-label">Vendor *</label>
+                                    <select class="form-select" id="adjustmentVendor" name="vendor_id" required>
+                                        <option value="">Select Vendor</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="adjustmentType" class="form-label">Adjustment Type *</label>
+                                    <select class="form-select" id="adjustmentType" name="adjustment_type" required>
+                                        <option value="debit_memo">Debit Memo</option>
+                                        <option value="credit_memo">Credit Memo</option>
+                                        <option value="discount">Discount</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="adjustmentDate" class="form-label">Adjustment Date *</label>
+                                    <input type="date" class="form-control" id="adjustmentDate" name="adjustment_date" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="adjustmentAmount" class="form-label">Amount *</label>
+                                    <input type="number" class="form-control" id="adjustmentAmount" name="amount" step="0.01" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="adjustmentDescription" class="form-label">Description *</label>
+                            <textarea class="form-control" id="adjustmentDescription" name="description" rows="3" required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" form="addAdjustmentForm" id="addAdjustmentModalSubmitBtn">Add Adjustment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Collection Modal -->
     <div class="modal fade" id="collectionModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -1114,6 +1455,82 @@ try {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Adjustment Modal -->
+    <div class="modal fade" id="viewAdjustmentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Adjustment Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Adjustment Number</label>
+                                <p id="view_adjustment_number" class="form-control-plaintext"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Status</label>
+                                <p id="view_adjustment_status" class="form-control-plaintext"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Vendor</label>
+                                <p id="view_vendor_name" class="form-control-plaintext"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Adjustment Type</label>
+                                <p id="view_adjustment_type" class="form-control-plaintext"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Amount</label>
+                                <p id="view_amount" class="form-control-plaintext"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Date</label>
+                                <p id="view_adjustment_date" class="form-control-plaintext"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Reason</label>
+                        <p id="view_reason" class="form-control-plaintext"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Journal Entries</label>
+                        <div id="view_journal_entries" class="card">
+                            <div class="card-body">
+                                <small class="text-muted">Journal entries automatically created for this adjustment.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </button>
+                    <button type="button" class="btn btn-primary" id="editAdjustmentBtn">
+                        <i class="fas fa-edit me-2"></i>Edit
+                    </button>
                 </div>
             </div>
         </div>
@@ -1183,7 +1600,1763 @@ try {
                 toggle.style.left = '290px';
             }
             updateFooterPosition();
+
+        // Set default active tab
+            currentTab = 'vendor';
+
+            // Set up event listeners
+            setupEventListeners();
+
+            // Set default date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('paymentDate').value = today;
+
+            // Load initial data
+            loadVendors();
+            loadBills();
+            loadPayments();
+            loadCollections();
+            loadAdjustments();
         });
+
+        // Handle vendor form submission
+        document.getElementById('addVendorForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Check if we're in edit mode BEFORE accessing form data
+            const isEditMode = !!this.dataset.vendorId;
+            const vendorId = this.dataset.vendorId;
+
+            // Ensure all form fields are captured, including potential readonly fields
+            const companyName = document.getElementById('companyName').value?.trim();
+            const contactPerson = document.getElementById('contactPerson').value?.trim();
+            const vendorEmail = document.getElementById('vendorEmail').value?.trim();
+            const vendorPhone = document.getElementById('vendorPhone').value?.trim();
+            const vendorAddress = document.getElementById('vendorAddress').value?.trim();
+            const paymentTerms = document.getElementById('paymentTerms').value?.trim();
+            const vendorStatus = document.getElementById('vendorStatus').value?.trim();
+
+            // Validate required fields
+            if (!companyName || !contactPerson) {
+                showAlert('Please fill in all required fields (Company Name and Contact Person)', 'danger');
+                return;
+            }
+
+            const vendorData = {
+                companyName: companyName,
+                contactPerson: contactPerson,
+                vendorEmail: vendorEmail || null,
+                vendorPhone: vendorPhone || null,
+                vendorAddress: vendorAddress || null,
+                paymentTerms: paymentTerms || 'Net 30',
+                vendorStatus: vendorStatus || 'active'
+            };
+
+            const method = isEditMode ? 'PUT' : 'POST';
+            const apiUrl = isEditMode ? `api/vendors.php?id=${vendorId}` : 'api/vendors.php';
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(vendorData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success !== undefined && result.success !== null) {
+                    const action = isEditMode ? 'updated' : 'created';
+                    const vendorPreview = result.vendor_code ? ` (Code: ${result.vendor_code})` : '';
+                    showAlert(`Vendor ${action} successfully${vendorPreview}`, 'success');
+
+                    const modalEl = document.getElementById('addVendorModal');
+                    if (modalEl) {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    }
+
+                    // Reset form back to add mode
+                    resetVendorForm();
+                    this.reset();
+
+                    loadVendors(); // Refresh the vendors table
+                } else {
+                    throw new Error(result.error || `Failed to ${isEditMode ? 'update' : 'create'} vendor`);
+                }
+            } catch (error) {
+                console.error(`Error ${isEditMode ? 'updating' : 'creating'} vendor:`, error);
+                showAlert(`Error ${isEditMode ? 'updating' : 'creating'} vendor: ` + error.message, 'danger');
+            }
+        });
+
+        // Handle bill form submission
+        document.getElementById('addBillForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Check if we're in edit mode BEFORE accessing form data
+            const isEditMode = !!this.dataset.editBillId;
+            const editBillId = this.dataset.editBillId;
+
+            // Ensure bill number is captured even for readonly fields
+            const billNumber = document.getElementById('billNumber').value?.trim();
+            const vendorId = document.getElementById('billVendor').value?.trim();
+            const billDate = document.getElementById('billDate').value?.trim();
+            const dueDate = document.getElementById('dueDate').value?.trim();
+            const amount = document.getElementById('billAmount').value?.trim();
+            const description = document.getElementById('billDescription').value?.trim();
+
+            if (!vendorId || !billDate || !dueDate || !amount) {
+                showAlert('Please fill in all required fields', 'danger');
+                return;
+            }
+
+            if (isEditMode && !billNumber) {
+                showAlert('Bill number is required for editing', 'danger');
+                return;
+            }
+
+            let billData = {
+                vendor_id: parseInt(vendorId),
+                bill_date: billDate,
+                due_date: dueDate,
+                amount: parseFloat(amount),
+                description: description || '',
+                bill_number: billNumber
+            };
+
+            // Add status for new bills only
+            if (!isEditMode) {
+                billData.status = 'draft';
+            }
+
+            const method = isEditMode ? 'PUT' : 'POST';
+            const apiUrl = isEditMode ? `api/bills.php?id=${editBillId}` : 'api/bills.php';
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(billData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                console.log('Bill creation API response:', result);
+                console.log('Success property:', result.success, 'Bill number:', result.bill_number);
+
+                const hasSuccess = result.success !== undefined && result.success !== null;
+
+                if (hasSuccess) {
+                    const action = isEditMode ? 'updated' : 'created';
+                    const billPreview = result.bill_number || billNumber || 'Unknown';
+                    showAlert(`Bill ${action} successfully! Bill #: ${billPreview}`, 'success');
+
+                    const modalEl = document.getElementById('addBillModal');
+                    if (modalEl) {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    }
+
+                    // Reset form back to add mode
+                    resetBillForm();
+                    this.reset();
+
+                    // Pre-populate bill number for next use
+                    await prePopulateBillNumber();
+
+                    loadBills(); // Refresh the bills table
+                } else {
+                    throw new Error(result.error || `Failed to ${isEditMode ? 'update' : 'create'} bill`);
+                }
+            } catch (error) {
+                console.error(`Error ${isEditMode ? 'updating' : 'creating'} bill:`, error);
+                showAlert(`Error ${isEditMode ? 'updating' : 'creating'} bill: ` + error.message, 'danger');
+            }
+        });
+
+        // Handle payment form submission
+        document.getElementById('addPaymentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const paymentData = {
+                payment_type: 'made', // This is for payments made to vendors
+                vendor_id: formData.get('vendor_id'),
+                bill_id: formData.get('bill_id') || null,
+                payment_date: formData.get('payment_date'),
+                amount: parseFloat(formData.get('amount')),
+                payment_method: formData.get('payment_method'),
+                notes: formData.get('notes') || null
+            };
+
+            // Auto-generate reference number if not provided
+            const referenceNumber = generateReferenceNumber(paymentData.payment_method);
+            paymentData.reference_number = referenceNumber;
+
+            try {
+                const response = await fetch('api/payments.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(paymentData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Payment recorded successfully! Payment #: ' + data.payment_number, 'success');
+                    const modalEl = document.getElementById('addPaymentModal');
+                    if (modalEl) {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    }
+                    this.reset();
+
+                    // Refresh payments table
+                    if (currentTab === 'payments') {
+                        loadPayments();
+                    }
+
+                    // Refresh bills table to show updated balances
+                    if (currentTab === 'bills') {
+                        loadBills();
+                    }
+
+                } else {
+                    throw new Error(data.error || 'Failed to record payment');
+                }
+            } catch (error) {
+                console.error('Error recording payment:', error);
+                showAlert('Error recording payment: ' + error.message, 'danger');
+            }
+        });
+
+        document.getElementById('addCollectionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const collectionData = {
+                vendor_id: parseInt(formData.get('vendor_id')),
+                collection_type: formData.get('collection_type'),
+                collection_date: formData.get('collection_date'),
+                amount: parseFloat(formData.get('amount')),
+                reason: formData.get('reason'),
+                transaction_type: 'collection' // Special type for collections
+            };
+
+            try {
+                // Collections are actually payments MADE to vendors (reducing AP liability)
+                const apiData = {
+                    vendor_id: collectionData.vendor_id,
+                    amount: collectionData.amount,
+                    payment_date: collectionData.collection_date,
+                    payment_method: 'refund', // Special method for collections/refunds
+                    reference_number: `COLL-${collectionData.collection_type.toUpperCase()}-${Date.now()}`,
+                    notes: `Collection: ${collectionData.collection_type} - ${collectionData.reason}`,
+                    payment_type: 'made', // Collections reduce accounts payable (payment made back to vendor)
+                    bill_id: null
+                };
+
+                const response = await fetch('api/payments.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(apiData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert(`Collection recorded successfully! Reference: ${result.payment_number}`, 'success');
+                    const modalEl = document.getElementById('addCollectionModal');
+                    if (modalEl) {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    }
+                    this.reset();
+                    loadCollections(); // Refresh the collections table
+                } else {
+                    throw new Error(result.error || 'Failed to record collection');
+                }
+            } catch (error) {
+                console.error('Error recording collection:', error);
+                showAlert('Error recording collection: ' + error.message, 'danger');
+            }
+        });
+
+        document.getElementById('addAdjustmentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const description = formData.get('description') || '';
+
+            // Check if we're in edit mode (has adjustmentId)
+            const isEditMode = this.dataset.adjustmentId;
+
+            const adjustmentData = {
+                vendor_id: parseInt(formData.get('vendor_id')),
+                adjustment_type: formData.get('adjustment_type'),
+                adjustment_date: formData.get('adjustment_date'),
+                amount: parseFloat(formData.get('amount')),
+                reason: description,
+                description: description
+            };
+
+            const apiUrl = isEditMode ? `api/adjustments.php?id=${this.dataset.adjustmentId}` : 'api/adjustments.php';
+            const method = isEditMode ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(adjustmentData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const action = isEditMode ? 'updated' : 'created';
+                    const message = isEditMode ?
+                        'Adjustment updated successfully' :
+                        `Adjustment created successfully! Adjustment #: ${result.adjustment_number}`;
+
+                    showAlert(message, 'success');
+                    const modalEl = document.getElementById('addAdjustmentModal');
+                    if (modalEl) {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    }
+                    this.reset();
+                    loadAdjustments(); // Refresh the adjustments table
+
+                    // Reset form back to add mode
+                    if (isEditMode) {
+                        resetAdjustmentForm();
+                    }
+                } else {
+                    throw new Error(result.error || `Failed to ${isEditMode ? 'update' : 'create'} adjustment`);
+                }
+            } catch (error) {
+                console.error(`Error ${isEditMode ? 'updating' : 'creating'} adjustment:`, error);
+                showAlert(`Error ${isEditMode ? 'updating' : 'creating'} adjustment: ` + error.message, 'danger');
+            }
+        });
+
+        // Load vendors
+        async function loadVendors() {
+            try {
+                const response = await fetch('api/vendors.php');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                renderVendorsTable(data);
+                // Update localStorage with last update timestamp for cross-module sync
+                localStorage.setItem('vendorsLastUpdate', Date.now());
+            } catch (error) {
+                console.error('Error loading vendors:', error);
+                showAlert('Error loading vendors: ' + error.message, 'danger');
+            }
+        }
+
+        // Render vendors table
+        function renderVendorsTable(vendors) {
+            const tbody = document.querySelector('#vendorsTable tbody');
+            tbody.innerHTML = '';
+
+            if (!vendors || vendors.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No vendors found</td></tr>';
+                return;
+            }
+
+            vendors.forEach(vendor => {
+                const statusBadge = getStatusBadge(vendor.status || 'active');
+                const row = `
+                    <tr>
+                        <td>${vendor.vendor_id || vendor.id}</td>
+                        <td>${vendor.company_name}</td>
+                        <td>${vendor.contact_person || ''}</td>
+                        <td>${vendor.email || ''}</td>
+                        <td>${formatAccountId(vendor.account_id)}</td>
+                        <td>${vendor.payment_terms || 'Net 30'}</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="editVendor(${vendor.id})">Edit</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteVendor(${vendor.id})">Delete</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+
+            // Populate vendor dropdowns in forms
+            populateVendorDropdowns(vendors);
+        }
+
+        // Load bills
+        async function loadBills() {
+            try {
+                const response = await fetch('api/bills.php');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                renderBillsTable(data);
+            } catch (error) {
+                console.error('Error loading bills:', error);
+                showAlert('Error loading bills: ' + error.message, 'danger');
+            }
+        }
+
+        // Render bills table
+        function renderBillsTable(bills) {
+            const tbody = document.querySelector('#billsTable tbody');
+            tbody.innerHTML = '';
+
+            if (!bills || bills.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No bills found</td></tr>';
+                return;
+            }
+
+            bills.forEach(bill => {
+                // Determine status badge color
+                let statusBadge;
+                let badgeColor;
+                switch(bill.status ? bill.status.toLowerCase() : 'draft') {
+                    case 'draft':
+                        badgeColor = 'secondary';
+                        break;
+                    case 'approved':
+                        badgeColor = 'warning';
+                        break;
+                    case 'paid':
+                        badgeColor = 'success';
+                        break;
+                    case 'overdue':
+                        badgeColor = 'danger';
+                        break;
+                    default:
+                        badgeColor = 'secondary';
+                }
+
+                const statusFormatted = bill.status ? bill.status.charAt(0).toUpperCase() + bill.status.slice(1) : 'Draft';
+                statusBadge = `<span class="badge bg-${badgeColor}">${statusFormatted}</span>`;
+
+                // Format dates
+                const billDate = bill.bill_date ? new Date(bill.bill_date).toLocaleDateString() : 'N/A';
+                const dueDate = bill.due_date ? new Date(bill.due_date).toLocaleDateString() : 'N/A';
+
+                // Format amounts
+                const amount = parseFloat(bill.amount || bill.total_amount || 0);
+
+                const row = `
+                    <tr>
+                        <td>${bill.bill_number || bill.id}</td>
+                        <td>${bill.vendor_name || 'Unknown Vendor'}</td>
+                        <td>${billDate}</td>
+                        <td>₱${amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td>${dueDate}</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" onclick="viewBill(${bill.id})" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="editBill(${bill.id})" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteBill(${bill.id})" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // Load payments made to vendors
+        async function loadPayments() {
+            try {
+                const response = await fetch('api/payments.php?type=made');
+                const data = await response.json();
+
+                // Filter out collection entries (those with COLL- reference)
+                const payments = data.filter(payment =>
+                    !payment.reference_number || !payment.reference_number.startsWith('COLL-')
+                );
+
+                renderPaymentsTable(payments);
+            } catch (error) {
+                console.error('Error loading payments:', error);
+                showAlert('Error loading payments: ' + error.message, 'danger');
+            }
+        }
+
+        // Render payments table
+        function renderPaymentsTable(payments) {
+            const tbody = document.querySelector('#paymentsTable tbody');
+            tbody.innerHTML = '';
+
+            if (!payments || payments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No payments recorded</td></tr>';
+                return;
+            }
+
+            payments.forEach(payment => {
+                // Format payment method display
+                const methodDisplay = payment.payment_method ? payment.payment_method.replace('_', ' ').toUpperCase() : 'Unknown';
+
+                const row = `
+                    <tr>
+                        <td>${payment.payment_number || payment.reference_number}</td>
+                        <td>${payment.vendor_name || 'Unknown Vendor'}</td>
+                        <td>₱${parseFloat(payment.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td><span class="badge bg-info">${methodDisplay}</span></td>
+                        <td>${new Date(payment.payment_date).toLocaleDateString()}</td>
+                        <td>${payment.reference_number || 'N/A'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" onclick="viewPayment(${payment.id})" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deletePayment(${payment.id})" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // Load collections from payments_made table
+        async function loadCollections() {
+            try {
+                const response = await fetch('api/payments.php?type=made');
+                const data = await response.json();
+
+                // Filter only collection entries (those with COLL- reference or Collection notes)
+                const collections = data.filter(payment =>
+                    payment.reference_number && payment.reference_number.startsWith('COLL-')
+                );
+
+                renderCollectionsTable(collections);
+            } catch (error) {
+                console.error('Error loading collections:', error);
+                showAlert('Error loading collections: ' + error.message, 'danger');
+            }
+        }
+
+        // Render collections table
+        function renderCollectionsTable(collections) {
+            const tbody = document.querySelector('#collectionsTable tbody');
+            tbody.innerHTML = '';
+
+            if (!collections || collections.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No collections recorded</td></tr>';
+                return;
+            }
+
+            collections.forEach(collection => {
+                // Parse collection type and reason from notes
+                let collectionType = 'Unknown';
+                let reason = '';
+                if (collection.notes && collection.notes.startsWith('Collection: ')) {
+                    const parts = collection.notes.substring(12).split(' - ');
+                    collectionType = parts[0] || 'Unknown';
+                    reason = parts[1] || '';
+                }
+
+                // Get collection type from reference number if available
+                if (collection.reference_number && collection.reference_number.startsWith('COLL-')) {
+                    const typeMatch = collection.reference_number.match(/COLL-(\w+)-/);
+                    if (typeMatch) {
+                        const typeCode = typeMatch[1];
+                        collectionType = typeCode === 'REFUND' ? 'Refund' :
+                                        typeCode === 'CREDIT' ? 'Credit Note' :
+                                        typeCode === 'ADJUSTMENT' ? 'Adjustment' : collectionType;
+                    }
+                }
+
+                const row = `
+                    <tr>
+                        <td>${collection.payment_number || collection.reference_number}</td>
+                        <td>${collection.vendor_name || 'Unknown Vendor'}</td>
+                        <td><span class="badge bg-info">${collectionType}</span></td>
+                        <td>₱${parseFloat(collection.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td>${new Date(collection.payment_date).toLocaleDateString()}</td>
+                        <td>${reason || 'N/A'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" onclick="viewCollection(${collection.id})" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteCollection(${collection.id})" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // Load adjustments from adjustments API (payable type only)
+        async function loadAdjustments() {
+            try {
+                const response = await fetch('api/adjustments.php?type=payable');
+                const data = await response.json();
+
+                renderAdjustmentsTable(data);
+            } catch (error) {
+                console.error('Error loading adjustments:', error);
+                showAlert('Error loading adjustments: ' + error.message, 'danger');
+            }
+        }
+
+        // Render adjustments table
+        function renderAdjustmentsTable(adjustments) {
+            const tbody = document.querySelector('#adjustmentsTable tbody');
+            tbody.innerHTML = '';
+
+            if (!adjustments || adjustments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No adjustments recorded</td></tr>';
+                return;
+            }
+
+            adjustments.forEach(adjustment => {
+                // Format adjustment type for display
+                const typeDisplay = adjustment.adjustment_type.replace('_', ' ').toUpperCase();
+                const typeBadgeColors = {
+                    'CREDIT_MEMO': 'success',
+                    'DEBIT_MEMO': 'warning',
+                    'DISCOUNT': 'info',
+                    'WRITE_OFF': 'danger',
+                    'default': 'secondary'
+                };
+
+                const badgeColor = typeBadgeColors[adjustment.adjustment_type.toUpperCase()] || 'secondary';
+
+                const row = `
+                    <tr>
+                        <td>${adjustment.adjustment_number}</td>
+                        <td>${adjustment.vendor_name || 'Unknown Vendor'}</td>
+                        <td><span class="badge bg-${badgeColor}">${typeDisplay}</span></td>
+                        <td>₱${parseFloat(adjustment.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td>${new Date(adjustment.adjustment_date).toLocaleDateString()}</td>
+                        <td>${adjustment.reason || 'N/A'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" onclick="viewAdjustment(${adjustment.id})" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteAdjustment(${adjustment.id})" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // Populate vendor dropdowns in forms
+        function populateVendorDropdowns(vendors) {
+            const dropdowns = [
+                'billVendor', 'paymentVendor', 'collectionVendor', 'adjustmentVendor'
+            ];
+
+            dropdowns.forEach(dropdownId => {
+                const select = document.getElementById(dropdownId);
+                if (select) {
+                    select.innerHTML = '<option value="">Select Vendor</option>';
+                    vendors.forEach(vendor => {
+                        select.innerHTML += `<option value="${vendor.id}">${vendor.company_name}</option>`;
+                    });
+                }
+            });
+        }
+
+        // Edit vendor
+        async function editVendor(vendorId) {
+            try {
+                const response = await fetch(`api/vendors.php?id=${vendorId}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Check if we got a single object or an array
+                let vendor = data;
+                if (Array.isArray(data)) {
+                    vendor = data[0];
+                }
+
+                if (!vendor || !vendor.id) {
+                    throw new Error('Vendor not found');
+                }
+
+                // Pre-populate the add vendor modal for editing
+                const form = document.getElementById('addVendorForm');
+
+                document.getElementById('companyName').value = vendor.company_name || '';
+                document.getElementById('contactPerson').value = vendor.contact_person || '';
+                document.getElementById('vendorEmail').value = vendor.email || '';
+                document.getElementById('vendorPhone').value = vendor.phone || '';
+                document.getElementById('vendorAddress').value = vendor.address || '';
+                document.getElementById('paymentTerms').value = vendor.payment_terms || 'Net 30';
+                document.getElementById('vendorStatus').value = vendor.status || 'active';
+
+                // Change modal title and submit button
+                document.getElementById('addVendorModalTitle').textContent = 'Edit Vendor';
+                document.getElementById('addVendorModal').querySelector('.btn-primary').textContent = 'Update Vendor';
+
+                // Store vendor ID for edit mode
+                form.dataset.vendorId = vendor.id;
+                form.dataset.editMode = 'true';
+
+                // Show the modal
+                const modalEl = document.getElementById('addVendorModal');
+                if (modalEl) {
+                    const modal = new bootstrap.Modal(modalEl);
+                    modal.show();
+                }
+
+            } catch (error) {
+                console.error('Error loading vendor for edit:', error);
+                showAlert('Error loading vendor: ' + error.message, 'danger');
+            }
+        }
+
+        // Delete vendor
+        async function deleteVendor(vendorId) {
+            if (!confirm('Are you sure you want to delete this vendor?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`api/vendors.php?id=${vendorId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Vendor deleted successfully', 'success');
+                    loadVendors();
+                } else {
+                    throw new Error(data.error || 'Failed to delete vendor');
+                }
+            } catch (error) {
+                console.error('Error deleting vendor:', error);
+                showAlert('Error deleting vendor: ' + error.message, 'danger');
+            }
+        }
+
+        // Filter bills
+        function filterBills() {
+            let apiUrl = 'api/bills.php';
+            const params = [];
+
+            // Get status filter
+            const statusSelect = document.getElementById('billStatusFilter');
+            const status = statusSelect ? statusSelect.value : '';
+            if (status && status !== 'all') {
+                // Map frontend values to backend values
+                let statusValue = status;
+                switch(status) {
+                    case 'unpaid':
+                        statusValue = 'draft,approved,overdue';
+                        break;
+                    case 'paid':
+                        statusValue = 'paid';
+                        break;
+                }
+                params.push(`status=${encodeURIComponent(statusValue)}`);
+            }
+
+            // Get date filters
+            const dateFrom = document.getElementById('billDateFrom')?.value;
+            const dateTo = document.getElementById('billDateTo')?.value;
+
+            if (dateFrom) {
+                params.push(`date_from=${encodeURIComponent(dateFrom)}`);
+            }
+            if (dateTo) {
+                params.push(`date_to=${encodeURIComponent(dateTo)}`);
+            }
+
+            // Build API URL
+            if (params.length > 0) {
+                apiUrl += '?' + params.join('&');
+            }
+
+            // Fetch filtered bills
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    renderBillsTable(data);
+                    showAlert(`Filtered ${data.length} bills`, 'success');
+                })
+                .catch(error => {
+                    console.error('Error filtering bills:', error);
+                    showAlert('Error filtering bills: ' + error.message, 'danger');
+                });
+        }
+
+        // Generate aging report
+        async function generateAgingReport() {
+            try {
+                // Get the selected period from dropdown
+                const periodSelect = document.getElementById('agingPeriod');
+                const selectedPeriod = periodSelect ? periodSelect.value : '30';
+
+                // Get all bills with their aging status
+                const response = await fetch('api/bills.php?action=aging&period=' + selectedPeriod);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Update the aging table with the data
+                renderAgingReport(data);
+
+                showAlert('Aging report generated successfully', 'success');
+
+            } catch (error) {
+                console.error('Error generating aging report:', error);
+                showAlert('Error generating aging report: ' + error.message, 'danger');
+            }
+        }
+
+        // Render aging report table
+        function renderAgingReport(data) {
+            const tbody = document.querySelector('#agingTable tbody');
+            tbody.innerHTML = '';
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No aging data found</td></tr>';
+                return;
+            }
+
+            // Group by vendor
+            const vendorGroups = {};
+            data.forEach(item => {
+                if (!vendorGroups[item.vendor_name]) {
+                    vendorGroups[item.vendor_name] = {
+                        current: 0,
+                        days_1_30: 0,
+                        days_31_60: 0,
+                        days_61_90: 0,
+                        days_90_plus: 0,
+                        total: 0
+                    };
+                }
+
+                // Add to appropriate aging bucket and total
+                if (item.aging_bucket === 'current') {
+                    vendorGroups[item.vendor_name].current += parseFloat(item.balance);
+                } else if (item.aging_bucket === '1-30') {
+                    vendorGroups[item.vendor_name].days_1_30 += parseFloat(item.balance);
+                } else if (item.aging_bucket === '31-60') {
+                    vendorGroups[item.vendor_name].days_31_60 += parseFloat(item.balance);
+                } else if (item.aging_bucket === '61-90') {
+                    vendorGroups[item.vendor_name].days_61_90 += parseFloat(item.balance);
+                } else if (item.aging_bucket === '90+') {
+                    vendorGroups[item.vendor_name].days_90_plus += parseFloat(item.balance);
+                }
+
+                vendorGroups[item.vendor_name].total += parseFloat(item.balance);
+            });
+
+            // Calculate totals across all vendors
+            let grandTotals = {
+                current: 0,
+                days_1_30: 0,
+                days_31_60: 0,
+                days_61_90: 0,
+                days_90_plus: 0,
+                total: 0
+            };
+
+            // Render each vendor row
+            Object.keys(vendorGroups).forEach(vendorName => {
+                const vendor = vendorGroups[vendorName];
+
+                // Update grand totals
+                grandTotals.current += vendor.current;
+                grandTotals.days_1_30 += vendor.days_1_30;
+                grandTotals.days_31_60 += vendor.days_31_60;
+                grandTotals.days_61_90 += vendor.days_61_90;
+                grandTotals.days_90_plus += vendor.days_90_plus;
+                grandTotals.total += vendor.total;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${vendorName}</strong></td>
+                    <td>₱${vendor.current.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>₱${vendor.days_1_30.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>₱${vendor.days_31_60.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>₱${vendor.days_61_90.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>₱${vendor.days_90_plus.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td><strong>₱${vendor.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Add totals row
+            const totalsRow = document.createElement('tr');
+            totalsRow.className = 'table-primary';
+            totalsRow.innerHTML = `
+                <td><strong>TOTAL</strong></td>
+                <td><strong>₱${grandTotals.current.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+                <td><strong>₱${grandTotals.days_1_30.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+                <td><strong>₱${grandTotals.days_31_60.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+                <td><strong>₱${grandTotals.days_61_90.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+                <td><strong>₱${grandTotals.days_90_plus.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+                <td><strong class="text-danger">₱${grandTotals.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+            `;
+            tbody.appendChild(totalsRow);
+        }
+
+        // Export report
+        async function exportReport(type) {
+            try {
+                let apiUrl = '';
+                let filename = '';
+
+                switch(type) {
+                    case 'payables':
+                        apiUrl = 'api/bills.php';
+                        filename = `payables_report_${new Date().toISOString().split('T')[0]}.csv`;
+                        break;
+                    case 'payments':
+                        apiUrl = 'api/payments.php?type=made';
+                        filename = `payments_report_${new Date().toISOString().split('T')[0]}.csv`;
+                        break;
+                    case 'aging':
+                        // Get aging data with 120+ days period to get all data
+                        apiUrl = 'api/bills.php?action=aging&period=120';
+                        filename = `aging_report_${new Date().toISOString().split('T')[0]}.csv`;
+                        break;
+                    default:
+                        throw new Error('Unknown report type');
+                }
+
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Filter out collection entries from payments report
+                let exportData = data;
+                if (type === 'payments') {
+                    exportData = data.filter(payment =>
+                        !payment.reference_number || !payment.reference_number.startsWith('COLL-')
+                    );
+                }
+
+                if (!exportData || exportData.length === 0) {
+                    throw new Error('No data available for export');
+                }
+
+                // Generate CSV content
+                const csvContent = generateCSV(type, exportData);
+
+                // Download CSV
+                downloadCSV(csvContent, filename);
+
+                showAlert(`Report exported successfully (${exportData.length} records)`, 'success');
+
+            } catch (error) {
+                console.error('Error exporting report:', error);
+                showAlert('Error exporting report: ' + error.message, 'danger');
+            }
+        }
+
+        // Generate CSV content from data
+        function generateCSV(type, data) {
+            let headers = [];
+            let rows = [];
+
+            switch(type) {
+                case 'payables':
+                    headers = ['Bill Number', 'Vendor', 'Bill Date', 'Due Date', 'Amount', 'Balance', 'Status', 'Vendor Code'];
+                    rows = data.map(item => [
+                        item.bill_number || item.id,
+                        item.vendor_name || 'Unknown',
+                        item.bill_date || '',
+                        item.due_date || '',
+                        parseFloat(item.amount || item.total_amount || 0).toFixed(2),
+                        parseFloat(item.balance || 0).toFixed(2),
+                        item.status || 'Draft',
+                        item.vendor_code || ''
+                    ]);
+                    break;
+
+                case 'payments':
+                    headers = ['Payment Number', 'Vendor', 'Amount', 'Payment Method', 'Payment Date', 'Reference Number', 'Bill Number', 'Notes'];
+                    rows = data.map(item => [
+                        item.payment_number || item.reference_number,
+                        item.vendor_name || 'Unknown',
+                        parseFloat(item.amount || 0).toFixed(2),
+                        item.payment_method ? item.payment_method.replace('_', ' ').toUpperCase() : 'Unknown',
+                        item.payment_date || '',
+                        item.reference_number || '',
+                        item.bill_number || 'N/A',
+                        item.notes || ''
+                    ]);
+                    break;
+
+                case 'aging':
+                    headers = ['Bill Number', 'Vendor', 'Bill Date', 'Due Date', 'Balance', 'Days Past Due', 'Aging Bucket', 'Status'];
+                    rows = data.map(item => [
+                        item.bill_number || item.id,
+                        item.vendor_name || 'Unknown',
+                        item.bill_date || '',
+                        item.due_date || '',
+                        parseFloat(item.balance || 0).toFixed(2),
+                        item.days_past_due || 0,
+                        item.aging_bucket || 'Unknown',
+                        item.status || 'Draft'
+                    ]);
+                    break;
+            }
+
+            // Create CSV content
+            let csv = headers.join(',') + '\n';
+            rows.forEach(row => {
+                const escapedRow = row.map(field =>
+                    '"' + String(field || '').replace(/"/g, '""') + '"'
+                );
+                csv += escapedRow.join(',') + '\n';
+            });
+
+            return csv;
+        }
+
+        // Download CSV file
+        function downloadCSV(content, filename) {
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Utility functions
+        function getStatusBadge(status) {
+            const badges = {
+                'active': '<span class="badge bg-success">Active</span>',
+                'inactive': '<span class="badge bg-secondary">Inactive</span>',
+                'suspended': '<span class="badge bg-warning">Suspended</span>'
+            };
+            return badges[status] || '<span class="badge bg-secondary">Unknown</span>';
+        }
+
+        function formatAccountId(accountId) {
+            return accountId || '2000-AP';
+        }
+
+        // Auto-generate bill number
+        async function generateNextBillNumber() {
+            try {
+                // Get the next bill number from the API
+                const response = await fetch('api/bills.php?action=next_number');
+                const data = await response.json();
+
+                if (data.success && data.next_number) {
+                    return data.next_number; // Return the generated number (e.g., "BILL-2025-001")
+                } else {
+                    // Fallback numbering if API fails
+                    const currentYear = new Date().getFullYear();
+                    return `BILL-${currentYear}-001`;
+                }
+            } catch (error) {
+                console.error('Error generating bill number:', error);
+                // Fallback numbering
+                const currentYear = new Date().getFullYear();
+                return `BILL-${currentYear}-001`;
+            }
+        }
+
+        // Pre-populate bill number in the form (called when modal opens)
+        async function prePopulateBillNumber() {
+            try {
+                const billNumberInput = document.getElementById('billNumber');
+                if (billNumberInput && !billNumberInput.dataset.manualEntry) {
+                    billNumberInput.value = await generateNextBillNumber();
+                }
+            } catch (error) {
+                console.error('Error pre-populating bill number:', error);
+            }
+        }
+
+        // Auto-generate reference number based on payment method
+        function generateReferenceNumber(paymentMethod) {
+            const timestamp = Date.now();
+            const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+
+            switch(paymentMethod) {
+                case 'check':
+                    return `CHK-${new Date().getFullYear()}-${randomNum}`;
+                case 'bank_transfer':
+                    return `TRF-${new Date().getFullYear()}-${randomNum}`;
+                case 'cash':
+                    return `CSH-${new Date().getFullYear()}-${randomNum}`;
+                default:
+                    return `PAY-${new Date().getFullYear()}-${randomNum}`;
+            }
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Handle tab changes to track current tab
+            const tabs = document.querySelectorAll('#apTabs button[data-bs-toggle="tab"]');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-bs-target').replace('#', '');
+                    if (targetId === 'payments') {
+                        currentTab = 'payments';
+                    } else if (targetId === 'bills') {
+                        currentTab = 'bills';
+                    } else {
+                        currentTab = 'vendor';
+                    }
+                });
+            });
+
+            // Handle vendor selection for bills in payment form
+            document.getElementById('paymentVendor').addEventListener('change', function() {
+                const vendorId = this.value;
+                if (vendorId) {
+                    loadBillsForVendor(vendorId);
+                } else {
+                    document.getElementById('paymentBill').innerHTML = '<option value="">Select Bill</option>';
+                }
+            });
+        }
+
+        // Load bills for a specific vendor (for payment dropdown)
+        async function loadBillsForVendor(vendorId) {
+            try {
+                const response = await fetch(`api/bills.php?vendor_id=${vendorId}&status=draft,approved,overdue`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                const billSelect = document.getElementById('paymentBill');
+                billSelect.innerHTML = '<option value="">Select Bill (Optional)</option>';
+
+                if (data && data.length > 0) {
+                    data.forEach(bill => {
+                        const balanceText = parseFloat(bill.balance) > 0 ? ` (Balance: ₱${parseFloat(bill.balance).toLocaleString()})` : '';
+                        billSelect.innerHTML += `<option value="${bill.id}">Bill ${bill.bill_number} - ₱${parseFloat(bill.total_amount).toLocaleString()}${balanceText}</option>`;
+                    });
+                } else {
+                    billSelect.innerHTML += '<option disabled>No unpaid bills for this vendor</option>';
+                }
+
+            } catch (error) {
+                console.error('Error loading bills for vendor:', error);
+                document.getElementById('paymentBill').innerHTML = '<option value="">Error loading bills</option>';
+            }
+        }
+
+        // View bill details
+        async function viewBill(billId) {
+            try {
+                const response = await fetch(`api/bills.php?id=${billId}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                let bill = data;
+                if (Array.isArray(data)) {
+                    bill = data[0];
+                }
+
+                if (!bill || !bill.id) {
+                    throw new Error('Bill not found');
+                }
+
+                // Create a view bill modal content
+                const modalContent = `
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Bill Details - ${bill.bill_number}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Bill Number</label>
+                                            <p class="form-control-plaintext">${bill.bill_number}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Vendor</label>
+                                            <p class="form-control-plaintext">${bill.vendor_name || 'Unknown Vendor'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Bill Date</label>
+                                            <p class="form-control-plaintext">${new Date(bill.bill_date).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Due Date</label>
+                                            <p class="form-control-plaintext">${new Date(bill.due_date).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Amount</label>
+                                            <p class="form-control-plaintext">₱${parseFloat(bill.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Balance</label>
+                                            <p class="form-control-plaintext">₱${parseFloat(bill.balance || bill.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Status</label>
+                                            <p class="form-control-plaintext">${bill.status ? bill.status.charAt(0).toUpperCase() + bill.status.slice(1) : 'Draft'}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Created</label>
+                                            <p class="form-control-plaintext">${bill.created_at ? new Date(bill.created_at).toLocaleDateString() : 'N/A'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                ${bill.description ? `
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Description</label>
+                                    <p class="form-control-plaintext">${bill.description}</p>
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-primary" onclick="editBill(${bill.id})">Edit Bill</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Create modal
+                const modalDiv = document.createElement('div');
+                modalDiv.className = 'modal fade';
+                modalDiv.innerHTML = modalContent;
+                document.body.appendChild(modalDiv);
+
+                const modal = new bootstrap.Modal(modalDiv);
+                modal.show();
+
+                // Remove modal from DOM when hidden
+                modalDiv.addEventListener('hidden.bs.modal', function() {
+                    document.body.removeChild(modalDiv);
+                });
+
+            } catch (error) {
+                console.error('Error viewing bill:', error);
+                showAlert('Error loading bill details: ' + error.message, 'danger');
+            }
+        }
+
+        // Edit bill
+        async function editBill(billId) {
+            try {
+                const response = await fetch(`api/bills.php?id=${billId}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                let bill = data;
+                if (Array.isArray(data)) {
+                    bill = data[0];
+                }
+
+                if (!bill || !bill.id) {
+                    throw new Error('Bill not found');
+                }
+
+                // Close the view modal if it exists
+                const existingModal = document.querySelector('.modal.show');
+                if (existingModal) {
+                    const modal = bootstrap.Modal.getInstance(existingModal);
+                    if (modal) modal.hide();
+                }
+
+                // Pre-populate the add bill form
+                document.getElementById('billNumber').value = bill.bill_number || '';
+                document.getElementById('billVendor').value = bill.vendor_id || '';
+                document.getElementById('billDate').value = bill.bill_date || '';
+                document.getElementById('dueDate').value = bill.due_date || '';
+                document.getElementById('billAmount').value = bill.amount || '';
+                document.getElementById('billDescription').value = bill.description || '';
+
+                // Change modal title
+                document.querySelector('#addBillModal .modal-title').textContent = 'Edit Bill';
+
+                // Store bill ID for edit mode
+                const form = document.getElementById('addBillForm');
+                form.dataset.editBillId = billId;
+
+                // Change submit button text
+                const submitBtn = document.querySelector('#addBillModal .btn-primary');
+                submitBtn.textContent = 'Update Bill';
+
+                // Show the modal
+                const modalEl = document.getElementById('addBillModal');
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+
+            } catch (error) {
+                console.error('Error loading bill for edit:', error);
+                showAlert('Error loading bill: ' + error.message, 'danger');
+            }
+        }
+
+        // Delete bill
+        async function deleteBill(billId) {
+            if (!confirm('Are you sure you want to delete this bill? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`api/bills.php?id=${billId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('Bill deleted successfully', 'success');
+                    loadBills(); // Refresh the bills table
+                } else {
+                    throw new Error(result.error || 'Failed to delete bill');
+                }
+            } catch (error) {
+                console.error('Error deleting bill:', error);
+                showAlert('Error deleting bill: ' + error.message, 'danger');
+            }
+        }
+
+        // Update bill form submission to handle both create and edit
+        // Find the bill form submission handler and update it
+        // The handler is already set up to handle edit mode by checking form.dataset.editBillId
+
+        // View payment details
+        async function viewPayment(paymentId) {
+            try {
+                const response = await fetch(`api/payments.php?id=${paymentId}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                let payment = data;
+                if (Array.isArray(data)) {
+                    payment = data[0];
+                }
+
+                if (!payment || !payment.id) {
+                    throw new Error('Payment not found');
+                }
+
+                // Create a view payment modal content
+                const modalContent = `
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Payment Details - ${payment.payment_number || payment.reference_number}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Payment Number</label>
+                                            <p class="form-control-plaintext">${payment.payment_number || payment.reference_number}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Vendor</label>
+                                            <p class="form-control-plaintext">${payment.vendor_name || 'Unknown Vendor'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Payment Date</label>
+                                            <p class="form-control-plaintext">${new Date(payment.payment_date).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Amount</label>
+                                            <p class="form-control-plaintext">₱${parseFloat(payment.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Payment Method</label>
+                                            <p class="form-control-plaintext">${payment.payment_method ? payment.payment_method.replace('_', ' ').toUpperCase() : 'Unknown'}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Reference Number</label>
+                                            <p class="form-control-plaintext">${payment.reference_number || 'N/A'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Bill (if applicable)</label>
+                                            <p class="form-control-plaintext">${payment.bill_number ? `Bill ${payment.bill_number}` : 'No specific bill'}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Created</label>
+                                            <p class="form-control-plaintext">${payment.created_at ? new Date(payment.created_at).toLocaleDateString() : 'N/A'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                ${payment.notes ? `
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Notes</label>
+                                    <p class="form-control-plaintext">${payment.notes}</p>
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Create modal
+                const modalDiv = document.createElement('div');
+                modalDiv.className = 'modal fade';
+                modalDiv.innerHTML = modalContent;
+                document.body.appendChild(modalDiv);
+
+                const modal = new bootstrap.Modal(modalDiv);
+                modal.show();
+
+                // Remove modal from DOM when hidden
+                modalDiv.addEventListener('hidden.bs.modal', function() {
+                    document.body.removeChild(modalDiv);
+                });
+
+            } catch (error) {
+                console.error('Error viewing payment:', error);
+                showAlert('Error loading payment details: ' + error.message, 'danger');
+            }
+        }
+
+        // Delete payment
+        async function deletePayment(paymentId) {
+            if (!confirm('Are you sure you want to delete this payment? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`api/payments.php?id=${paymentId}&type=made`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('Payment deleted successfully', 'success');
+                    loadPayments(); // Refresh the payments table
+                } else {
+                    throw new Error(result.error || 'Failed to delete payment');
+                }
+            } catch (error) {
+                console.error('Error deleting payment:', error);
+                showAlert('Error deleting payment: ' + error.message, 'danger');
+            }
+        }
+
+        // View collection details
+        function viewCollection(collectionId) {
+            // TODO: Implement view collection details modal
+            showAlert('View collection details coming soon', 'info');
+        }
+
+        // Delete collection
+        async function deleteCollection(collectionId) {
+            if (!confirm('Are you sure you want to delete this collection? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`api/payments.php?id=${collectionId}&type=made`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('Collection deleted successfully', 'success');
+                    loadCollections(); // Refresh the collections table
+                } else {
+                    throw new Error(result.error || 'Failed to delete collection');
+                }
+            } catch (error) {
+                console.error('Error deleting collection:', error);
+                showAlert('Error deleting collection: ' + error.message, 'danger');
+            }
+        }
+
+        // View adjustment details
+        async function viewAdjustment(adjustmentId) {
+            try {
+                // Fetch adjustment details from API
+                const response = await fetch(`api/adjustments.php?id=${adjustmentId}`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const adjustment = await response.json();
+
+                console.log('Adjustment data received:', adjustment); // Debug log
+
+                // Check if we got a single object or an array
+                let adjustmentData = adjustment;
+                if (Array.isArray(adjustment)) {
+                    adjustmentData = adjustment[0];
+                }
+
+                if (!adjustmentData || adjustment.error) {
+                    throw new Error(adjustment.error || 'No adjustment data found');
+                }
+
+                // Populate view modal with adjustment data (with safe property access)
+                document.getElementById('view_adjustment_number').textContent = adjustmentData.adjustment_number || 'N/A';
+                document.getElementById('view_adjustment_status').textContent = 'Active';
+                document.getElementById('view_vendor_name').textContent = adjustmentData.vendor_name || adjustmentData.vendor_id || 'Unknown Vendor';
+                document.getElementById('view_adjustment_type').textContent = adjustmentData.adjustment_type ? adjustmentData.adjustment_type.replace('_', ' ').toUpperCase() : 'Unknown Type';
+                document.getElementById('view_amount').textContent = `₱${parseFloat(adjustmentData.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+                try {
+                    document.getElementById('view_adjustment_date').textContent = adjustmentData.adjustment_date ?
+                        new Date(adjustmentData.adjustment_date).toLocaleDateString() : 'Unknown Date';
+                } catch (e) {
+                    document.getElementById('view_adjustment_date').textContent = 'Unknown Date';
+                }
+
+                document.getElementById('view_reason').textContent = adjustmentData.reason || adjustmentData.description || 'N/A';
+
+                // Store adjustment data for edit functionality
+                window.currentAdjustment = adjustmentData;
+
+                // Set up edit button
+                const editBtn = document.getElementById('editAdjustmentBtn');
+                if (editBtn) {
+                    editBtn.onclick = function() {
+                        editAdjustmentFromView();
+                    };
+                }
+
+                // Show the view modal
+                const modalEl = document.getElementById('viewAdjustmentModal');
+                if (modalEl) {
+                    const modal = new bootstrap.Modal(modalEl);
+                    modal.show();
+                }
+
+            } catch (error) {
+                console.error('Error viewing adjustment:', error);
+                showAlert('Error loading adjustment details: ' + error.message, 'danger');
+            }
+        }
+
+        // Edit adjustment from view modal - pre-populate add adjustment modal
+        function editAdjustmentFromView() {
+            const adjustment = window.currentAdjustment;
+            if (!adjustment) {
+                showAlert('No adjustment data available for editing', 'warning');
+                return;
+            }
+
+            // Close view modal
+            const viewModal = bootstrap.Modal.getInstance(document.getElementById('viewAdjustmentModal'));
+            if (viewModal) viewModal.hide();
+
+            // Pre-populate add adjustment modal
+            const form = document.getElementById('addAdjustmentForm');
+
+            // Set values
+            document.getElementById('adjustmentVendor').value = adjustment.vendor_id;
+            document.getElementById('adjustmentType').value = adjustment.adjustment_type;
+            document.getElementById('adjustmentDate').value = adjustment.adjustment_date;
+            document.getElementById('adjustmentAmount').value = adjustment.amount;
+            document.getElementById('adjustmentDescription').value = adjustment.reason || '';
+
+            // Change modal title and submit button
+            document.getElementById('addAdjustmentModalTitle').textContent = 'Edit Adjustment';
+            document.getElementById('addAdjustmentModalSubmitBtn').textContent = 'Update Adjustment';
+
+            // Store adjustment ID for edit mode (form handler will check this)
+            form.dataset.adjustmentId = adjustment.id;
+            form.dataset.editMode = 'true'; // Clear flag for edit mode
+
+            // Show the add modal
+            const modalEl = document.getElementById('addAdjustmentModal');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        }
+
+        // Reset adjustment form back to add mode
+        function resetAdjustmentForm() {
+            const form = document.getElementById('addAdjustmentForm');
+            form.reset();
+            delete form.dataset.adjustmentId;
+
+            // Reset modal title and button
+            document.getElementById('addAdjustmentModalTitle').textContent = 'Add Adjustment';
+            document.getElementById('addAdjustmentModalSubmitBtn').textContent = 'Add Adjustment';
+        }
+
+        // Reset vendor form back to add mode
+        function resetVendorForm() {
+            const form = document.getElementById('addVendorForm');
+            form.reset();
+            delete form.dataset.vendorId;
+
+            // Reset modal title and button
+            document.getElementById('addVendorModalTitle').textContent = 'Add New Vendor';
+            const submitBtn = document.querySelector('#addVendorModal .btn-primary');
+            if (submitBtn) {
+                submitBtn.textContent = 'Add Vendor';
+            }
+        }
+
+        // Reset bill form back to add mode
+        function resetBillForm() {
+            const form = document.getElementById('addBillForm');
+            form.reset();
+            delete form.dataset.editBillId;
+
+            // Reset modal title and button
+            document.querySelector('#addBillModal .modal-title').textContent = 'Add New Bill';
+            const submitBtn = document.querySelector('#addBillModal .btn-primary');
+            if (submitBtn) {
+                submitBtn.textContent = 'Add Bill';
+            }
+        }
+
+        // Delete adjustment
+        async function deleteAdjustment(adjustmentId) {
+            if (!confirm('Are you sure you want to delete this adjustment? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`api/adjustments.php?id=${adjustmentId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('Adjustment deleted successfully', 'success');
+                    loadAdjustments(); // Refresh the adjustments table
+                } else {
+                    throw new Error(result.error || 'Failed to delete adjustment');
+                }
+            } catch (error) {
+                console.error('Error deleting adjustment:', error);
+                showAlert('Error deleting adjustment: ' + error.message, 'danger');
+            }
+        }
+
+        // Alert function
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(alertDiv);
+
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
     </script>
 </body>
 </html>

@@ -5,35 +5,32 @@ ob_start();
 ini_set('display_errors', 0);
 error_reporting(0);
 
-header('Content-Type: application/json');
-
-// Clean any buffered output before including files
-ob_clean();
-
-require_once '../../includes/auth.php';
-require_once '../../includes/database.php';
-
 // Start session safely
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user is logged in
-if (!isset($_SESSION['user'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
-    exit;
-}
-
-$db = null;
-$method = $_SERVER['REQUEST_METHOD'];
+header('Content-Type: application/json');
 
 try {
-    $db = Database::getInstance();
+    // Include required files
+    require_once '../../includes/auth.php';
+    require_once '../../includes/database.php';
+
+    // Check if user is logged in
+    if (!isset($_SESSION['user'])) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Unauthorized']);
+        exit;
+    }
+
+    $db = Database::getInstance()->getConnection();
+    $method = $_SERVER['REQUEST_METHOD'];
 } catch (Exception $e) {
-    error_log("Database connection error: " . $e->getMessage());
+    // Catch any errors from includes or database connection
+    error_log("API initialization error: " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Database connection failed. Please check your configuration.']);
+    echo json_encode(['success' => false, 'error' => 'Server error occurred. Please check the logs.']);
     exit;
 }
 

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internal Invoice Notification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #1e2936 0%, #2c3e50 100%);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .content {
+            padding: 40px;
+        }
+        .invoice-details {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 30px;
+            margin: 30px 0;
+            border-left: 4px solid #1e2936;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .amount {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e2936;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px 40px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-top: 20px;
+            font-weight: 600;
+        }
+        .footer a {
+            color: #1e2936;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>🧾 New Invoice Created</h1>
+        </div>
+
+        <div class="content">
+            <p>Hello,</p>
+
+            <p>A new invoice has been created in the ATIERA Finance system. Here are the details:</p>
+
+            <div class="invoice-details">
+                <div class="detail-row">
+                    <strong>Invoice Number:</strong>
+                    <span>{{invoice_number}}</span>
+                </div>
+                <div class="detail-row">
+                    <strong>Customer:</strong>
+                    <span>{{customer_name}}</span>
+                </div>
+                <div class="detail-row">
+                    <strong>Invoice Date:</strong>
+                    <span>{{invoice_date}}</span>
+                </div>
+                <div class="detail-row">
+                    <strong>Due Date:</strong>
+                    <span>{{due_date}}</span>
+                </div>
+                <div class="detail-row">
+                    <strong class="amount">Amount: ₱{{amount}}</strong>
+                    <span></span>
+                </div>
+            </div>
+
+            <p>You can review this invoice in the system by logging into your ATIERA Finance dashboard.</p>
+
+            <div style="text-align: center;">
+                <a href="#" class="button">View Invoice Details</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>
+                This is an automated notification from ATIERA Financial Management System.<br>
+                <a href="mailto:support@atiera.com">Contact Support</a> | <a href="#">View in System</a>
+            </p>
+            <p><small>© 2025 ATIERA Finance. All rights reserved.</small></p>
+        </div>
+    </div>
+</body>
+</html>

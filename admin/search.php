@@ -440,7 +440,11 @@ function loadSavedSearch(searchId) {
                 });
 
                 // Close modal and submit form
-                bootstrap.Modal.getInstance(document.getElementById('savedSearchesModal')).hide();
+                const modalEl = document.getElementById('savedSearchesModal');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
                 document.getElementById('searchForm').submit();
             } else {
                 alert('Error loading saved search: ' + data.error);

@@ -622,7 +622,7 @@ $db = Database::getInstance()->getConnection();
             <hr style="border-top: 2px solid white; margin: 10px 0;">
         </div>
         <nav class="nav flex-column">
-            <a class="nav-link" href="dashboard.php">
+            <a class="nav-link" href="index.php">
                 <i class="fas fa-tachometer-alt me-2"></i><span>Dashboard</span>
             </a>
             <div class="nav-item">
@@ -1695,8 +1695,11 @@ $db = Database::getInstance()->getConnection();
                 loadBudgets(); // Refresh the list
 
                 // Close modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('createBudgetModal'));
-                modal.hide();
+                const modalEl = document.getElementById('createBudgetModal');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
 
             } catch (error) {
                 console.error('Error creating budget:', error);
@@ -1847,6 +1850,230 @@ $db = Database::getInstance()->getConnection();
                 });
             }
         });
+
+        // Load vendors for dropdowns
+        async function loadVendors() {
+            try {
+                const response = await fetch('api/vendors.php');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                vendors = data; // Store globally for dropdown population
+                populateVendorDropdowns(data);
+
+            } catch (error) {
+                console.error('Error loading vendors:', error);
+                showAlert('Error loading vendors: ' + error.message, 'danger');
+            }
+        }
+
+        // Populate vendor dropdowns in modals
+        function populateVendorDropdowns(vendors) {
+            const vendorSelects = [
+                'budgetVendor', 'allocationVendor', 'adjustmentVendor', 'trackingVendor'
+            ];
+
+            vendorSelects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (select) {
+                    select.innerHTML = '<option value="">Select Vendor</option>';
+                    vendors.forEach(vendor => {
+                        if (vendor.status === 'active') {
+                            select.innerHTML += `<option value="${vendor.id}">${vendor.company_name}</option>`;
+                        }
+                    });
+                }
+            });
+        }
+
+        // Update initialize section to load vendors and start polling
+        document.addEventListener('DOMContentLoaded', function() {
+            // ... existing code ...
+
+            // Load initial data including vendors
+            loadBudgets();
+            loadAllocations();
+            loadTrackingData();
+            loadVendors(); // Add vendor loading
+
+            // Start polling for vendor updates (check every 10 seconds)
+            startVendorPolling();
+        });
+
+        // Polling function to check for vendor updates
+        function startVendorPolling() {
+            setInterval(async function() {
+                try {
+                    // Check if vendor data has been updated
+                    const lastUpdate = localStorage.getItem('vendorsLastUpdate');
+                    const currentTimestamp = Date.now();
+
+                    // If no last update or if it's been more than 2 seconds since last check,
+                    // refresh vendor data to catch any cross-module changes
+                    if (!lastUpdate || (currentTimestamp - parseInt(lastUpdate)) > 2000) {
+                        await loadVendors();
+                    }
+                } catch (error) {
+                    console.error('Error checking for vendor updates:', error);
+                }
+            }, 10000); // Check every 10 seconds
+        }
     </script>
+
+    <!-- Create Budget Modal -->
+    <div class="modal fade" id="createBudgetModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Budget</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createBudgetForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="budgetName" class="form-label">Budget Name *</label>
+                                    <input type="text" class="form-control" id="budgetName" name="budgetName" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="budgetDepartment" class="form-label">Department</label>
+                                    <select class="form-select" id="budgetDepartment" name="budgetDepartment">
+                                        <option value="">Select Department</option>
+                                        <option value="Hotel Operations">Hotel Operations</option>
+                                        <option value="Restaurant">Restaurant</option>
+                                        <option value="Events">Events</option>
+                                        <option value="Finance & Admin">Finance & Admin</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="startDate" class="form-label">Start Date *</label>
+                                    <input type="date" class="form-control" id="startDate" name="startDate" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="endDate" class="form-label">End Date *</label>
+                                    <input type="date" class="form-control" id="endDate" name="endDate" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="totalAmount" class="form-label">Total Budget Amount *</label>
+                                    <input type="number" class="form-control" id="totalAmount" name="totalAmount" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="budgetVendor" class="form-label">Primary Vendor (Optional)</label>
+                                    <select class="form-select" id="budgetVendor" name="budgetVendor">
+                                        <option value="">Loading vendors...</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="budgetDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="budgetDescription" name="budgetDescription" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" form="createBudgetForm">Create Budget</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Adjustment Request Modal -->
+    <div class="modal fade" id="adjustmentRequestModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Request Budget Adjustment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="adjustmentRequestForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="adjustmentType" class="form-label">Adjustment Type *</label>
+                                    <select class="form-select" id="adjustmentType" name="adjustmentType" required>
+                                        <option value="">Select Type</option>
+                                        <option value="increase">Increase Budget</option>
+                                        <option value="decrease">Decrease Budget</option>
+                                        <option value="transfer">Transfer Funds</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="adjustmentAmount" class="form-label">Amount *</label>
+                                    <input type="number" class="form-control" id="adjustmentAmount" name="adjustmentAmount" step="0.01" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="adjustmentDepartment" class="form-label">Department *</label>
+                                    <select class="form-select" id="adjustmentDepartment" name="adjustmentDepartment" required>
+                                        <option value="">Select Department</option>
+                                        <option value="Hotel Operations">Hotel Operations</option>
+                                        <option value="Restaurant">Restaurant</option>
+                                        <option value="Events">Events</option>
+                                        <option value="Finance & Admin">Finance & Admin</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="adjustmentVendor" class="form-label">Related Vendor</label>
+                                    <select class="form-select" id="adjustmentVendor" name="adjustmentVendor">
+                                        <option value="">Loading vendors...</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="adjustmentReason" class="form-label">Reason for Adjustment *</label>
+                            <textarea class="form-control" id="adjustmentReason" name="adjustmentReason" rows="4" required placeholder="Please provide detailed reason for this budget adjustment"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="requestedBy" class="form-label">Requested By</label>
+                                    <input type="text" class="form-control" id="requestedBy" name="requestedBy" value="Admin" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="expectedDate" class="form-label">Effective Date</label>
+                                    <input type="date" class="form-control" id="expectedDate" name="expectedDate">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" form="adjustmentRequestForm">Submit Request</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

@@ -160,21 +160,25 @@ CREATE TABLE invoice_items (
     FOREIGN KEY (account_id) REFERENCES chart_of_accounts(id)
 );
 
--- Payments received (Collections - Accounts Receivable)
+-- Payments received (Collections - Accounts Receivable & Supplier Refunds/Credits)
 CREATE TABLE payments_received (
     id INT PRIMARY KEY AUTO_INCREMENT,
     payment_number VARCHAR(20) UNIQUE NOT NULL,
-    customer_id INT NOT NULL,
+    customer_id INT NULL,
+    vendor_id INT NULL,
     invoice_id INT NULL,
+    bill_id INT NULL,
     payment_date DATE NOT NULL,
     amount DECIMAL(15,2) NOT NULL,
-    payment_method ENUM('cash', 'check', 'bank_transfer', 'credit_card', 'other') NOT NULL,
+    payment_method ENUM('cash', 'check', 'bank_transfer', 'credit_card', 'refund', 'credit', 'other') NOT NULL,
     reference_number VARCHAR(100),
     notes TEXT,
     recorded_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (customer_id) REFERENCES customers(id),
+    FOREIGN KEY (vendor_id) REFERENCES vendors(id),
     FOREIGN KEY (invoice_id) REFERENCES invoices(id),
+    FOREIGN KEY (bill_id) REFERENCES bills(id),
     FOREIGN KEY (recorded_by) REFERENCES users(id)
 );
 

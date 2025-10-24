@@ -5,7 +5,6 @@ require_once '../../includes/logger.php';
 require_once '../../includes/notifications.php';
 
 header('Content-Type: application/json');
-session_start();
 
 // Check if user is logged in
 if (!isset($_SESSION['user'])) {
@@ -21,7 +20,10 @@ $userId = $_SESSION['user']['id'];
 try {
     switch ($method) {
         case 'GET':
-            if (isset($_GET['id'])) {
+            if (isset($_GET['aging'])) {
+                // Generate aging report
+                generateAgingReport($db);
+            } elseif (isset($_GET['id'])) {
                 // Get single invoice with items
                 $invoice = $db->select(
                     "SELECT i.*, c.company_name as customer_name, c.customer_code,
@@ -365,6 +367,91 @@ function postInvoiceJournalEntry($db, $invoiceId, $subtotal, $taxAmount, $custom
              VALUES (?, (SELECT id FROM chart_of_accounts WHERE account_code = '2001'), ?, 'Tax Payable')",
             [$entryId, $taxAmount]
         );
+    }
+}
+
+/**
+ * Generate aging report for accounts receivable
+ */
+function generateAgingReport($db) {
+    try {
+        // Query to get unpaid invoices with customer info and calculate days past due
+        $query = "
+            SELECT
+                i.*,
+                c.company_name as customer_name,
+                c.customer_code,
+                DATEDIFF(CURDATE(), i.due_date) as days_past_due,
+                CASE
+                    WHEN DATEDIFF(CURDATE(), i.due_date) <= 0 THEN 'current'
+                    WHEN DATEDIFF(CURDATE(), i.due_date) BETWEEN 1 AND 30 THEN '1-30'
+                    WHEN DATEDIFF(CURDATE(), i.due_date) BETWEEN 31 AND 60 THEN '31-60'
+                    WHEN DATEDIFF(CURDATE(), i.due_date) BETWEEN 61 AND 90 THEN '61-90'
+                    ELSE '90+'
+                END as aging_bucket
+            FROM invoices i
+            JOIN customers c ON i.customer_id = c.id
+            WHERE i.balance > 0.01
+            AND i.status IN ('sent', 'overdue', 'draft')
+            AND c.status = 'active'
+            ORDER BY c.company_name, i.due_date
+        ";
+
+        $invoices = $db->select($query);
+
+        // Group by customer and sum amounts per aging bucket
+        $customerGroups = [];
+        foreach ($invoices as $invoice) {
+            $customerName = $invoice['customer_name'];
+
+            if (!isset($customerGroups[$customerName])) {
+                $customerGroups[$customerName] = [
+                    'customer_name' => $customerName,
+                    'customer_code' => $invoice['customer_code'],
+                    'current' => 0,
+                    'days30' => 0,
+                    'days60' => 0,
+                    'days90' => 0,
+                    'legacy' => 0, // 90+ days
+                    'total' => 0
+                ];
+            }
+
+            $balance = (float)$invoice['balance'];
+
+            // Add to appropriate aging bucket
+            switch ($invoice['aging_bucket']) {
+                case 'current':
+                    $customerGroups[$customerName]['current'] += $balance;
+                    break;
+                case '1-30':
+                    $customerGroups[$customerName]['days30'] += $balance;
+                    break;
+                case '31-60':
+                    $customerGroups[$customerName]['days60'] += $balance;
+                    break;
+                case '61-90':
+                    $customerGroups[$customerName]['days90'] += $balance;
+                    break;
+                case '90+':
+                    $customerGroups[$customerName]['legacy'] += $balance;
+                    break;
+            }
+
+            $customerGroups[$customerName]['total'] += $balance;
+        }
+
+        // Convert associative array to indexed array
+        $agingData = array_values($customerGroups);
+        echo json_encode($agingData);
+
+    } catch (Exception $e) {
+        Logger::getInstance()->logDatabaseError('Aging Report Generation', $e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'error' => 'Failed to generate aging report',
+            'message' => $e->getMessage()
+        ]);
     }
 }
 ?>

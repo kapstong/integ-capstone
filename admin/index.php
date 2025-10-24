@@ -256,7 +256,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Financial Management System - Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
@@ -267,7 +267,7 @@ body {
     padding: 0;
 }
 .sidebar {
-    background-color: #2c5530;
+    background-color: #1e2936;
     color: white;
     min-height: 100vh;
     position: fixed;
@@ -366,7 +366,7 @@ body {
     font-size: 1.5em;
     width: 40px;
     height: 40px;
-    background-color: #2c5530;
+    background-color: #1e2936;
     border: 2px solid white;
     border-radius: 50%;
     display: flex;
@@ -404,7 +404,7 @@ body {
 }
 .navbar-brand {
     font-weight: 700;
-    color: #2c5530 !important;
+    color: #2c3e50 !important;
     font-size: 1.4rem;
     letter-spacing: -0.02em;
 }
@@ -612,7 +612,7 @@ body {
 }
 .stats-card {
     background: #f8f9fa;
-    color: #2c5530;
+    color: #1e2936;
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 20px;
@@ -806,7 +806,7 @@ body {
 /* Enhanced Footer */
 .footer-enhanced {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-top: 3px solid #2c5530;
+    border-top: 3px solid #1e2936;
     box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
 }
 
@@ -869,6 +869,9 @@ body {
             <a class="nav-link" href="reports.php">
                 <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
             </a>
+            <a class="nav-link" href="index.php">
+                <i class="fas fa-chart-pie me-2"></i><span>Analytics</span>
+            </a>
         </nav>
     </div>
     <div class="sidebar-toggle" onclick="toggleSidebarDesktop()">
@@ -918,7 +921,7 @@ body {
         <!-- Welcome Section -->
         <div class="row mb-4">
             <div class="col-12">
-                <div class="card" style="background: linear-gradient(135deg, #1e2936 0%, #2c3e50 100%); border: none; box-shadow: 0 8px 25px rgba(30, 41, 54, 0.3); color: white;">
+                <div class="card" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border: none; box-shadow: 0 8px 25px rgba(30, 41, 54, 0.1);">
                     <div class="card-body py-5">
                         <div class="row align-items-center">
                             <div class="col-lg-8 text-center text-lg-start">
@@ -927,11 +930,11 @@ body {
                                         <i class="fas fa-chart-line fa-2x"></i>
                                     </div>
                                     <div>
-                                        <h2 class="mb-1" style="color: white; font-weight: 700;">Hello, <strong>User</strong></h2>
-                                        <p class="mb-0" style="color: rgba(255,255,255,0.8);">Ready to manage your finances efficiently</p>
+                                        <h2 class="mb-1" style="color: #1e2936; font-weight: 700;">Hello, <strong>User</strong></h2>
+                                        <p class="text-muted mb-0">Ready to manage your finances efficiently</p>
                                     </div>
                                 </div>
-                                <p class="mb-4" style="color: rgba(255,255,255,0.9); font-size: 1.1rem; line-height: 1.6;">
+                                <p class="mb-4" style="color: #6c757d; font-size: 1.1rem; line-height: 1.6;">
                                     Your comprehensive financial management platform. Track income, monitor expenses,
                                     generate reports, and make informed business decisions with real-time insights.
                                 </p>
@@ -979,7 +982,7 @@ body {
                                             <div class="p-2">
                                                 <i class="fas fa-balance-scale text-primary fa-lg mb-1"></i>
                                                 <div class="small text-muted">Balance</div>
-                                                <div class="fw-bold text-primary">₱0</div>
+                                                <div class="fw-bold text-primary">₱<?php echo number_format($todayBalance, 2); ?></div>
                                             </div>
                                         </div>
                                     </div>
@@ -1088,9 +1091,6 @@ body {
                                                             <div class="list-group-item px-0">
                                                                 <div class="d-flex align-items-center">
                                                                     <div class="flex-shrink-0 me-3">
-                                                                        <div class="bg-<?php echo $transaction['type'] === 'payment_received' ? 'success' : 'danger'; ?> bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                                                            <i class="fas fa-<?php echo $transaction['type'] === 'payment_received' ? 'arrow-up' : 'arrow-down'; ?> text-<?php echo $transaction['type'] === 'payment_received' ? 'success' : 'danger'; ?>"></i>
-                                                                        </div>
                                                                     </div>
                                                                     <div class="flex-grow-1">
                                                                         <h6 class="mb-1"><?php echo htmlspecialchars($transaction['description']); ?></h6>

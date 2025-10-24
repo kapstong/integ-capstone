@@ -1,149 +1,190 @@
 <?php
-/**
- * ATIERA Financial Management System - Audit API
- * Handles audit log operations and exports
- */
-
-require_once '../../includes/auth.php';
-require_once '../../includes/logger.php';
+// Audits API for Disbursements Module
+if (isset($_GET['test'])) {
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'Audit API is working']);
+    exit;
+}
 
 header('Content-Type: application/json');
-session_start();
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-// Check if user is logged in
+ob_start();
+ini_set('display_errors', 0);
+error_reporting(0);
+ob_clean();
+
+require_once '../../includes/auth.php';
+require_once '../../includes/database.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 if (!isset($_SESSION['user'])) {
     http_response_code(401);
     echo json_encode(['error' => 'Unauthorized']);
     exit;
 }
 
-$userId = $_SESSION['user']['id'];
+$db = Database::getInstance()->getConnection();
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 
-$auth = new Auth();
-$logger = Logger::getInstance();
+function getAuditTrail($db, $filters = []) {
+    try {
+        $where = [];
+        $params = [];
 
-// Check if user has permission to view audit logs
-if (!$auth->hasPermission('audit.view')) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Access denied']);
-    exit;
+        // Filter by table
+        if (isset($filters['table_name'])) {
+            $where[] = "a.table_name = ?";
+            $params[] = $filters['table_name'];
+        }
+
+        // Filter by user
+        if (isset($filters['user_id'])) {
+            $where[] = "a.user_id = ?";
+            $params[] = $filters['user_id'];
+        }
+
+        // Filter by date range
+        if (isset($filters['date_from'])) {
+            $where[] = "a.created_at >= ?";
+            $params[] = $filters['date_from'];
+        }
+
+        if (isset($filters['date_to'])) {
+            $where[] = "a.created_at <= ?";
+            $params[] = $filters['date_to'];
+        }
+
+        // Filter by record ID (for disbursements)
+        if (isset($filters['record_id'])) {
+            $where[] = "a.record_id = ?";
+            $params[] = $filters['record_id'];
+        }
+
+        // Special filter for disbursements
+        if (!isset($filters['table_name'])) {
+            $where[] = "a.table_name = 'disbursements'";
+        }
+
+        $whereClause = $where ? "WHERE " . implode(" AND ", $where) : "";
+
+        $stmt = $db->prepare("
+            SELECT a.*,
+                   u.username, u.full_name,
+                   d.disbursement_number
+            FROM audit_log a
+            LEFT JOIN users u ON a.user_id = u.id
+            LEFT JOIN disbursements d ON a.record_id = d.id AND a.table_name = 'disbursements'
+            $whereClause
+            ORDER BY a.created_at DESC
+            LIMIT 1000
+        ");
+        $stmt->execute($params);
+
+        $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Format the results
+        foreach ($logs as &$log) {
+            $log['formatted_date'] = date('M j, Y g:i A', strtotime($log['created_at']));
+            $log['action_description'] = formatAction($log);
+        }
+
+        return $logs;
+
+    } catch (Exception $e) {
+        error_log("Error fetching audit trail: " . $e->getMessage());
+        return [];
+    }
+}
+
+function logDisbursementAction($db, $action, $recordId, $oldValues = null, $newValues = null, $userId = null) {
+    try {
+        $userId = $userId ?? $_SESSION['user']['id'] ?? 1;
+
+        $stmt = $db->prepare("
+            INSERT INTO audit_log (
+                user_id, action, table_name, record_id, old_values, new_values,
+                ip_address, user_agent
+            ) VALUES (?, ?, 'disbursements', ?, ?, ?, ?, ?)
+        ");
+
+        $stmt->execute([
+            $userId,
+            $action,
+            $recordId,
+            $oldValues ? json_encode($oldValues) : null,
+            $newValues ? json_encode($newValues) : null,
+            $_SERVER['REMOTE_ADDR'] ?? null,
+            $_SERVER['HTTP_USER_AGENT'] ?? null
+        ]);
+
+        return true;
+
+    } catch (Exception $e) {
+        error_log("Error logging disbursement action: " . $e->getMessage());
+        return false;
+    }
+}
+
+function formatAction($log) {
+    $action = strtolower($log['action']);
+    $record = $log['disbursement_number'] ? "disbursement {$log['disbursement_number']}" : "record ID {$log['record_id']}";
+
+    switch ($action) {
+        case 'created':
+        case 'inserted':
+            return "Created $record";
+        case 'updated':
+        case 'modified':
+            return "Updated $record";
+        case 'deleted':
+        case 'removed':
+            return "Deleted $record";
+        case 'viewed':
+            return "Viewed $record";
+        case 'approved':
+            return "Approved $record";
+        case 'rejected':
+            return "Rejected $record";
+        default:
+            return ucfirst($action) . " $record";
+    }
 }
 
 try {
     switch ($method) {
         case 'GET':
-            $action = $_GET['action'] ?? '';
+            $filters = [];
 
-            switch ($action) {
-                case 'details':
-                    if (!isset($_GET['id'])) {
-                        http_response_code(400);
-                        echo json_encode(['error' => 'Log ID is required']);
-                        exit;
-                    }
+            // Apply filters from query parameters
+            if (isset($_GET['user_id'])) $filters['user_id'] = $_GET['user_id'];
+            if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
+            if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
+            if (isset($_GET['record_id'])) $filters['record_id'] = $_GET['record_id'];
+            if (isset($_GET['action'])) $filters['action'] = $_GET['action'];
 
-                    // Get detailed log information
-                    $stmt = $db->prepare("
-                        SELECT al.*, u.username, u.full_name
-                        FROM audit_log al
-                        LEFT JOIN users u ON al.user_id = u.id
-                        WHERE al.id = ?
-                    ");
-                    $stmt->execute([$_GET['id']]);
-                    $log = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                    if (!$log) {
-                        http_response_code(404);
-                        echo json_encode(['error' => 'Audit log not found']);
-                        exit;
-                    }
-
-                    echo json_encode(['success' => true, 'log' => $log]);
-                    break;
-
-                case 'stats':
-                    $stats = $logger->getAuditStats();
-                    echo json_encode(['success' => true, 'stats' => $stats]);
-                    break;
-
-                case 'export':
-                    // Export audit logs as CSV
-                    header('Content-Type: text/csv');
-                    header('Content-Disposition: attachment; filename="audit_logs_' . date('Y-m-d_H-i-s') . '.csv"');
-
-                    $filters = [
-                        'user_id' => $_GET['user_id'] ?? '',
-                        'action' => $_GET['action'] ?? '',
-                        'table_name' => $_GET['table_name'] ?? '',
-                        'date_from' => $_GET['date_from'] ?? '',
-                        'date_to' => $_GET['date_to'] ?? '',
-                        'ip_address' => $_GET['ip_address'] ?? ''
-                    ];
-
-                    $logs = $logger->getAuditLogs($filters, 10000); // Export up to 10k records
-
-                    // Output CSV headers
-                    echo "ID,Timestamp,User,Action,Table,Record ID,IP Address,User Agent\n";
-
-                    // Output CSV data
-                    foreach ($logs as $log) {
-                        $row = [
-                            $log['id'],
-                            $log['created_at'],
-                            $log['username'] ?: 'System',
-                            $log['action'],
-                            $log['table_name'] ?: '',
-                            $log['record_id'] ?: '',
-                            $log['ip_address'],
-                            str_replace('"', '""', $log['user_agent']) // Escape quotes in CSV
-                        ];
-                        echo '"' . implode('","', $row) . "\"\n";
-                    }
-                    exit;
-
-                default:
-                    http_response_code(400);
-                    echo json_encode(['error' => 'Invalid action']);
-                    exit;
-            }
-            break;
-
-        case 'POST':
-            $action = $_POST['action'] ?? '';
-
-            switch ($action) {
-                case 'cleanup':
-                    // Check if user has manage permission for cleanup
-                    if (!$auth->hasPermission('roles.manage')) {
-                        http_response_code(403);
-                        echo json_encode(['error' => 'Access denied - manage permission required']);
-                        exit;
-                    }
-
-                    $deletedCount = $logger->cleanupAuditLogs(365); // Delete logs older than 1 year
-                    echo json_encode([
-                        'success' => true,
-                        'message' => 'Audit logs cleaned up successfully',
-                        'deleted_count' => $deletedCount
-                    ]);
-                    break;
-
-                default:
-                    http_response_code(400);
-                    echo json_encode(['error' => 'Invalid action']);
-                    exit;
-            }
+            $auditTrail = getAuditTrail($db, $filters);
+            echo json_encode($auditTrail);
             break;
 
         default:
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
-            break;
     }
 } catch (Exception $e) {
-    Logger::getInstance()->logDatabaseError('Audit API operation', $e->getMessage());
+    error_log("Audit API error: " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Internal server error']);
+    echo json_encode(['error' => 'Internal server error']);
 }
 ?>

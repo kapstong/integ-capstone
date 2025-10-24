@@ -10,7 +10,7 @@ if (!isset($_SESSION['user'])) {
 }
 
 // Initialize database connection
-$db = Database::getInstance()->getConnection();
+$db = Database::getInstance();
 
 // Fetch summary data
 try {
@@ -31,6 +31,17 @@ try {
     $outstandingReceivables = 0;
     $overdueAmount = 0;
     $collectionsThisMonth = 0;
+}
+
+// Load customer data for the page
+$customers = [];
+try {
+    $customers = $db->select(
+        "SELECT id, customer_code, company_name, contact_person, email, phone, credit_limit, status
+         FROM customers ORDER BY company_name ASC"
+    );
+} catch (Exception $e) {
+    $customers = [];
 }
 ?>
 <!DOCTYPE html>
@@ -615,7 +626,7 @@ try {
             <hr style="border-top: 2px solid white; margin: 10px 0;">
         </div>
         <nav class="nav flex-column">
-            <a class="nav-link" href="dashboard.php">
+            <a class="nav-link" href="index.php">
                 <i class="fas fa-tachometer-alt me-2"></i><span>Dashboard</span>
             </a>
             <div class="nav-item">
@@ -1116,19 +1127,17 @@ try {
                 <form id="invoiceForm">
                     <div class="modal-body">
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <div class="mb-3">
                                     <label for="invoiceCustomer" class="form-label">Customer *</label>
                                     <select class="form-select" id="invoiceCustomer" required>
                                         <option value="">Select Customer</option>
                                         <!-- Customer options will be loaded here -->
                                     </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="invoiceNumber" class="form-label">Invoice Number *</label>
-                                    <input type="text" class="form-control" id="invoiceNumber" required>
+                                    <div class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Invoice number will be auto-generated (e.g., INV-2025-0001)
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1348,6 +1357,9 @@ try {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Pass customers data from PHP to JavaScript
+        const phpCustomers = <?php echo json_encode($customers); ?>;
+
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('show');
             updateFooterPosition();
@@ -1444,62 +1456,43 @@ try {
         }
 
         // Customer Functions
-        async function loadCustomers() {
+        function loadCustomers() {
             try {
-                const response = await fetch('api/customers.php');
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    throw new Error('Response is not JSON');
-                }
-
-                const data = await response.json();
-
                 const tbody = document.querySelector('#customersTable tbody');
                 tbody.innerHTML = '';
 
-                if (response.ok) {
-                    if (Array.isArray(data)) {
-                        data.forEach(customer => {
-                            const row = `
-                                <tr>
-                                    <td>${customer.customer_code || ''}</td>
-                                    <td>${customer.company_name || ''}</td>
-                                    <td>${customer.contact_person || ''}</td>
-                                    <td>${customer.email || ''}</td>
-                                    <td>${customer.phone || ''}</td>
-                                    <td>₱${parseFloat(customer.credit_limit || 0).toLocaleString()}</td>
-                                    <td><span class="badge bg-${customer.status === 'active' ? 'success' : 'secondary'}">${customer.status || 'unknown'}</span></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editCustomer(${customer.id})">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCustomer(${customer.id})">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            `;
-                            tbody.innerHTML += row;
-                        });
+                if (Array.isArray(phpCustomers) && phpCustomers.length > 0) {
+                    phpCustomers.forEach(customer => {
+                        const row = `
+                            <tr>
+                                <td>${customer.customer_code || ''}</td>
+                                <td>${customer.company_name || ''}</td>
+                                <td>${customer.contact_person || ''}</td>
+                                <td>${customer.email || ''}</td>
+                                <td>${customer.phone || ''}</td>
+                                <td>₱${parseFloat(customer.credit_limit || 0).toLocaleString()}</td>
+                                <td><span class="badge bg-${customer.status === 'active' ? 'success' : 'secondary'}">${customer.status || 'unknown'}</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary me-1" onclick="editCustomer(${customer.id})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteCustomer(${customer.id})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                        tbody.innerHTML += row;
+                    });
 
-                        // Update customer dropdowns
-                        updateCustomerDropdowns(data);
-                    } else {
-                        throw new Error('Invalid response format');
-                    }
+                    // Update customer dropdowns
+                    updateCustomerDropdowns(phpCustomers);
+                    showAlert('Customers loaded successfully', 'success');
+                } else if (Array.isArray(phpCustomers) && phpCustomers.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No customers found. Add your first customer to get started.</td></tr>';
                 } else {
-                    // Handle API error
-                    if (data.error) {
-                        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted">${data.error}</td></tr>`;
-                        showAlert(data.error, 'warning');
-                    } else {
-                        throw new Error('API returned an error');
-                    }
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Error loading customers. Please try again.</td></tr>';
+                    showAlert('Error loading customers data', 'danger');
                 }
             } catch (error) {
                 console.error('Error loading customers:', error);
@@ -1512,10 +1505,26 @@ try {
         async function handleCustomerSubmit(e) {
             e.preventDefault();
             const formData = new FormData(e.target);
-            const customerData = Object.fromEntries(formData);
+            const action = e.target.getAttribute('data-mode') === 'update' ? 'update' : 'create';
+            const customerId = e.target.getAttribute('data-id') || '';
+
+            // Collect form data
+            const customerData = {
+                company_name: document.getElementById('customerName').value,
+                contact_person: document.getElementById('contactPerson').value,
+                email: document.getElementById('customerEmail').value,
+                phone: document.getElementById('customerPhone').value,
+                address: document.getElementById('customerAddress').value,
+                credit_limit: parseFloat(document.getElementById('creditLimit').value) || 0,
+                status: document.getElementById('customerStatus').value || 'active'
+            };
 
             try {
-                const response = await fetch('api/customers.php', {
+                const url = action === 'update' && customerId
+                    ? `customer_handler.php?action=${action}&id=${customerId}`
+                    : `customer_handler.php?action=${action}`;
+
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1529,11 +1538,11 @@ try {
                     // Close modal and reload data
                     const modal = bootstrap.Modal.getInstance(document.getElementById('addCustomerModal'));
                     modal.hide();
-                    loadCustomers();
-                    showAlert('Customer saved successfully', 'success');
 
-                    // Reset form
-                    e.target.reset();
+                    // Reload page to get fresh data
+                    window.location.reload();
+
+                    showAlert(result.message || 'Customer saved successfully', 'success');
                 } else {
                     showAlert(result.error || 'Error saving customer', 'danger');
                 }
@@ -1545,7 +1554,7 @@ try {
 
         async function editCustomer(id) {
             try {
-                const response = await fetch(`api/customers.php?id=${id}`);
+                const response = await fetch(`customer_handler.php?action=read&id=${id}`);
                 const customer = await response.json();
 
                 if (customer) {
@@ -1579,114 +1588,175 @@ try {
         async function deleteCustomer(id) {
             if (confirm('Are you sure you want to delete this customer?')) {
                 try {
-                    const response = await fetch(`api/customers.php?id=${id}`, {
+                    const response = await fetch(`customer_handler.php?action=delete&id=${id}`, {
                         method: 'DELETE'
                     });
 
                     const result = await response.json();
 
-                    if (result.success) {
-                        loadCustomers();
+                    if (response.ok && result.success) {
+                        // Reload page to get fresh data
+                        window.location.reload();
                         showAlert('Customer deleted successfully', 'success');
                     } else {
                         showAlert(result.error || 'Error deleting customer', 'danger');
                     }
                 } catch (error) {
                     console.error('Error deleting customer:', error);
-                    showAlert('Error deleting customer', 'danger');
+                    showAlert('Error deleting customer: ' + error.message, 'danger');
                 }
             }
         }
 
         // Invoice Functions
-        function loadInvoices() {
-            // Mock data - replace with actual API calls
-            const invoices = [
-                { number: 'INV-001', customer: 'ABC Corp', date: '2025-09-01', dueDate: '2025-09-30', amount: 15000, status: 'paid' },
-                { number: 'INV-002', customer: 'XYZ Ltd', date: '2025-09-15', dueDate: '2025-10-15', amount: 8750, status: 'sent' },
-                { number: 'INV-003', customer: 'ABC Corp', date: '2025-09-20', dueDate: '2025-09-25', amount: 5200, status: 'overdue' }
-            ];
+        async function loadInvoices() {
+            try {
+                showLoading();
+                const response = await fetch('api/invoices.php');
+                const invoices = await response.json();
 
-            const tbody = document.querySelector('#invoicesTable tbody');
-            tbody.innerHTML = '';
+                if (invoices && !invoices.error) {
+                    const tbody = document.querySelector('#invoicesTable tbody');
+                    tbody.innerHTML = '';
 
-            invoices.forEach(invoice => {
-                const statusClass = invoice.status === 'paid' ? 'success' : invoice.status === 'overdue' ? 'danger' : 'warning';
-                const statusDotClass = invoice.status === 'paid' ? 'status-paid' : invoice.status === 'overdue' ? 'status-overdue' : invoice.status === 'sent' ? 'status-sent' : 'status-draft';
-                const row = `
-                    <tr>
-                        <td>${invoice.number}</td>
-                        <td>${invoice.customer}</td>
-                        <td>${invoice.date}</td>
-                        <td>${invoice.dueDate}</td>
-                        <td>₱${invoice.amount.toLocaleString()}</td>
-                        <td>
-                            <div class="status-indicator ${statusDotClass}">
-                                <span class="status-dot"></span>
-                                <span class="badge bg-${statusClass}">${invoice.status}</span>
-                            </div>
-                        </td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary me-1" onclick="viewInvoice('${invoice.number}')" title="View Invoice">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-success me-1" onclick="sendInvoice('${invoice.number}')" title="Send Invoice">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteInvoice('${invoice.number}')" title="Delete Invoice">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
+                    if (invoices.length > 0) {
+                        invoices.forEach(invoice => {
+                            const statusClass = getStatusClass(invoice.status);
+                            const statusDotClass = getStatusDotClass(invoice.status);
+                            const row = `
+                                <tr>
+                                    <td>${invoice.invoice_number}</td>
+                                    <td>${invoice.customer_name}</td>
+                                    <td>${new Date(invoice.invoice_date).toLocaleDateString()}</td>
+                                    <td>${new Date(invoice.due_date).toLocaleDateString()}</td>
+                                    <td>₱${parseFloat(invoice.total_amount).toLocaleString()}</td>
+                                    <td>
+                                        <div class="status-indicator ${statusDotClass}">
+                                            <span class="status-dot"></span>
+                                            <span class="badge bg-${statusClass}">${invoice.status}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="viewInvoice('${invoice.id}')" title="View Invoice">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-success me-1" onclick="sendInvoice('${invoice.id}')" title="Send Invoice">
+                                            <i class="fas fa-paper-plane"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteInvoice('${invoice.id}')" title="Delete Invoice">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                            tbody.innerHTML += row;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No invoices found. Create your first invoice to get started.</td></tr>';
+                    }
+                } else {
+                    // Handle error
+                    const tbody = document.querySelector('#invoicesTable tbody');
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error loading invoices</td></tr>';
+                    showAlert('Error loading invoices', 'danger');
+                }
+            } catch (error) {
+                console.error('Error loading invoices:', error);
+                const tbody = document.querySelector('#invoicesTable tbody');
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error loading invoices data</td></tr>';
+                showAlert('Error loading invoices', 'danger');
+            } finally {
+                hideLoading();
+            }
         }
 
-        function handleInvoiceSubmit(e) {
+        async function handleInvoiceSubmit(e) {
             e.preventDefault();
-            const formData = new FormData(e.target);
-            const invoiceData = Object.fromEntries(formData);
 
-            // Calculate total from invoice items
+            // Collect invoice data
+            const invoiceData = {
+                customer_id: parseInt(document.getElementById('invoiceCustomer').value),
+                invoice_date: document.getElementById('invoiceDate').value,
+                due_date: document.getElementById('dueDate').value,
+                status: document.getElementById('invoiceStatus').value || 'draft',
+                tax_rate: 10.00, // 10% VAT as default
+                items: []
+            };
+
+            // Collect invoice items
             const items = document.querySelectorAll('.invoice-item');
-            let total = 0;
             items.forEach(item => {
-                const lineTotal = parseFloat(item.querySelector('.line-total').value) || 0;
-                total += lineTotal;
+                const description = item.querySelector('input[type="text"]').value;
+                const quantity = parseFloat(item.querySelector('.quantity').value) || 0;
+                const unitPrice = parseFloat(item.querySelector('.unit-price').value) || 0;
+
+                if (description && quantity > 0 && unitPrice > 0) {
+                    invoiceData.items.push({
+                        description: description,
+                        quantity: quantity,
+                        unit_price: unitPrice
+                    });
+                }
             });
-            invoiceData.total = total;
 
-            // Mock save - replace with actual API call
-            console.log('Saving invoice:', invoiceData);
+            if (invoiceData.items.length === 0) {
+                showAlert('Please add at least one item to the invoice', 'danger');
+                return;
+            }
 
-            // Close modal and reload data
-            const modal = bootstrap.Modal.getInstance(document.getElementById('addInvoiceModal'));
-            modal.hide();
-            loadInvoices();
+            try {
+                showLoading();
+                const response = await fetch('api/invoices.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(invoiceData)
+                });
 
-            // Reset form
-            e.target.reset();
-            document.getElementById('invoiceItems').innerHTML = `
-                <div class="row mb-2 invoice-item">
-                    <div class="col-md-4">
-                        <input type="text" class="form-control" placeholder="Description" required>
-                    </div>
-                    <div class="col-md-2">
-                        <input type="number" class="form-control quantity" placeholder="Qty" step="1" min="1" required>
-                    </div>
-                    <div class="col-md-2">
-                        <input type="number" class="form-control unit-price" placeholder="Unit Price" step="0.01" min="0" required>
-                    </div>
-                    <div class="col-md-2">
-                        <input type="number" class="form-control line-total" placeholder="Total" readonly>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
-                    </div>
-                </div>
-            `;
-            updateInvoiceTotals();
+                const result = await response.json();
+
+                if (result.success) {
+                    // Close modal and reload data
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addInvoiceModal'));
+                    modal.hide();
+
+                    // Reload invoices data
+                    loadInvoices();
+
+                    // Reset form
+                    e.target.reset();
+                    document.getElementById('invoiceItems').innerHTML = `
+                        <div class="row mb-2 invoice-item">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" placeholder="Description" required>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control quantity" placeholder="Qty" step="1" min="1" required>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control unit-price" placeholder="Unit Price" step="0.01" min="0" required>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control line-total" placeholder="Total" readonly>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
+                            </div>
+                        </div>
+                    `;
+                    updateInvoiceTotals();
+
+                    showAlert(`Invoice created successfully! Invoice #: ${result.invoice_number}`, 'success');
+                } else {
+                    showAlert(result.error || 'Failed to create invoice', 'danger');
+                }
+            } catch (error) {
+                console.error('Error saving invoice:', error);
+                showAlert('Error creating invoice: ' + error.message, 'danger');
+            } finally {
+                hideLoading();
+            }
         }
 
         function addInvoiceItem() {
@@ -1751,134 +1821,235 @@ try {
         }
 
         // Payment Functions
-        function loadPayments() {
-            // Mock data - replace with actual API calls
-            const payments = [
-                { id: 'P001', customer: 'ABC Corp', invoice: 'INV-001', date: '2025-09-05', amount: 15000, method: 'bank_transfer', reference: 'CHK-12345' },
-                { id: 'P002', customer: 'XYZ Ltd', invoice: 'INV-002', date: '2025-09-20', amount: 5000, method: 'check', reference: 'CHK-67890' }
-            ];
+        async function loadPayments() {
+            try {
+                const response = await fetch('api/payments.php?type=received');
+                const result = await response.json();
 
-            const tbody = document.querySelector('#collectionsTable tbody');
-            tbody.innerHTML = '';
+                if (result.success !== false && Array.isArray(result)) {
+                    const tbody = document.querySelector('#collectionsTable tbody');
+                    tbody.innerHTML = '';
 
-            payments.forEach(payment => {
-                const row = `
-                    <tr>
-                        <td>${payment.id}</td>
-                        <td>${payment.customer}</td>
-                        <td>${payment.invoice}</td>
-                        <td>${payment.date}</td>
-                        <td>₱${payment.amount.toLocaleString()}</td>
-                        <td>${payment.method.replace('_', ' ').toUpperCase()}</td>
-                        <td>${payment.reference}</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary me-1" onclick="viewPayment('${payment.id}')">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deletePayment('${payment.id}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
+                    if (result.length > 0) {
+                        result.forEach(payment => {
+                            const invoiceNumber = payment.invoice_number || 'N/A';
+                            const row = `
+                                <tr>
+                                    <td>${payment.payment_number || payment.id}</td>
+                                    <td>${payment.customer_name || 'Unknown'}</td>
+                                    <td>${invoiceNumber}</td>
+                                    <td>${new Date(payment.payment_date).toLocaleDateString()}</td>
+                                    <td>₱${parseFloat(payment.amount).toLocaleString()}</td>
+                                    <td>${payment.payment_method.replace('_', ' ').toUpperCase()}</td>
+                                    <td>${payment.reference_number || ''}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="viewPayment('${payment.id}')">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deletePayment('${payment.id}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                            tbody.innerHTML += row;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No payments found. Add your first payment to get started.</td></tr>';
+                    }
+                } else {
+                    console.error('Failed to load payments:', result);
+                    const tbody = document.querySelector('#collectionsTable tbody');
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error loading payments data</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error loading payments:', error);
+                const tbody = document.querySelector('#collectionsTable tbody');
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error loading payments data</td></tr>';
+            }
         }
 
-        function handlePaymentSubmit(e) {
+        async function handlePaymentSubmit(e) {
             e.preventDefault();
             const formData = new FormData(e.target);
             const paymentData = Object.fromEntries(formData);
 
-            // Mock save - replace with actual API call
-            console.log('Saving payment:', paymentData);
+            // Convert to API format
+            const apiData = {
+                customer_id: parseInt(paymentData.paymentCustomer),
+                invoice_id: paymentData.paymentInvoice ? parseInt(paymentData.paymentInvoice) : null,
+                payment_date: paymentData.paymentDate,
+                amount: parseFloat(paymentData.paymentAmount),
+                payment_method: paymentData.paymentMethod,
+                reference_number: paymentData.paymentReference,
+                notes: paymentData.paymentNotes,
+                payment_type: 'received' // This is for collections (payments received)
+            };
 
-            // Close modal and reload data
-            const modal = bootstrap.Modal.getInstance(document.getElementById('addPaymentModal'));
-            modal.hide();
-            loadPayments();
+            try {
+                const response = await fetch('api/payments.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(apiData)
+                });
 
-            // Reset form
-            e.target.reset();
+                const result = await response.json();
+
+                if (result.success) {
+                    // Close modal and reload data
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addPaymentModal'));
+                    modal.hide();
+
+                    // Reset form
+                    e.target.reset();
+
+                    // Reload payments data
+                    loadPayments();
+
+                    // Show success message
+                    showAlert('Payment recorded successfully!', 'success');
+                } else {
+                    showAlert(result.error || 'Failed to record payment', 'danger');
+                }
+            } catch (error) {
+                console.error('Error saving payment:', error);
+                showAlert('Error recording payment: ' + error.message, 'danger');
+            }
         }
 
         // Adjustment Functions
-        function loadAdjustments() {
-            // Mock data - replace with actual API calls
-            const adjustments = [
-                { id: 'ADJ-001', type: 'credit_memo', customer: 'ABC Corp', invoice: 'INV-001', amount: 500, reason: 'Damaged goods', date: '2025-09-10' },
-                { id: 'ADJ-002', type: 'discount', customer: 'XYZ Ltd', invoice: 'INV-002', amount: 250, reason: 'Early payment discount', date: '2025-09-18' }
-            ];
+        async function loadAdjustments() {
+            try {
+                const response = await fetch('api/adjustments.php?type=receivable');
+                const adjustments = await response.json();
 
-            const tbody = document.querySelector('#adjustmentsTable tbody');
-            tbody.innerHTML = '';
+                const tbody = document.querySelector('#adjustmentsTable tbody');
+                tbody.innerHTML = '';
 
-            adjustments.forEach(adjustment => {
-                const typeLabel = adjustment.type.replace('_', ' ').toUpperCase();
-                const row = `
-                    <tr>
-                        <td>${adjustment.id}</td>
-                        <td>${typeLabel}</td>
-                        <td>${adjustment.customer}</td>
-                        <td>${adjustment.invoice}</td>
-                        <td>₱${adjustment.amount.toLocaleString()}</td>
-                        <td>${adjustment.reason}</td>
-                        <td>${adjustment.date}</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary me-1" onclick="viewAdjustment('${adjustment.id}')">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteAdjustment('${adjustment.id}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
+                if (adjustments && Array.isArray(adjustments) && adjustments.length > 0) {
+                    adjustments.forEach(adjustment => {
+                        const typeLabel = adjustment.adjustment_type.replace('_', ' ').toUpperCase();
+                        const customerName = adjustment.customer_name || 'Unknown Customer';
+                        const invoiceNumber = adjustment.invoice_number || 'N/A';
+                        const row = `
+                            <tr>
+                                <td>${adjustment.adjustment_number || adjustment.id}</td>
+                                <td>${typeLabel}</td>
+                                <td>${customerName}</td>
+                                <td>${invoiceNumber}</td>
+                                <td>₱${parseFloat(adjustment.amount).toLocaleString()}</td>
+                                <td>${adjustment.reason}</td>
+                                <td>${new Date(adjustment.adjustment_date).toLocaleDateString()}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary me-1" onclick="viewAdjustment('${adjustment.id}')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteAdjustment('${adjustment.id}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                        tbody.innerHTML += row;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No adjustments found. Add your first adjustment to get started.</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error loading adjustments:', error);
+                const tbody = document.querySelector('#adjustmentsTable tbody');
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error loading adjustments data</td></tr>';
+                showAlert('Error loading adjustments', 'danger');
+            }
         }
 
-        function handleAdjustmentSubmit(e) {
+        async function handleAdjustmentSubmit(e) {
             e.preventDefault();
-            const formData = new FormData(e.target);
-            const adjustmentData = Object.fromEntries(formData);
 
-            // Mock save - replace with actual API call
-            console.log('Saving adjustment:', adjustmentData);
+            // Collect adjustment data
+            const adjustmentData = {
+                adjustment_type: document.getElementById('adjustmentType').value,
+                customer_id: parseInt(document.getElementById('adjustmentCustomer').value),
+                invoice_id: document.getElementById('adjustmentInvoice').value ? parseInt(document.getElementById('adjustmentInvoice').value) : null,
+                amount: parseFloat(document.getElementById('adjustmentAmount').value),
+                reason: document.getElementById('adjustmentReason').value,
+                adjustment_date: document.getElementById('adjustmentDate').value
+            };
 
-            // Close modal and reload data
-            const modal = bootstrap.Modal.getInstance(document.getElementById('addAdjustmentModal'));
-            modal.hide();
-            loadAdjustments();
+            try {
+                const response = await fetch('api/adjustments.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(adjustmentData)
+                });
 
-            // Reset form
-            e.target.reset();
+                const result = await response.json();
+
+                if (result.success) {
+                    // Close modal and reload data
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addAdjustmentModal'));
+                    modal.hide();
+                    loadAdjustments();
+
+                    // Reset form
+                    e.target.reset();
+
+                    showAlert(`Adjustment created successfully! Adjustment #: ${result.adjustment_number}`, 'success');
+                } else {
+                    showAlert(result.error || 'Failed to create adjustment', 'danger');
+                }
+            } catch (error) {
+                console.error('Error saving adjustment:', error);
+                showAlert('Error creating adjustment: ' + error.message, 'danger');
+            }
         }
 
         // Aging Report Functions
-        function generateAgingReport() {
-            // Mock data - replace with actual API calls
-            const agingData = [
-                { customer: 'ABC Corp', current: 0, days30: 0, days60: 0, days90: 5200, total: 5200 },
-                { customer: 'XYZ Ltd', current: 3750, days30: 0, days60: 0, days90: 0, total: 3750 }
-            ];
+        async function generateAgingReport() {
+            try {
+                const response = await fetch('api/invoices.php?aging=true');
+                const agingData = await response.json();
 
-            const tbody = document.querySelector('#agingTable tbody');
-            tbody.innerHTML = '';
+                const tbody = document.querySelector('#agingTable tbody');
+                tbody.innerHTML = '';
 
-            agingData.forEach(data => {
-                const row = `
-                    <tr>
-                        <td>${data.customer}</td>
-                        <td>₱${data.current.toLocaleString()}</td>
-                        <td>₱${data.days30.toLocaleString()}</td>
-                        <td>₱${data.days60.toLocaleString()}</td>
-                        <td>₱${data.days90.toLocaleString()}</td>
-                        <td><strong>₱${data.total.toLocaleString()}</strong></td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
+                if (agingData && Array.isArray(agingData) && agingData.length > 0) {
+                    agingData.forEach(customerData => {
+                        const current = parseFloat(customerData.current) || 0;
+                        const days30 = parseFloat(customerData.days30) || 0;
+                        const days60 = parseFloat(customerData.days60) || 0;
+                        const days90 = parseFloat(customerData.days90) || 0;
+                        const legacy = parseFloat(customerData.legacy) || 0;
+                        const total = parseFloat(customerData.total) || 0;
+
+                        const row = `
+                            <tr>
+                                <td>${customerData.customer_name}</td>
+                                <td>₱${current.toLocaleString()}</td>
+                                <td>₱${days30.toLocaleString()}</td>
+                                <td>₱${days60.toLocaleString()}</td>
+                                <td>₱${days90.toLocaleString()}</td>
+                                <td>₱${legacy.toLocaleString()}</td>
+                                <td><strong>₱${total.toLocaleString()}</strong></td>
+                            </tr>
+                        `;
+                        tbody.innerHTML += row;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No aging data available. Create some invoices with due dates to see aging.</td></tr>';
+                }
+
+                showAlert('Aging report generated successfully', 'success');
+            } catch (error) {
+                console.error('Error generating aging report:', error);
+                const tbody = document.querySelector('#agingTable tbody');
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error generating aging report</td></tr>';
+                showAlert('Error generating aging report: ' + error.message, 'danger');
+            }
         }
 
         // Reports Functions
@@ -1895,21 +2066,149 @@ try {
             }
         }
 
-        function exportReport(type) {
-            // Mock export - replace with actual implementation
-            alert(`Exporting ${type} report...`);
+        async function exportReport(type) {
+            try {
+                showAlert(`Generating ${type} report...`, 'info');
+
+                let data = [];
+                let filename = '';
+                let headers = [];
+
+                switch (type) {
+                    case 'receivables':
+                        // Export receivables report
+                        const receivablesResponse = await fetch('api/invoices.php');
+                        const receivablesData = await receivablesResponse.json();
+
+                        data = receivablesData.map(invoice => ({
+                            'Invoice #': invoice.invoice_number,
+                            'Customer': invoice.customer_name,
+                            'Customer Code': invoice.customer_code,
+                            'Date': new Date(invoice.invoice_date).toLocaleDateString(),
+                            'Due Date': new Date(invoice.due_date).toLocaleDateString(),
+                            'Amount': parseFloat(invoice.total_amount).toLocaleString(),
+                            'Balance': parseFloat(invoice.balance).toLocaleString(),
+                            'Status': invoice.status,
+                            'Days Overdue': invoice.status === 'overdue' ? Math.floor((new Date() - new Date(invoice.due_date)) / (1000 * 60 * 60 * 24)) : 0
+                        }));
+
+                        headers = ['Invoice #', 'Customer', 'Customer Code', 'Date', 'Due Date', 'Amount', 'Balance', 'Status', 'Days Overdue'];
+                        filename = `receivables_report_${new Date().toISOString().split('T')[0]}.csv`;
+                        break;
+
+                    case 'collections':
+                        // Export collections report
+                        const collectionsResponse = await fetch('api/payments.php?type=received');
+                        const collectionsData = await collectionsResponse.json();
+
+                        if (collectionsData.success !== false) {
+                            data = Array.isArray(collectionsData) ? collectionsData : collectionsData.data || [];
+                            data = data.map(payment => ({
+                                'Payment #': payment.payment_number || payment.id,
+                                'Customer': payment.customer_name || 'Unknown',
+                                'Date': new Date(payment.payment_date).toLocaleDateString(),
+                                'Amount': parseFloat(payment.amount).toLocaleString(),
+                                'Method': payment.payment_method.replace('_', ' ').toUpperCase(),
+                                'Reference': payment.reference_number || '',
+                                'Invoice': payment.invoice_number || 'N/A'
+                            }));
+
+                            headers = ['Payment #', 'Customer', 'Date', 'Amount', 'Method', 'Reference', 'Invoice'];
+                            filename = `collections_report_${new Date().toISOString().split('T')[0]}.csv`;
+                        }
+                        break;
+
+                    case 'aging':
+                        // Export aging report
+                        const agingResponse = await fetch('api/invoices.php?aging=true');
+                        const agingData = await agingResponse.json();
+
+                        if (agingData && Array.isArray(agingData)) {
+                            data = agingData.map(customer => ({
+                                'Customer': customer.customer_name,
+                                'Customer Code': customer.customer_code,
+                                'Current': parseFloat(customer.current).toLocaleString(),
+                                '1-30 Days': parseFloat(customer.days30).toLocaleString(),
+                                '31-60 Days': parseFloat(customer.days60).toLocaleString(),
+                                '61-90 Days': parseFloat(customer.days90).toLocaleString(),
+                                '90+ Days': parseFloat(customer.legacy).toLocaleString(),
+                                'Total': parseFloat(customer.total).toLocaleString()
+                            }));
+
+                            headers = ['Customer', 'Customer Code', 'Current', '1-30 Days', '31-60 Days', '61-90 Days', '90+ Days', 'Total'];
+                            filename = `aging_report_${new Date().toISOString().split('T')[0]}.csv`;
+                        }
+                        break;
+
+                    default:
+                        throw new Error('Unknown report type');
+                }
+
+                if (data.length === 0) {
+                    showAlert(`No data available for ${type} report`, 'warning');
+                    return;
+                }
+
+                // Generate CSV content
+                const csvContent = generateCSV(headers, data);
+
+                // Create download link
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Revoke the object URL
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+
+                showAlert(`${type.charAt(0).toUpperCase() + type.slice(1)} report exported successfully!`, 'success');
+
+            } catch (error) {
+                console.error('Error exporting report:', error);
+                showAlert(`Error exporting ${type} report: ${error.message}`, 'danger');
+            }
+        }
+
+        // Helper function to generate CSV content
+        function generateCSV(headers, data) {
+            const csvRows = [];
+
+            // Add headers
+            csvRows.push(headers.map(header => `"${header}"`).join(','));
+
+            // Add data rows
+            data.forEach(row => {
+                const csvRow = headers.map(header => {
+                    const value = row[header] || '';
+                    // Escape quotes and wrap in quotes
+                    const escapedValue = String(value).replace(/"/g, '""');
+                    return `"${escapedValue}"`;
+                });
+                csvRows.push(csvRow.join(','));
+            });
+
+            return csvRows.join('\n');
         }
 
         // Utility Functions
-        function updateCustomerDropdowns(customers) {
+        function updateCustomerDropdowns() {
             const dropdowns = ['invoiceCustomer', 'paymentCustomer', 'adjustmentCustomer'];
             dropdowns.forEach(id => {
                 const select = document.getElementById(id);
                 if (select) {
                     select.innerHTML = '<option value="">Select Customer</option>';
-                    customers.forEach(customer => {
-                        select.innerHTML += `<option value="${customer.id}">${customer.name}</option>`;
-                    });
+                    if (Array.isArray(phpCustomers)) {
+                        phpCustomers.forEach(customer => {
+                            select.innerHTML += `<option value="${customer.id}">${customer.company_name}</option>`;
+                        });
+                    }
                 }
             });
         }
@@ -1935,14 +2234,414 @@ try {
             }, 5000);
         }
 
-        // Placeholder functions for actions
-        function viewInvoice(id) { alert(`View invoice ${id}`); }
-        function sendInvoice(id) { alert(`Send invoice ${id}`); }
-        function deleteInvoice(id) { if (confirm('Delete invoice?')) console.log('Delete', id); }
-        function viewPayment(id) { alert(`View payment ${id}`); }
-        function deletePayment(id) { if (confirm('Delete payment?')) console.log('Delete', id); }
-        function viewAdjustment(id) { alert(`View adjustment ${id}`); }
-        function deleteAdjustment(id) { if (confirm('Delete adjustment?')) console.log('Delete', id); }
+        // Invoice action functions
+        async function viewInvoice(id) {
+            try {
+                const response = await fetch(`api/invoices.php?id=${id}`);
+                const invoice = await response.json();
+                if (invoice.error) {
+                    throw new Error(invoice.error);
+                }
+
+                // Create invoice details modal
+                const modalContent = `
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Invoice Details - ${invoice.invoice_number}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <strong>Customer:</strong> ${invoice.customer_name}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>Invoice Date:</strong> ${new Date(invoice.invoice_date).toLocaleDateString()}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>Due Date:</strong> ${new Date(invoice.due_date).toLocaleDateString()}
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-3">
+                                        <strong>Status:</strong>
+                                        <span class="badge bg-${getStatusClass(invoice.status)}">${invoice.status}</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>Balance:</strong> ₱${parseFloat(invoice.balance).toLocaleString()}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Total:</strong> ₱${parseFloat(invoice.total_amount).toLocaleString()}
+                                    </div>
+                                </div>
+
+                                <h6>Invoice Items:</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Description</th>
+                                                <th class="text-end">Quantity</th>
+                                                <th class="text-end">Unit Price</th>
+                                                <th class="text-end">Line Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${invoice.items && invoice.items.length > 0 ?
+                                                invoice.items.map(item => `
+                                                    <tr>
+                                                        <td>${item.description}</td>
+                                                        <td class="text-end">${item.quantity}</td>
+                                                        <td class="text-end">₱${parseFloat(item.unit_price).toLocaleString()}</td>
+                                                        <td class="text-end">₱${parseFloat(item.line_total).toLocaleString()}</td>
+                                                    </tr>
+                                                `).join('') :
+                                                '<tr><td colspan="4" class="text-center">No items found</td></tr>'
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                ${invoice.notes ? `<div class="mt-3"><strong>Notes:</strong> ${invoice.notes}</div>` : ''}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-success" onclick="sendInvoice('${invoice.id}')">
+                                    <i class="fas fa-paper-plane me-1"></i>Send Invoice
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Create and show modal
+                const modalDiv = document.createElement('div');
+                modalDiv.className = 'modal fade';
+                modalDiv.innerHTML = modalContent;
+                document.body.appendChild(modalDiv);
+
+                const modal = new bootstrap.Modal(modalDiv);
+                modal.show();
+
+                // Remove modal from DOM when hidden
+                modalDiv.addEventListener('hidden.bs.modal', function() {
+                    document.body.removeChild(modalDiv);
+                });
+
+            } catch (error) {
+                console.error('Error viewing invoice:', error);
+                showAlert('Error loading invoice details: ' + error.message, 'danger');
+            }
+        }
+
+        async function sendInvoice(id) {
+            if (!confirm('Are you sure you want to mark this invoice as sent? This will send notification emails.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`api/invoices.php?id=${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ status: 'sent' })
+                });
+
+                const result = await response.json();
+
+                if (result.success || result === true) {
+                    showAlert('Invoice sent successfully! Notifications will be sent.', 'success');
+
+                    // Close any open modals
+                    const openModals = document.querySelectorAll('.modal.show');
+                    openModals.forEach(modalEl => {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    });
+
+                    // Reload invoices to show updated status
+                    loadInvoices();
+                } else {
+                    throw new Error(result.error || 'Failed to send invoice');
+                }
+            } catch (error) {
+                console.error('Error sending invoice:', error);
+                showAlert('Error sending invoice: ' + error.message, 'danger');
+            }
+        }
+
+        async function deleteInvoice(id) {
+            if (!confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`api/invoices.php?id=${id}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success || result === true) {
+                    showAlert('Invoice deleted successfully', 'success');
+                    loadInvoices(); // Reload invoices list
+                } else {
+                    throw new Error(result.error || 'Failed to delete invoice');
+                }
+            } catch (error) {
+                console.error('Error deleting invoice:', error);
+                showAlert('Error deleting invoice: ' + error.message, 'danger');
+            }
+        }
+
+        // Payment action functions
+        async function viewPayment(id) {
+            try {
+                const response = await fetch(`api/payments.php?id=${id}&type=received`);
+                const payment = await response.json();
+
+                if (payment.error) {
+                    throw new Error(payment.error);
+                }
+
+                // Create payment details modal
+                const modalContent = `
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Payment Details - ${payment.payment_number || payment.reference_number}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Customer</label>
+                                            <p class="form-control-plaintext">${payment.customer_name || 'Unknown'}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Payment Date</label>
+                                            <p class="form-control-plaintext">${new Date(payment.payment_date).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Amount</label>
+                                            <p class="form-control-plaintext">₱${parseFloat(payment.amount).toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Method</label>
+                                            <p class="form-control-plaintext">${payment.payment_method.replace('_', ' ').toUpperCase()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Reference Number</label>
+                                    <p class="form-control-plaintext">${payment.reference_number || 'N/A'}</p>
+                                </div>
+                                ${payment.notes ? `
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Notes</label>
+                                    <p class="form-control-plaintext">${payment.notes}</p>
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Create and show modal
+                const modalDiv = document.createElement('div');
+                modalDiv.className = 'modal fade';
+                modalDiv.innerHTML = modalContent;
+                document.body.appendChild(modalDiv);
+
+                const modal = new bootstrap.Modal(modalDiv);
+                modal.show();
+
+                // Remove modal from DOM when hidden
+                modalDiv.addEventListener('hidden.bs.modal', function() {
+                    document.body.removeChild(modalDiv);
+                });
+
+            } catch (error) {
+                console.error('Error viewing payment:', error);
+                showAlert('Error loading payment details: ' + error.message, 'danger');
+            }
+        }
+
+        async function deletePayment(id) {
+            if (!confirm('Are you sure you want to delete this payment? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`api/payments.php?id=${id}&type=received`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success || result === true) {
+                    showAlert('Payment deleted successfully', 'success');
+                    loadPayments(); // Reload payments list
+                } else {
+                    throw new Error(result.error || 'Failed to delete payment');
+                }
+            } catch (error) {
+                console.error('Error deleting payment:', error);
+                showAlert('Error deleting payment: ' + error.message, 'danger');
+            }
+        }
+
+        // Adjustment action functions
+        async function viewAdjustment(id) {
+            try {
+                const response = await fetch(`api/adjustments.php?id=${id}`);
+                const adjustment = await response.json();
+
+                // Create adjustment details modal
+                const modalContent = `
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Adjustment Details - ${adjustment.adjustment_number || 'ADJ-' + adjustment.id}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Customer</label>
+                                            <p class="form-control-plaintext">${adjustment.customer_name || 'Unknown'}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Type</label>
+                                            <p class="form-control-plaintext">${adjustment.adjustment_type.replace('_', ' ').toUpperCase()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Amount</label>
+                                            <p class="form-control-plaintext">₱${parseFloat(adjustment.amount).toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Date</label>
+                                            <p class="form-control-plaintext">${new Date(adjustment.adjustment_date).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                ${adjustment.reason ? `
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Reason</label>
+                                    <p class="form-control-plaintext">${adjustment.reason}</p>
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Create and show modal
+                const modalDiv = document.createElement('div');
+                modalDiv.className = 'modal fade';
+                modalDiv.innerHTML = modalContent;
+                document.body.appendChild(modalDiv);
+
+                const modal = new bootstrap.Modal(modalDiv);
+                modal.show();
+
+                // Remove modal from DOM when hidden
+                modalDiv.addEventListener('hidden.bs.modal', function() {
+                    document.body.removeChild(modalDiv);
+                });
+
+            } catch (error) {
+                console.error('Error viewing adjustment:', error);
+                showAlert('Error loading adjustment details: ' + error.message, 'danger');
+            }
+        }
+
+        async function deleteAdjustment(id) {
+            if (!confirm('Are you sure you want to delete this adjustment? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`api/adjustments.php?id=${id}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('Adjustment deleted successfully', 'success');
+                    loadAdjustments(); // Reload adjustments list
+                } else {
+                    throw new Error(result.error || 'Failed to delete adjustment');
+                }
+            } catch (error) {
+                console.error('Error deleting adjustment:', error);
+                showAlert('Error deleting adjustment: ' + error.message, 'danger');
+            }
+        }
+
+        // Loading and utility functions
+        function showLoading() {
+            const loadingBtn = document.querySelector('.btn-primary[form="invoiceForm"]');
+            if (loadingBtn) {
+                loadingBtn.innerHTML = '<span class="loading"></span> Processing...';
+                loadingBtn.disabled = true;
+            }
+        }
+
+        function hideLoading() {
+            const loadingBtn = document.querySelector('.btn-primary[form="invoiceForm"]');
+            if (loadingBtn) {
+                loadingBtn.innerHTML = 'Save Invoice';
+                loadingBtn.disabled = false;
+            }
+        }
+
+        function getStatusClass(status) {
+            const statusClasses = {
+                'draft': 'secondary',
+                'sent': 'warning',
+                'paid': 'success',
+                'overdue': 'danger'
+            };
+            return statusClasses[status] || 'secondary';
+        }
+
+        function getStatusDotClass(status) {
+            const statusDotClasses = {
+                'draft': 'status-draft',
+                'sent': 'status-sent',
+                'paid': 'status-paid',
+                'overdue': 'status-overdue'
+            };
+            return statusDotClasses[status] || 'status-draft';
+        }
     </script>
 </body>
 </html>

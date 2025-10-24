@@ -4,14 +4,6 @@ require_once '../../includes/database.php';
 require_once '../../includes/logger.php';
 
 header('Content-Type: application/json');
-session_start();
-
-// Check if user is logged in
-if (!isset($_SESSION['user'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
-    exit;
-}
 
 $db = Database::getInstance();
 $method = $_SERVER['REQUEST_METHOD'];
@@ -68,14 +60,30 @@ try {
                 $payments = [];
 
                 if ($type === 'received' || $type === 'all') {
+                    // Build dynamic query based on available columns
+                    $selectFields = "pr.*, c.company_name as customer_name, u.full_name as recorded_by_name, 'received' as payment_type";
+
+                    $joins = "LEFT JOIN customers c ON pr.customer_id = c.id
+                             LEFT JOIN users u ON pr.recorded_by = u.id";
+
+                    if ($db->columnExists('payments_received', 'vendor_id')) {
+                        $selectFields .= ", v.company_name as vendor_name";
+                        $selectFields .= ", CASE WHEN pr.customer_id IS NOT NULL THEN 'customer' WHEN pr.vendor_id IS NOT NULL THEN 'vendor' ELSE 'unknown' END as source_type";
+                        $joins .= " LEFT JOIN vendors v ON pr.vendor_id = v.id";
+                    }
+
+                    if ($db->columnExists('payments_received', 'invoice_id')) {
+                        $selectFields .= ", i.invoice_number";
+                        $joins .= " LEFT JOIN invoices i ON pr.invoice_id = i.id";
+                    }
+
+                    if ($db->columnExists('payments_received', 'bill_id')) {
+                        $selectFields .= ", b.bill_number";
+                        $joins .= " LEFT JOIN bills b ON pr.bill_id = b.id";
+                    }
+
                     $received = $db->select(
-                        "SELECT pr.*, c.company_name as customer_name, i.invoice_number,
-                                u.full_name as recorded_by_name, 'received' as payment_type
-                         FROM payments_received pr
-                         LEFT JOIN customers c ON pr.customer_id = c.id
-                         LEFT JOIN invoices i ON pr.invoice_id = i.id
-                         LEFT JOIN users u ON pr.recorded_by = u.id
-                         ORDER BY pr.payment_date DESC"
+                        "SELECT $selectFields FROM payments_received pr $joins ORDER BY pr.payment_date DESC"
                     );
                     $payments = array_merge($payments, $received);
                 }
@@ -121,9 +129,9 @@ try {
                 exit;
             }
 
-            if ($paymentType === 'received' && empty($data['customer_id'])) {
+            if ($paymentType === 'received' && empty($data['customer_id']) && empty($data['vendor_id'])) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'Customer ID required for payments received']);
+                echo json_encode(['success' => false, 'error' => 'Either Customer ID or Vendor ID required for payments received']);
                 exit;
             }
 
@@ -142,21 +150,33 @@ try {
                     $count = $stmt->fetch()['count'] + 1;
                     $paymentNumber = 'PAY-' . date('Y') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
 
+                    // Support both existing and new database structures
+                    $columns = ['payment_number', 'customer_id', 'payment_date', 'amount', 'payment_method', 'reference_number', 'notes', 'recorded_by'];
+                    $values = [$paymentNumber, $data['customer_id'] ?? null, $data['payment_date'], $data['amount'], $data['payment_method'], $data['reference_number'] ?? null, $data['notes'] ?? null, $userId];
+                    $placeholders = ['?', '?', '?', '?', '?', '?', '?', '?'];
+
+                    // Add vendor_id and bill_id if they exist in the database (after migration)
+                    if ($db->columnExists('payments_received', 'vendor_id')) {
+                        $columns[] = 'vendor_id';
+                        $columns[] = 'bill_id';
+                        $values[] = $data['vendor_id'] ?? null;
+                        $values[] = $data['bill_id'] ?? null;
+                        $placeholders[] = '?';
+                        $placeholders[] = '?';
+                    }
+
+                    if ($db->columnExists('payments_received', 'invoice_id')) {
+                        $columns[] = 'invoice_id';
+                        $values[] = $data['invoice_id'] ?? null;
+                        $placeholders[] = '?';
+                    }
+
+                    $columnsStr = implode(', ', $columns);
+                    $placeholdersStr = implode(', ', $placeholders);
+
                     $paymentId = $db->insert(
-                        "INSERT INTO payments_received (payment_number, customer_id, invoice_id, payment_date,
-                                                      amount, payment_method, reference_number, notes, recorded_by)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        [
-                            $paymentNumber,
-                            $data['customer_id'],
-                            $data['invoice_id'] ?? null,
-                            $data['payment_date'],
-                            $data['amount'],
-                            $data['payment_method'],
-                            $data['reference_number'] ?? null,
-                            $data['notes'] ?? null,
-                            $userId
-                        ]
+                        "INSERT INTO payments_received ($columnsStr) VALUES ($placeholdersStr)",
+                        $values
                     );
 
                     // Update invoice balance if linked to invoice

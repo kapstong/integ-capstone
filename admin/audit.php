@@ -317,7 +317,10 @@ function showLogDetails(logId) {
                     </div>
                 `;
                 document.getElementById('logDetailsContent').innerHTML = content;
-                new bootstrap.Modal(document.getElementById('logDetailsModal')).show();
+                const modalEl = document.getElementById('logDetailsModal');
+                if (modalEl) {
+                    new bootstrap.Modal(modalEl).show();
+                }
             } else {
                 alert('Error loading log details: ' + data.error);
             }

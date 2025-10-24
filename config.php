@@ -168,6 +168,10 @@ class Config {
     }
 }
 
+// Include required files
+require_once __DIR__ . '/includes/database.php';
+require_once __DIR__ . '/includes/auth.php';
+
 // Initialize configuration
 Config::get('app.name'); // Trigger config loading
 

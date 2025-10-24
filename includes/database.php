@@ -106,6 +106,19 @@ class Database {
         return $stmt->rowCount();
     }
 
+    // Check if a column exists in a table
+    public function columnExists($tableName, $columnName) {
+        try {
+            $sql = "SELECT column_name FROM information_schema.COLUMNS
+                    WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?";
+            $stmt = $this->connection->prepare($sql);
+            $stmt->execute([$tableName, $columnName]);
+            return $stmt->rowCount() > 0;
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
     // Begin transaction
     public function beginTransaction() {
         return $this->connection->beginTransaction();

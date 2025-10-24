@@ -670,7 +670,7 @@ $db = Database::getInstance()->getConnection();
             <hr style="border-top: 2px solid white; margin: 10px 0;">
         </div>
         <nav class="nav flex-column">
-            <a class="nav-link" href="dashboard.php">
+            <a class="nav-link" href="index.php">
                 <i class="fas fa-tachometer-alt me-2"></i><span>Dashboard</span>
             </a>
             <div class="nav-item">

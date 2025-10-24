@@ -1,15 +1,25 @@
 <?php
-require_once '../../includes/auth.php';
-require_once '../../includes/database.php';
-require_once '../../includes/logger.php';
-
+// Force JSON output and disable HTML errors for API responses
 header('Content-Type: application/json');
-session_start();
+ini_set('display_errors', 0);
+error_reporting(E_ERROR);
 
-// Check if user is logged in
-if (!isset($_SESSION['user'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
+try {
+    require_once '../../includes/auth.php';
+    require_once '../../includes/database.php';
+    require_once '../../includes/logger.php';
+
+    // Session is already started in auth.php
+
+    // Check if user is logged in
+    if (!isset($_SESSION['user'])) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Unauthorized']);
+        exit;
+    }
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Server configuration error', 'details' => $e->getMessage()]);
     exit;
 }
 
@@ -20,7 +30,18 @@ $userId = $_SESSION['user']['id'];
 try {
     switch ($method) {
         case 'GET':
-            if (isset($_GET['id'])) {
+            if (isset($_GET['action'])) {
+                if ($_GET['action'] === 'aging') {
+                    // Generate aging report
+                    generateAgingReport($db);
+                } elseif ($_GET['action'] === 'next_number') {
+                    // Get next bill number
+                    $stmt = $db->query("SELECT COUNT(*) as count FROM bills WHERE YEAR(created_at) = YEAR(CURDATE())");
+                    $count = $stmt->fetch()['count'] + 1;
+                    $nextNumber = 'BILL-' . date('Y') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+                    echo json_encode(['success' => true, 'next_number' => $nextNumber]);
+                }
+            } elseif (isset($_GET['id'])) {
                 // Get single bill with items
                 $bill = $db->select(
                     "SELECT b.*, v.company_name as vendor_name, v.vendor_code,
@@ -52,12 +73,45 @@ try {
                 $bill['items'] = $items;
                 echo json_encode($bill);
             } else {
-                // Get all bills with vendor info
+                // Build WHERE clause for filtering
+                $whereConditions = [];
+                $params = [];
+
+                // Status filtering
+                if (isset($_GET['status']) && !empty($_GET['status'])) {
+                    $statusList = explode(',', $_GET['status']);
+                    $placeholders = str_repeat('?,', count($statusList) - 1) . '?';
+                    $whereConditions[] = "b.status IN ($placeholders)";
+                    $params = array_merge($params, $statusList);
+                }
+
+                // Vendor ID filtering
+                if (isset($_GET['vendor_id']) && !empty($_GET['vendor_id'])) {
+                    $whereConditions[] = "b.vendor_id = ?";
+                    $params[] = $_GET['vendor_id'];
+                }
+
+                // Date range filtering
+                if (isset($_GET['date_from']) && !empty($_GET['date_from'])) {
+                    $whereConditions[] = "b.bill_date >= ?";
+                    $params[] = $_GET['date_from'];
+                }
+
+                if (isset($_GET['date_to']) && !empty($_GET['date_to'])) {
+                    $whereConditions[] = "b.bill_date <= ?";
+                    $params[] = $_GET['date_to'];
+                }
+
+                // Build the SQL query
+                $whereClause = !empty($whereConditions) ? "WHERE " . implode(' AND ', $whereConditions) : '';
+
                 $bills = $db->select(
                     "SELECT b.*, v.company_name as vendor_name, v.vendor_code
                      FROM bills b
                      JOIN vendors v ON b.vendor_id = v.id
-                     ORDER BY b.created_at DESC"
+                     $whereClause
+                     ORDER BY b.created_at DESC",
+                    $params
                 );
                 echo json_encode($bills);
             }
@@ -78,22 +132,35 @@ try {
                 exit;
             }
 
-            // Generate bill number
-            $stmt = $db->query("SELECT COUNT(*) as count FROM bills WHERE YEAR(created_at) = YEAR(CURDATE())");
-            $count = $stmt->fetch()['count'] + 1;
-            $billNumber = 'BILL-' . date('Y') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
-
-            // Calculate totals
-            $subtotal = 0;
-            $taxRate = $data['tax_rate'] ?? 12.00;
-            $items = $data['items'] ?? [];
-
-            foreach ($items as $item) {
-                $subtotal += ($item['quantity'] ?? 1) * ($item['unit_price'] ?? 0);
+            // Use provided bill number or generate new one
+            $billNumber = $data['bill_number'] ?? null;
+            if (empty($billNumber)) {
+                $stmt = $db->query("SELECT COUNT(*) as count FROM bills WHERE YEAR(created_at) = YEAR(CURDATE())");
+                $count = $stmt->fetch()['count'] + 1;
+                $billNumber = 'BILL-' . date('Y') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
             }
 
-            $taxAmount = $subtotal * ($taxRate / 100);
-            $totalAmount = $subtotal + $taxAmount;
+            // Calculate totals - handle simple amount field from frontend
+            $taxRate = $data['tax_rate'] ?? 12.00;
+
+            if (isset($data['amount'])) {
+                // Simple bill creation from frontend - use amount directly
+                $totalAmount = (float)$data['amount'];
+                $subtotal = $totalAmount / (1 + ($taxRate / 100));
+                $taxAmount = $totalAmount - $subtotal;
+                $items = []; // No items for simple bills
+            } else {
+                // Detailed bill creation with items
+                $subtotal = 0;
+                $items = $data['items'] ?? [];
+
+                foreach ($items as $item) {
+                    $subtotal += ($item['quantity'] ?? 1) * ($item['unit_price'] ?? 0);
+                }
+
+                $taxAmount = $subtotal * ($taxRate / 100);
+                $totalAmount = $subtotal + $taxAmount;
+            }
 
             $db->beginTransaction();
 
@@ -193,6 +260,21 @@ try {
                     $fields[] = "due_date = ?";
                     $params[] = $data['due_date'];
                 }
+                if (isset($data['amount'])) {
+                    // Update total_amount directly (frontend sends simple amount field)
+                    $fields[] = "total_amount = ?";
+                    $params[] = $data['amount'];
+                }
+                if (isset($data['description'])) {
+                    // Update notes from description
+                    $fields[] = "notes = ?";
+                    $params[] = $data['description'];
+                }
+                if (isset($data['bill_number'])) {
+                    // Update bill number
+                    $fields[] = "bill_number = ?";
+                    $params[] = $data['bill_number'];
+                }
                 if (isset($data['status'])) {
                     $fields[] = "status = ?";
                     $params[] = $data['status'];
@@ -200,10 +282,6 @@ try {
                 if (isset($data['approved_by'])) {
                     $fields[] = "approved_by = ?";
                     $params[] = $data['approved_by'];
-                }
-                if (isset($data['notes'])) {
-                    $fields[] = "notes = ?";
-                    $params[] = $data['notes'];
                 }
 
                 // Recalculate totals if items changed
@@ -318,6 +396,65 @@ try {
     Logger::getInstance()->logDatabaseError('Bill API operation', $e->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Database error occurred']);
+}
+
+/**
+ * Generate aging report
+ */
+function generateAgingReport($db) {
+    try {
+        $period = isset($_GET['period']) ? (int)$_GET['period'] : 30;
+
+        // Query to get unpaid bills with vendor info and calculate days past due
+        $query = "
+            SELECT
+                b.*,
+                v.company_name as vendor_name,
+                v.vendor_code,
+                DATEDIFF(CURDATE(), b.due_date) as days_past_due,
+                CASE
+                    WHEN DATEDIFF(CURDATE(), b.due_date) <= 0 THEN 'current'
+                    WHEN DATEDIFF(CURDATE(), b.due_date) BETWEEN 1 AND 30 THEN '1-30'
+                    WHEN DATEDIFF(CURDATE(), b.due_date) BETWEEN 31 AND 60 THEN '31-60'
+                    WHEN DATEDIFF(CURDATE(), b.due_date) BETWEEN 61 AND 90 THEN '61-90'
+                    ELSE '90+'
+                END as aging_bucket
+            FROM bills b
+            JOIN vendors v ON b.vendor_id = v.id
+            WHERE b.balance > 0.01
+            AND b.status IN ('approved', 'overdue', 'draft')
+            AND v.status = 'active'
+            ORDER BY v.company_name, b.due_date
+        ";
+
+        $bills = $db->select($query);
+
+        $agingData = [];
+        foreach ($bills as $bill) {
+            $agingData[] = [
+                'bill_number' => $bill['bill_number'],
+                'vendor_name' => $bill['vendor_name'],
+                'vendor_code' => $bill['vendor_code'],
+                'bill_date' => $bill['bill_date'],
+                'due_date' => $bill['due_date'],
+                'total_amount' => (float)$bill['total_amount'],
+                'balance' => (float)$bill['balance'],
+                'days_past_due' => (int)$bill['days_past_due'],
+                'aging_bucket' => $bill['aging_bucket'],
+                'status' => $bill['status']
+            ];
+        }
+
+        echo json_encode($agingData);
+
+    } catch (Exception $e) {
+        Logger::getInstance()->logDatabaseError('Aging Report Generation', $e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'error' => 'Failed to generate aging report',
+            'message' => $e->getMessage()
+        ]);
+    }
 }
 
 /**

@@ -348,7 +348,10 @@ function configureIntegration(integrationName) {
             if (data.success) {
                 document.getElementById('modal_integration_name').value = integrationName;
                 document.getElementById('configFields').innerHTML = data.form_html;
-                new bootstrap.Modal(document.getElementById('configureModal')).show();
+                const modalEl = document.getElementById('configureModal');
+                if (modalEl) {
+                    new bootstrap.Modal(modalEl).show();
+                }
             } else {
                 alert('Error loading configuration form: ' + data.error);
             }
@@ -412,7 +415,10 @@ function showIntegrationStats() {
                     }
                 });
 
-                new bootstrap.Modal(document.getElementById('statsModal')).show();
+                const modalEl = document.getElementById('statsModal');
+                if (modalEl) {
+                    new bootstrap.Modal(modalEl).show();
+                }
             } else {
                 alert('Error loading statistics: ' + data.error);
             }
@@ -444,7 +450,10 @@ function showIntegrationLogs() {
 
                 html += '</tbody></table></div>';
                 document.getElementById('logsContent').innerHTML = html;
-                new bootstrap.Modal(document.getElementById('logsModal')).show();
+                const modalEl = document.getElementById('logsModal');
+                if (modalEl) {
+                    new bootstrap.Modal(modalEl).show();
+                }
             } else {
                 alert('Error loading logs: ' + data.error);
             }
