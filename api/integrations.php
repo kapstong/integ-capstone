@@ -146,6 +146,7 @@ try {
             $headers[] = 'Authorization: Bearer ' . $config['api_key'];
         }
 
+        // Add debugging information for PUT request
         $ch = curl_init($config['api_url']);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
@@ -155,16 +156,58 @@ try {
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 
+        // Enable verbose logging for debugging
+        curl_setopt($ch, CURLOPT_VERBOSE, true);
+        $verboseBuffer = fopen('php://temp', 'w+');
+        curl_setopt($ch, CURLOPT_STDERR, $verboseBuffer);
+
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
+
+        // Get verbose output
+        rewind($verboseBuffer);
+        $verbose = stream_get_contents($verboseBuffer);
+        fclose($verboseBuffer);
+
         curl_close($ch);
 
-        // Log the attempt for debugging
-        error_log("HR3 PUT Update Attempt - URL: {$config['api_url']}, Code: {$httpCode}, Error: {$curlError}");
+        // Detailed logging for troubleshooting
+        error_log("=== HR3 PUT REQUEST DEBUG ===");
+        error_log("URL: {$config['api_url']}");
+        error_log("Method: PUT");
+        error_log("Headers: " . json_encode($headers));
+        error_log("Data: {$updateData}");
+        error_log("HTTP Code: {$httpCode}");
+        error_log("Curl Error: {$curlError}");
+        error_log("Response First 200 chars: " . substr($response, 0, 200));
+        error_log("Verbose Log: " . substr($verbose, 0, 500)); // First 500 chars of verbose
+
+        // Check if it's the claims list response (indicating HR3 not processing PUT correctly)
+        $isClaimsList = false;
+        if ($response && substr(trim($response), 0, 1) === '[') { // JSON array starts with [
+            $possibleClaims = json_decode($response, true);
+            if (is_array($possibleClaims) && !empty($possibleClaims) &&
+                isset($possibleClaims[0]['claim_id'])) {
+                $isClaimsList = true;
+            }
+        }
 
         // Check HR3 API response
-        if (!$curlError && $httpCode === 200) {
+        if ($isClaimsList) {
+            // HR3 is returning claims list instead of processing PUT
+            echo json_encode([
+                'success' => false,
+                'error' => 'HR3 API not processing PUT requests correctly - returning claims list instead of update response',
+                'http_code' => $httpCode,
+                'note' => 'HR3 server may not be configured properly for PUT requests. Disbursement created locally.',
+                'debug_info' => [
+                    'response_starts_with' => substr($response, 0, 50),
+                    'is_json_array' => true,
+                    'likely_claims_list' => true
+                ]
+            ]);
+        } elseif (!$curlError && $httpCode === 200) {
             $result = json_decode($response, true);
 
             // HR3 API returns success message on successful update
@@ -182,6 +225,7 @@ try {
                     'success' => false,
                     'error' => 'HR3 API rejected the update: ' . ($result['error'] ?? 'Unknown error'),
                     'hr3_response' => $result,
+                    'http_code' => $httpCode,
                     'note' => 'Check if claim exists and is in "Approved" status.'
                 ]);
             }
@@ -193,6 +237,7 @@ try {
                 'error' => 'Failed to connect to HR3 API: ' . $errorMsg,
                 'claim_id' => $claimId,
                 'attempted_status' => $newStatus,
+                'http_code' => $httpCode,
                 'note' => 'Disbursement will still be created locally.'
             ]);
         }
