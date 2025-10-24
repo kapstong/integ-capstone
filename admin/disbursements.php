@@ -11,11 +11,11 @@ $userDepartment = $_SESSION['user']['department'] ?? '';
 
 // Define department permissions for disbursements module
 $deptPermissions = [
-    'finance' => ['view', 'create', 'edit', 'delete', 'approve', 'process_claims'],
-    'accounting' => ['view', 'create', 'edit', 'delete', 'approve'],
+    'finance' => ['view', 'create', 'edit', 'delete', 'process_claims'],
+    'accounting' => ['view', 'create', 'edit', 'delete'],
     'hr' => ['view', 'process_claims', 'upload_vouchers'],
     'procurement' => ['view', 'create', 'upload_vouchers'],
-    'admin' => ['view', 'create', 'edit', 'delete', 'approve', 'process_claims', 'configure'],
+    'admin' => ['view', 'create', 'edit', 'delete', 'process_claims', 'configure'],
 ];
 
 // Department-based access control (permissive approach)
@@ -391,11 +391,7 @@ body {
                     <i class="fas fa-file-invoice me-2"></i>Vouchers & Documentation
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="approval-tab" data-bs-toggle="tab" data-bs-target="#approval" type="button" role="tab">
-                    <i class="fas fa-check-circle me-2"></i>Approval Workflow
-                </button>
-            </li>
+
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button" role="tab">
                     <i class="fas fa-chart-bar me-2"></i>Reports & Analytics
@@ -724,74 +720,7 @@ body {
                 </div>
             </div>
 
-            <!-- Approval Workflow Tab -->
-            <div class="tab-pane fade" id="approval" role="tabpanel" aria-labelledby="approval-tab">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">Approval Workflow Management</h6>
-                    <div>
-                        <button class="btn btn-success me-2" onclick="loadApprovals()">
-                            <i class="fas fa-refresh me-1"></i>Load Approvals
-                        </button>
-                        <button class="btn btn-outline-primary" onclick="loadApprovals()">
-                            <i class="fas fa-cog me-1"></i>Configure Workflow
-                        </button>
-                    </div>
-                </div>
 
-                <div class="card">
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped" id="approvalWorkflowTable">
-                                <thead>
-                                    <tr>
-                                        <th>Disbursement ID</th>
-                                        <th>Payee</th>
-                                        <th>Amount</th>
-                                        <th>Status</th>
-                                        <th>Approvers</th>
-                                        <th>Last Updated</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="approvalWorkflowBody">
-                                    <tr>
-                                        <td colspan="7" class="text-center text-muted">
-                                            Click "Load Approvals" to view pending approvals
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row mt-3">
-                    <div class="col-md-4">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <h4 class="text-warning" id="pendingApprovalsCount">0</h4>
-                                <p class="mb-0">Pending Approvals</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <h4 class="text-success" id="approvedCount">0</h4>
-                                <p class="mb-0">Approved Today</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <h4 class="text-danger" id="rejectedCount">0</h4>
-                                <p class="mb-0">Rejected Today</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 

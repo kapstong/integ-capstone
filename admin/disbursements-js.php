@@ -534,11 +534,11 @@ header('Content-Type: application/javascript');
 
             // Define permissions (same as PHP backend)
             const deptPermissions = {
-                'finance': ['view', 'create', 'edit', 'delete', 'approve', 'process_claims'],
-                'accounting': ['view', 'create', 'edit', 'delete', 'approve'],
+                'finance': ['view', 'create', 'edit', 'delete', 'process_claims'],
+                'accounting': ['view', 'create', 'edit', 'delete'],
                 'hr': ['view', 'process_claims', 'upload_vouchers'],
                 'procurement': ['view', 'create', 'upload_vouchers'],
-                'admin': ['view', 'create', 'edit', 'delete', 'approve', 'process_claims', 'configure']
+                'admin': ['view', 'create', 'edit', 'delete', 'process_claims', 'configure']
             };
 
             // Get user perms or fallback to admin role
@@ -552,7 +552,6 @@ header('Content-Type: application/javascript');
                 'processing-tab': 'create',      // Payment Processing - requires create permission
                 'claims-tab': 'process_claims',  // Claims Processing - requires process_claims permission
                 'vouchers-tab': 'upload_vouchers', // Vouchers - requires upload permission
-                'approval-tab': 'approve',       // Approval Workflow - requires approve permission
                 'reports-tab': 'view',           // Reports - basic view permission
                 'audit-tab': 'delete'            // Audit Trail - requires delete permission
             };
@@ -608,7 +607,6 @@ header('Content-Type: application/javascript');
                 canEdit: userPerms.includes('edit') || hasAdminRole,
                 canDelete: userPerms.includes('delete') || hasAdminRole,
                 canView: userPerms.includes('view') || hasAdminRole,
-                canApprove: userPerms.includes('approve') || hasAdminRole,
                 department: userDepartment,
                 role: userRole
             };
@@ -852,253 +850,3 @@ header('Content-Type: application/javascript');
                 bulkDeleteBtn.innerHTML = originalText;
             }
         }
-
-        // ================================================================
-        // APPROVAL WORKFLOW SYSTEM
-        // ================================================================
-
-        // Load pending approvals
-        async function loadApprovals() {
-            try {
-                const response = await fetch('api/disbursements.php?action=get_approvals', {
-                    credentials: 'include'
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const approvals = await response.json();
-                renderApprovalsTable(approvals);
-            } catch (error) {
-                console.error('Error loading approvals:', error);
-                showAlert('Error loading approval requests', 'danger');
-                const tbody = document.getElementById('approvalsTableBody');
-                if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Error loading approvals</td></tr>';
-                }
-            }
-        }
-
-        // Render approvals table
-        function renderApprovalsTable(approvals) {
-            const tbody = document.getElementById('approvalsTableBody');
-
-            if (!tbody) return;
-
-            if (approvals.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center">No pending approvals</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = approvals.map(approval => {
-                const statusBadge = getApprovalStatusBadge(approval.status);
-                const levelInfo = `Level ${approval.current_level}/${approval.total_levels}`;
-
-                const actions = approval.status === 'pending' ?
-                    `<button class="btn btn-sm btn-success me-1" onclick="approveDisbursement(${approval.id})">
-                        <i class="fas fa-check"></i> Approve
-                     </button>
-                     <button class="btn btn-sm btn-danger" onclick="rejectDisbursement(${approval.id})">
-                        <i class="fas fa-times"></i> Reject
-                     </button>` :
-                    '<span class="text-muted">No actions available</span>';
-
-                return `<tr>
-                    <td>${approval.disbursement_number}</td>
-                    <td>${approval.payee}</td>
-                    <td>${approval.amount_formatted}</td>
-                    <td>${levelInfo}</td>
-                    <td>${statusBadge}</td>
-                    <td>${approval.approver_name || 'Unassigned'}</td>
-                    <td>${approval.due_by_formatted || 'No deadline'}</td>
-                    <td>${actions}</td>
-                </tr>`;
-            }).join('');
-        }
-
-        // Approve disbursement
-        async function approveDisbursement(approvalId) {
-            const action = 'Approve';
-            const reason = await getActionReason(action);
-
-            if (reason === null) return; // Cancelled
-
-            const approveBtn = event.target.closest('button');
-            const originalHtml = approveBtn.innerHTML;
-            approveBtn.disabled = true;
-            approveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-
-            try {
-                const response = await fetch(`api/disbursements.php?action=approve&id=${approvalId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        comments: reason
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showAlert(result.message, 'success');
-                    loadApprovals(); // Reload approvals
-                    loadDisbursements(); // Update main table
-                } else {
-                    showAlert(result.error || 'Error approving disbursement', 'danger');
-                }
-            } catch (error) {
-                console.error('Approval error:', error);
-                showAlert('Error processing approval', 'danger');
-            } finally {
-                approveBtn.disabled = false;
-                approveBtn.innerHTML = originalHtml;
-            }
-        }
-
-        // Reject disbursement
-        async function rejectDisbursement(approvalId) {
-            const action = 'Reject';
-            const reason = await getActionReason(action);
-
-            if (reason === null) return; // Cancelled
-
-            const rejectBtn = event.target.closest('button');
-            const originalHtml = rejectBtn.innerHTML;
-            rejectBtn.disabled = true;
-            rejectBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-
-            try {
-                const response = await fetch(`api/disbursements.php?action=reject&id=${approvalId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        comments: reason
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showAlert(result.message, 'success');
-                    loadApprovals(); // Reload approvals
-                    loadDisbursements(); // Update main table
-                } else {
-                    showAlert(result.error || 'Error rejecting disbursement', 'danger');
-                }
-            } catch (error) {
-                console.error('Rejection error:', error);
-                showAlert('Error processing rejection', 'danger');
-            } finally {
-                rejectBtn.disabled = false;
-                rejectBtn.innerHTML = originalHtml;
-            }
-        }
-
-        // Get action reason from user (approve/reject comments)
-        function getActionReason(action) {
-            return new Promise((resolve) => {
-                const modalHtml = `
-                    <div class="modal fade" id="actionReasonModal" tabindex="-1">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">${action} Disbursement</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="mb-3">
-                                        <label for="actionComments" class="form-label">Comments (optional)</label>
-                                        <textarea class="form-control" id="actionComments" rows="3" placeholder="Enter your comments or reason..."></textarea>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="button" class="btn btn-${action === 'Approve' ? 'success' : 'danger'}" id="confirmActionBtn">${action}</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                // Remove existing modal if present
-                const existingModal = document.getElementById('actionReasonModal');
-                if (existingModal) {
-                    existingModal.remove();
-                }
-
-                document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-                const modal = new bootstrap.Modal(document.getElementById('actionReasonModal'));
-
-                document.getElementById('confirmActionBtn').addEventListener('click', () => {
-                    const comments = document.getElementById('actionComments').value;
-                    modal.hide();
-
-                    // Wait for modal to hide before resolving
-                    setTimeout(() => {
-                        resolve(comments);
-                    }, 300);
-                });
-
-                // Handle cancel
-                document.querySelector('#actionReasonModal .btn-secondary').addEventListener('click', () => {
-                    modal.hide();
-                    setTimeout(() => {
-                        resolve(null); // Cancelled
-                    }, 300);
-                });
-
-                modal.show();
-            });
-        }
-
-        // Get status badge for approval statuses
-        function getApprovalStatusBadge(status) {
-            const badges = {
-                'pending': '<span class="badge bg-warning text-dark">Pending</span>',
-                'approved': '<span class="badge bg-success">Approved</span>',
-                'rejected': '<span class="badge bg-danger">Rejected</span>',
-                'timed_out': '<span class="badge bg-secondary">Timed Out</span>',
-                'cancelled': '<span class="badge bg-light text-dark">Cancelled</span>'
-            };
-            return badges[status] || `<span class="badge bg-secondary">${status}</span>`;
-        }
-
-        // Initialize approval workflow when DOM loads
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add approval tab event listener
-            const approvalTab = document.querySelector('[data-bs-target="#approval"]');
-            if (approvalTab) {
-                approvalTab.addEventListener('shown.bs.tab', function() {
-                    loadApprovals();
-                });
-            }
-
-            // Add refresh button for approvals if it exists
-            const refreshBtn = document.getElementById('refreshApprovalsBtn');
-            if (refreshBtn) {
-                refreshBtn.addEventListener('click', loadApprovals);
-            }
-
-            // Auto-refresh approvals every 30 seconds when on approval tab
-            let approvalRefreshInterval;
-            document.querySelectorAll('#disbursementsTabs .nav-link').forEach(tab => {
-                tab.addEventListener('shown.bs.tab', function(e) {
-                    const target = e.target.getAttribute('data-bs-target');
-                    if (target === '#approval') {
-                        approvalRefreshInterval = setInterval(loadApprovals, 30000); // 30 seconds
-                    } else {
-                        if (approvalRefreshInterval) {
-                            clearInterval(approvalRefreshInterval);
-                        }
-                    }
-                });
-            });
-        });
