@@ -525,19 +525,13 @@ $db = Database::getInstance()->getConnection();
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">HR3 Claims Processing - From HR3 API</h6>
                     <div>
-                        <button class="btn btn-success me-2" onclick="loadHR3Claims()">
+                        <button class="btn btn-success" onclick="loadHR3Claims()">
                             <i class="fas fa-sync me-2"></i>Load HR3 Claims
-                        </button>
-                        <button class="btn btn-outline-secondary" id="claimsConfigBtn" onclick="testHR3Connection()">
-                            <i class="fas fa-cog me-2"></i>Test HR3 Connection
                         </button>
                     </div>
                 </div>
 
-                <div class="alert alert-info mb-3" id="claimsInfoAlert" style="display: none;">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Claims are fetched from HR3 API. When processed, status changes to "Paid" instead of "approved".
-                </div>
+
 
                 <div class="table-responsive">
                     <table class="table table-striped" id="claimsTable">
@@ -1025,7 +1019,6 @@ $db = Database::getInstance()->getConnection();
 
                 if (result.success) {
                     window.displayHR3Claims(result.result);
-                    document.getElementById('claimsInfoAlert').style.display = 'block';
                 } else {
                     window.showAlert('Error loading claims: ' + (result.error || 'Unknown error'), 'danger');
                 }
