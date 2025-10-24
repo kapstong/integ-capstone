@@ -839,7 +839,7 @@ $db = Database::getInstance()->getConnection();
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading Claims...';
 
             try {
-                const response = await fetch('api/integrations.php?action=execute&integration_name=hr3&action_name=getApprovedClaims', {
+                const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=getApprovedClaims', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -913,7 +913,7 @@ $db = Database::getInstance()->getConnection();
                     notes: `Processed from HR3 claim ${claimId} - Status changed to "Paid"`
                 };
 
-                const response = await fetch('api/disbursements.php', {
+                const response = await fetch('../api/disbursements.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -954,7 +954,7 @@ $db = Database::getInstance()->getConnection();
         window.markHR3ClaimAsPaid = async function(claimId) {
             // This would call the HR3 API to update claim status to "Paid"
             // Implementation depends on HR3 API capabilities
-            const response = await fetch('api/integrations.php?action=execute&integration_name=hr3&action_name=updateClaimStatus', {
+            const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=updateClaimStatus', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
