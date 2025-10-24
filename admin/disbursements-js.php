@@ -640,10 +640,9 @@ header('Content-Type: application/javascript');
         });
 
         // Load initial data and setup permissions
-        loadDisbursements();
-        loadVendors();
-        setupDepartmentAccess();
-        });
+        // Note: Initial loading is handled in the HTML DOMContentLoaded event
+        // loadDisbursements();
+        // loadVendors();
 
         function toggleSidebarDesktop() {
             const sidebar = document.getElementById('sidebar');
