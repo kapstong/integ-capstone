@@ -215,7 +215,7 @@
                         <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
                             <i class="fas fa-user"></i>
                         </div>
-                        <span><strong><?php echo htmlspecialchars($_SESSION['user']['username'] ?? 'Admin'); ?></strong></span>
+                        <span><strong><?php echo htmlspecialchars($_SESSION['user']['name'] ?? $_SESSION['user']['username'] ?? 'Admin'); ?></strong></span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                         <li><a class="dropdown-item" href="admin-profile-settings.php"><i class="fas fa-user me-2"></i>Profile Settings</a></li>
