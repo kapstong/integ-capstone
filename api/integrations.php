@@ -193,8 +193,21 @@ try {
             }
         }
 
-        // Check HR3 API response
-        if ($isClaimsList) {
+        // Check for 405 Method Not Allowed error (very specific configuration issue)
+        if ($httpCode === 405) {
+            echo json_encode([
+                'success' => false,
+                'error' => 'HR3 API returns HTTP 405 (Method Not Allowed) for PUT requests',
+                'http_code' => $httpCode,
+                'note' => 'HR3 web server is explicitly configured to BLOCK PUT requests. This is a server configuration issue.',
+                'solution' => 'Configure Apache/nginx to allow PUT requests. Add: <LimitExcept GET POST>Deny from all</LimitExcept> to .htaccess',
+                'detailed_solution' => [
+                    'apache_htaccess' => 'Add to HR3 .htaccess: <LimitExcept GET POST HEAD>deny from all</LimitExcept>',
+                    'nginx_location' => 'Add to nginx config: location /api { limit_except GET POST { deny all; } }',
+                    'apache_vhost' => 'Add to <Directory>: AllowMethods GET POST PUT PATCH'
+                ]
+            ]);
+        } elseif ($isClaimsList) {
             // HR3 is returning claims list instead of processing PUT
             echo json_encode([
                 'success' => false,
