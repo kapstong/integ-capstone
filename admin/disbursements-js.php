@@ -99,9 +99,14 @@ header('Content-Type: application/javascript');
                     monthlyData[month] += parseFloat(d.amount);
                 });
 
-                // Create chart
+                // Create chart - destroy existing chart if it exists
                 const ctx = document.getElementById('cashFlowChart');
                 if (ctx && window.Chart) {
+                    // Destroy existing chart if it exists to prevent "Canvas is already in use" error
+                    if (Chart.getChart(ctx)) {
+                        Chart.getChart(ctx).destroy();
+                    }
+
                     new Chart(ctx, {
                         type: 'line',
                         data: {
