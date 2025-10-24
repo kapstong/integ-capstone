@@ -540,15 +540,12 @@ header('Content-Type: application/javascript');
             setupDepartmentAccess();
         });
 
+
         // Department-based access control setup
         function setupDepartmentAccess() {
             // Get user department from PHP session via a hidden element
             const userDepartment = '<?php echo $_SESSION["user"]["department"] ?? ""; ?>';
             const userRole = '<?php echo $_SESSION["user"]["role"] ?? ""; ?>';
-
-            // Debug logging
-            console.log('User Department:', userDepartment);
-            console.log('User Role:', userRole);
 
             // Define permissions (same as PHP backend)
             const deptPermissions = {
@@ -561,10 +558,8 @@ header('Content-Type: application/javascript');
 
             // Get user perms or fallback to admin role
             const userPerms = deptPermissions[userDepartment] || [];
-            const hasAdminRole = userRole === 'admin';
-
-            console.log('User Permissions:', userPerms);
-            console.log('Has Admin Role:', hasAdminRole);
+            // TREAT EMPTY/MISSING SESSION AS ADMIN (Development mode)
+            const hasAdminRole = (userRole === 'admin') || (userRole === '');
 
             // Define tab permissions
             const tabPermissions = {
@@ -577,15 +572,22 @@ header('Content-Type: application/javascript');
                 'audit-tab': 'delete'            // Audit Trail - requires delete permission
             };
 
-            // TEMPORARY: Force show all tabs for debugging
-            // Original logic will be restored once we confirm the session values
+            // Hide tabs based on permissions - Show ALL by default for development/sessions issues
             Object.keys(tabPermissions).forEach(tabId => {
+                const requiredPerm = tabPermissions[tabId];
                 const tabElement = document.getElementById(tabId);
+
                 if (tabElement) {
-                    tabElement.style.display = 'block'; // Force show all tabs
-                    console.log('Showing tab:', tabId);
-                } else {
-                    console.log('Tab not found:', tabId);
+                    // Show tab if user has permission OR is admin OR session is empty (dev mode)
+                    if (userPerms.includes(requiredPerm) || hasAdminRole) {
+                        tabElement.style.display = ''; // Default display
+                    } else {
+                        // Only hide for non-admin users with specific restrictions
+                        if (userDepartment !== '' && userRole !== '') {
+                            tabElement.style.display = 'none';
+                        }
+                        // If session is empty, show all tabs (development mode)
+                    }
                 }
             });
 
