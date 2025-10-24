@@ -525,8 +525,8 @@ $db = Database::getInstance()->getConnection();
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">HR3 Claims Processing - From HR3 API</h6>
                     <div>
-                        <button class="btn btn-success" onclick="loadHR3Claims()">
-                            <i class="fas fa-sync me-2"></i>Load HR3 Claims
+                        <button class="btn btn-success" onclick="loadClaims()">
+                            <i class="fas fa-sync me-2"></i>Load Claims
                         </button>
                     </div>
                 </div>
@@ -549,7 +549,7 @@ $db = Database::getInstance()->getConnection();
                         <tbody id="claimsTableBody">
                             <tr>
                                 <td colspan="7" class="text-center">
-                                    <div class="text-muted">Click "Load HR3 Claims" to fetch approved claims from HR3 system</div>
+                                    <div class="text-muted">Click "Load Claims" to fetch approved claims from HR3 system</div>
                                 </td>
                             </tr>
                         </tbody>
@@ -990,14 +990,14 @@ $db = Database::getInstance()->getConnection();
                 const claimsTableBody = document.getElementById('claimsTableBody');
                 if (claimsTableBody && claimsTableBody.children.length === 1) {
                     const firstChild = claimsTableBody.children[0];
-                    if (firstChild && firstChild.tagName === 'TR' && firstChild.textContent.includes('Click "Load HR3 Claims"')) {
+                    if (firstChild && firstChild.tagName === 'TR' && firstChild.textContent.includes('Click "Load Claims"')) {
                         // Auto-load claims if not already loaded
-                        window.loadHR3Claims();
+                        window.loadClaims();
                     }
                 }
             });
         }
-        window.loadHR3Claims = async function() {
+        window.loadClaims = async function() {
             const btn = event.target.closest('button');
             const originalText = btn.innerHTML;
 
@@ -1005,14 +1005,11 @@ $db = Database::getInstance()->getConnection();
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading Claims...';
 
             try {
-                const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=getApprovedClaims', {
-                    method: 'POST',
+                const response = await fetch('https://hr3.atierahotelandrestaurant.com/api/claimsApi.php', {
+                    method: 'GET',
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        api_key: 'hr3_integration_key'
-                    })
+                        'Content-Type': 'application/json',
+                    }
                 });
 
                 const result = await response.json();
@@ -1028,6 +1025,11 @@ $db = Database::getInstance()->getConnection();
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
+        };
+
+        window.loadHR3Claims = function() {
+            // Backward compatibility - calls the new loadClaims function
+            return window.loadClaims();
         };
 
         window.displayHR3Claims = function(claims) {
