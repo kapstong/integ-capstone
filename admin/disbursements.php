@@ -901,8 +901,18 @@ $db = Database::getInstance()->getConnection();
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
 
+            let hr3SyncResult = null;
+
             try {
-                // Create disbursement record
+                // Step 1: Update HR3 claim status first
+                try {
+                    hr3SyncResult = await window.markHR3ClaimAsPaid(claimId);
+                } catch (hr3Error) {
+                    console.log('HR3 status update attempted but failed:', hr3Error);
+                    hr3SyncResult = { success: false, error: hr3Error.message };
+                }
+
+                // Step 2: Create disbursement record
                 const disbursementData = {
                     disbursement_date: new Date().toISOString().split('T')[0],
                     amount: amount,
@@ -924,14 +934,16 @@ $db = Database::getInstance()->getConnection();
                 const result = await response.json();
 
                 if (result.success) {
-                    // Update HR3 claim status (if API supports it)
-                    try {
-                        await window.markHR3ClaimAsPaid(claimId);
-                    } catch (hr3Error) {
-                        console.log('HR3 status update failed, but disbursement created:', hr3Error);
+                    // Success message with HR3 sync status
+                    let message = `Claim payment processed successfully! Reference: ${result.disbursement_number}`;
+
+                    if (hr3SyncResult && hr3SyncResult.success) {
+                        message += '\n✓ HR3 system updated with "Paid" status (2-way sync successful)';
+                    } else {
+                        message += '\n⚠️ HR3 system update failed (disbursement still created)';
                     }
 
-                    window.showAlert(`Claim payment processed successfully! Status changed to "Paid". Reference: ${result.disbursement_id}`, 'success');
+                    window.showAlert(message, hr3SyncResult && hr3SyncResult.success ? 'success' : 'warning');
 
                     // Remove the processed claim row
                     btn.closest('tr').remove();

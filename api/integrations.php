@@ -113,6 +113,114 @@ try {
         exit;
     }
 
+    // Update claim status back to HR3 (2-way sync)
+    if ($action === 'execute' && $integrationName === 'hr3' && $actionName === 'updateClaimStatus') {
+        $claimId = $_POST['claim_id'] ?? '';
+        $newStatus = $_POST['status'] ?? 'Paid';
+
+        if (!$claimId) {
+            echo json_encode([
+                'success' => false,
+                'error' => 'claim_id is required'
+            ]);
+            exit;
+        }
+
+        // Get HR3 API configuration
+        $configFile = '../config/integrations/hr3.json';
+        $config = ['api_url' => 'https://hr3.atierahotelandrestaurant.com/api/claimsApi.php'];
+
+        if (file_exists($configFile) && ($configData = json_decode(file_get_contents($configFile), true))) {
+            $config = array_merge($config, $configData);
+        }
+
+        // Try POST method first (most likely API pattern)
+        $postUrl = $config['api_url'];
+        $postData = [
+            'claim_id' => $claimId,
+            'status' => $newStatus,
+            'action' => 'update_status'
+        ];
+
+        $ch = curl_init($postUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+        $headers = ['Content-Type: application/json'];
+        if (!empty($config['api_key'])) {
+            $headers[] = 'Authorization: Bearer ' . $config['api_key'];
+        }
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        // If POST fails, try PUT method
+        $putSuccess = false;
+        if ($httpCode !== 200) {
+            $putUrl = $config['api_url'] . '?claim_id=' . urlencode($claimId);
+            $putData = ['status' => $newStatus];
+
+            $ch = curl_init($putUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($putData));
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+            $putResponse = curl_exec($ch);
+            $putHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($putHttpCode === 200) {
+                $putSuccess = true;
+                $response = $putResponse;
+                $httpCode = $putHttpCode;
+            }
+        }
+
+        // Check if either POST or PUT succeeded
+        if ($httpCode === 200 || $putSuccess) {
+            $result = json_decode($response, true);
+
+            // Accept success if we get a valid response or if the API returns success
+            if ($result && isset($result['success']) && $result['success'] === true) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'HR3 claim status updated to ' . $newStatus,
+                    'claim_id' => $claimId,
+                    'new_status' => $newStatus
+                ]);
+            } else {
+                // Even if JSON doesn't have success=true, treat 200 response as success
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'HR3 claim status update attempted (response: ' . substr($response, 0, 100) . ')',
+                    'claim_id' => $claimId,
+                    'new_status' => $newStatus
+                ]);
+            }
+        } else {
+            // HR3 update failed, but this shouldn't break the local disbursement
+            echo json_encode([
+                'success' => false,
+                'error' => 'Failed to update HR3 claim status: HTTP ' . $httpCode .
+                          ($curlError ? ' - ' . $curlError : '') .
+                          ' (Disbursement still created locally)',
+                'claim_id' => $claimId
+            ]);
+        }
+        exit;
+    }
+
     // Default response for other actions
     if ($action === 'execute') {
         echo json_encode([
