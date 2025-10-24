@@ -1054,17 +1054,29 @@ $db = Database::getInstance()->getConnection();
 
             tbody.innerHTML = '';
 
-            claims.forEach(claim => {
+            // Filter only approved claims and sort by created_at descending
+            const approvedClaims = claims.filter(claim => claim.status === 'Approved')
+                                        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            if (approvedClaims.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No approved claims ready for payment processing</td></tr>';
+                return;
+            }
+
+            approvedClaims.forEach(claim => {
+                const amount = parseFloat(claim.total_amount || 0);
+                const statusBadge = claim.status === 'Approved' ? '<span class="badge bg-success">Approved</span>' : '<span class="badge bg-secondary">' + claim.status + '</span>';
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><strong>${claim.claim_id || claim.id}</strong></td>
-                    <td>${claim.employee_name || claim.employee || 'N/A'}</td>
-                    <td><span class="badge bg-primary">${claim.claim_type || claim.type || 'General'}</span></td>
-                    <td><strong>₱${parseFloat(claim.amount || 0).toFixed(2)}</strong></td>
-                    <td>${window.formatDate(claim.claim_date || claim.date || claim.created_at)}</td>
-                    <td>${claim.description || claim.notes || 'No description'}</td>
+                    <td><strong>${claim.claim_id}</strong></td>
+                    <td>${claim.employee_name}</td>
+                    <td>${claim.status === 'Approved' ? 'Approved Claim' : claim.status}</td>
+                    <td><strong>₱${amount.toFixed(2)}</strong> ${claim.currency_code ? '(' + claim.currency_code + ')' : ''}</td>
+                    <td>${window.formatDate(claim.created_at)}</td>
+                    <td>${claim.remarks || 'No remarks'}</td>
                     <td>
-                        <button class="btn btn-success btn-sm" onclick="processHR3Claim('${claim.claim_id || claim.id}', '${claim.employee_name || claim.employee}', ${parseFloat(claim.amount || 0)}, '${claim.description || claim.notes || ''}')">
+                        <button class="btn btn-success btn-sm" onclick="processHR3Claim('${claim.claim_id}', '${claim.employee_name}', ${amount}, '${claim.remarks || ''}', '${claim.currency_code || 'PHP'}')">
                             <i class="fas fa-money-bill-wave me-1"></i>Process Payment
                         </button>
                     </td>
@@ -1073,7 +1085,7 @@ $db = Database::getInstance()->getConnection();
             });
         };
 
-        window.processHR3Claim = async function(claimId, employeeName, amount, description) {
+        window.processHR3Claim = async function(claimId, employeeName, amount, description, currency) {
             const btn = event.target.closest('button');
             const originalText = btn.innerHTML;
 
