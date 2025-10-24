@@ -540,8 +540,33 @@ $db = Database::getInstance()->getConnection();
             <div class="tab-pane fade" id="vouchers" role="tabpanel" aria-labelledby="vouchers-tab">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">Payment Vouchers and Documentation</h6>
-                    <button class="btn btn-primary"><i class="fas fa-plus me-2"></i>Create Voucher</button>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadVoucherModal">
+                        <i class="fas fa-plus me-2"></i>Upload Voucher
+                    </button>
                 </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <select class="form-select" id="disbursementFilter" onchange="filterVouchersByDisbursement()">
+                            <option value="">All Recent Disbursements</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select">
+                            <option value="">All Types</option>
+                            <option value="receipt">Receipt</option>
+                            <option value="invoice">Invoice</option>
+                            <option value="contract">Contract</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-outline-secondary" onclick="refreshVouchers()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+
                 <div class="table-responsive">
                     <table class="table table-striped" id="vouchersTable">
                         <thead>
@@ -550,11 +575,12 @@ $db = Database::getInstance()->getConnection();
                                 <th>Type</th>
                                 <th>Disbursement Ref</th>
                                 <th>Date</th>
-                                <th>Attachments</th>
+                                <th>File Info</th>
+                                <th>Uploaded By</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="vouchersTableBody">
                             <!-- Vouchers will be loaded here -->
                         </tbody>
                     </table>
@@ -628,6 +654,121 @@ $db = Database::getInstance()->getConnection();
                             <!-- Audit logs will be loaded here -->
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Voucher Upload Modal -->
+            <div class="modal fade" id="uploadVoucherModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Upload Voucher</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="voucherUploadForm" enctype="multipart/form-data">
+                                <div class="mb-3">
+                                    <label for="voucherDisbursementId" class="form-label">Disbursement Reference *</label>
+                                    <select class="form-select" id="voucherDisbursementId" name="disbursement_id" required>
+                                        <option value="">Select Disbursement</option>
+                                        <!-- Will be populated by JavaScript -->
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="voucherType" class="form-label">Voucher Type *</label>
+                                    <select class="form-select" id="voucherType" name="voucher_type" required>
+                                        <option value="receipt">Receipt</option>
+                                        <option value="invoice">Invoice</option>
+                                        <option value="contract">Contract</option>
+                                        <option value="other">Other Document</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="voucherFile" class="form-label">File *</label>
+                                    <input type="file" class="form-control" id="voucherFile" name="voucher_file"
+                                           accept="image/*,.pdf" required>
+                                    <small class="form-text text-muted">
+                                        Supports images (JPG, PNG, GIF) and PDF files (max 5MB)
+                                    </small>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="uploadVoucher()">
+                                <i class="fas fa-upload me-1"></i>Upload Voucher
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Approval Workflow Tab -->
+            <div class="tab-pane fade" id="approval" role="tabpanel" aria-labelledby="approval-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">Approval Workflow Management</h6>
+                    <div>
+                        <button class="btn btn-success me-2" onclick="loadApprovalWorkflow()">
+                            <i class="fas fa-refresh me-1"></i>Load Approvals
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="setupApprovals()">
+                            <i class="fas fa-cog me-1"></i>Configure Workflow
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="approvalWorkflowTable">
+                                <thead>
+                                    <tr>
+                                        <th>Disbursement ID</th>
+                                        <th>Payee</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Approvers</th>
+                                        <th>Last Updated</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="approvalWorkflowBody">
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted">
+                                            Click "Load Approvals" to view pending approvals
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-warning" id="pendingApprovalsCount">0</h4>
+                                <p class="mb-0">Pending Approvals</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-success" id="approvedCount">0</h4>
+                                <p class="mb-0">Approved Today</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-danger" id="rejectedCount">0</h4>
+                                <p class="mb-0">Rejected Today</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -926,6 +1067,33 @@ $db = Database::getInstance()->getConnection();
                     purpose: `HR3 Claim Payment: ${description}`,
                     notes: `Processed from HR3 claim ${claimId} - Status changed to "Paid"`
                 };
+
+                // Log HR3 claim processing to audit trail
+                try {
+                    await fetch('../api/audit.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        credentials: 'include',
+                        body: new URLSearchParams({
+                            action: 'log',
+                            table_name: 'hr3_claims',
+                            record_id: claimId,
+                            action_type: 'processed_payment',
+                            description: `Processed HR3 claim payment for ${employeeName} (₱${amount}) - Claim ID: ${claimId}`,
+                            old_values: JSON.stringify({ status: 'Approved' }),
+                            new_values: JSON.stringify({
+                                status: 'Paid',
+                                disbursement_created: true,
+                                processed_by: 'Current User',
+                                amount: amount,
+                                employee: employeeName
+                            })
+                        })
+                    });
+                } catch (auditError) {
+                    console.warn('HR3 claim audit logging failed:', auditError);
+                    // Don't fail the main operation if audit logging fails
+                }
 
                 const response = await fetch('../api/disbursements.php', {
                     method: 'POST',

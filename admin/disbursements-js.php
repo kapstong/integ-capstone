@@ -46,7 +46,6 @@ header('Content-Type: application/javascript');
                     showAlert('Error: ' + result.error, 'danger');
                 }
             } catch (error) {
-                console.error('Error processing payment:', error);
                 showAlert('An error occurred while processing payment', 'danger');
             }
         }
@@ -72,7 +71,6 @@ header('Content-Type: application/javascript');
                 ).join('');
 
             } catch (error) {
-                console.error('Error loading audit trail:', error);
                 const tbody = document.getElementById('auditTableBody');
                 if (tbody) {
                     tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Error loading audit trail</td></tr>';
@@ -152,7 +150,7 @@ header('Content-Type: application/javascript');
                 document.getElementById('pendingDisbursementsCount').textContent = pendingCount;
 
             } catch (error) {
-                console.error('Error loading reports:', error);
+                // Reports loading error handled
             }
         }
 
@@ -179,7 +177,7 @@ header('Content-Type: application/javascript');
                 }
     }
     catch (error) {
-        console.error('Error loading vouchers:', error);
+        // Voucher loading error handled silently
     }
 }
 
@@ -239,7 +237,6 @@ header('Content-Type: application/javascript');
 
             showDisbursementDetails(data);
         } catch (error) {
-            console.error('Error viewing disbursement:', error);
             showAlert('Error loading disbursement details', 'danger');
         }
     }
@@ -263,7 +260,6 @@ header('Content-Type: application/javascript');
             const modal = new bootstrap.Modal(document.getElementById('disbursementModal'));
             modal.show();
         } catch (error) {
-            console.error('Error editing disbursement:', error);
             showAlert('Error loading disbursement for editing', 'danger');
         }
     }
@@ -494,14 +490,12 @@ header('Content-Type: application/javascript');
                     populateVendorDropdown();
                 } else {
                     if (data.error) {
-                        console.error('Error loading vendors:', data.error);
                         showAlert('Error loading vendors: ' + data.error, 'danger');
                     } else {
                         throw new Error('API returned an error');
                     }
                 }
             } catch (error) {
-                console.error('Error loading vendors:', error);
                 showAlert('Error loading vendors. Please try again.', 'warning');
             }
         }
@@ -727,7 +721,6 @@ header('Content-Type: application/javascript');
                         }
                     } catch (error) {
                         failCount++;
-                        console.error('Error deleting disbursement', id, error);
                     }
                 }
 

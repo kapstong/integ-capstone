@@ -295,6 +295,162 @@ try {
             }
             break;
 
+        case 'GET':
+            // Handle voucher operations if action is present
+            $action = $_GET['action'] ?? '';
+            if ($action === 'get_vouchers') {
+                $disbursementId = $_GET['disbursement_id'] ?? null;
+
+                // If specific disbursement ID is provided, show vouchers for that disbursement
+                // Otherwise, show vouchers for disbursements created by current user in last 30 days
+                $dateLimit = date('Y-m-d', strtotime('-30 days'));
+
+                if ($disbursementId) {
+                    $stmt = $db->prepare("
+                        SELECT v.*,
+                               d.disbursement_number,
+                               u.username as uploaded_by
+                        FROM disbursement_vouchers v
+                        LEFT JOIN disbursements d ON v.disbursement_id = d.id
+                        LEFT JOIN users u ON v.uploaded_by = u.id
+                        WHERE v.disbursement_id = ? AND v.deleted_at IS NULL
+                        ORDER BY v.uploaded_at DESC
+                    ");
+                    $stmt->execute([$disbursementId]);
+                } else {
+                    $stmt = $db->prepare("
+                        SELECT v.*,
+                               d.disbursement_number,
+                               u.username as uploaded_by
+                        FROM disbursement_vouchers v
+                        LEFT JOIN disbursements d ON v.disbursement_id = d.id
+                        LEFT JOIN users u ON v.uploaded_by = u.id
+                        WHERE d.disbursement_date >= ? AND v.deleted_at IS NULL
+                        ORDER BY v.uploaded_at DESC
+                        LIMIT 50
+                    ");
+                    $stmt->execute([$dateLimit]);
+                }
+
+                $vouchers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                echo json_encode($vouchers);
+                exit;
+            }
+            break;
+
+        case 'POST':
+            // Handle voucher upload
+            if (isset($_GET['action']) && $_GET['action'] === 'upload_voucher') {
+                $disbursementId = $_POST['disbursement_id'] ?? 0;
+                $voucherType = $_POST['voucher_type'] ?? 'receipt';
+
+                // Check if disbursement exists
+                $stmt = $db->prepare("SELECT id, disbursement_number FROM disbursements WHERE id = ?");
+                $stmt->execute([$disbursementId]);
+                $disbursement = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$disbursement) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'error' => 'Disbursement not found']);
+                    exit;
+                }
+
+                // Handle file upload
+                if (!isset($_FILES['voucher_file']) || $_FILES['voucher_file']['error'] !== UPLOAD_ERR_OK) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'error' => 'No file uploaded']);
+                    exit;
+                }
+
+                $file = $_FILES['voucher_file'];
+                $fileName = $file['name'];
+                $fileTmp = $file['tmp_name'];
+                $fileSize = $file['size'];
+
+                // Validate file type
+                $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
+                $fileType = mime_content_type($fileTmp);
+                if (!in_array($fileType, $allowedTypes)) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'error' => 'Invalid file type. Only images and PDF allowed.']);
+                    exit;
+                }
+
+                // Validate file size (max 5MB)
+                if ($fileSize > 5 * 1024 * 1024) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'error' => 'File too large. Maximum size is 5MB.']);
+                    exit;
+                }
+
+                // Create uploads directory if it doesn't exist
+                $uploadDir = '../uploads/disbursements/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+
+                // Generate unique filename
+                $extension = pathinfo($fileName, PATHINFO_EXTENSION);
+                $uniqueName = 'voucher_' . time() . '_' . rand(1000, 9999) . '.' . $extension;
+                $filePath = $uploadDir . $uniqueName;
+
+                if (move_uploaded_file($fileTmp, $filePath)) {
+                    // Insert voucher record into database
+                    $stmt = $db->prepare("
+                        INSERT INTO disbursement_vouchers (
+                            disbursement_id,
+                            file_name,
+                            original_name,
+                            file_path,
+                            file_size,
+                            file_type,
+                            voucher_type,
+                            uploaded_by,
+                            uploaded_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                    ");
+
+                    $stmt->execute([
+                        $disbursementId,
+                        $uniqueName,
+                        $fileName,
+                        $filePath,
+                        $fileSize,
+                        $fileType,
+                        $voucherType,
+                        $_SESSION['user']['id']
+                    ]);
+
+                    $voucherId = $db->lastInsertId();
+
+                    // Log voucher upload to audit trail
+                    Logger::getInstance()->logUserAction(
+                        'uploaded_voucher',
+                        'disbursement_vouchers',
+                        $voucherId,
+                        null,
+                        [
+                            'disbursement_number' => $disbursement['disbursement_number'],
+                            'file_name' => $uniqueName,
+                            'original_name' => $fileName,
+                            'voucher_type' => $voucherType
+                        ]
+                    );
+
+                    echo json_encode([
+                        'success' => true,
+                        'voucher_id' => $voucherId,
+                        'message' => 'Voucher uploaded successfully'
+                    ]);
+                } else {
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'error' => 'Failed to save file']);
+                }
+                exit;
+            }
+            break;
+            break;
+
         default:
             http_response_code(405);
             echo json_encode(['success' => false, 'error' => 'Method not allowed']);
