@@ -881,7 +881,7 @@ $db = Database::getInstance()->getConnection();
                     <td><strong>${claim.claim_id || claim.id}</strong></td>
                     <td>${claim.employee_name || claim.employee || 'N/A'}</td>
                     <td><span class="badge bg-primary">${claim.claim_type || claim.type || 'General'}</span></td>
-                    <td><strong>$${parseFloat(claim.amount || 0).toFixed(2)}</strong></td>
+                    <td><strong>₱${parseFloat(claim.amount || 0).toFixed(2)}</strong></td>
                     <td>${window.formatDate(claim.claim_date || claim.date || claim.created_at)}</td>
                     <td>${claim.description || claim.notes || 'No description'}</td>
                     <td>
