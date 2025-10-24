@@ -134,88 +134,95 @@ try {
             $config = array_merge($config, $configData);
         }
 
-        // Try POST method first (most likely API pattern)
-        $postUrl = $config['api_url'];
-        $postData = [
-            'claim_id' => $claimId,
-            'status' => $newStatus,
-            'action' => 'update_status'
-        ];
-
-        $ch = curl_init($postUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-
         $headers = ['Content-Type: application/json'];
         if (!empty($config['api_key'])) {
             $headers[] = 'Authorization: Bearer ' . $config['api_key'];
         }
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
+        $success = false;
+        $finalResponse = '';
+        $finalHttpCode = 0;
 
-        // If POST fails, try PUT method
-        $putSuccess = false;
-        if ($httpCode !== 200) {
-            $putUrl = $config['api_url'] . '?claim_id=' . urlencode($claimId);
-            $putData = ['status' => $newStatus];
+        // Try multiple update patterns (most common API designs)
 
-            $ch = curl_init($putUrl);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($putData));
-            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        // Pattern 1: POST to /claimsApi.php with claim_id parameter
+        $apiUrls = [
+            $config['api_url'],                                         // Main endpoint
+            $config['api_url'] . '?claim_id=' . urlencode($claimId),   // Query param
+            str_replace('/api/claimsApi.php', '/api/claims/' . urlencode($claimId), $config['api_url']), // REST style
+        ];
 
-            $putResponse = curl_exec($ch);
-            $putHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+        $methods = ['PATCH', 'PUT', 'POST']; // Try PATCH first (most RESTful for updates)
 
-            if ($putHttpCode === 200) {
-                $putSuccess = true;
-                $response = $putResponse;
-                $httpCode = $putHttpCode;
+        foreach ($apiUrls as $apiUrl) {
+            foreach ($methods as $method) {
+                $ch = curl_init($apiUrl);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+                // Send raw JSON payload
+                $updateData = json_encode([
+                    'claim_id' => $claimId,
+                    'status' => $newStatus,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                    'action' => 'update_status',
+                    'processed_by' => 'financial_system'
+                ]);
+
+                if ($method === 'POST') {
+                    curl_setopt($ch, CURLOPT_POST, true);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $updateData);
+                } elseif ($method === 'PUT') {
+                    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $updateData);
+                } elseif ($method === 'PATCH') {
+                    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $updateData);
+                }
+
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $curlError = curl_error($ch);
+                curl_close($ch);
+
+                // Log attempt for debugging
+                error_log("HR3 Update Attempt - Method: {$method}, URL: {$apiUrl}, Code: {$httpCode}, Error: {$curlError}");
+
+                // Check if this attempt succeeded (200 OK or 204 No Content)
+                if (!$curlError && ($httpCode === 200 || $httpCode === 204 || $httpCode === 201)) {
+                    $success = true;
+                    $finalResponse = $response;
+                    $finalHttpCode = $httpCode;
+                    break 2; // Exit both loops
+                }
+
+                // Small delay between attempts
+                usleep(100000); // 0.1 second
             }
         }
 
-        // Check if either POST or PUT succeeded
-        if ($httpCode === 200 || $putSuccess) {
-            $result = json_decode($response, true);
-
-            // Accept success if we get a valid response or if the API returns success
-            if ($result && isset($result['success']) && $result['success'] === true) {
-                echo json_encode([
-                    'success' => true,
-                    'message' => 'HR3 claim status updated to ' . $newStatus,
-                    'claim_id' => $claimId,
-                    'new_status' => $newStatus
-                ]);
-            } else {
-                // Even if JSON doesn't have success=true, treat 200 response as success
-                echo json_encode([
-                    'success' => true,
-                    'message' => 'HR3 claim status update attempted (response: ' . substr($response, 0, 100) . ')',
-                    'claim_id' => $claimId,
-                    'new_status' => $newStatus
-                ]);
-            }
+        // Return results
+        if ($success) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'HR3 claim status successfully updated to "' . $newStatus . '"',
+                'claim_id' => $claimId,
+                'new_status' => $newStatus,
+                'http_code' => $finalHttpCode,
+                'response' => substr($finalResponse, 0, 200) // First 200 chars of response
+            ]);
         } else {
-            // HR3 update failed, but this shouldn't break the local disbursement
+            // HR3 update failed, but disbursement creation should still proceed
             echo json_encode([
                 'success' => false,
-                'error' => 'Failed to update HR3 claim status: HTTP ' . $httpCode .
-                          ($curlError ? ' - ' . $curlError : '') .
-                          ' (Disbursement still created locally)',
-                'claim_id' => $claimId
+                'error' => 'HR3 API update failed - claim status not synchronized. Disbursement will still be created locally.',
+                'claim_id' => $claimId,
+                'attempted_status' => $newStatus,
+                'note' => 'Financial disbursement created successfully despite HR3 sync failure.'
             ]);
         }
         exit;
