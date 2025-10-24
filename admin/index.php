@@ -894,7 +894,7 @@ body {
                             <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
                                 <i class="fas fa-user"></i>
                             </div>
-                            <span><strong><?php echo htmlspecialchars($_SESSION['user']['name'] ?? $_SESSION['user']['username'] ?? 'User'); ?></strong></span>
+                            <span><strong><?php echo htmlspecialchars($_SESSION['user']['name'] ?? $_SESSION['user']['username']); ?></strong></span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li><a class="dropdown-item" href="admin-profile-settings.php"><i class="fas fa-user me-2"></i>Profile</a></li>
@@ -927,7 +927,7 @@ body {
                                         <i class="fas fa-chart-line fa-2x"></i>
                                     </div>
                                     <div>
-                                        <h2 class="mb-1" style="color: #1e2936; font-weight: 700;">Hello, <strong><?php echo htmlspecialchars($_SESSION['user']['full_name'] ?? $_SESSION['user']['username'] ?? 'User'); ?></strong></h2>
+                                        <h2 class="mb-1" style="color: #1e2936; font-weight: 700;">Hello, <strong><?php echo htmlspecialchars($_SESSION['user']['name'] ?? $_SESSION['user']['username']); ?></strong></h2>
                                         <p class="text-muted mb-0">Ready to manage your finances efficiently</p>
                                     </div>
                                 </div>
