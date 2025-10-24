@@ -432,7 +432,7 @@ header('Content-Type: application/javascript');
                 } else {
                     if (data.error) {
                         const tbody = document.getElementById('disbursementsTableBody');
-                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Error loading disbursements. Please try again.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Error loading disbursements. Please try again.</td></tr>';
                         showAlert('Error loading disbursements: ' + data.error, 'danger');
                     } else {
                         throw new Error('API returned an error');
@@ -441,23 +441,9 @@ header('Content-Type: application/javascript');
             } catch (error) {
                 console.error('Error loading disbursements:', error);
                 const tbody = document.getElementById('disbursementsTableBody');
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Error loading disbursements. Please try again.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Error loading disbursements. Please try again.</td></tr>';
                 showAlert('Error loading disbursements. Please try again.', 'warning');
             }
-        }
-
-        // Render disbursements table
-        function renderDisbursementsTable(disbursements) {
-            const tbody = document.getElementById('disbursementsTableBody');
-
-            if (disbursements.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center">No disbursements found</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = disbursements.map(d =>
-                '<tr><td>' + (d.disbursement_number || d.id) + '</td><td>' + (d.payee || 'N/A') + '</td><td><span class="badge bg-secondary">' + (d.payment_method || 'N/A') + '</span></td><td>' + formatDate(d.disbursement_date) + '</td><td>₱' + parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td><td>' + getStatusBadge(d.status || 'pending') + '</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="viewDisbursement(' + d.id + ')"><i class="fas fa-eye"></i></button><button class="btn btn-sm btn-outline-secondary me-1" onclick="editDisbursement(' + d.id + ')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteDisbursement(' + d.id + ')"><i class="fas fa-trash"></i></button></td></tr>'
-            ).join('');
         }
 
         // Load vendors for dropdown
