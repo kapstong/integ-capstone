@@ -134,95 +134,66 @@ try {
             $config = array_merge($config, $configData);
         }
 
-        $headers = ['Content-Type: application/json'];
+        // HR3 API expects form-urlencoded data for PUT requests, not JSON
+        $updateData = http_build_query([
+            'claim_id' => $claimId,
+            'status' => $newStatus, // Must be "Paid" to work with HR3 API
+            'paid_by' => 'Financial System' // Optional field for HR3
+        ]);
+
+        $headers = ['Content-Type: application/x-www-form-urlencoded'];
         if (!empty($config['api_key'])) {
             $headers[] = 'Authorization: Bearer ' . $config['api_key'];
         }
 
-        $success = false;
-        $finalResponse = '';
-        $finalHttpCode = 0;
+        $ch = curl_init($config['api_url']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT'); // HR3 requires PUT method
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $updateData); // Form-encoded data
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 
-        // Try multiple update patterns (most common API designs)
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
 
-        // Pattern 1: POST to /claimsApi.php with claim_id parameter
-        $apiUrls = [
-            $config['api_url'],                                         // Main endpoint
-            $config['api_url'] . '?claim_id=' . urlencode($claimId),   // Query param
-            str_replace('/api/claimsApi.php', '/api/claims/' . urlencode($claimId), $config['api_url']), // REST style
-        ];
+        // Log the attempt for debugging
+        error_log("HR3 PUT Update Attempt - URL: {$config['api_url']}, Code: {$httpCode}, Error: {$curlError}");
 
-        $methods = ['PATCH', 'PUT', 'POST']; // Try PATCH first (most RESTful for updates)
+        // Check HR3 API response
+        if (!$curlError && $httpCode === 200) {
+            $result = json_decode($response, true);
 
-        foreach ($apiUrls as $apiUrl) {
-            foreach ($methods as $method) {
-                $ch = curl_init($apiUrl);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
-                // Send raw JSON payload
-                $updateData = json_encode([
+            // HR3 API returns success message on successful update
+            if ($result && isset($result['status']) && $result['status'] === 'success') {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'HR3 claim status successfully updated to "' . $newStatus . '"',
                     'claim_id' => $claimId,
-                    'status' => $newStatus,
-                    'updated_at' => date('Y-m-d H:i:s'),
-                    'action' => 'update_status',
-                    'processed_by' => 'financial_system'
+                    'new_status' => $newStatus,
+                    'hr3_response' => $result
                 ]);
-
-                if ($method === 'POST') {
-                    curl_setopt($ch, CURLOPT_POST, true);
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $updateData);
-                } elseif ($method === 'PUT') {
-                    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $updateData);
-                } elseif ($method === 'PATCH') {
-                    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $updateData);
-                }
-
-                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-
-                $response = curl_exec($ch);
-                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                $curlError = curl_error($ch);
-                curl_close($ch);
-
-                // Log attempt for debugging
-                error_log("HR3 Update Attempt - Method: {$method}, URL: {$apiUrl}, Code: {$httpCode}, Error: {$curlError}");
-
-                // Check if this attempt succeeded (200 OK or 204 No Content)
-                if (!$curlError && ($httpCode === 200 || $httpCode === 204 || $httpCode === 201)) {
-                    $success = true;
-                    $finalResponse = $response;
-                    $finalHttpCode = $httpCode;
-                    break 2; // Exit both loops
-                }
-
-                // Small delay between attempts
-                usleep(100000); // 0.1 second
+            } else {
+                // If HR3 API returns an error (like claim not found or wrong status)
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'HR3 API rejected the update: ' . ($result['error'] ?? 'Unknown error'),
+                    'hr3_response' => $result,
+                    'note' => 'Check if claim exists and is in "Approved" status.'
+                ]);
             }
-        }
-
-        // Return results
-        if ($success) {
-            echo json_encode([
-                'success' => true,
-                'message' => 'HR3 claim status successfully updated to "' . $newStatus . '"',
-                'claim_id' => $claimId,
-                'new_status' => $newStatus,
-                'http_code' => $finalHttpCode,
-                'response' => substr($finalResponse, 0, 200) // First 200 chars of response
-            ]);
         } else {
-            // HR3 update failed, but disbursement creation should still proceed
+            // Network or HTTP error
+            $errorMsg = $curlError ?: "HTTP $httpCode";
             echo json_encode([
                 'success' => false,
-                'error' => 'HR3 API update failed - claim status not synchronized. Disbursement will still be created locally.',
+                'error' => 'Failed to connect to HR3 API: ' . $errorMsg,
                 'claim_id' => $claimId,
                 'attempted_status' => $newStatus,
-                'note' => 'Financial disbursement created successfully despite HR3 sync failure.'
+                'note' => 'Disbursement will still be created locally.'
             ]);
         }
         exit;
