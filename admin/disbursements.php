@@ -814,8 +814,23 @@ $db = Database::getInstance()->getConnection();
 
     <!-- HR3 Claims Processing Functions -->
     <script>
-    // Wait for DOM to be fully loaded before defining functions
+        // Wait for DOM to be fully loaded before defining functions
     window.addEventListener('DOMContentLoaded', function() {
+        // Auto-load HR3 claims when Claims Processing tab is activated
+        const claimsTab = document.getElementById('claims-tab');
+        if (claimsTab) {
+            claimsTab.addEventListener('shown.bs.tab', function() {
+                // Check if claims table is empty (no claims loaded yet)
+                const claimsTableBody = document.getElementById('claimsTableBody');
+                if (claimsTableBody && claimsTableBody.children.length === 1) {
+                    const firstChild = claimsTableBody.children[0];
+                    if (firstChild && firstChild.tagName === 'TR' && firstChild.textContent.includes('Click "Load HR3 Claims"')) {
+                        // Auto-load claims if not already loaded
+                        window.loadHR3Claims();
+                    }
+                }
+            });
+        }
         window.loadHR3Claims = async function() {
             const btn = event.target.closest('button');
             const originalText = btn.innerHTML;
