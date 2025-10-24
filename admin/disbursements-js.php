@@ -546,6 +546,10 @@ header('Content-Type: application/javascript');
             const userDepartment = '<?php echo $_SESSION["user"]["department"] ?? ""; ?>';
             const userRole = '<?php echo $_SESSION["user"]["role"] ?? ""; ?>';
 
+            // Debug logging
+            console.log('User Department:', userDepartment);
+            console.log('User Role:', userRole);
+
             // Define permissions (same as PHP backend)
             const deptPermissions = {
                 'finance': ['view', 'create', 'edit', 'delete', 'approve', 'process_claims'],
@@ -559,6 +563,9 @@ header('Content-Type: application/javascript');
             const userPerms = deptPermissions[userDepartment] || [];
             const hasAdminRole = userRole === 'admin';
 
+            console.log('User Permissions:', userPerms);
+            console.log('Has Admin Role:', hasAdminRole);
+
             // Define tab permissions
             const tabPermissions = {
                 'records-tab': 'view',           // Disbursement Records - basic view permission
@@ -570,16 +577,15 @@ header('Content-Type: application/javascript');
                 'audit-tab': 'delete'            // Audit Trail - requires delete permission
             };
 
-            // Hide tabs based on permissions
+            // TEMPORARY: Force show all tabs for debugging
+            // Original logic will be restored once we confirm the session values
             Object.keys(tabPermissions).forEach(tabId => {
-                const requiredPerm = tabPermissions[tabId];
                 const tabElement = document.getElementById(tabId);
-
                 if (tabElement) {
-                    // Show tab if user has permission OR is admin
-                    if (!userPerms.includes(requiredPerm) && !hasAdminRole) {
-                        tabElement.style.display = 'none';
-                    }
+                    tabElement.style.display = 'block'; // Force show all tabs
+                    console.log('Showing tab:', tabId);
+                } else {
+                    console.log('Tab not found:', tabId);
                 }
             });
 
@@ -640,9 +646,8 @@ header('Content-Type: application/javascript');
         });
 
         // Load initial data and setup permissions
-        // Note: Initial loading is handled in the HTML DOMContentLoaded event
-        // loadDisbursements();
-        // loadVendors();
+        // loadDisbursements(); // Called from HTML DOMContentLoaded in disbursements.php
+        // loadVendors(); // Called from HTML DOMContentLoaded in disbursements.php
 
         function toggleSidebarDesktop() {
             const sidebar = document.getElementById('sidebar');
