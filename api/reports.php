@@ -112,18 +112,38 @@ try {
         $totalRevenue = array_sum(array_column($revenueData, 'amount'));
 
         // Get expense data from daily_expense_summary (includes HR4 payroll)
-        $expenseQuery = $db->prepare("
-            SELECT
-                d.dept_name as department,
-                SUM(des.total_amount) as amount
-            FROM daily_expense_summary des
-            LEFT JOIN departments d ON des.department_id = d.id
-            WHERE (:date_from IS NULL OR des.business_date >= :date_from)
-                AND (:date_to IS NULL OR des.business_date <= :date_to)
-            GROUP BY d.dept_name
-            ORDER BY d.dept_name
-        ");
-        $expenseQuery->execute(['date_from' => $dateFrom, 'date_to' => $dateTo]);
+        if (!empty($dateFrom) || !empty($dateTo)) {
+            $whereConditions = [];
+            if (!empty($dateFrom)) $whereConditions[] = "des.business_date >= :date_from";
+            if (!empty($dateTo)) $whereConditions[] = "des.business_date <= :date_to";
+
+            $expenseQuery = $db->prepare("
+                SELECT
+                    d.dept_name as department,
+                    SUM(des.total_amount) as amount
+                FROM daily_expense_summary des
+                LEFT JOIN departments d ON des.department_id = d.id
+                " . (!empty($whereConditions) ? "WHERE " . implode(" AND ", $whereConditions) : "") . "
+                GROUP BY d.dept_name
+                ORDER BY d.dept_name
+            ");
+
+            $params = [];
+            if (!empty($dateFrom)) $params['date_from'] = $dateFrom;
+            if (!empty($dateTo)) $params['date_to'] = $dateTo;
+            $expenseQuery->execute($params);
+        } else {
+            $expenseQuery = $db->prepare("
+                SELECT
+                    d.dept_name as department,
+                    SUM(des.total_amount) as amount
+                FROM daily_expense_summary des
+                LEFT JOIN departments d ON des.department_id = d.id
+                GROUP BY d.dept_name
+                ORDER BY d.dept_name
+            ");
+            $expenseQuery->execute();
+        }
         $expenseData = $expenseQuery->fetchAll(PDO::FETCH_ASSOC);
 
         // Get expense data from journal entries too (other expenses not tracked in daily_expense_summary)
