@@ -852,133 +852,25 @@ $db = Database::getInstance()->getConnection();
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">Balance Sheet</h6>
                     <div>
-                        <select class="form-select form-select-sm me-2" style="width: auto;">
-                            <option>As of Sep 30, 2025</option>
-                            <option>As of Jun 30, 2025</option>
-                            <option>As of Dec 31, 2024</option>
+                        <select class="form-select form-select-sm me-2" style="width: auto;" id="balanceDateSelect" onchange="updateBalanceSheet()">
+                            <option value="current">Current Date</option>
+                            <option value="last_month">Last Month</option>
+                            <option value="last_quarter">Last Quarter</option>
                         </select>
-                        <button class="btn btn-outline-secondary me-2"><i class="fas fa-download me-2"></i>Export PDF</button>
-                        <button class="btn btn-primary"><i class="fas fa-sync me-2"></i>Generate Report</button>
+                        <button class="btn btn-outline-secondary me-2" onclick="exportBalanceSheet('pdf')"><i class="fas fa-download me-2"></i>Export PDF</button>
+                        <button class="btn btn-primary" onclick="generateBalanceSheet()"><i class="fas fa-sync me-2"></i>Generate Report</button>
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-md-6">
-                        <div class="financial-statement">
+                    <div class="col-md-12">
+                        <div class="financial-statement" id="balanceSheetContainer">
                             <div class="statement-header">
-                                <h1 class="statement-title">Assets</h1>
-                                <p class="statement-period">As of September 30, 2025</p>
+                                <h1 class="statement-title">Balance Sheet</h1>
+                                <p class="statement-period">Loading...</p>
                             </div>
-
-                            <div class="account-category">
-                                <h6>Current Assets</h6>
-                                <div class="account-item">
-                                    <span class="account-name">Cash & Cash Equivalents</span>
-                                    <span class="account-amount">₱850,000.00</span>
-                                </div>
-                                <div class="account-item">
-                                    <span class="account-name">Accounts Receivable</span>
-                                    <span class="account-amount">₱320,000.00</span>
-                                </div>
-                                <div class="account-item">
-                                    <span class="account-name">Inventory</span>
-                                    <span class="account-amount">₱95,000.00</span>
-                                </div>
-                                <div class="account-item">
-                                    <span class="account-name">Prepaid Expenses</span>
-                                    <span class="account-amount">₱45,000.00</span>
-                                </div>
-                                <div class="account-item total-row">
-                                    <span class="account-name"><strong>Total Current Assets</strong></span>
-                                    <span class="account-amount"><strong>₱1,310,000.00</strong></span>
-                                </div>
-                            </div>
-
-                            <div class="account-category">
-                                <h6>Fixed Assets</h6>
-                                <div class="account-item">
-                                    <span class="account-name">Property & Equipment</span>
-                                    <span class="account-amount">₱3,200,000.00</span>
-                                </div>
-                                <div class="account-item">
-                                    <span class="account-name">Accumulated Depreciation</span>
-                                    <span class="account-amount">₱(800,000.00)</span>
-                                </div>
-                                <div class="account-item total-row">
-                                    <span class="account-name"><strong>Net Fixed Assets</strong></span>
-                                    <span class="account-amount"><strong>₱2,400,000.00</strong></span>
-                                </div>
-                            </div>
-
-                            <div class="account-category">
-                                <h6>Total Assets</h6>
-                                <div class="account-item total-row">
-                                    <span class="account-name"><strong>Total Assets</strong></span>
-                                    <span class="account-amount"><strong>₱3,710,000.00</strong></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="financial-statement">
-                            <div class="statement-header">
-                                <h1 class="statement-title">Liabilities & Equity</h1>
-                                <p class="statement-period">As of September 30, 2025</p>
-                            </div>
-
-                            <div class="account-category">
-                                <h6>Current Liabilities</h6>
-                                <div class="account-item">
-                                    <span class="account-name">Accounts Payable</span>
-                                    <span class="account-amount">₱180,000.00</span>
-                                </div>
-                                <div class="account-item">
-                                    <span class="account-name">Accrued Expenses</span>
-                                    <span class="account-amount">₱95,000.00</span>
-                                </div>
-                                <div class="account-item">
-                                    <span class="account-name">Short-term Loans</span>
-                                    <span class="account-amount">₱150,000.00</span>
-                                </div>
-                                <div class="account-item total-row">
-                                    <span class="account-name"><strong>Total Current Liabilities</strong></span>
-                                    <span class="account-amount"><strong>₱425,000.00</strong></span>
-                                </div>
-                            </div>
-
-                            <div class="account-category">
-                                <h6>Long-term Liabilities</h6>
-                                <div class="account-item">
-                                    <span class="account-name">Long-term Loans</span>
-                                    <span class="account-amount">₱1,200,000.00</span>
-                                </div>
-                                <div class="account-item total-row">
-                                    <span class="account-name"><strong>Total Long-term Liabilities</strong></span>
-                                    <span class="account-amount"><strong>₱1,200,000.00</strong></span>
-                                </div>
-                            </div>
-
-                            <div class="account-category">
-                                <h6>Equity</h6>
-                                <div class="account-item">
-                                    <span class="account-name">Owner's Capital</span>
-                                    <span class="account-amount">₱1,500,000.00</span>
-                                </div>
-                                <div class="account-item">
-                                    <span class="account-name">Retained Earnings</span>
-                                    <span class="account-amount">₱585,000.00</span>
-                                </div>
-                                <div class="account-item total-row">
-                                    <span class="account-name"><strong>Total Equity</strong></span>
-                                    <span class="account-amount"><strong>₱2,085,000.00</strong></span>
-                                </div>
-                            </div>
-
-                            <div class="account-category">
-                                <h6>Total Liabilities & Equity</h6>
-                                <div class="account-item total-row">
-                                    <span class="account-name"><strong>Total Liabilities & Equity</strong></span>
-                                    <span class="account-amount"><strong>₱3,710,000.00</strong></span>
-                                </div>
+                            <div class="text-center py-5">
+                                <div class="loading mb-3"></div>
+                                <p class="text-muted">Generating balance sheet...</p>
                             </div>
                         </div>
                     </div>
@@ -990,89 +882,25 @@ $db = Database::getInstance()->getConnection();
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">Cash Flow Statement</h6>
                     <div>
-                        <select class="form-select form-select-sm me-2" style="width: auto;">
-                            <option>Last Quarter</option>
-                            <option>Last 6 Months</option>
-                            <option>Year to Date</option>
+                        <select class="form-select form-select-sm me-2" style="width: auto;" id="cashFlowPeriodSelect">
+                            <option value="last_quarter">Last Quarter</option>
+                            <option value="last_6_months">Last 6 Months</option>
+                            <option value="year_to_date">Year to Date</option>
                         </select>
-                        <button class="btn btn-outline-secondary me-2"><i class="fas fa-download me-2"></i>Export PDF</button>
-                        <button class="btn btn-primary"><i class="fas fa-sync me-2"></i>Generate Report</button>
+                        <button class="btn btn-outline-secondary me-2" onclick="exportCashFlow('pdf')"><i class="fas fa-download me-2"></i>Export PDF</button>
+                        <button class="btn btn-primary" onclick="generateCashFlow()"><i class="fas fa-sync me-2"></i>Generate Report</button>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-md-12">
-                        <div class="financial-statement">
+                        <div class="financial-statement" id="cashFlowContainer">
                             <div class="statement-header">
                                 <h1 class="statement-title">Cash Flow Statement</h1>
-                                <p class="statement-period">For the quarter ended September 30, 2025</p>
+                                <p class="statement-period">Loading...</p>
                             </div>
-
-                            <div class="account-category">
-                                <h6>Operating Activities</h6>
-                                <div class="account-item">
-                                    <span class="account-name">Net Income</span>
-                                    <span class="account-amount">₱1,020,000.00</span>
-                                </div>
-                                <div class="account-item">
-                                    <span class="account-name">Depreciation</span>
-                                    <span class="account-amount">₱75,000.00</span>
-                                </div>
-                                <div class="account-item">
-                                    <span class="account-name">Changes in Working Capital</span>
-                                    <span class="account-amount">₱(45,000.00)</span>
-                                </div>
-                                <div class="account-item total-row">
-                                    <span class="account-name"><strong>Cash from Operating Activities</strong></span>
-                                    <span class="account-amount positive-amount"><strong>₱1,050,000.00</strong></span>
-                                </div>
-                            </div>
-
-                            <div class="account-category">
-                                <h6>Investing Activities</h6>
-                                <div class="account-item">
-                                    <span class="account-name">Purchase of Equipment</span>
-                                    <span class="account-amount">₱(150,000.00)</span>
-                                </div>
-                                <div class="account-item">
-                                    <span class="account-name">Sale of Investments</span>
-                                    <span class="account-amount">₱25,000.00</span>
-                                </div>
-                                <div class="account-item total-row">
-                                    <span class="account-name"><strong>Cash from Investing Activities</strong></span>
-                                    <span class="account-amount negative-amount"><strong>₱(125,000.00)</strong></span>
-                                </div>
-                            </div>
-
-                            <div class="account-category">
-                                <h6>Financing Activities</h6>
-                                <div class="account-item">
-                                    <span class="account-name">Loan Repayments</span>
-                                    <span class="account-amount">₱(75,000.00)</span>
-                                </div>
-                                <div class="account-item">
-                                    <span class="account-name">Owner's Capital Contribution</span>
-                                    <span class="account-amount">₱50,000.00</span>
-                                </div>
-                                <div class="account-item total-row">
-                                    <span class="account-name"><strong>Cash from Financing Activities</strong></span>
-                                    <span class="account-amount negative-amount"><strong>₱(25,000.00)</strong></span>
-                                </div>
-                            </div>
-
-                            <div class="account-category">
-                                <h6>Net Cash Flow</h6>
-                                <div class="account-item">
-                                    <span class="account-name">Beginning Cash Balance</span>
-                                    <span class="account-amount">₱750,000.00</span>
-                                </div>
-                                <div class="account-item total-row">
-                                    <span class="account-name"><strong>Net Increase in Cash</strong></span>
-                                    <span class="account-amount positive-amount"><strong>₱900,000.00</strong></span>
-                                </div>
-                                <div class="account-item total-row">
-                                    <span class="account-name"><strong>Ending Cash Balance</strong></span>
-                                    <span class="account-amount positive-amount"><strong>₱1,650,000.00</strong></span>
-                                </div>
+                            <div class="text-center py-5">
+                                <div class="loading mb-3"></div>
+                                <p class="text-muted">Generating cash flow statement...</p>
                             </div>
                         </div>
                     </div>
@@ -1093,25 +921,13 @@ $db = Database::getInstance()->getConnection();
                             </div>
                             <div class="card-body">
                                 <p>Consolidated view of outstanding receivables by age category.</p>
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between">
-                                        <span>Current (0-30 days)</span>
-                                        <span class="text-success">₱285,000</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>31-60 days</span>
-                                        <span class="text-warning">₱25,000</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>61-90 days</span>
-                                        <span class="text-danger">₱8,000</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>90+ days</span>
-                                        <span class="text-danger">₱2,000</span>
+                                <div class="mb-3" id="arAgingContainer">
+                                    <div class="text-center py-3">
+                                        <div class="loading mb-3"></div>
+                                        <p class="text-muted">Generating aging report...</p>
                                     </div>
                                 </div>
-                                <button class="btn btn-primary w-100">Generate Aging Report</button>
+                                <button class="btn btn-primary w-100" onclick="generateAgingReport('receivable')">Generate Aging Report</button>
                             </div>
                         </div>
                     </div>
@@ -1122,25 +938,13 @@ $db = Database::getInstance()->getConnection();
                             </div>
                             <div class="card-body">
                                 <p>Consolidated view of outstanding payables by age category.</p>
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between">
-                                        <span>Current (0-30 days)</span>
-                                        <span class="text-success">₱165,000</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>31-60 days</span>
-                                        <span class="text-warning">₱12,000</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>61-90 days</span>
-                                        <span class="text-danger">₱3,000</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>90+ days</span>
-                                        <span class="text-danger">₱0</span>
+                                <div class="mb-3" id="apAgingContainer">
+                                    <div class="text-center py-3">
+                                        <div class="loading mb-3"></div>
+                                        <p class="text-muted">Generating aging report...</p>
                                     </div>
                                 </div>
-                                <button class="btn btn-primary w-100">Generate Aging Report</button>
+                                <button class="btn btn-primary w-100" onclick="generateAgingReport('payable')">Generate Aging Report</button>
                             </div>
                         </div>
                     </div>
@@ -1153,21 +957,13 @@ $db = Database::getInstance()->getConnection();
                             </div>
                             <div class="card-body">
                                 <p>Comparison of planned vs actual spending across all departments.</p>
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between">
-                                        <span>Total Budget</span>
-                                        <span>₱3,500,000</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Actual Spent</span>
-                                        <span>₱2,870,000</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Variance</span>
-                                        <span class="variance-negative">-₱630,000 (-18%)</span>
+                                <div class="mb-3" id="budgetVsActualContainer">
+                                    <div class="text-center py-3">
+                                        <div class="loading mb-3"></div>
+                                        <p class="text-muted">Generating budget report...</p>
                                     </div>
                                 </div>
-                                <button class="btn btn-primary w-100">Generate Budget Report</button>
+                                <button class="btn btn-primary w-100" onclick="generateBudgetReport()">Generate Budget Report</button>
                             </div>
                         </div>
                     </div>
@@ -1178,21 +974,13 @@ $db = Database::getInstance()->getConnection();
                             </div>
                             <div class="card-body">
                                 <p>Company-wide summary of cash inflows and outflows.</p>
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between">
-                                        <span>Total Collections</span>
-                                        <span class="text-success">₱3,250,000</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Total Disbursements</span>
-                                        <span class="text-danger">₱2,350,000</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Net Cash Flow</span>
-                                        <span class="text-success">₱900,000</span>
+                                <div class="mb-3" id="cashFlowSummaryContainer">
+                                    <div class="text-center py-3">
+                                        <div class="loading mb-3"></div>
+                                        <p class="text-muted">Generating cash flow summary...</p>
                                     </div>
                                 </div>
-                                <button class="btn btn-primary w-100">Generate Cash Flow Report</button>
+                                <button class="btn btn-primary w-100" onclick="generateCashFlowSummary()">Generate Cash Flow Report</button>
                             </div>
                         </div>
                     </div>
@@ -1209,36 +997,13 @@ $db = Database::getInstance()->getConnection();
                     </div>
                 </div>
                 <div class="row mb-4">
-                    <div class="col-md-3">
-                        <div class="reports-card">
-                            <i class="fas fa-file-pdf fa-2x mb-3 text-danger"></i>
-                            <h6>PDF Reports</h6>
-                            <h3>24</h3>
-                            <small>Generated this month</small>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="reports-card">
-                            <i class="fas fa-file-excel fa-2x mb-3 text-success"></i>
-                            <h6>Excel Exports</h6>
-                            <h3>18</h3>
-                            <small>Generated this month</small>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="reports-card">
-                            <i class="fas fa-print fa-2x mb-3 text-info"></i>
-                            <h6>Print Jobs</h6>
-                            <h3>12</h3>
-                            <small>Generated this month</small>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="reports-card">
-                            <i class="fas fa-users fa-2x mb-3 text-warning"></i>
-                            <h6>Active Users</h6>
-                            <h3>8</h3>
-                            <small>Report viewers</small>
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-body text-center py-5">
+                                <i class="fas fa-chart-bar fa-3x mb-4 text-muted"></i>
+                                <h4>No Analytics Data Available</h4>
+                                <p class="text-muted">Reports and analytics will be populated once the system has been in use.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1369,27 +1134,10 @@ $db = Database::getInstance()->getConnection();
                             <div class="card-header">
                                 <h6>Data Synchronization</h6>
                             </div>
-                            <div class="card-body">
-                                <div class="d-flex align-items-center justify-content-between mb-3">
-                                    <span>General Ledger</span>
-                                    <span class="badge bg-success">Synced 2 min ago</span>
-                                </div>
-                                <div class="d-flex align-items-center justify-content-between mb-3">
-                                    <span>Accounts Payable</span>
-                                    <span class="badge bg-success">Synced 5 min ago</span>
-                                </div>
-                                <div class="d-flex align-items-center justify-content-between mb-3">
-                                    <span>Accounts Receivable</span>
-                                    <span class="badge bg-success">Synced 3 min ago</span>
-                                </div>
-                                <div class="d-flex align-items-center justify-content-between mb-3">
-                                    <span>Disbursements</span>
-                                    <span class="badge bg-success">Synced 1 min ago</span>
-                                </div>
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <span>Budget Management</span>
-                                    <span class="badge bg-success">Synced 4 min ago</span>
-                                </div>
+                            <div class="card-body text-center py-5">
+                                <i class="fas fa-sync-alt fa-3x mb-4 text-muted"></i>
+                                <h5>No Sync History Available</h5>
+                                <p class="text-muted small">Sync status will be displayed once integrations are active and data syncing starts.</p>
                             </div>
                         </div>
                     </div>
@@ -1398,31 +1146,10 @@ $db = Database::getInstance()->getConnection();
                             <div class="card-header">
                                 <h6>Report Users & Access</h6>
                             </div>
-                            <div class="card-body">
-                                <div class="row text-center">
-                                    <div class="col-4">
-                                        <h4 class="text-primary">8</h4>
-                                        <small class="text-muted">Admin/Managers</small>
-                                    </div>
-                                    <div class="col-4">
-                                        <h4 class="text-success">12</h4>
-                                        <small class="text-muted">Accountants</small>
-                                    </div>
-                                    <div class="col-4">
-                                        <h4 class="text-info">5</h4>
-                                        <small class="text-muted">Auditors</small>
-                                    </div>
-                                </div>
-                                <hr>
-                                <div class="mb-2">
-                                    <strong>Report Permissions:</strong>
-                                </div>
-                                <ul class="list-unstyled small">
-                                    <li><i class="fas fa-check text-success me-2"></i>Financial statements access</li>
-                                    <li><i class="fas fa-check text-success me-2"></i>Export capabilities</li>
-                                    <li><i class="fas fa-check text-success me-2"></i>Custom report creation</li>
-                                    <li><i class="fas fa-check text-success me-2"></i>Audit trail viewing</li>
-                                </ul>
+                            <div class="card-body text-center py-5">
+                                <i class="fas fa-users fa-3x mb-4 text-muted"></i>
+                                <h5>No User Activity Data</h5>
+                                <p class="text-muted small">User access and permissions will be displayed once the system is in active use.</p>
                             </div>
                         </div>
                     </div>
