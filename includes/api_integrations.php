@@ -45,7 +45,8 @@ class APIIntegrationManager {
             'xero' => new XeroIntegration(),
             'mailchimp' => new MailchimpIntegration(),
             'zoom' => new ZoomIntegration(),
-            'microsoft_teams' => new MicrosoftTeamsIntegration()
+            'microsoft_teams' => new MicrosoftTeamsIntegration(),
+            'hr3' => new HR3Integration()
         ];
     }
 
@@ -839,6 +840,196 @@ class MicrosoftTeamsIntegration extends BaseIntegration {
         } catch (Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
+    }
+}
+
+/**
+ * HR3 Claims Integration
+ */
+class HR3Integration extends BaseIntegration {
+    protected $name = 'hr3';
+    protected $displayName = 'HR3 Claims System';
+    protected $description = 'Employee claims and reimbursements processing from HR3 system';
+    protected $requiredConfig = ['api_url'];
+
+    /**
+     * Override validateConfig to handle optional authentication fields
+     */
+    public function validateConfig($config) {
+        $errors = [];
+
+        // Check required config
+        if (empty($config['api_url'])) {
+            $errors[] = "Required field 'api_url' is missing";
+        }
+
+        // api_key and api_secret are optional for now
+        // They can be added later when authentication is implemented
+
+        return [
+            'valid' => empty($errors),
+            'errors' => $errors
+        ];
+    }
+
+    public function testConnection($config) {
+        try {
+            // Test HR3 API connection by attempting to get claims
+            $url = $config['api_url'];
+            if (!str_ends_with($url, '?')) {
+                $url .= '?';
+            }
+            $url .= 'action=test&api_key=' . urlencode($config['api_key']);
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Bearer ' . $this->generateAuthToken($config),
+                'Content-Type: application/json'
+            ]);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200) {
+                $result = json_decode($response, true);
+                if (isset($result['success']) && $result['success']) {
+                    return ['success' => true, 'message' => 'HR3 API connection successful'];
+                } else {
+                    return ['success' => false, 'error' => 'HR3 API returned success=false'];
+                }
+            } else {
+                return ['success' => false, 'error' => 'HR3 API returned HTTP ' . $httpCode];
+            }
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get approved claims from HR3
+     */
+    public function getApprovedClaims($config, $params = []) {
+        try {
+            $url = $config['api_url'];
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, ''); // Empty post data as per API structure
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Bearer ' . $this->generateAuthToken($config),
+                'Content-Type: application/x-www-form-urlencoded'
+            ]);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200) {
+                $claims = json_decode($response, true);
+
+                // Filter for only "Approved" status claims and map fields
+                $approvedClaims = [];
+                foreach ($claims as $claim) {
+                    if (isset($claim['status']) && $claim['status'] === 'Approved' && floatval($claim['total_amount'] ?? 0) > 0) {
+                        $approvedClaims[] = [
+                            'id' => $claim['claim_id'],
+                            'claim_id' => $claim['claim_id'],
+                            'reference_id' => $claim['reference_id'],
+                            'employee_name' => $claim['employee_name'],
+                            'employee_id' => $claim['employee_id'],
+                            'amount' => floatval($claim['total_amount']),
+                            'currency_code' => $claim['currency_code'] ?? 'PHP',
+                            'description' => $claim['remarks'],
+                            'status' => $claim['status'],
+                            'date' => $claim['updated_at'] ?? $claim['created_at'],
+                            'type' => $this->mapEventTypeToClaimType($claim['event_type_id'] ?? '')
+                        ];
+                    }
+                }
+
+                return $approvedClaims;
+            } else {
+                throw new Exception('HR3 API HTTP error: ' . $httpCode);
+            }
+        } catch (Exception $e) {
+            Logger::getInstance()->error('HR3 getApprovedClaims failed: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Update claim status in HR3 (optional - if API supports it)
+     */
+    public function updateClaimStatus($config, $params = []) {
+        if (!isset($params['claim_id']) || !isset($params['status'])) {
+            throw new Exception('claim_id and status are required');
+        }
+
+        try {
+            $url = $config['api_url'];
+            $postData = [
+                'action' => 'updateClaimStatus',
+                'api_key' => $config['api_key'],
+                'claim_id' => $params['claim_id'],
+                'status' => $params['status']
+            ];
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Bearer ' . $this->generateAuthToken($config),
+                'Content-Type: application/x-www-form-urlencoded'
+            ]);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200) {
+                $result = json_decode($response, true);
+                return [
+                    'success' => isset($result['success']) && $result['success'],
+                    'message' => $result['message'] ?? 'Status updated'
+                ];
+            } else {
+                throw new Exception('HR3 API HTTP error: ' . $httpCode);
+            }
+        } catch (Exception $e) {
+            Logger::getInstance()->error('HR3 updateClaimStatus failed: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Map event type ID to claim type description
+     */
+    private function mapEventTypeToClaimType($eventTypeId) {
+        $eventTypes = [
+            'cc74251e-a4df-11f0-b0bf-d63e92cd2848' => 'Transportation',
+            'cc742de8-a4df-11f0-b0bf-d63e92cd2848' => 'Meals',
+            'cc742d84-a4df-11f0-b0bf-d63e92cd2848' => 'Office Supplies',
+            'cc742dc0-a4df-11f0-b0bf-d63e92cd2848' => 'Entertainment',
+            'cc742d16-a4df-11f0-b0bf-d63e92cd2848' => 'Medical',
+        ];
+
+        return $eventTypes[$eventTypeId] ?? 'General Expense';
+    }
+
+    /**
+     * Generate authentication token for HR3 API
+     */
+    private function generateAuthToken($config) {
+        // Simple token generation - can be enhanced based on HR3 requirements
+        $payload = $config['api_key'] . ':' . $config['api_secret'];
+        return base64_encode(hash('sha256', $payload, true));
     }
 }
 ?>

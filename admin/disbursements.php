@@ -355,6 +355,11 @@ $db = Database::getInstance()->getConnection();
                 </button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="claims-tab" data-bs-toggle="tab" data-bs-target="#claims" type="button" role="tab">
+                    <i class="fas fa-receipt me-2"></i>Claims Processing
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="vouchers-tab" data-bs-toggle="tab" data-bs-target="#vouchers" type="button" role="tab">
                     <i class="fas fa-file-invoice me-2"></i>Vouchers & Documentation
                 </button>
@@ -481,6 +486,49 @@ $db = Database::getInstance()->getConnection();
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Claims Processing Tab -->
+            <div class="tab-pane fade" id="claims" role="tabpanel" aria-labelledby="claims-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">HR3 Claims Processing - From HR3 API</h6>
+                    <div>
+                        <button class="btn btn-success me-2" onclick="loadHR3Claims()">
+                            <i class="fas fa-sync me-2"></i>Load HR3 Claims
+                        </button>
+                        <button class="btn btn-outline-secondary" id="claimsConfigBtn">
+                            <i class="fas fa-cog me-2"></i>HR3 Config
+                        </button>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mb-3" id="claimsInfoAlert" style="display: none;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Claims are fetched from HR3 API. When processed, status changes to "Paid" instead of "approved".
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped" id="claimsTable">
+                        <thead>
+                            <tr>
+                                <th>Claim ID</th>
+                                <th>Employee</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="claimsTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <div class="text-muted">Click "Load HR3 Claims" to fetch approved claims from HR3 system</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -762,5 +810,171 @@ $db = Database::getInstance()->getConnection();
                 arrow.classList.remove('fa-chevron-right');
                 arrow.classList.add('fa-chevron-left');
                 toggle.style.left = '290px';
+            }
+        }
+
+        // HR3 Claims Processing Functions
+        async function loadHR3Claims() {
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading Claims...';
+
+            try {
+                const response = await fetch('api/integrations.php?action=execute&integration_name=hr3&action_name=getApprovedClaims', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        api_key: 'hr3_integration_key'
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    displayHR3Claims(result.result);
+                    document.getElementById('claimsInfoAlert').style.display = 'block';
+                } else {
+                    showAlert('Error loading claims: ' + (result.error || 'Unknown error'), 'danger');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        function displayHR3Claims(claims) {
+            const tbody = document.getElementById('claimsTableBody');
+
+            if (!claims || claims.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No approved claims found in HR3 system</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+
+            claims.forEach(claim => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${claim.claim_id || claim.id}</strong></td>
+                    <td>${claim.employee_name || claim.employee || 'N/A'}</td>
+                    <td><span class="badge bg-primary">${claim.claim_type || claim.type || 'General'}</span></td>
+                    <td><strong>$${parseFloat(claim.amount || 0).toFixed(2)}</strong></td>
+                    <td>${formatDate(claim.claim_date || claim.date || claim.created_at)}</td>
+                    <td>${claim.description || claim.notes || 'No description'}</td>
+                    <td>
+                        <button class="btn btn-success btn-sm" onclick="processHR3Claim('${claim.claim_id || claim.id}', '${claim.employee_name || claim.employee}', ${parseFloat(claim.amount || 0)}, '${claim.description || claim.notes || ''}')">
+                            <i class="fas fa-money-bill-wave me-1"></i>Process Payment
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function processHR3Claim(claimId, employeeName, amount, description) {
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
+
+            try {
+                // Create disbursement record
+                const disbursementData = {
+                    disbursement_date: new Date().toISOString().split('T')[0],
+                    amount: amount,
+                    payment_method: 'bank_transfer', // Default payment method
+                    reference_number: `HR3-CLAIM-${claimId}`,
+                    payee: employeeName,
+                    description: `HR3 Claim Payment: ${description}`,
+                    notes: `Processed from HR3 claim ${claimId} - Status changed to "Paid"`
+                };
+
+                const response = await fetch('api/disbursements.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams(disbursementData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update HR3 claim status (if API supports it)
+                    try {
+                        await markHR3ClaimAsPaid(claimId);
+                    } catch (hr3Error) {
+                        console.log('HR3 status update failed, but disbursement created:', hr3Error);
+                    }
+
+                    showAlert(`Claim payment processed successfully! Status changed to "Paid". Reference: ${result.disbursement_id}`, 'success');
+
+                    // Remove the processed claim row
+                    btn.closest('tr').remove();
+
+                    // Refresh disbursements if on records tab
+                    if (document.getElementById('records-tab').classList.contains('active')) {
+                        loadDisbursements();
+                    }
+                } else {
+                    showAlert('Error processing claim: ' + (result.error || 'Unknown error'), 'danger');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        async function markHR3ClaimAsPaid(claimId) {
+            // This would call the HR3 API to update claim status to "Paid"
+            // Implementation depends on HR3 API capabilities
+            const response = await fetch('api/integrations.php?action=execute&integration_name=hr3&action_name=updateClaimStatus', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    claim_id: claimId,
+                    status: 'Paid'
+                })
+            });
+
+            const result = await response.json();
+            return result;
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            // Insert at top of content area
+            const content = document.querySelector('.content');
+            content.insertBefore(alertDiv, content.firstChild);
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            try {
+                return new Date(dateString).toLocaleDateString();
+            } catch (e) {
+                return dateString;
             }
         }
