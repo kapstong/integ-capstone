@@ -813,8 +813,13 @@ $db = Database::getInstance()->getConnection();
             }
         }
 
-        // HR3 Claims Processing Functions
-        async function loadHR3Claims() {
+    </script>
+
+    <!-- HR3 Claims Processing Functions -->
+    <script>
+    // Wait for DOM to be fully loaded before defining functions
+    window.addEventListener('DOMContentLoaded', function() {
+        window.loadHR3Claims = async function() {
             const btn = event.target.closest('button');
             const originalText = btn.innerHTML;
 
@@ -835,20 +840,20 @@ $db = Database::getInstance()->getConnection();
                 const result = await response.json();
 
                 if (result.success) {
-                    displayHR3Claims(result.result);
+                    window.displayHR3Claims(result.result);
                     document.getElementById('claimsInfoAlert').style.display = 'block';
                 } else {
-                    showAlert('Error loading claims: ' + (result.error || 'Unknown error'), 'danger');
+                    window.showAlert('Error loading claims: ' + (result.error || 'Unknown error'), 'danger');
                 }
             } catch (error) {
-                showAlert('Error: ' + error.message, 'danger');
+                window.showAlert('Error: ' + error.message, 'danger');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
-        }
+        };
 
-        function displayHR3Claims(claims) {
+        window.displayHR3Claims = function(claims) {
             const tbody = document.getElementById('claimsTableBody');
 
             if (!claims || claims.length === 0) {
@@ -865,7 +870,7 @@ $db = Database::getInstance()->getConnection();
                     <td>${claim.employee_name || claim.employee || 'N/A'}</td>
                     <td><span class="badge bg-primary">${claim.claim_type || claim.type || 'General'}</span></td>
                     <td><strong>$${parseFloat(claim.amount || 0).toFixed(2)}</strong></td>
-                    <td>${formatDate(claim.claim_date || claim.date || claim.created_at)}</td>
+                    <td>${window.formatDate(claim.claim_date || claim.date || claim.created_at)}</td>
                     <td>${claim.description || claim.notes || 'No description'}</td>
                     <td>
                         <button class="btn btn-success btn-sm" onclick="processHR3Claim('${claim.claim_id || claim.id}', '${claim.employee_name || claim.employee}', ${parseFloat(claim.amount || 0)}, '${claim.description || claim.notes || ''}')">
@@ -875,9 +880,9 @@ $db = Database::getInstance()->getConnection();
                 `;
                 tbody.appendChild(row);
             });
-        }
+        };
 
-        async function processHR3Claim(claimId, employeeName, amount, description) {
+        window.processHR3Claim = async function(claimId, employeeName, amount, description) {
             const btn = event.target.closest('button');
             const originalText = btn.innerHTML;
 
@@ -909,12 +914,12 @@ $db = Database::getInstance()->getConnection();
                 if (result.success) {
                     // Update HR3 claim status (if API supports it)
                     try {
-                        await markHR3ClaimAsPaid(claimId);
+                        await window.markHR3ClaimAsPaid(claimId);
                     } catch (hr3Error) {
                         console.log('HR3 status update failed, but disbursement created:', hr3Error);
                     }
 
-                    showAlert(`Claim payment processed successfully! Status changed to "Paid". Reference: ${result.disbursement_id}`, 'success');
+                    window.showAlert(`Claim payment processed successfully! Status changed to "Paid". Reference: ${result.disbursement_id}`, 'success');
 
                     // Remove the processed claim row
                     btn.closest('tr').remove();
@@ -924,17 +929,17 @@ $db = Database::getInstance()->getConnection();
                         loadDisbursements();
                     }
                 } else {
-                    showAlert('Error processing claim: ' + (result.error || 'Unknown error'), 'danger');
+                    window.showAlert('Error processing claim: ' + (result.error || 'Unknown error'), 'danger');
                 }
             } catch (error) {
-                showAlert('Error: ' + error.message, 'danger');
+                window.showAlert('Error: ' + error.message, 'danger');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
-        }
+        };
 
-        async function markHR3ClaimAsPaid(claimId) {
+        window.markHR3ClaimAsPaid = async function(claimId) {
             // This would call the HR3 API to update claim status to "Paid"
             // Implementation depends on HR3 API capabilities
             const response = await fetch('api/integrations.php?action=execute&integration_name=hr3&action_name=updateClaimStatus', {
@@ -950,9 +955,9 @@ $db = Database::getInstance()->getConnection();
 
             const result = await response.json();
             return result;
-        }
+        };
 
-        function showAlert(message, type = 'info') {
+        window.showAlert = function(message, type = 'info') {
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
             alertDiv.innerHTML = `
@@ -968,13 +973,17 @@ $db = Database::getInstance()->getConnection();
             setTimeout(() => {
                 alertDiv.remove();
             }, 5000);
-        }
+        };
 
-        function formatDate(dateString) {
+        window.formatDate = function(dateString) {
             if (!dateString) return 'N/A';
             try {
                 return new Date(dateString).toLocaleDateString();
             } catch (e) {
                 return dateString;
             }
-        }
+        };
+    });
+    </script>
+</body>
+</html>
