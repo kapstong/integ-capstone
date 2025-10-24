@@ -978,6 +978,31 @@ class HR4Integration extends BaseIntegration {
     }
 
     /**
+     * Get appropriate expense account for payroll based on department
+     * Returns the account id to use for payroll expenses
+     */
+    private function getPayrollExpenseAccount($payroll = []) {
+        // Base payroll expense accounts by department
+        $departmentAccounts = [
+            1 => 5401, // Administrative Salaries (Department 1)
+            2 => 5402, // Kitchen/F&B Salaries (Department 2)
+            3 => 5403, // Front Desk/Service Salaries (Department 3)
+            // Add more department mappings as needed
+        ];
+
+        $departmentId = $payroll['department_id'] ?? 1;
+        return $departmentAccounts[$departmentId] ?? 5401; // Default to Administrative Salaries
+    }
+
+    /**
+     * Get appropriate liability account for accrued payroll
+     * Returns the account id to use for accrued wages payable
+     */
+    private function getPayrollLiabilityAccount() {
+        return 2107; // Accrued Salaries Payable - this should exist in chart_of_accounts
+    }
+
+    /**
      * Import payroll data into financials system
      */
     public function importPayroll($config, $params = []) {
@@ -988,36 +1013,79 @@ class HR4Integration extends BaseIntegration {
 
         foreach ($payrollData as $payroll) {
             try {
-                // Insert payroll expense into imported_transactions table
                 $db = Database::getInstance()->getConnection();
+                $amount = floatval($payroll['net_pay'] ?? $payroll['amount'] ?? 0);
 
+                if ($amount <= 0) {
+                    continue; // Skip invalid amounts
+                }
+
+                $batchId = 'PAYROLL_' . date('Ymd_His');
+                $entryDate = $payroll['payroll_date'] ?? $payroll['date'] ?? date('Y-m-d');
+                $description = 'Payroll: ' . ($payroll['employee_name'] ?? 'Employee') . ' - ' . ($payroll['payroll_period'] ?? 'Period');
+                $externalId = $payroll['payroll_id'] ?? $payroll['id'] ?? 'PAY' . time() . '_' . $importedCount;
+
+                // Step 1: First import to imported_transactions for audit trail
                 $stmt = $db->prepare("
                     INSERT INTO imported_transactions
                     (import_batch, source_system, transaction_date, transaction_type,
-                     external_id, department_id, amount, description, raw_data)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     external_id, department_id, amount, description, raw_data, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
                 ");
 
-                $batchId = 'PAYROLL_' . date('Ymd_His');
                 $stmt->execute([
                     $batchId,
                     'HR4_SYSTEM',
-                    $payroll['payroll_date'] ?? $payroll['date'] ?? date('Y-m-d'),
+                    $entryDate,
                     'payroll_expense',
-                    $payroll['payroll_id'] ?? $payroll['id'] ?? 'PAY' . time() . '_' . $importedCount,
-                    $payroll['department_id'] ?? 1, // Default department
-                    $payroll['net_pay'] ?? $payroll['amount'] ?? 0,
-                    'Payroll: ' . ($payroll['employee_name'] ?? 'Employee') . ' - ' . ($payroll['payroll_period'] ?? 'Period'),
+                    $externalId,
+                    $payroll['department_id'] ?? 1,
+                    $amount,
+                    $description,
                     json_encode($payroll)
                 ]);
 
+                $importedTransactionId = $db->lastInsertId();
+
+                // Step 2: Create actual journal entry (debit expense, credit liability)
+                $entryNumber = 'JE-PAY-' . date('ymd') . '-' . str_pad($importedCount + 1, 4, '0', STR_PAD_LEFT);
+
+                // Insert journal entry
+                $jeStmt = $db->prepare("
+                    INSERT INTO journal_entries
+                    (entry_number, entry_date, description, total_debit, total_credit, status, created_by, posted_by, posted_at)
+                    VALUES (?, ?, ?, ?, ?, 'posted', 1, 1, NOW())
+                ");
+                $jeStmt->execute([$entryNumber, $entryDate, $description, $amount, $amount]);
+                $journalEntryId = $db->lastInsertId();
+
+                // Insert journal entry lines (debit payroll expense, credit accrued salaries payable)
+                $jelStmt = $db->prepare("
+                    INSERT INTO journal_entry_lines (journal_entry_id, account_id, debit, credit, description)
+                    VALUES (?, ?, ?, ?, ?)
+                ");
+
+                // Debit: Payroll Expense (5401 - Administrative Salaries)
+                $jelStmt->execute([$journalEntryId, $this->getPayrollExpenseAccount($payroll), $amount, 0, $description]);
+
+                // Credit: Accrued Salaries Payable (2107 - Payroll Taxes Payable or similar liability)
+                $jelStmt->execute([$journalEntryId, $this->getPayrollLiabilityAccount(), 0, $amount, $description]);
+
+                // Step 3: Update imported_transactions with journal_entry_id and mark as posted
+                $updateStmt = $db->prepare("
+                    UPDATE imported_transactions
+                    SET status = 'posted', journal_entry_id = ?
+                    WHERE id = ?
+                ");
+                $updateStmt->execute([$journalEntryId, $importedTransactionId]);
+
                 $importedCount++;
 
-                // Log successful import
-                Logger::getInstance()->info('Payroll data imported from HR4', [
-                    'payroll_id' => $payroll['payroll_id'] ?? $payroll['id'],
+                Logger::getInstance()->info('Payroll imported to General Ledger', [
+                    'payroll_id' => $externalId,
                     'employee' => $payroll['employee_name'] ?? 'Unknown',
-                    'amount' => $payroll['net_pay'] ?? $payroll['amount']
+                    'amount' => $amount,
+                    'journal_entry' => $entryNumber
                 ]);
 
             } catch (Exception $e) {
