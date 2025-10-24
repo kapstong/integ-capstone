@@ -8,7 +8,7 @@ try {
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
 
     // Read the SQL file
-    $sql = file_get_contents('database_schema.sql');
+    $sql = file_get_contents('atiera_finance_master.sql');
 
     // Split into individual statements more carefully
     $statements = [];

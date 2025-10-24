@@ -51,55 +51,6 @@ header('Content-Type: application/javascript');
             }
         }
 
-        // Process Payment Functionality
-        async function processPayment() {
-            const formData = {
-                action: 'process_payment',
-                payee: document.getElementById('processPayee').value,
-                payment_date: document.getElementById('paymentDate').value,
-                payment_type: document.getElementById('paymentType').value,
-                payment_method: document.getElementById('paymentMethodModal').value,
-                amount: document.getElementById('processAmount').value,
-                reference_number: document.getElementById('paymentReference').value,
-                description: document.getElementById('processDescription').value
-            };
-
-            // Validate required fields
-            if (!formData.payee || !formData.payment_date || !formData.payment_method || !formData.amount) {
-                showAlert('Please fill in all required fields', 'warning');
-                return;
-            }
-
-            try {
-                const response = await fetch('api/disbursements.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify(formData)
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showAlert('Payment processed successfully!', 'success');
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('processPaymentModal'));
-                    if (modal) modal.hide();
-                    // Reset form
-                    document.getElementById('processPaymentForm').reset();
-                    // Reload disbursements
-                    loadDisbursements();
-                } else {
-                    showAlert('Error: ' + result.error, 'danger');
-                }
-            } catch (error) {
-                console.error('Error processing payment:', error);
-                showAlert('An error occurred while processing payment', 'danger');
-            }
-        }
-
         // Audit Trail Functionality
         async function loadAuditTrail() {
             try {
@@ -116,15 +67,9 @@ header('Content-Type: application/javascript');
                     return;
                 }
 
-                tbody.innerHTML = auditLogs.map(log => `
-                    <tr>
-                        <td>${log.formatted_date}</td>
-                        <td>${log.full_name || log.username || 'Unknown'}</td>
-                        <td><span class="badge bg-info">${log.action}</span></td>
-                        <td>${log.disbursement_number || log.record_id || 'N/A'}</td>
-                        <td>${log.action_description}</td>
-                    </tr>
-                `).join('');
+                tbody.innerHTML = auditLogs.map(log =>
+                    '<tr><td>' + log.formatted_date + '</td><td>' + (log.full_name || log.username || 'Unknown') + '</td><td><span class="badge bg-info">' + log.action + '</span></td><td>' + (log.disbursement_number || log.record_id || 'N/A') + '</td><td>' + log.action_description + '</td></tr>'
+                ).join('');
 
             } catch (error) {
                 console.error('Error loading audit trail:', error);
@@ -223,25 +168,15 @@ header('Content-Type: application/javascript');
                     document.querySelector('#vouchersTable tbody');
 
                 if (tbody && vouchers.length > 0) {
-                    tbody.innerHTML = vouchers.map(v => `
-                        <tr>
-                            <td>${v.file_name}</td>
-                            <td>Voucher</td>
-                            <td>${v.disbursement_number || 'N/A'}</td>
-                            <td>${formatDate(v.uploaded_at)}</td>
-                            <td><i class="fas fa-paperclip"></i> ${v.original_name}</td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-primary">View</button>
-                                <button class="btn btn-sm btn-outline-secondary">Download</button>
-                            </td>
-                        </tr>
-                    `).join('');
+                    tbody.innerHTML = vouchers.map(v =>
+                        '<tr><td>' + v.file_name + '</td><td>Voucher</td><td>' + (v.disbursement_number || 'N/A') + '</td><td>' + formatDate(v.uploaded_at) + '</td><td><i class="fas fa-paperclip"></i> ' + v.original_name + '</td><td><button class="btn btn-sm btn-outline-primary">View</button><button class="btn btn-sm btn-outline-secondary">Download</button></td></tr>'
+                    ).join('');
                 }
-
-        } catch (error) {
-            console.error('Error loading vouchers:', error);
-        }
     }
+    catch (error) {
+        console.error('Error loading vouchers:', error);
+    }
+}
 
     // Additional functions for disbursements module
 
@@ -520,27 +455,9 @@ header('Content-Type: application/javascript');
                 return;
             }
 
-            tbody.innerHTML = disbursements.map(d => `
-                <tr>
-                    <td>${d.disbursement_number || d.id}</td>
-                    <td>${d.payee || 'N/A'}</td>
-                    <td><span class="badge bg-secondary">${d.payment_method || 'N/A'}</span></td>
-                    <td>${formatDate(d.disbursement_date)}</td>
-                    <td>₱${parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    <td>${getStatusBadge(d.status || 'pending')}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="viewDisbursement(${d.id})">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary me-1" onclick="editDisbursement(${d.id})">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteDisbursement(${d.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = disbursements.map(d =>
+                '<tr><td>' + (d.disbursement_number || d.id) + '</td><td>' + (d.payee || 'N/A') + '</td><td><span class="badge bg-secondary">' + (d.payment_method || 'N/A') + '</span></td><td>' + formatDate(d.disbursement_date) + '</td><td>₱' + parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td><td>' + getStatusBadge(d.status || 'pending') + '</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="viewDisbursement(' + d.id + ')"><i class="fas fa-eye"></i></button><button class="btn btn-sm btn-outline-secondary me-1" onclick="editDisbursement(' + d.id + ')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteDisbursement(' + d.id + ')"><i class="fas fa-trash"></i></button></td></tr>'
+            ).join('');
         }
 
         // Load vendors for dropdown
@@ -637,6 +554,30 @@ header('Content-Type: application/javascript');
             loadDisbursements();
             loadVendors();
         });
+
+        function toggleSidebarDesktop() {
+            const sidebar = document.getElementById('sidebar');
+            const content = document.querySelector('.content');
+            const arrow = document.getElementById('sidebarArrow');
+            const toggle = document.querySelector('.sidebar-toggle');
+            const logoImg = document.querySelector('.navbar-brand img');
+            sidebar.classList.toggle('sidebar-collapsed');
+            const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+            if (isCollapsed) {
+                logoImg.src = 'atieralogo2.png';
+                content.style.marginLeft = '120px';
+                arrow.classList.remove('fa-chevron-left');
+                arrow.classList.add('fa-chevron-right');
+                toggle.style.left = '110px';
+            } else {
+                logoImg.src = 'atieralogo.png';
+                content.style.marginLeft = '300px';
+                arrow.classList.remove('fa-chevron-right');
+                arrow.classList.add('fa-chevron-left');
+                toggle.style.left = '290px';
+            }
+        }
 
         // Utility functions
         function formatDate(dateString) {

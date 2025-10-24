@@ -72,10 +72,7 @@ function getAuditTrail($db, $filters = []) {
             $params[] = $filters['record_id'];
         }
 
-        // Special filter for disbursements
-        if (!isset($filters['table_name'])) {
-            $where[] = "a.table_name = 'disbursements'";
-        }
+        // No default filter - allow all tables unless specifically filtering
 
         $whereClause = $where ? "WHERE " . implode(" AND ", $where) : "";
 
@@ -139,7 +136,23 @@ function logDisbursementAction($db, $action, $recordId, $oldValues = null, $newV
 
 function formatAction($log) {
     $action = strtolower($log['action']);
-    $record = $log['disbursement_number'] ? "disbursement {$log['disbursement_number']}" : "record ID {$log['record_id']}";
+    $table = $log['table_name'];
+    $record = '';
+
+    // Format record description based on table
+    switch ($table) {
+        case 'disbursements':
+            $record = $log['disbursement_number'] ? "disbursement {$log['disbursement_number']}" : "disbursement ID {$log['record_id']}";
+            break;
+        case 'journal_entries':
+            $record = "journal entry ID {$log['record_id']}";
+            break;
+        case 'chart_of_accounts':
+            $record = "account ID {$log['record_id']}";
+            break;
+        default:
+            $record = "record ID {$log['record_id']}";
+    }
 
     switch ($action) {
         case 'created':
@@ -150,6 +163,7 @@ function formatAction($log) {
             return "Updated $record";
         case 'deleted':
         case 'removed':
+        case 'deactivated':
             return "Deleted $record";
         case 'viewed':
             return "Viewed $record";
@@ -157,6 +171,8 @@ function formatAction($log) {
             return "Approved $record";
         case 'rejected':
             return "Rejected $record";
+        case 'generated':
+            return "Generated report";
         default:
             return ucfirst($action) . " $record";
     }

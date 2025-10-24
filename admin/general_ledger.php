@@ -10,41 +10,136 @@ if (!isset($_SESSION['user'])) {
 // Initialize database connection
 $db = Database::getInstance()->getConnection();
 
-// Fetch summary data
+// Fetch summary data and actual data for all modules
 try {
-    // Total accounts
-    $totalAccounts = $db->query("SELECT COUNT(*) as count FROM chart_of_accounts WHERE status = 'active'")->fetch()['count'];
+    // Basic stats
+    $totalAccounts = $db->query("SELECT COUNT(*) as count FROM chart_of_accounts WHERE is_active = 1")->fetch()['count'];
+    $totalEntries = $db->query("SELECT COUNT(*) as count FROM journal_entries WHERE status != 'voided'")->fetch()['count'] ?? 0;
 
-    // Total journal entries
-    $totalEntries = $db->query("SELECT COUNT(*) as count FROM journal_entries")->fetch()['count'];
+    // Calculate balances from journal entries
+    $balanceQuery = $db->query("
+        SELECT
+            coa.account_type,
+            SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as balance
+        FROM chart_of_accounts coa
+        LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id AND je.status = 'posted'
+        WHERE coa.is_active = 1
+        GROUP BY coa.id, coa.account_type
+    ")->fetchAll();
 
-    // Total assets
-    $totalAssets = $db->query("
-        SELECT COALESCE(SUM(balance), 0) as total
-        FROM chart_of_accounts
-        WHERE account_type = 'asset' AND status = 'active'
-    ")->fetch()['total'];
+    // Initialize balance variables
+    $totalAssets = 0;
+    $totalLiabilities = 0;
+    $totalEquity = 0;
+    $totalRevenue = 0;
+    $totalExpenses = 0;
 
-    // Net profit calculation (simplified)
-    $totalRevenue = $db->query("
-        SELECT COALESCE(SUM(balance), 0) as total
-        FROM chart_of_accounts
-        WHERE account_type = 'revenue' AND status = 'active'
-    ")->fetch()['total'];
-
-    $totalExpenses = $db->query("
-        SELECT COALESCE(SUM(balance), 0) as total
-        FROM chart_of_accounts
-        WHERE account_type = 'expense' AND status = 'active'
-    ")->fetch()['total'];
+    foreach ($balanceQuery as $row) {
+        $balance = intval($row['balance']);
+        switch ($row['account_type']) {
+            case 'asset':
+                $totalAssets += $balance;
+                break;
+            case 'liability':
+                $totalLiabilities += $balance;
+                break;
+            case 'equity':
+                $totalEquity += $balance;
+                break;
+            case 'revenue':
+                $totalRevenue += $balance;
+                break;
+            case 'expense':
+                $totalExpenses += $balance;
+                break;
+        }
+    }
 
     $netProfit = $totalRevenue - $totalExpenses;
 
+    // Fetch actual Chart of Accounts with calculated balances
+    $chartOfAccountsQuery = $db->query("
+        SELECT
+            coa.id,
+            coa.account_code,
+            coa.account_name,
+            coa.account_type,
+            coa.description,
+            coa.category,
+            COALESCE(SUM(jel.debit - jel.credit), 0) as balance
+        FROM chart_of_accounts coa
+        LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id AND je.status = 'posted'
+        WHERE coa.is_active = 1
+        GROUP BY coa.id, coa.account_code, coa.account_name, coa.account_type, coa.description, coa.category
+        ORDER BY coa.account_code ASC
+    ")->fetchAll();
+
+    // Fetch actual Journal Entries with proper formatting
+    $journalEntriesQuery = $db->query("
+        SELECT
+            je.entry_date as date,
+            je.entry_number as reference,
+            je.description,
+            jel.debit,
+            jel.credit,
+            coa.account_name,
+            je.status
+        FROM journal_entry_lines jel
+        JOIN journal_entries je ON jel.journal_entry_id = je.id
+        JOIN chart_of_accounts coa ON jel.account_id = coa.id
+        ORDER BY je.entry_date DESC, je.id DESC
+        LIMIT 50
+    ")->fetchAll();
+
+    // Fetch trial balance data with proper calculations
+    $trialBalanceQuery = $db->query("
+        SELECT
+            coa.account_code,
+            coa.account_name,
+            COALESCE(SUM(jel.debit), 0) as debit_balance,
+            COALESCE(SUM(jel.credit), 0) as credit_balance
+        FROM chart_of_accounts coa
+        LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id AND je.status = 'posted'
+        WHERE coa.is_active = 1
+        GROUP BY coa.id, coa.account_code, coa.account_name
+        HAVING (debit_balance > 0 OR credit_balance > 0)
+        ORDER BY coa.account_code ASC
+    ")->fetchAll();
+
+    // Fetch audit trail (if table exists)
+    try {
+        $auditTrail = $db->query("
+            SELECT created_at as date_time, user_id as user, action, table_name as details, record_id
+            FROM audit_log
+            ORDER BY created_at DESC
+            LIMIT 10
+        ")->fetchAll() ?? [];
+    } catch (Exception $e) {
+        $auditTrail = [];
+    }
+
+    // Assign results to variables
+    $chartOfAccounts = $chartOfAccountsQuery;
+    $journalEntries = $journalEntriesQuery;
+    $trialBalance = $trialBalanceQuery;
+
 } catch (Exception $e) {
+    error_log("Database error in general_ledger.php: " . $e->getMessage());
     $totalAccounts = 0;
     $totalEntries = 0;
     $totalAssets = 0;
+    $totalLiabilities = 0;
+    $totalEquity = 0;
+    $totalRevenue = 0;
+    $totalExpenses = 0;
     $netProfit = 0;
+    $chartOfAccounts = [];
+    $journalEntries = [];
+    $trialBalance = [];
+    $auditTrail = [];
 }
 ?>
 <!DOCTYPE html>
@@ -637,7 +732,7 @@ try {
                             <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
                                 <i class="fas fa-user"></i>
                             </div>
-                            <span><strong>User</strong></span>
+                            <span><strong><?php echo htmlspecialchars(is_array($_SESSION['user']) ? ($_SESSION['user']['username'] ?? 'User') : ($_SESSION['user'] ?? 'User')); ?></strong></span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li><a class="dropdown-item" href="admin-profile-settings.php"><i class="fas fa-user me-2"></i>Profile</a></li>
@@ -714,7 +809,7 @@ try {
                             <div class="tab-pane fade show active" id="coa" role="tabpanel" aria-labelledby="coa-tab">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h6 class="mb-0">Master List of Accounts</h6>
-                                    <button class="btn btn-primary"><i class="fas fa-plus me-2"></i>Add Account</button>
+                                    <button class="btn btn-primary" onclick="showAddAccountModal()"><i class="fas fa-plus me-2"></i>Add Account</button>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-striped">
@@ -728,48 +823,23 @@ try {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr>
-                                                <td>1000</td>
-                                                <td>Cash</td>
-                                                <td><span class="account-type asset">Asset</span></td>
-                                                <td>Cash on hand and in bank</td>
-                                                <td><button class="btn btn-sm btn-outline-primary">Edit</button></td>
-                                            </tr>
-                                            <tr>
-                                                <td>1100</td>
-                                                <td>Accounts Receivable</td>
-                                                <td><span class="account-type asset">Asset</span></td>
-                                                <td>Money owed by customers</td>
-                                                <td><button class="btn btn-sm btn-outline-primary">Edit</button></td>
-                                            </tr>
-                                            <tr>
-                                                <td>1200</td>
-                                                <td>Office Supplies</td>
-                                                <td><span class="account-type asset">Asset</span></td>
-                                                <td>Supplies for office use</td>
-                                                <td><button class="btn btn-sm btn-outline-primary">Edit</button></td>
-                                            </tr>
-                                            <tr>
-                                                <td>3000</td>
-                                                <td>Capital</td>
-                                                <td><span class="account-type equity">Equity</span></td>
-                                                <td>Owner's equity in the business</td>
-                                                <td><button class="btn btn-sm btn-outline-primary">Edit</button></td>
-                                            </tr>
-                                            <tr>
-                                                <td>4000</td>
-                                                <td>Service Revenue</td>
-                                                <td><span class="account-type revenue">Revenue</span></td>
-                                                <td>Income from services</td>
-                                                <td><button class="btn btn-sm btn-outline-primary">Edit</button></td>
-                                            </tr>
-                                            <tr>
-                                                <td>5000</td>
-                                                <td>Rent Expense</td>
-                                                <td><span class="account-type expense">Expense</span></td>
-                                                <td>Monthly rent payments</td>
-                                                <td><button class="btn btn-sm btn-outline-primary">Edit</button></td>
-                                            </tr>
+                                            <?php if (empty($chartOfAccounts)): ?>
+                                                <tr>
+                                                    <td colspan="5" class="text-center text-muted py-4">
+                                                        <i class="fas fa-info-circle me-2"></i>No accounts found. Click "Add Account" to create the first account.
+                                                    </td>
+                                                </tr>
+                                            <?php else: ?>
+                                                <?php foreach ($chartOfAccounts as $account): ?>
+                                                    <tr>
+                                                        <td data-account-id="<?php echo htmlspecialchars($account['id']); ?>"><?php echo htmlspecialchars($account['account_code']); ?></td>
+                                                        <td><?php echo htmlspecialchars($account['account_name']); ?></td>
+                                                        <td><span class="account-type <?php echo $account['account_type']; ?>"><?php echo ucfirst($account['account_type']); ?></span></td>
+                                                        <td><?php echo htmlspecialchars($account['description'] ?? 'No description'); ?></td>
+                                                        <td><button class="btn btn-sm btn-outline-primary" onclick="editAccount()">Edit</button></td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
                                         </tbody>
                                     </table>
                                 </div>
@@ -794,51 +864,32 @@ try {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr>
-                                                <td>2025-09-25</td>
-                                                <td>JE001</td>
-                                                <td>Cash</td>
-                                                <td>Initial deposit</td>
-                                                <td>₱10,000.00</td>
-                                                <td>-</td>
-                                                <td><button class="btn btn-sm btn-outline-primary">Edit</button> <button class="btn btn-sm btn-outline-danger">Delete</button></td>
-                                            </tr>
-                                            <tr>
-                                                <td>2025-09-24</td>
-                                                <td>JE002</td>
-                                                <td>Office Supplies</td>
-                                                <td>Purchase of supplies</td>
-                                                <td>-</td>
-                                                <td>₱2,500.00</td>
-                                                <td><button class="btn btn-sm btn-outline-primary">Edit</button> <button class="btn btn-sm btn-outline-danger">Delete</button></td>
-                                            </tr>
-                                            <tr>
-                                                <td>2025-09-23</td>
-                                                <td>JE003</td>
-                                                <td>Service Revenue</td>
-                                                <td>Service income</td>
-                                                <td>₱15,000.00</td>
-                                                <td>-</td>
-                                                <td><button class="btn btn-sm btn-outline-primary">Edit</button> <button class="btn btn-sm btn-outline-danger">Delete</button></td>
-                                            </tr>
-                                            <tr>
-                                                <td>2025-09-22</td>
-                                                <td>JE004</td>
-                                                <td>Rent Expense</td>
-                                                <td>Monthly rent</td>
-                                                <td>-</td>
-                                                <td>₱5,000.00</td>
-                                                <td><button class="btn btn-sm btn-outline-primary">Edit</button> <button class="btn btn-sm btn-outline-danger">Delete</button></td>
-                                            </tr>
-                                            <tr>
-                                                <td>2025-09-21</td>
-                                                <td>JE005</td>
-                                                <td>Accounts Receivable</td>
-                                                <td>Invoice payment</td>
-                                                <td>₱8,000.00</td>
-                                                <td>-</td>
-                                                <td><button class="btn btn-sm btn-outline-primary">Edit</button> <button class="btn btn-sm btn-outline-danger">Delete</button></td>
-                                            </tr>
+                                            <?php if (empty($journalEntries)): ?>
+                                                <tr>
+                                                    <td colspan="7" class="text-center text-muted py-4">
+                                                        <i class="fas fa-info-circle me-2"></i>No journal entries found. Click "Add Journal Entry" to record your first transaction.
+                                                    </td>
+                                                </tr>
+                                            <?php else: ?>
+                                                <?php foreach ($journalEntries as $entry): ?>
+                                                    <tr>
+                                                        <td><?php echo htmlspecialchars(date('Y-m-d', strtotime($entry['date']))); ?></td>
+                                                        <td><?php echo htmlspecialchars($entry['reference']); ?></td>
+                                                        <td><?php echo htmlspecialchars($entry['account_name'] ?? 'Unknown Account'); ?></td>
+                                                        <td><?php echo htmlspecialchars($entry['description']); ?></td>
+                                                        <td><?php echo $entry['debit'] > 0 ? '₱' . number_format($entry['debit'], 2) : '-'; ?></td>
+                                                        <td><?php echo $entry['credit'] > 0 ? '₱' . number_format($entry['credit'], 2) : '-'; ?></td>
+                <td>
+                    <?php if ($entry['status'] === 'draft'): ?>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editEntry('<?php echo htmlspecialchars($entry['reference']); ?>')">Edit</button>
+                        <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteEntry('<?php echo htmlspecialchars($entry['reference']); ?>')">Delete</button>
+                    <?php else: ?>
+                        <span class="text-muted small"><?php echo ucfirst($entry['status']); ?> - Read-only</span>
+                    <?php endif; ?>
+                </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
                                         </tbody>
                                     </table>
                                 </div>
@@ -847,7 +898,7 @@ try {
                             <div class="tab-pane fade" id="trial" role="tabpanel" aria-labelledby="trial-tab">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h6 class="mb-0">Trial Balance Report</h6>
-                                    <button class="btn btn-outline-secondary"><i class="fas fa-download me-2"></i>Export</button>
+                                    <button class="btn btn-outline-secondary" onclick="exportTrialBalance()"><i class="fas fa-download me-2"></i>Export</button>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-striped">
@@ -859,41 +910,32 @@ try {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr>
-                                                <td>Cash</td>
-                                                <td>₱10,000.00</td>
-                                                <td>-</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Accounts Receivable</td>
-                                                <td>₱8,000.00</td>
-                                                <td>-</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Office Supplies</td>
-                                                <td>-</td>
-                                                <td>₱2,500.00</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Capital</td>
-                                                <td>-</td>
-                                                <td>₱10,000.00</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Service Revenue</td>
-                                                <td>-</td>
-                                                <td>₱15,000.00</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Rent Expense</td>
-                                                <td>₱5,000.00</td>
-                                                <td>-</td>
-                                            </tr>
-                                            <tr class="table-dark">
-                                                <td><strong>Total</strong></td>
-                                                <td><strong>₱23,000.00</strong></td>
-                                                <td><strong>₱27,500.00</strong></td>
-                                            </tr>
+                                            <?php if (empty($trialBalance)): ?>
+                                                <tr>
+                                                    <td colspan="3" class="text-center text-muted py-4">
+                                                        <i class="fas fa-info-circle me-2"></i>No balances to display. Add accounts and journal entries first.
+                                                    </td>
+                                                </tr>
+                                            <?php else: ?>
+                                                <?php
+                                                $debit_total = 0;
+                                                $credit_total = 0;
+                                                foreach ($trialBalance as $account):
+                                                    $debit_total += $account['debit_balance'];
+                                                    $credit_total += $account['credit_balance'];
+                                                ?>
+                                                    <tr>
+                                                        <td><?php echo htmlspecialchars($account['account_name']); ?></td>
+                                                        <td><?php echo $account['debit_balance'] > 0 ? '₱' . number_format($account['debit_balance'], 2) : '-'; ?></td>
+                                                        <td><?php echo $account['credit_balance'] > 0 ? '₱' . number_format($account['credit_balance'], 2) : '-'; ?></td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                                <tr class="table-dark">
+                                                    <td><strong>Total</strong></td>
+                                                    <td><strong>₱<?php echo number_format($debit_total, 2); ?></strong></td>
+                                                    <td><strong>₱<?php echo number_format($credit_total, 2); ?></strong></td>
+                                                </tr>
+                                            <?php endif; ?>
                                         </tbody>
                                     </table>
                                 </div>
@@ -916,37 +958,70 @@ try {
                                 </ul>
                                 <div class="tab-content">
                                     <div class="tab-pane fade show active" id="balance-sheet" role="tabpanel">
-                                        <h6>Balance Sheet - As of September 25, 2025</h6>
+                                        <h6>Balance Sheet - As of <?php echo date('F j, Y'); ?></h6>
                                         <table class="table financial-table">
-                                            <tr><th>Assets</th><th></th><th>₱18,000.00</th></tr>
-                                            <tr><td>&nbsp;&nbsp;Cash</td><td></td><td>₱10,000.00</td></tr>
-                                            <tr><td>&nbsp;&nbsp;Accounts Receivable</td><td></td><td>₱8,000.00</td></tr>
-                                            <tr><th>Liabilities</th><th></th><th>₱0.00</th></tr>
-                                            <tr><th>Equity</th><th></th><th>₱18,000.00</th></tr>
-                                            <tr><td>&nbsp;&nbsp;Capital</td><td></td><td>₱10,000.00</td></tr>
-                                            <tr class="total-row"><td>&nbsp;&nbsp;Retained Earnings</td><td></td><td>₱8,000.00</td></tr>
+                                            <tr><th>Assets</th><th></th><th>₱<?php echo number_format($totalAssets, 2); ?></th></tr>
+                                            <?php
+                                            // Get asset accounts for breakdown
+                                            $assetAccounts = array_filter($chartOfAccounts, function($account) {
+                                                return $account['account_type'] === 'asset';
+                                            });
+                                            foreach ($assetAccounts as $asset):
+                                            ?>
+                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($asset['account_name']); ?></td><td></td><td>₱<?php echo number_format($asset['balance'] ?? 0, 2); ?></td></tr>
+                                            <?php endforeach; ?>
+                                            <tr><th>Liabilities</th><th></th><th>₱<?php echo number_format($totalLiabilities, 2); ?></th></tr>
+                                            <tr><th>Equity</th><th></th><th>₱<?php echo number_format($totalAssets - $totalLiabilities, 2); ?></th></tr>
+                                            <?php
+                                            // Get equity accounts for breakdown
+                                            $equityAccounts = array_filter($chartOfAccounts, function($account) {
+                                                return $account['account_type'] === 'equity';
+                                            });
+                                            foreach ($equityAccounts as $equity):
+                                            ?>
+                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($equity['account_name']); ?></td><td></td><td>₱<?php echo number_format($equity['balance'] ?? 0, 2); ?></td></tr>
+                                            <?php endforeach; ?>
+                                            <tr class="total-row"><td>&nbsp;&nbsp;Retained Earnings</td><td></td><td>₱<?php echo number_format($netProfit, 2); ?></td></tr>
                                         </table>
                                     </div>
                                     <div class="tab-pane fade" id="income-statement" role="tabpanel">
-                                        <h6>Income Statement - For the period ending September 25, 2025</h6>
+                                        <h6>Income Statement - For the period ending <?php echo date('F j, Y'); ?></h6>
                                         <table class="table financial-table">
-                                            <tr><th>Revenue</th><th></th><th>₱15,000.00</th></tr>
-                                            <tr><td>&nbsp;&nbsp;Service Revenue</td><td></td><td>₱15,000.00</td></tr>
-                                            <tr><th>Expenses</th><th></th><th>₱7,500.00</th></tr>
-                                            <tr><td>&nbsp;&nbsp;Rent Expense</td><td></td><td>₱5,000.00</td></tr>
-                                            <tr><td>&nbsp;&nbsp;Office Supplies</td><td></td><td>₱2,500.00</td></tr>
-                                            <tr class="total-row"><th>Net Profit</th><th></th><th>₱7,500.00</th></tr>
+                                            <tr><th>Revenue</th><th></th><th>₱<?php echo number_format($totalRevenue, 2); ?></th></tr>
+                                            <?php
+                                            // Get revenue accounts
+                                            $revenueAccounts = array_filter($chartOfAccounts, function($account) {
+                                                return $account['account_type'] === 'revenue';
+                                            });
+                                            foreach ($revenueAccounts as $revenue):
+                                            ?>
+                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($revenue['account_name']); ?></td><td></td><td>₱<?php echo number_format($revenue['balance'] ?? 0, 2); ?></td></tr>
+                                            <?php endforeach; ?>
+                                            <tr><th>Expenses</th><th></th><th>₱<?php echo number_format($totalExpenses, 2); ?></th></tr>
+                                            <?php
+                                            // Get expense accounts
+                                            $expenseAccounts = array_filter($chartOfAccounts, function($account) {
+                                                return $account['account_type'] === 'expense';
+                                            });
+                                            foreach ($expenseAccounts as $expense):
+                                            ?>
+                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($expense['account_name']); ?></td><td></td><td>₱<?php echo number_format($expense['balance'] ?? 0, 2); ?></td></tr>
+                                            <?php endforeach; ?>
+                                            <tr class="total-row"><th>Net Profit</th><th></th><th>₱<?php echo number_format($netProfit, 2); ?></th></tr>
                                         </table>
                                     </div>
                                     <div class="tab-pane fade" id="cash-flow" role="tabpanel">
-                                        <h6>Cash Flow Statement - For the period ending September 25, 2025</h6>
+                                        <h6>Cash Flow Statement - For the period ending <?php echo date('F j, Y'); ?></h6>
                                         <table class="table financial-table">
-                                            <tr><th>Operating Activities</th><th></th><th>₱10,000.00</th></tr>
-                                            <tr><td>&nbsp;&nbsp;Net Income</td><td></td><td>₱7,500.00</td></tr>
-                                            <tr><td>&nbsp;&nbsp;Adjustments</td><td></td><td>₱2,500.00</td></tr>
+                                            <tr><th>Operating Activities</th><th></th><th>₱<?php echo number_format($netProfit, 2); ?></th></tr>
+                                            <tr><td>&nbsp;&nbsp;Net Income</td><td></td><td>₱<?php echo number_format($netProfit, 2); ?></td></tr>
+                                            <?php
+                                            $operatingCashFlow = $netProfit; // Simplified - would include other adjustments
+                                            ?>
+                                            <tr class="total-row"><th>Net Operating Cash Flow</th><th></th><th>₱<?php echo number_format($operatingCashFlow, 2); ?></th></tr>
                                             <tr><th>Investing Activities</th><th></th><th>₱0.00</th></tr>
                                             <tr><th>Financing Activities</th><th></th><th>₱0.00</th></tr>
-                                            <tr class="total-row"><th>Net Cash Flow</th><th></th><th>₱10,000.00</th></tr>
+                                            <tr class="total-row"><th>Net Cash Flow</th><th></th><th>₱<?php echo number_format($operatingCashFlow, 2); ?></th></tr>
                                         </table>
                                     </div>
                                 </div>
@@ -955,7 +1030,7 @@ try {
                             <div class="tab-pane fade" id="audit" role="tabpanel" aria-labelledby="audit-tab">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h6 class="mb-0">User Activity Logs</h6>
-                                    <button class="btn btn-outline-secondary"><i class="fas fa-filter me-2"></i>Filter</button>
+                                    <button class="btn btn-outline-secondary" onclick="showFilterModal()"><i class="fas fa-filter me-2"></i>Filter</button>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-striped">
@@ -968,30 +1043,22 @@ try {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr>
-                                                <td>2025-09-25 10:00 AM</td>
-                                                <td>Admin</td>
-                                                <td>Created Journal Entry</td>
-                                                <td>JE001 - Initial deposit</td>
-                                            </tr>
-                                            <tr>
-                                                <td>2025-09-24 2:30 PM</td>
-                                                <td>Accountant</td>
-                                                <td>Edited Account</td>
-                                                <td>Updated Office Supplies description</td>
-                                            </tr>
-                                            <tr>
-                                                <td>2025-09-23 9:15 AM</td>
-                                                <td>Admin</td>
-                                                <td>Generated Report</td>
-                                                <td>Trial Balance for September</td>
-                                            </tr>
-                                            <tr>
-                                                <td>2025-09-22 4:45 PM</td>
-                                                <td>Accountant</td>
-                                                <td>Deleted Journal Entry</td>
-                                                <td>Removed duplicate entry JE006</td>
-                                            </tr>
+                                            <?php if (empty($auditTrail)): ?>
+                                                <tr>
+                                                    <td colspan="4" class="text-center text-muted py-4">
+                                                        <i class="fas fa-info-circle me-2"></i>No audit records found.
+                                                    </td>
+                                                </tr>
+                            <?php else: ?>
+                                                <?php foreach ($auditTrail as $log): ?>
+                                                    <tr>
+                                                        <td><?php echo htmlspecialchars(date('Y-m-d h:i A', strtotime($log['date_time']))); ?></td>
+                                                        <td><?php echo htmlspecialchars($log['user'] ?? 'Unknown'); ?></td>
+                                                        <td><?php echo htmlspecialchars($log['action'] ?? 'Unknown'); ?></td>
+                                                        <td><?php echo htmlspecialchars(($log['details'] ?? 'Unknown') . ' - ' . ($log['record_id'] ?? 'N/A')); ?></td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
                                         </tbody>
                                     </table>
                                 </div>
@@ -1010,49 +1077,95 @@ try {
                         <h5 class="modal-title" id="addJournalModalLabel">Add Journal Entry</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
-                        <form>
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="entryDate" class="form-label">Date</label>
-                                    <input type="date" class="form-control" id="entryDate" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="reference" class="form-label">Reference</label>
-                                    <input type="text" class="form-control" id="reference" placeholder="JE001" required>
-                                </div>
+                            <div class="modal-body">
+                                <form id="journalEntryForm">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="entryDate" class="form-label">Date *</label>
+                                            <input type="date" class="form-control" id="entryDate" value="<?php echo date('Y-m-d'); ?>" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="reference" class="form-label">Reference</label>
+                                            <input type="text" class="form-control" id="reference" placeholder="Auto-generated" readonly>
+                                        </div>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="description" class="form-label">Description *</label>
+                                        <input type="text" class="form-control" id="description" placeholder="Transaction description" required>
+                                    </div>
+
+                                    <div id="journalLines" class="mb-3">
+                                        <h6 class="mb-3">Journal Lines</h6>
+
+                                        <!-- Line 1 -->
+                                        <div class="journal-line border rounded p-3 mb-3 bg-light">
+                                            <div class="row mb-2">
+                                                <div class="col-md-5">
+                                                    <label class="form-label">Account *</label>
+                                                    <select class="form-select account-select" required>
+                                                        <option value="">Select Account</option>
+                                                        <option value="loading">Loading accounts...</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">Debit</label>
+                                                    <input type="number" class="form-control debit-amount" step="0.01" placeholder="0.00">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">Credit</label>
+                                                    <input type="number" class="form-control credit-amount" step="0.01" placeholder="0.00">
+                                                </div>
+                                                <div class="col-md-3 d-flex align-items-end">
+                                                    <input type="text" class="form-control" placeholder="Line description (optional)">
+                                                    <button type="button" class="btn btn-outline-danger ms-2" onclick="removeJournalLine(this)" title="Remove line">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Line 2 -->
+                                        <div class="journal-line border rounded p-3 mb-3 bg-light">
+                                            <div class="row mb-2">
+                                                <div class="col-md-5">
+                                                    <label class="form-label">Account *</label>
+                                                    <select class="form-select account-select" required>
+                                                        <option value="">Select Account</option>
+                                                        <option value="loading">Loading accounts...</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">Debit</label>
+                                                    <input type="number" class="form-control debit-amount" step="0.01" placeholder="0.00">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">Credit</label>
+                                                    <input type="number" class="form-control credit-amount" step="0.01" placeholder="0.00">
+                                                </div>
+                                                <div class="col-md-3 d-flex align-items-end">
+                                                    <input type="text" class="form-control" placeholder="Line description (optional)">
+                                                    <button type="button" class="btn btn-outline-danger ms-2" onclick="removeJournalLine(this)" title="Remove line">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <button type="button" class="btn btn-outline-primary" onclick="addJournalLine()">
+                                            <i class="fas fa-plus me-2"></i>Add Another Line
+                                        </button>
+                                    </div>
+
+                                    <div class="alert alert-info">
+                                        <strong>Note:</strong> Debits must equal credits. At least 2 lines are required for a journal entry.
+                                    </div>
+                                </form>
                             </div>
-                            <div class="mb-3">
-                                <label for="description" class="form-label">Description</label>
-                                <input type="text" class="form-control" id="description" placeholder="Transaction description" required>
-                            </div>
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="account" class="form-label">Account</label>
-                                    <select class="form-select" id="account" required>
-                                        <option value="">Select Account</option>
-                                        <option value="1000">Cash</option>
-                                        <option value="1100">Accounts Receivable</option>
-                                        <option value="1200">Office Supplies</option>
-                                        <option value="3000">Capital</option>
-                                        <option value="4000">Service Revenue</option>
-                                        <option value="5000">Rent Expense</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-3">
-                                    <label for="debit" class="form-label">Debit</label>
-                                    <input type="number" class="form-control" id="debit" step="0.01" placeholder="0.00">
-                                </div>
-                                <div class="col-md-3">
-                                    <label for="credit" class="form-label">Credit</label>
-                                    <input type="number" class="form-control" id="credit" step="0.01" placeholder="0.00">
-                                </div>
-                            </div>
-                        </form>
-                    </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary">Save Entry</button>
+                        <button type="button" class="btn btn-primary" onclick="saveJournalEntry()">Save Entry</button>
                     </div>
                 </div>
             </div>
@@ -1123,14 +1236,1098 @@ try {
             footer.style.width = `calc(100% - ${marginLeft})`;
         }
 
-        function changeModule() {
-            const select = document.getElementById('moduleSelect');
-            const value = select.value;
+        // General Ledger Functions
+        function showAddAccountModal() {
+            const modalHTML = `
+            <div class="modal fade" id="addAccountModal" tabindex="-1" aria-labelledby="addAccountModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="addAccountModalLabel">
+                                <i class="fas fa-plus me-2"></i>Add New Account
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="addAccountForm">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="accountCode" class="form-label">Account Code *</label>
+                                        <input type="text" class="form-control" id="accountCode" placeholder="e.g. 1300" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="accountType" class="form-label">Account Type *</label>
+                                        <select class="form-select" id="accountType" required>
+                                            <option value="">Select Type</option>
+                                            <option value="asset">Asset</option>
+                                            <option value="liability">Liability</option>
+                                            <option value="equity">Equity</option>
+                                            <option value="revenue">Revenue</option>
+                                            <option value="expense">Expense</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="accountName" class="form-label">Account Name *</label>
+                                    <input type="text" class="form-control" id="accountName" placeholder="e.g. Equipment" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="accountDescription" class="form-label">Description</label>
+                                    <textarea class="form-control" id="accountDescription" rows="3" placeholder="Optional description"></textarea>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="accountCategory" class="form-label">Category</label>
+                                        <input type="text" class="form-control" id="accountCategory" placeholder="e.g. Current Assets">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="normalBalance" class="form-label">Normal Balance</label>
+                                        <select class="form-select" id="normalBalance">
+                                            <option value="debit">Debit</option>
+                                            <option value="credit">Credit</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="saveNewAccount()">Create Account</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
 
-            document.getElementById('ledgerContent').style.display = value === 'ledger' ? 'block' : 'none';
-            document.getElementById('payableContent').style.display = value === 'payable' ? 'block' : 'none';
-            document.getElementById('receivableContent').style.display = value === 'receivable' ? 'block' : 'none';
+            // Remove existing modal if present
+            const existingModal = document.getElementById('addAccountModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addAccountModal'));
+            modal.show();
         }
+
+        function exportTrialBalance() {
+            // Show loading state on the export button
+            const exportBtn = document.querySelector('#trial .btn-outline-secondary');
+            const originalText = exportBtn.innerHTML;
+            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Exporting...';
+            exportBtn.disabled = true;
+
+            // Make API call to get trial balance data
+            const currentDate = new Date().toISOString().split('T')[0];
+            fetch(`api/reports.php?type=trial_balance&date_to=${currentDate}&format=csv`, {
+                method: 'GET'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to export trial balance');
+                }
+                return response.text();
+            })
+            .then(csvContent => {
+                // Create and download the file
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+
+                link.setAttribute('href', url);
+                link.setAttribute('download', `trial_balance_${currentDate}.csv`);
+                link.style.visibility = 'hidden';
+
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Show success message
+                showAlert('success', 'Trial Balance exported successfully!');
+            })
+            .catch(error => {
+                console.error('Error exporting trial balance:', error);
+                showAlert('error', error.message || 'Failed to export trial balance. Please try again.');
+            })
+            .finally(() => {
+                // Restore button state
+                exportBtn.innerHTML = originalText;
+                exportBtn.disabled = false;
+            });
+        }
+
+        function showFilterModal() {
+            const modalHTML = `
+            <div class="modal fade" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="filterModalLabel">
+                                <i class="fas fa-filter me-2"></i>Filter Audit Trail
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="auditFilterForm">
+                                <div class="mb-3">
+                                    <label for="filterDateFrom" class="form-label">Date From</label>
+                                    <input type="date" class="form-control" id="filterDateFrom">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="filterDateTo" class="form-label">Date To</label>
+                                    <input type="date" class="form-control" id="filterDateTo">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="filterUser" class="form-label">User</label>
+                                    <select class="form-select" id="filterUser">
+                                        <option value="">All Users</option>
+                                        <option value="Admin">Admin</option>
+                                        <option value="Accountant">Accountant</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="filterAction" class="form-label">Action</label>
+                                    <select class="form-select" id="filterAction">
+                                        <option value="">All Actions</option>
+                                        <option value="Created">Created</option>
+                                        <option value="Edited">Edited</option>
+                                        <option value="Deleted">Deleted</option>
+                                        <option value="Generated">Generated</option>
+                                    </select>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" onclick="clearFilters()" data-bs-dismiss="modal">Clear Filters</button>
+                            <button type="button" class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+            // Remove existing modal if present
+            const existingModal = document.getElementById('filterModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('filterModal'));
+            modal.show();
+        }
+
+        function saveNewAccount() {
+            const form = document.getElementById('addAccountForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            // Get form values
+            const accountCode = document.getElementById('accountCode').value;
+            const accountType = document.getElementById('accountType').value;
+            const accountName = document.getElementById('accountName').value;
+            const accountDescription = document.getElementById('accountDescription').value;
+            const accountCategory = document.getElementById('accountCategory').value;
+            const normalBalance = document.getElementById('normalBalance').value;
+
+            // Build form data
+            const formData = new FormData();
+            formData.append('account_code', accountCode);
+            formData.append('account_name', accountName);
+            formData.append('account_type', accountType);
+            if (accountDescription) formData.append('description', accountDescription);
+            if (accountCategory) formData.append('account_category', accountCategory);
+            if (normalBalance) formData.append('normal_balance', normalBalance);
+
+            // Show loading state
+            const button = document.querySelector('#addAccountModal .btn-primary');
+            const originalText = button.textContent;
+            button.textContent = 'Creating...';
+            button.disabled = true;
+
+            // Make API call
+            fetch('api/chart_of_accounts.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addAccountModal'));
+                    modal.hide();
+
+                    // Show success message
+                    showAlert('success', 'Account created successfully!');
+
+                    // Refresh the chart of accounts table
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    throw new Error(data.error || 'Failed to create account');
+                }
+            })
+            .catch(error => {
+                console.error('Error creating account:', error);
+                showAlert('error', error.message || 'Failed to create account. Please try again.');
+            })
+            .finally(() => {
+                // Restore button state
+                button.textContent = originalText;
+                button.disabled = false;
+            });
+        }
+
+        function applyFilters() {
+            const dateFrom = document.getElementById('filterDateFrom').value;
+            const dateTo = document.getElementById('filterDateTo').value;
+            const user = document.getElementById('filterUser').value;
+            const action = document.getElementById('filterAction').value;
+
+            // Build query parameters
+            const params = new URLSearchParams();
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
+            if (user) params.append('user', user);
+            if (action) params.append('action', action);
+
+            // Fetch filtered audit trail
+            fetch(`api/audit.php?${params.toString()}`, {
+                method: 'GET'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && Array.isArray(data.audit_trail)) {
+                    // Update the audit trail table
+                    updateAuditTrailTable(data.audit_trail);
+                } else {
+                    throw new Error(data.error || 'Failed to fetch filtered audit trail');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching filtered audit trail:', error);
+                showAlert('error', error.message || 'Failed to apply filters.');
+            });
+
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('filterModal'));
+            modal.hide();
+        }
+
+        function clearFilters() {
+            // Reset filter form
+            document.getElementById('auditFilterForm').reset();
+
+            // Reload original audit trail
+            location.reload();
+        }
+
+        function updateAuditTrailTable(auditTrail) {
+            const tbody = document.querySelector('#audit tbody');
+
+            if (!auditTrail || auditTrail.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            <i class="fas fa-info-circle me-2"></i>No audit records found with the applied filters.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = auditTrail.map(log => `
+                <tr>
+                    <td>${new Date(log.date_time).toLocaleString()}</td>
+                    <td>${log.user || 'Unknown'}</td>
+                    <td>${log.action || ''}</td>
+                    <td>${log.details || ''}</td>
+                </tr>
+            `).join('');
+        }
+
+        function editAccount() {
+            // Get account data from the clicked row
+            const row = event.target.closest('tr');
+            if (!row) return;
+
+            const accountId = row.cells[0].dataset.accountId || row.cells[0].textContent; // Fallback to account code
+            const accountCode = row.cells[0].textContent;
+            const accountName = row.cells[1].textContent;
+            const accountType = row.cells[2].querySelector('.account-type')?.textContent.toLowerCase() || row.cells[2].textContent.toLowerCase();
+            const description = row.cells[3].textContent !== 'No description' ? row.cells[3].textContent : '';
+
+            showEditAccountModal(accountId, accountCode, accountName, accountType, description);
+        }
+
+        function showEditAccountModal(accountId, accountCode, accountName, accountType, description) {
+            const modalHTML = `
+            <div class="modal fade" id="editAccountModal" tabindex="-1" aria-labelledby="editAccountModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editAccountModalLabel">
+                                <i class="fas fa-edit me-2"></i>Edit Account
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editAccountForm">
+                                <input type="hidden" id="editAccountId" value="${accountId}">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="editAccountCode" class="form-label">Account Code *</label>
+                                        <input type="text" class="form-control" id="editAccountCode" value="${accountCode}" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="editAccountType" class="form-label">Account Type *</label>
+                                        <select class="form-select" id="editAccountType" required>
+                                            <option value="">Select Type</option>
+                                            <option value="asset" ${accountType === 'asset' ? 'selected' : ''}>Asset</option>
+                                            <option value="liability" ${accountType === 'liability' ? 'selected' : ''}>Liability</option>
+                                            <option value="equity" ${accountType === 'equity' ? 'selected' : ''}>Equity</option>
+                                            <option value="revenue" ${accountType === 'revenue' ? 'selected' : ''}>Revenue</option>
+                                            <option value="expense" ${accountType === 'expense' ? 'selected' : ''}>Expense</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editAccountName" class="form-label">Account Name *</label>
+                                    <input type="text" class="form-control" id="editAccountName" value="${accountName}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editAccountDescription" class="form-label">Description</label>
+                                    <textarea class="form-control" id="editAccountDescription" rows="3">${description}</textarea>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="updateAccount()">Update Account</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+            // Remove existing modal if present
+            const existingModal = document.getElementById('editAccountModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('editAccountModal'));
+            modal.show();
+        }
+
+        function updateAccount() {
+            const form = document.getElementById('editAccountForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const accountId = document.getElementById('editAccountId').value;
+            const accountCode = document.getElementById('editAccountCode').value;
+            const accountType = document.getElementById('editAccountType').value;
+            const accountName = document.getElementById('editAccountName').value;
+            const description = document.getElementById('editAccountDescription').value;
+
+            // Build form data
+            const formData = new FormData();
+            formData.append('account_code', accountCode);
+            formData.append('account_name', accountName);
+            formData.append('account_type', accountType);
+            formData.append('description', description || '');
+
+            // Show loading state
+            const button = document.querySelector('#editAccountModal .btn-primary');
+            const originalText = button.textContent;
+            button.textContent = 'Updating...';
+            button.disabled = true;
+
+            // Make API call
+            fetch(`api/chart_of_accounts.php?id=${accountId}`, {
+                method: 'PUT',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editAccountModal'));
+                    modal.hide();
+
+                    // Show success message
+                    showAlert('success', 'Account updated successfully!');
+
+                    // Refresh the chart of accounts table
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    throw new Error(data.error || 'Failed to update account');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating account:', error);
+                showAlert('error', error.message || 'Failed to update account. Please try again.');
+            })
+            .finally(() => {
+                // Restore button state
+                button.textContent = originalText;
+                button.disabled = false;
+            });
+        }
+
+        function deleteEntry(entryReference) {
+            if (!confirm('Are you sure you want to delete this journal entry? This action cannot be undone.')) {
+                return;
+            }
+
+            // Show loading alert
+            showAlert('info', 'Deleting journal entry...');
+
+            // First get the journal entry by reference to obtain the ID
+            fetch(`api/journal_entries.php?reference=${encodeURIComponent(entryReference)}`, {
+                method: 'GET'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.journal_entry && data.journal_entry.id) {
+                    // Now delete using the actual ID
+                    return fetch(`api/journal_entries.php?id=${data.journal_entry.id}`, {
+                        method: 'DELETE'
+                    });
+                } else {
+                    throw new Error('Journal entry not found');
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Journal entry deleted successfully!');
+                    // Refresh the journal entries table
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    throw new Error(data.error || 'Failed to delete journal entry');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting journal entry:', error);
+                showAlert('error', error.message || 'Failed to delete journal entry. Please try again.');
+            });
+        }
+
+        // Utility function to show alerts
+        function showAlert(type, message) {
+            // Remove any existing alerts
+            const existingAlerts = document.querySelectorAll('.alert');
+            existingAlerts.forEach(alert => alert.remove());
+
+            // Create new alert
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const alertHTML = `
+                <div class="alert ${alertClass} alert-dismissible fade show position-fixed" role="alert"
+                     style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+
+            // Add to body
+            document.body.insertAdjacentHTML('beforeend', alertHTML);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                const alertElement = document.querySelector('.alert');
+                if (alertElement) {
+                    alertElement.remove();
+                }
+            }, 5000);
+        }
+
+        // Journal Entry Functions
+        function addJournalLine() {
+            const journalLines = document.getElementById('journalLines');
+            const lineCount = journalLines.querySelectorAll('.journal-line').length;
+
+            if (lineCount >= 10) {
+                showAlert('error', 'Maximum 10 journal lines allowed');
+                return;
+            }
+
+            const newLineHTML = `
+                <div class="journal-line border rounded p-3 mb-3 bg-light">
+                    <div class="row mb-2">
+                        <div class="col-md-5">
+                            <label class="form-label">Account *</label>
+                            <select class="form-select account-select" required>
+                                <option value="">Select Account</option>
+                                <option value="loading">Loading accounts...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Debit</label>
+                            <input type="number" class="form-control debit-amount" step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Credit</label>
+                            <input type="number" class="form-control credit-amount" step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <input type="text" class="form-control" placeholder="Line description (optional)">
+                            <button type="button" class="btn btn-outline-danger ms-2" onclick="removeJournalLine(this)" title="Remove line">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            journalLines.insertAdjacentHTML('beforeend', newLineHTML);
+
+            // Load accounts for the new dropdown
+            const newSelects = journalLines.querySelectorAll('.journal-line:last-child .account-select');
+            if (newSelects.length > 0) {
+                loadAccountsForSelect(newSelects[0]);
+            }
+        }
+
+        function removeJournalLine(button) {
+            const journalLine = button.closest('.journal-line');
+            const journalLines = document.getElementById('journalLines');
+            const lineCount = journalLines.querySelectorAll('.journal-line').length;
+
+            if (lineCount <= 2) {
+                showAlert('error', 'At least 2 journal lines are required');
+                return;
+            }
+
+            journalLine.remove();
+        }
+
+        function loadAccountsForModal() {
+            const accountSelects = document.querySelectorAll('.account-select');
+
+            accountSelects.forEach(select => {
+                loadAccountsForSelect(select);
+            });
+        }
+
+        function loadAccountsForSelect(select) {
+            fetch('api/chart_of_accounts.php', {
+                method: 'GET'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data && Array.isArray(data)) {
+                    // Clear existing options except the first one
+                    select.innerHTML = '<option value="">Select Account</option>';
+
+                    // Add account options
+                    data.forEach(account => {
+                        const option = document.createElement('option');
+                        option.value = account.id;
+                        option.textContent = `${account.account_code} - ${account.account_name}`;
+                        select.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading accounts:', error);
+                select.innerHTML = '<option value="">Error loading accounts</option>';
+            });
+        }
+
+        function validateJournalEntry() {
+            const lines = document.querySelectorAll('.journal-line');
+            if (lines.length < 2) {
+                return { valid: false, message: 'At least 2 journal lines are required' };
+            }
+
+            let totalDebit = 0;
+            let totalCredit = 0;
+            let hasEmptyAccount = false;
+            let hasEmptyAmounts = false;
+
+            lines.forEach((line, index) => {
+                const accountSelect = line.querySelector('.account-select');
+                const debitInput = line.querySelector('.debit-amount');
+                const creditInput = line.querySelector('.credit-amount');
+
+                // Check account selection
+                if (!accountSelect.value) {
+                    hasEmptyAccount = true;
+                    accountSelect.classList.add('is-invalid');
+                } else {
+                    accountSelect.classList.remove('is-invalid');
+                }
+
+                // Check amounts
+                const debit = parseFloat(debitInput.value) || 0;
+                const credit = parseFloat(creditInput.value) || 0;
+
+                if (debit > 0 && credit > 0) {
+                    debitInput.classList.add('is-invalid');
+                    creditInput.classList.add('is-invalid');
+                    hasEmptyAmounts = true;
+                } else if (debit === 0 && credit === 0) {
+                    debitInput.classList.add('is-invalid');
+                    creditInput.classList.add('is-invalid');
+                    hasEmptyAmounts = true;
+                } else {
+                    debitInput.classList.remove('is-invalid');
+                    creditInput.classList.remove('is-invalid');
+                }
+
+                totalDebit += debit;
+                totalCredit += credit;
+            });
+
+            if (hasEmptyAccount) {
+                return { valid: false, message: 'Please select an account for all lines' };
+            }
+
+            if (hasEmptyAmounts) {
+                return { valid: false, message: 'Each line must have either debit or credit amount, but not both' };
+            }
+
+            const difference = Math.abs(totalDebit - totalCredit);
+            if (difference > 0.01) {
+                return { valid: false, message: `Debits must equal credits. Current difference: ₱${difference.toFixed(2)}` };
+            }
+
+            return { valid: true };
+        }
+
+        function saveJournalEntry() {
+            const form = document.getElementById('journalEntryForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            // Validate journal entry rules
+            const validation = validateJournalEntry();
+            if (!validation.valid) {
+                showAlert('error', validation.message);
+                return;
+            }
+
+            // Collect journal entry data
+            const entryDate = document.getElementById('entryDate').value;
+            const description = document.getElementById('description').value;
+
+            const lines = document.querySelectorAll('.journal-line');
+            const journalLines = [];
+
+            lines.forEach(line => {
+                const accountId = line.querySelector('.account-select').value;
+                const debit = parseFloat(line.querySelector('.debit-amount').value) || 0;
+                const credit = parseFloat(line.querySelector('.credit-amount').value) || 0;
+                const lineDescription = line.querySelector('input[type="text"]').value || '';
+
+                journalLines.push({
+                    account_id: accountId,
+                    debit: debit,
+                    credit: credit,
+                    description: lineDescription
+                });
+            });
+
+            const journalData = {
+                entry_date: entryDate,
+                description: description,
+                lines: journalLines
+            };
+
+            // Show loading state
+            const button = document.querySelector('#addJournalModal .btn-primary');
+            const originalText = button.textContent;
+            button.textContent = 'Saving...';
+            button.disabled = true;
+
+            // Make API call
+            fetch('api/journal_entries.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(journalData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addJournalModal'));
+                    modal.hide();
+
+                    // Show success message
+                    showAlert('success', `Journal entry ${data.entry_number || ''} saved successfully!`);
+
+                    // Refresh the journal entries table
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    throw new Error(data.error || 'Failed to save journal entry');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving journal entry:', error);
+                showAlert('error', error.message || 'Failed to save journal entry. Please try again.');
+            })
+            .finally(() => {
+                // Restore button state
+                button.textContent = originalText;
+                button.disabled = false;
+            });
+        }
+
+        function editEntry(entryReference) {
+            // Fetch journal entry data
+            fetch(`api/journal_entries.php?reference=${encodeURIComponent(entryReference)}`, {
+                method: 'GET'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.journal_entry) {
+                    showEditJournalEntryModal(data.journal_entry);
+                } else {
+                    throw new Error(data.error || data.journal_entry || 'Failed to load journal entry');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading journal entry:', error);
+                showAlert('error', error.message || 'Failed to load journal entry for editing.');
+            });
+        }
+
+        function showEditJournalEntryModal(journalEntry) {
+            const modalHTML = `
+            <div class="modal fade" id="editJournalEntryModal" tabindex="-1" aria-labelledby="editJournalEntryModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editJournalEntryModalLabel">Edit Journal Entry - ${journalEntry.entry_number}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editJournalEntryForm">
+                                <input type="hidden" id="editJournalEntryId" value="${journalEntry.id}">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="editEntryDate" class="form-label">Date *</label>
+                                        <input type="date" class="form-control" id="editEntryDate" value="${journalEntry.entry_date}" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="editReference" class="form-label">Reference</label>
+                                        <input type="text" class="form-control" id="editReference" value="${journalEntry.entry_number}" readonly>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label for="editDescription" class="form-label">Description *</label>
+                                    <input type="text" class="form-control" id="editDescription" value="${journalEntry.description}" required>
+                                </div>
+
+                                <div id="editJournalLines" class="mb-3">
+                                    <h6 class="mb-3">Journal Lines</h6>
+                                    ${journalEntry.lines.map((line, index) => `
+                                        <div class="journal-line border rounded p-3 mb-3 bg-light">
+                                            <div class="row mb-2">
+                                                <div class="col-md-5">
+                                                    <label class="form-label">Account *</label>
+                                                    <select class="form-select account-select" required>
+                                                        <option value="">Select Account</option>
+                                                        <option value="loading">Loading accounts...</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">Debit</label>
+                                                    <input type="number" class="form-control debit-amount" step="0.01" placeholder="0.00" value="${line.debit || ''}">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">Credit</label>
+                                                    <input type="number" class="form-control credit-amount" step="0.01" placeholder="0.00" value="${line.credit || ''}">
+                                                </div>
+                                                <div class="col-md-3 d-flex align-items-end">
+                                                    <input type="text" class="form-control" placeholder="Line description (optional)" value="${line.description || ''}">
+                                                    ${index >= 2 ? `<button type="button" class="btn btn-outline-danger ms-2" onclick="removeJournalLine(this)" title="Remove line">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>` : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+
+                                <div class="mb-3">
+                                    <button type="button" class="btn btn-outline-primary" onclick="addJournalLine()">
+                                        <i class="fas fa-plus me-2"></i>Add Another Line
+                                    </button>
+                                </div>
+
+                                <div class="alert alert-info">
+                                    <strong>Note:</strong> Debits must equal credits. At least 2 lines are required for a journal entry.
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="updateJournalEntry()">Update Entry</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+            // Remove existing modal if present
+            const existingModal = document.getElementById('editJournalEntryModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('editJournalEntryModal'));
+            modal.show();
+
+            // Load accounts and set selected values after modal is shown
+            setTimeout(() => {
+                loadAccountsForModal();
+
+                // Set the selected accounts and values after accounts are loaded
+                const accountSelects = document.querySelectorAll('#editJournalLines .account-select');
+                journalEntry.lines.forEach((line, index) => {
+                    if (accountSelects[index]) {
+                        accountSelects[index].dataset.selectedValue = line.account_id;
+                        // Wait a bit for accounts to load, then set the value
+                        setTimeout(() => {
+                            accountSelects[index].value = line.account_id;
+                        }, 500);
+                    }
+                });
+            }, 100);
+        }
+
+        function updateJournalEntry() {
+            const form = document.getElementById('editJournalEntryForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            // Validate journal entry rules
+            const validation = validateEditJournalEntry();
+            if (!validation.valid) {
+                showAlert('error', validation.message);
+                return;
+            }
+
+            // Collect journal entry data
+            const journalEntryId = document.getElementById('editJournalEntryId').value;
+            const entryDate = document.getElementById('editEntryDate').value;
+            const description = document.getElementById('editDescription').value;
+
+            const lines = document.querySelectorAll('#editJournalLines .journal-line');
+            const journalLines = [];
+
+            lines.forEach(line => {
+                const accountId = line.querySelector('.account-select').value;
+                const debit = parseFloat(line.querySelector('.debit-amount').value) || 0;
+                const credit = parseFloat(line.querySelector('.credit-amount').value) || 0;
+                const lineDescription = line.querySelector('input[type="text"]').value || '';
+
+                journalLines.push({
+                    account_id: accountId,
+                    debit: debit,
+                    credit: credit,
+                    description: lineDescription
+                });
+            });
+
+            const journalData = {
+                entry_date: entryDate,
+                description: description,
+                lines: journalLines
+            };
+
+            // Show loading state
+            const button = document.querySelector('#editJournalEntryModal .btn-primary');
+            const originalText = button.textContent;
+            button.textContent = 'Updating...';
+            button.disabled = true;
+
+            // Make API call
+            fetch(`api/journal_entries.php?id=${journalEntryId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(journalData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editJournalEntryModal'));
+                    modal.hide();
+
+                    // Show success message
+                    showAlert('success', 'Journal entry updated successfully!');
+
+                    // Refresh the journal entries table
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    throw new Error(data.error || 'Failed to update journal entry');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating journal entry:', error);
+                showAlert('error', error.message || 'Failed to update journal entry. Please try again.');
+            })
+            .finally(() => {
+                // Restore button state
+                button.textContent = originalText;
+                button.disabled = false;
+            });
+        }
+
+        function validateEditJournalEntry() {
+            const lines = document.querySelectorAll('#editJournalLines .journal-line');
+            if (lines.length < 2) {
+                return { valid: false, message: 'At least 2 journal lines are required' };
+            }
+
+            let totalDebit = 0;
+            let totalCredit = 0;
+            let hasEmptyAccount = false;
+            let hasEmptyAmounts = false;
+
+            lines.forEach((line, index) => {
+                const accountSelect = line.querySelector('.account-select');
+                const debitInput = line.querySelector('.debit-amount');
+                const creditInput = line.querySelector('.credit-amount');
+
+                // Check account selection
+                if (!accountSelect.value) {
+                    hasEmptyAccount = true;
+                    accountSelect.classList.add('is-invalid');
+                } else {
+                    accountSelect.classList.remove('is-invalid');
+                }
+
+                // Check amounts
+                const debit = parseFloat(debitInput.value) || 0;
+                const credit = parseFloat(creditInput.value) || 0;
+
+                if (debit > 0 && credit > 0) {
+                    debitInput.classList.add('is-invalid');
+                    creditInput.classList.add('is-invalid');
+                    hasEmptyAmounts = true;
+                } else if (debit === 0 && credit === 0) {
+                    debitInput.classList.add('is-invalid');
+                    creditInput.classList.add('is-invalid');
+                    hasEmptyAmounts = true;
+                } else {
+                    debitInput.classList.remove('is-invalid');
+                    creditInput.classList.remove('is-invalid');
+                }
+
+                totalDebit += debit;
+                totalCredit += credit;
+            });
+
+            if (hasEmptyAccount) {
+                return { valid: false, message: 'Please select an account for all lines' };
+            }
+
+            if (hasEmptyAmounts) {
+                return { valid: false, message: 'Each line must have either debit or credit amount, but not both' };
+            }
+
+            const difference = Math.abs(totalDebit - totalCredit);
+            if (difference > 0.01) {
+                return { valid: false, message: `Debits must equal credits. Current difference: ₱${difference.toFixed(2)}` };
+            }
+
+            return { valid: true };
+        }
+
+        // Add event listener for journal modal when opened
+        document.getElementById('addJournalModal').addEventListener('shown.bs.modal', function() {
+            loadAccountsForModal();
+            generateReferenceNumber();
+        });
+
+        function generateReferenceNumber() {
+            // Generate a simple reference number
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+
+            document.getElementById('reference').value = `JE-${year}${month}${day}-${random}`;
+        }
+
+        // Add input event listeners to journal lines for real-time validation
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('debit-amount') || e.target.classList.contains('credit-amount')) {
+                // Clear previous validation
+                e.target.classList.remove('is-invalid');
+
+                // Ensure only one amount per line
+                const line = e.target.closest('.journal-line');
+                const debitInput = line.querySelector('.debit-amount');
+                const creditInput = line.querySelector('.credit-amount');
+
+                if (e.target === debitInput && parseFloat(debitInput.value) > 0) {
+                    creditInput.value = '';
+                } else if (e.target === creditInput && parseFloat(creditInput.value) > 0) {
+                    debitInput.value = '';
+                }
+            }
+        });
+
+        // Make table action buttons functional
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add click handlers for edit buttons in account table
+            const editButtons = document.querySelectorAll('#coa table button[class*="btn-outline-primary"]');
+            editButtons.forEach((button, index) => {
+                button.onclick = function() {
+                    // Get account code from the row
+                    const row = this.closest('tr');
+                    const accountCode = row.cells[0].textContent;
+                    editAccount(accountCode);
+                };
+            });
+
+            // Add click handlers for action buttons in journal table
+            const journalButtons = document.querySelectorAll('#journal table button');
+            journalButtons.forEach(button => {
+                const action = button.textContent.trim().toLowerCase();
+                const row = button.closest('tr');
+                const reference = row.cells[1].textContent;
+
+                if (action === 'edit') {
+                    button.onclick = function() {
+                        editEntry(reference);
+                    };
+                } else if (action === 'delete') {
+                    button.onclick = function() {
+                        deleteEntry(reference);
+                    };
+                }
+            });
+        });
 
         // Initialize sidebar state on page load
         document.addEventListener('DOMContentLoaded', function() {

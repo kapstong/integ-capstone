@@ -4,7 +4,11 @@ require_once '../../includes/database.php';
 require_once '../../includes/logger.php';
 
 header('Content-Type: application/json');
-session_start();
+
+// Only start session if not already started (handles AJAX calls)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Check if user is logged in
 if (!isset($_SESSION['user'])) {
@@ -23,12 +27,9 @@ try {
             if (isset($_GET['id'])) {
                 // Get single journal entry with lines
                 $entry = $db->select(
-                    "SELECT je.*, u.full_name as created_by_name, ua.full_name as approved_by_name,
-                            ub.full_name as posted_by_name
+                    "SELECT je.*, u.full_name as created_by_name
                      FROM journal_entries je
                      LEFT JOIN users u ON je.created_by = u.id
-                     LEFT JOIN users ua ON je.approved_by = ua.id
-                     LEFT JOIN users ub ON je.posted_by = ub.id
                      WHERE je.id = ?",
                     [$_GET['id']]
                 );
@@ -52,6 +53,34 @@ try {
 
                 $entry['lines'] = $lines;
                 echo json_encode($entry);
+            } else if (isset($_GET['reference'])) {
+                // Get single journal entry by reference (entry_number)
+                $entry = $db->select(
+                    "SELECT je.*, u.full_name as created_by_name
+                     FROM journal_entries je
+                     LEFT JOIN users u ON je.created_by = u.id
+                     WHERE je.entry_number = ?",
+                    [$_GET['reference']]
+                );
+
+                if (empty($entry)) {
+                    echo json_encode(['success' => false, 'error' => 'Journal entry not found']);
+                    exit;
+                }
+
+                $entry = $entry[0];
+
+                // Get journal entry lines
+                $lines = $db->select(
+                    "SELECT jel.*, coa.account_name, coa.account_code, coa.account_type
+                     FROM journal_entry_lines jel
+                     JOIN chart_of_accounts coa ON jel.account_id = coa.id
+                     WHERE jel.journal_entry_id = ?
+                     ORDER BY jel.id ASC",
+                    [$entry['id']]
+                );
+
+                echo json_encode(['success' => true, 'journal_entry' => array_merge($entry, ['lines' => $lines])]);
             } else {
                 // Get all journal entries with filters
                 $where = [];
@@ -243,15 +272,6 @@ try {
                 if (isset($data['status']) && in_array($data['status'], ['draft', 'approved', 'posted'])) {
                     $fields[] = "status = ?";
                     $params[] = $data['status'];
-
-                    if ($data['status'] === 'posted') {
-                        $fields[] = "posted_by = ?";
-                        $fields[] = "posted_at = NOW()";
-                        $params[] = $userId;
-                    } elseif ($data['status'] === 'approved') {
-                        $fields[] = "approved_by = ?";
-                        $params[] = $userId;
-                    }
                 }
 
                 // Update lines if provided

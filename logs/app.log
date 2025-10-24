@@ -1,0 +1,3 @@
+[2025-10-24 14:06:34] ERROR | User: 1 | IP: ::1 | API tables migration failed | Context: {"error":"Query execution failed: SQLSTATE[HY000]: General error: 1824 Failed to open the referenced table 'users'"}
+[2025-10-24 14:07:36] ERROR | User: 1 | IP: ::1 | API tables migration failed | Context: {"error":"Query execution failed: SQLSTATE[HY000]: General error: 1824 Failed to open the referenced table 'users'"}
+[2025-10-24 14:08:42] ERROR | User: 1 | IP: ::1 | API tables migration failed | Context: {"error":"Query execution failed: SQLSTATE[HY000]: General error: 1824 Failed to open the referenced table 'users'"}

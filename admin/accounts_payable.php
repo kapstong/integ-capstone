@@ -802,13 +802,14 @@ try {
                             <table class="table table-striped" id="vendorsTable">
                                 <thead>
                                     <tr>
-                                        <th>Vendor ID</th>
-                                        <th>Name</th>
-                                        <th>Contact</th>
-                                        <th>Account ID</th>
-                                        <th>Terms</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
+                                        <th range="col">Vendor ID</th>
+                                        <th range="col">Name</th>
+                                        <th range="col">Contact</th>
+                                        <th range="col">Email</th>
+                                        <th range="col">Account ID</th>
+                                        <th range="col">Terms</th>
+                                        <th range="col">Status</th>
+                                        <th range="col" style="width: 120px;">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1983,7 +1984,7 @@ try {
             tbody.innerHTML = '';
 
             if (!vendors || vendors.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No vendors found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No vendors found</td></tr>';
                 return;
             }
 

@@ -869,9 +869,6 @@ body {
             <a class="nav-link" href="reports.php">
                 <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
             </a>
-            <a class="nav-link" href="index.php">
-                <i class="fas fa-chart-pie me-2"></i><span>Analytics</span>
-            </a>
         </nav>
     </div>
     <div class="sidebar-toggle" onclick="toggleSidebarDesktop()">
@@ -930,7 +927,7 @@ body {
                                         <i class="fas fa-chart-line fa-2x"></i>
                                     </div>
                                     <div>
-                                        <h2 class="mb-1" style="color: #1e2936; font-weight: 700;">Hello, <strong>User</strong></h2>
+                                        <h2 class="mb-1" style="color: #1e2936; font-weight: 700;">Hello, <strong><?php echo htmlspecialchars($_SESSION['user']['full_name'] ?? $_SESSION['user']['username'] ?? 'User'); ?></strong></h2>
                                         <p class="text-muted mb-0">Ready to manage your finances efficiently</p>
                                     </div>
                                 </div>
@@ -939,13 +936,13 @@ body {
                                     generate reports, and make informed business decisions with real-time insights.
                                 </p>
                                 <div class="d-flex flex-wrap gap-3 justify-content-center justify-content-lg-start">
-                                    <button class="btn btn-primary btn-lg px-4">
-                                        <i class="fas fa-plus me-2"></i>Add Transaction
+                                    <button class="btn btn-primary btn-lg px-4" onclick="window.location.href='accounts_receivable.php'">
+                                        <i class="fas fa-plus me-2"></i>Add Invoice
                                     </button>
-                                    <button class="btn btn-outline-primary btn-lg px-4">
+                                    <button class="btn btn-outline-primary btn-lg px-4" onclick="window.location.href='reports.php'">
                                         <i class="fas fa-chart-bar me-2"></i>View Reports
                                     </button>
-                                    <button class="btn btn-outline-success btn-lg px-4">
+                                    <button class="btn btn-outline-success btn-lg px-4" onclick="showQuickActionsModal()">
                                         <i class="fas fa-cog me-2"></i>Quick Setup
                                     </button>
                                 </div>
@@ -1571,6 +1568,105 @@ body {
                 }
             });
         });
+
+        function showQuickActionsModal() {
+            const modalHTML = `
+            <div class="modal fade" id="quickActionsModal" tabindex="-1" aria-labelledby="quickActionsModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="quickActionsModalLabel">
+                                <i class="fas fa-cog me-2"></i>Quick Setup Actions
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="card border-primary h-100">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-plus-circle fa-3x text-primary mb-3"></i>
+                                            <h6>Add Sample Data</h6>
+                                            <p class="text-muted small">Create sample customers, vendors, and initial transactions</p>
+                                            <button class="btn btn-primary btn-sm" onclick="addSampleData()">Add Sample Data</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-success h-100">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
+                                            <h6>Configure Budgets</h6>
+                                            <p class="text-muted small">Set up annual budgets for departments</p>
+                                            <button class="btn btn-success btn-sm" onclick="configureBudgets()">Setup Budgets</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-info h-100">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-key fa-3x text-info mb-3"></i>
+                                            <h6>Generate API Keys</h6>
+                                            <p class="text-muted small">Create API credentials for integrations</p>
+                                            <button class="btn btn-info btn-sm" onclick="generateAPIKeys()">Create API Key</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-warning h-100">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-envelope fa-3x text-warning mb-3"></i>
+                                            <h6>Email Configuration</h6>
+                                            <p class="text-muted small">Configure email settings for notifications</p>
+                                            <button class="btn btn-warning btn-sm" onclick="configureEmail()">Configure Email</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-primary" onclick="runAllQuickSetup()">Run All Setup</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+            // Remove existing modal if present
+            const existingModal = document.getElementById('quickActionsModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('quickActionsModal'));
+            modal.show();
+        }
+
+        function addSampleData() {
+            alert('Sample data functionality will be implemented in a future update.');
+        }
+
+        function configureBudgets() {
+            window.location.href = 'budget_management.php';
+        }
+
+        function generateAPIKeys() {
+            window.location.href = 'api_clients.php';
+        }
+
+        function configureEmail() {
+            window.location.href = 'settings.php';
+        }
+
+        function runAllQuickSetup() {
+            alert('Complete quick setup will be implemented in a future update.');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('quickActionsModal'));
+            modal.hide();
+        }
     </script>
 </body>
 </html>

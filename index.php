@@ -59,8 +59,10 @@ if ($_POST) {
         } else {
                          if (isset($result['lockout'])) {
                  $error = 'Account locked due to too many attempts. Please try again in ' . $result['lockout']['remaining'] . ' seconds.';
-             } else {
-                $attemptsLeft = 5 - $result['attempts'];
+             } elseif (isset($result['error'])) {
+                $error = $result['error'];
+            } else {
+                $attemptsLeft = 5 - ($result['attempts'] ?? 0);
                 $error = 'Invalid username or password. Attempts remaining: ' . $attemptsLeft;
             }
         }

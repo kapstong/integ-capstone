@@ -53,7 +53,7 @@ $db = Database::getInstance()->getConnection();
         .sidebar.sidebar-collapsed .navbar-brand {
             text-align: center;
         }
-        .sidebar.sidebar-collapsed .nav-item i[data-bs-toggle="collapse"] {
+        .sidebar.sidebar-collapsed .nav-item .dropdown-toggle {
             display: none;
         }
         .sidebar.sidebar-collapsed .submenu {
@@ -89,6 +89,21 @@ $db = Database::getInstance()->getConnection();
         .sidebar .navbar-brand {
             color: white !important;
             font-weight: bold;
+        }
+        .sidebar .nav-item {
+            position: relative;
+        }
+        .sidebar .nav-item i[data-bs-toggle="collapse"] {
+            position: absolute;
+            right: 20px;
+            top: 10px;
+            transition: transform 0.3s ease;
+        }
+        .sidebar .nav-item i[aria-expanded="true"] {
+            transform: rotate(90deg);
+        }
+        .sidebar .nav-item i[aria-expanded="false"] {
+            transform: rotate(0deg);
         }
         .content {
             margin-left: 300px;
@@ -702,6 +717,7 @@ $db = Database::getInstance()->getConnection();
             const arrow = document.getElementById('sidebarArrow');
             const toggle = document.querySelector('.sidebar-toggle');
             const logoImg = document.querySelector('.navbar-brand img');
+            // Default state is expanded (not collapsed)
             const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
             if (isCollapsed) {
                 sidebar.classList.add('sidebar-collapsed');
@@ -711,6 +727,7 @@ $db = Database::getInstance()->getConnection();
                 arrow.classList.add('fa-chevron-right');
                 toggle.style.left = '110px';
             } else {
+                // Default: sidebar remains expanded
                 sidebar.classList.remove('sidebar-collapsed');
                 logoImg.src = 'atieralogo.png';
                 content.style.marginLeft = '300px';

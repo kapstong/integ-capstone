@@ -4,7 +4,11 @@ require_once '../../includes/database.php';
 require_once '../../includes/logger.php';
 
 header('Content-Type: application/json');
-session_start();
+
+// Only start session if not already started (handles AJAX calls)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Check if user is logged in
 if (!isset($_SESSION['user'])) {
