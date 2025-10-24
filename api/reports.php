@@ -93,13 +93,14 @@ try {
         // Get expense data from daily_expense_summary (includes HR4 payroll)
         $expenseQuery = $db->prepare("
             SELECT
-                department,
-                SUM(daily_expenses) as amount
-            FROM daily_expense_summary
-            WHERE (:date_from IS NULL OR expense_date >= :date_from)
-                AND (:date_to IS NULL OR expense_date <= :date_to)
-            GROUP BY department
-            ORDER BY department
+                d.dept_name as department,
+                SUM(des.total_amount) as amount
+            FROM daily_expense_summary des
+            LEFT JOIN departments d ON des.department_id = d.id
+            WHERE (:date_from IS NULL OR des.business_date >= :date_from)
+                AND (:date_to IS NULL OR des.business_date <= :date_to)
+            GROUP BY d.dept_name
+            ORDER BY d.dept_name
         ");
         $expenseQuery->execute(['date_from' => $dateFrom, 'date_to' => $dateTo]);
         $expenseData = $expenseQuery->fetchAll(PDO::FETCH_ASSOC);
@@ -313,11 +314,12 @@ try {
             // Operating activities - from daily expenses mostly (cash basis approximation)
             $operatingQuery = $db->prepare("
                 SELECT
-                    department as name,
-                    SUM(daily_expenses) as amount
-                FROM daily_expense_summary
-                WHERE expense_date BETWEEN :start_date AND :end_date
-                GROUP BY department
+                    d.dept_name as name,
+                    SUM(des.total_amount) as amount
+                FROM daily_expense_summary des
+                LEFT JOIN departments d ON des.department_id = d.id
+                WHERE des.business_date BETWEEN :start_date AND :end_date
+                GROUP BY d.dept_name
             ");
             $operatingQuery->execute(['start_date' => $startDate, 'end_date' => $endDate]);
             $operatingData = $operatingQuery->fetchAll(PDO::FETCH_ASSOC);
