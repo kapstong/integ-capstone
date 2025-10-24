@@ -186,6 +186,12 @@ include 'header.php';
                                         onclick="testIntegration('<?php echo $name; ?>')">
                                     <i class="fas fa-vial"></i> Test
                                 </button>
+                                <?php if ($name === 'hr4'): ?>
+                                <button type="button" class="btn btn-outline-warning btn-sm"
+                                        onclick="importPayroll()">
+                                    <i class="fas fa-cloud-download-alt"></i> Import Payroll
+                                </button>
+                                <?php endif; ?>
                                 <?php endif; ?>
                                 <?php if ($integrationStatuses[$name]): ?>
                                 <button type="button" class="btn btn-outline-danger btn-sm"
@@ -372,6 +378,51 @@ function testIntegration(integrationName) {
         `;
         document.body.appendChild(form);
         form.submit();
+    }
+}
+
+// Import payroll data for HR4
+function importPayroll() {
+    if (confirm('Import payroll data from HR4 API? This will create journal entries.')) {
+        // Show loading state
+        const button = event.target.closest('button');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+        button.disabled = true;
+
+        // Make API call to execute importPayroll action
+        fetch('api/integrations.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                'action': 'execute',
+                'integration_name': 'hr4',
+                'action_name': 'importPayroll'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Payroll import completed successfully!\n\n' +
+                      'Imported: ' + (data.result.imported_count || 0) + ' records\n' +
+                      'Details: ' + data.result.message);
+                // Reload page to show new journal entries
+                location.reload();
+            } else {
+                alert('Payroll import failed: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Payroll import error:', error);
+            alert('Error importing payroll: ' + error.message);
+        })
+        .finally(() => {
+            // Restore button state
+            button.innerHTML = originalText;
+            button.disabled = false;
+        });
     }
 }
 
