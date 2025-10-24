@@ -9,14 +9,21 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
-// Require only the essential files for basic testing
+// Require core files for full integration support
 require_once '../config.php';
 require_once '../includes/logger.php';
 require_once '../includes/database.php';
+require_once '../includes/auth.php';
+require_once '../includes/api_integrations.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+// Initialize auth and integration manager
+$auth = new Auth();
+$auth->requireLogin(); // Require authentication for all integration actions
+$integrationManager = APIIntegrationManager::getInstance();
 
 // Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -24,11 +31,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 try {
-    $action = $_GET['action'] ?? '';
-    $integrationName = $_GET['integration_name'] ?? '';
-    $actionName = $_GET['action_name'] ?? '';
+    $action = $_GET['action'] ?? $_POST['action'] ?? '';
+    $integrationName = $_GET['integration'] ?? $_GET['integration_name'] ?? $_POST['integration_name'] ?? '';
+    $actionName = $_GET['action_name'] ?? $_POST['action_name'] ?? '';
+    $params = $_POST ? array_merge($_POST, $_GET) : $_GET;
 
-    // Connect to REAL HR3 API
+    // Handle integration actions
+    if ($action === 'execute' && $integrationName && $actionName) {
+        try {
+            $result = $integrationManager->executeIntegrationAction($integrationName, $actionName, $params);
+
+            echo json_encode([
+                'success' => true,
+                'result' => $result
+            ]);
+            exit;
+        } catch (Exception $e) {
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+            exit;
+        }
+    }
+
+    // Handle integration configuration forms
+    if ($action === 'get_config_form' && $integrationName) {
+        $integration = $integrationManager->getIntegration($integrationName);
+        if ($integration) {
+            $metadata = $integration->getMetadata();
+            $config = $integrationManager->getIntegrationConfig($integrationName);
+            $isConfigured = !empty($config);
+
+            $formHtml = '<h6>' . htmlspecialchars($metadata['display_name']) . '</h6>';
+            $formHtml .= '<p>' . htmlspecialchars($metadata['description']) . '</p>';
+            $formHtml .= '<small class="text-muted">Required Configuration Fields:</small><br>';
+
+            $requiredFields = $metadata['required_config'];
+            if (empty($requiredFields)) {
+                $formHtml .= '<span class="badge bg-success">No configuration required</span><br>';
+            } else {
+                foreach ($requiredFields as $field) {
+                    $formHtml .= '<span class="badge bg-primary me-1">' . htmlspecialchars($field) . '</span>';
+                }
+                $formHtml .= '<br>';
+            }
+
+            $formHtml .= '<form class="mt-3">';
+            foreach ([$metadata['required_config'], ['api_key', 'api_secret', 'webhook_url']] as $fieldGroup) {
+                foreach ($fieldGroup as $field) {
+                    $currentValue = $config[$field] ?? '';
+                    $fieldType = (strpos($field, 'secret') !== false || strpos($field, 'key') !== false) ? 'password' : 'text';
+                    $fieldLabel = ucwords(str_replace('_', ' ', $field));
+                    $requiredAttr = in_array($field, $metadata['required_config']) ? 'required' : '';
+
+                    $formHtml .= '<div class="mb-3">';
+                    $formHtml .= '<label for="' . htmlspecialchars($field) . '" class="form-label">' . htmlspecialchars($fieldLabel) . '</label>';
+                    $formHtml .= '<input type="' . $fieldType . '" class="form-control" id="' . htmlspecialchars($field) . '" name="' . htmlspecialchars($field) . '" value="' . htmlspecialchars($currentValue) . '" ' . $requiredAttr . '>';
+                    $formHtml .= '</div>';
+                }
+            }
+            $formHtml .= '</form>';
+
+            echo json_encode([
+                'success' => true,
+                'form_html' => $formHtml
+            ]);
+            exit;
+        } else {
+            echo json_encode([
+                'success' => false,
+                'error' => 'Integration not found'
+            ]);
+            exit;
+        }
+    }
+
+    // Handle integration statistics
+    if ($action === 'get_stats') {
+        $stats = $integrationManager->getIntegrationStats();
+        echo json_encode([
+            'success' => true,
+            'stats' => $stats
+        ]);
+        exit;
+    }
+
+    // Handle integration logs
+    if ($action === 'get_logs') {
+        $limit = intval($_GET['limit'] ?? 50);
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("
+            SELECT * FROM integration_logs
+            WHERE status = 'success'
+            ORDER BY created_at DESC
+            LIMIT ?
+        ");
+        $stmt->execute([$limit]);
+        $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'success' => true,
+            'logs' => $logs
+        ]);
+        exit;
+    }
+
+    // Connect to REAL HR3 API (legacy specific handling)
     if ($action === 'execute' && $integrationName === 'hr3' && $actionName === 'getApprovedClaims') {
         // Get HR3 API configuration
         $configFile = '../config/integrations/hr3.json';
