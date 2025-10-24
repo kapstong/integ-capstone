@@ -675,7 +675,21 @@ $db = Database::getInstance()->getConnection();
                             <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
                                 <i class="fas fa-user"></i>
                             </div>
-                            <span><strong>User</strong></span>
+                            <span><strong><?php
+                                // Display user name: first_name + last_name, or full_name, or username
+                                $firstName = $_SESSION['user']['first_name'] ?? '';
+                                $lastName = $_SESSION['user']['last_name'] ?? '';
+                                $fullName = $_SESSION['user']['full_name'] ?? '';
+                                $userName = $_SESSION['user']['username'] ?? '';
+
+                                if (!empty($firstName) || !empty($lastName)) {
+                                    echo htmlspecialchars(trim($firstName . ' ' . $lastName));
+                                } elseif (!empty($fullName)) {
+                                    echo htmlspecialchars($fullName);
+                                } else {
+                                    echo htmlspecialchars($userName);
+                                }
+                            ?></strong></span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li><a class="dropdown-item" href="admin-profile-settings.php"><i class="fas fa-user me-2"></i>Profile</a></li>
