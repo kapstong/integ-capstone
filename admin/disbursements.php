@@ -1021,11 +1021,14 @@ $db = Database::getInstance()->getConnection();
                 const result = await response.json();
                 console.log('HR3 API Parsed result:', result);
 
-                if (result.success || result.result) {
+                if (Array.isArray(result) && result.length > 0) {
+                    window.displayHR3Claims(result);
+                    window.showAlert('Successfully loaded ' + result.length + ' claims from HR3 API!', 'success');
+                } else if (result.success || result.result) {
                     window.displayHR3Claims(result.result || result);
                     window.showAlert('Successfully loaded claims from HR3 API!', 'success');
                 } else {
-                    window.showAlert('Error loading claims: ' + (result.error || 'Invalid response format'), 'danger');
+                    window.showAlert('Error loading claims: ' + (result.error || 'No claims found'), 'danger');
                 }
             } catch (error) {
                 console.error('HR3 Claims loading error:', error);
