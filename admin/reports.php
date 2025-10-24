@@ -1301,8 +1301,6 @@ $db = Database::getInstance()->getConnection();
                 const response = await fetch(`../api/reports.php?type=income_statement&date_from=${dateFrom}&date_to=${dateTo}`);
                 const data = await response.json();
 
-                console.log('Income Statement API Response:', data); // Debug logging
-
                 if (!data.success || data.error) {
                     throw new Error(data.error || 'Failed to generate income statement');
                 }
@@ -1507,8 +1505,6 @@ $db = Database::getInstance()->getConnection();
                 const response = await fetch(`../api/reports.php?type=aging_${type}&format=json`);
                 const data = await response.json();
 
-                console.log(`${type} Aging Report API Response:`, data); // Debug logging
-
                 if (!data.success || data.error) {
                     throw new Error(data.error || 'Failed to generate aging report');
                 }
@@ -1626,8 +1622,6 @@ $db = Database::getInstance()->getConnection();
                 const response = await fetch(`../api/reports.php?type=balance_sheet&as_of=${apiDate}`);
                 const data = await response.json();
 
-                console.log('Balance Sheet API Response:', data); // Debug logging
-
                 if (!data.success || data.error) {
                     throw new Error(data.error || 'Failed to generate balance sheet');
                 }
@@ -1739,8 +1733,6 @@ $db = Database::getInstance()->getConnection();
                 // Fetch cash flow data
                 const response = await fetch(`../api/reports.php?type=cash_flow&period=${period}`);
                 const data = await response.json();
-
-                console.log('Cash Flow API Response:', data); // Debug logging
 
                 if (!data.success || data.error) {
                     throw new Error(data.error || 'Failed to generate cash flow statement');
@@ -1933,8 +1925,6 @@ $db = Database::getInstance()->getConnection();
                 const response = await fetch('../api/reports.php?type=budget_vs_actual');
                 const data = await response.json();
 
-                console.log('Budget Report API Response:', data); // Debug logging
-
                 if (data.error) {
                     throw new Error(data.error);
                 }
@@ -1977,8 +1967,6 @@ $db = Database::getInstance()->getConnection();
             try {
                 const response = await fetch('../api/reports.php?type=cash_flow_summary');
                 const data = await response.json();
-
-                console.log('Cash Flow Summary API Response:', data); // Debug logging
 
                 if (!data.success || data.error) {
                     throw new Error(data.error || 'Failed to generate cash flow summary');
