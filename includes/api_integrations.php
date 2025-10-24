@@ -231,7 +231,7 @@ class APIIntegrationManager {
     /**
      * Update integration status
      */
-    private function updateIntegrationStatus($name, $active) {
+    public function updateIntegrationStatus($name, $active) {
         try {
             $stmt = $this->db->prepare("
                 INSERT INTO api_integrations (name, is_active, last_updated)
@@ -963,8 +963,13 @@ class HR4Integration extends BaseIntegration {
                     return $this->getSamplePayrollData();
                 }
 
-                // If JSON was parsed successfully, return payroll data
-                return $result ?: $this->getSamplePayrollData();
+                // Parse the actual HR4 API response format and convert to our expected format
+                if (isset($result['success']) && $result['success'] && isset($result['payroll_data'])) {
+                    return $this->parseHR4PayrollData($result);
+                } else {
+                    // Return sample data if API response is not in expected format
+                    return $this->getSamplePayrollData();
+                }
             } else {
                 // Return sample data for testing if API is not accessible
                 return $this->getSamplePayrollData();
@@ -975,6 +980,66 @@ class HR4Integration extends BaseIntegration {
             // Return sample data as fallback
             return $this->getSamplePayrollData();
         }
+    }
+
+    /**
+     * Parse the actual HR4 API response format into our expected payroll data format
+     */
+    private function parseHR4PayrollData($apiResponse) {
+        $parsedData = [];
+
+        if (!isset($apiResponse['payroll_data']) || !is_array($apiResponse['payroll_data'])) {
+            return $this->getSamplePayrollData();
+        }
+
+        $payrollMonth = $apiResponse['month'] ?? date('Y-m');
+
+        foreach ($apiResponse['payroll_data'] as $employeeData) {
+            // Map department name to department ID
+            $departmentMapping = [
+                'Human Resources Department' => 1, // Administrative
+                'Kitchen Department' => 2,
+                'Front Office Department' => 3,
+                'Housekeeping Department' => 4,
+                'Food & Beverage Department' => 2, // Map to Kitchen
+                'Maintenance Department' => 5,
+                'Security Department' => 6,
+                'Accounting Department' => 1, // Administrative
+                'Sales & Marketing Department' => 7,
+            ];
+
+            $departmentName = $employeeData['department'] ?? 'General';
+            $departmentId = $departmentMapping[$departmentName] ?? 1; // Default to Administrative
+
+            // Convert employee data to our expected format
+            $parsedEntry = [
+                'payroll_id' => 'HR4_' . $employeeData['id'],
+                'employee_id' => 'EMP_' . $employeeData['id'],
+                'employee_name' => $employeeData['name'] ?? 'Unknown Employee',
+                'department_id' => $departmentId,
+                'department' => $departmentName,
+                'payroll_date' => date('Y-m-d'), // Use current date as payroll date
+                'payroll_period' => $payrollMonth . '-01 to ' . $payrollMonth . '-' . date('t', strtotime($payrollMonth . '-01')),
+                'basic_salary' => floatval($employeeData['basic_salary'] ?? 0),
+                'overtime_pay' => floatval($employeeData['overtime_pay'] ?? 0),
+                'bonus' => floatval($employeeData['bonus'] ?? 0),
+                'allowances' => floatval($employeeData['additions'] ?? 0),
+                'deductions' => floatval($employeeData['deductions'] ?? 0),
+                'gross' => floatval($employeeData['gross'] ?? 0),
+                'net_pay' => floatval($employeeData['net'] ?? 0),
+                'amount' => floatval($employeeData['net'] ?? 0), // For compatibility
+                'currency_code' => 'PHP',
+                'status' => 'processed',
+                'position' => $employeeData['position'] ?? 'Staff',
+                'email' => $employeeData['email'] ?? '',
+                'date' => date('Y-m-d'), // For compatibility
+                'id' => $employeeData['id'] ?? 0
+            ];
+
+            $parsedData[] = $parsedEntry;
+        }
+
+        return $parsedData;
     }
 
     /**
