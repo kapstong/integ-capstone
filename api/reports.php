@@ -69,22 +69,43 @@ try {
         }
 
         // Get revenue data (from journal entries - placeholder for now)
-        $revenueQuery = $db->prepare("
-            SELECT
-                coa.account_name,
-                SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as amount
-            FROM chart_of_accounts coa
-            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-                AND je.status = 'posted'
-                AND (? IS NULL OR je.entry_date >= ?)
-                AND (? IS NULL OR je.entry_date <= ?)
-            WHERE coa.account_type = 'revenue'
-                AND coa.is_active = 1
-            GROUP BY coa.id, coa.account_name
-            HAVING amount > 0
-        ");
-        $revenueQuery->execute([$dateFrom, $dateFrom, $dateTo, $dateTo]);
+        // Build query based on whether dates are provided
+        if (!empty($dateFrom) || !empty($dateTo)) {
+            $revenueQuery = $db->prepare("
+                SELECT
+                    coa.account_name,
+                    SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as amount
+                FROM chart_of_accounts coa
+                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+                    AND je.status = 'posted'
+                    " . (!empty($dateFrom) ? "AND je.entry_date >= :date_from" : "") . "
+                    " . (!empty($dateTo) ? "AND je.entry_date <= :date_to" : "") . "
+                WHERE coa.account_type = 'revenue'
+                    AND coa.is_active = 1
+                GROUP BY coa.id, coa.account_name
+                HAVING amount > 0
+            ");
+            $params = [];
+            if (!empty($dateFrom)) $params['date_from'] = $dateFrom;
+            if (!empty($dateTo)) $params['date_to'] = $dateTo;
+            $revenueQuery->execute($params);
+        } else {
+            $revenueQuery = $db->prepare("
+                SELECT
+                    coa.account_name,
+                    SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as amount
+                FROM chart_of_accounts coa
+                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+                    AND je.status = 'posted'
+                WHERE coa.account_type = 'revenue'
+                    AND coa.is_active = 1
+                GROUP BY coa.id, coa.account_name
+                HAVING amount > 0
+            ");
+            $revenueQuery->execute();
+        }
         $revenueData = $revenueQuery->fetchAll(PDO::FETCH_ASSOC);
 
         // Calculate total revenue
@@ -106,23 +127,44 @@ try {
         $expenseData = $expenseQuery->fetchAll(PDO::FETCH_ASSOC);
 
         // Get expense data from journal entries too (other expenses not tracked in daily_expense_summary)
-        $journalExpenseQuery = $db->prepare("
-            SELECT
-                coa.account_name,
-                SUM(COALESCE(jel.debit, 0)) as amount
-            FROM chart_of_accounts coa
-            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-                AND je.status = 'posted'
-                AND (? IS NULL OR je.entry_date >= ?)
-                AND (? IS NULL OR je.entry_date <= ?)
-            WHERE coa.account_type = 'expense'
-                AND coa.is_active = 1
-                AND coa.category NOT IN ('Payroll', 'Salary')
-            GROUP BY coa.id, coa.account_name
-            HAVING amount > 0
-        ");
-        $journalExpenseQuery->execute([$dateFrom, $dateFrom, $dateTo, $dateTo]);
+        if (!empty($dateFrom) || !empty($dateTo)) {
+            $journalExpenseQuery = $db->prepare("
+                SELECT
+                    coa.account_name,
+                    SUM(COALESCE(jel.debit, 0)) as amount
+                FROM chart_of_accounts coa
+                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+                    AND je.status = 'posted'
+                    " . (!empty($dateFrom) ? "AND je.entry_date >= :date_from" : "") . "
+                    " . (!empty($dateTo) ? "AND je.entry_date <= :date_to" : "") . "
+                WHERE coa.account_type = 'expense'
+                    AND coa.is_active = 1
+                    AND coa.category NOT IN ('Payroll', 'Salary')
+                GROUP BY coa.id, coa.account_name
+                HAVING amount > 0
+            ");
+            $params = [];
+            if (!empty($dateFrom)) $params['date_from'] = $dateFrom;
+            if (!empty($dateTo)) $params['date_to'] = $dateTo;
+            $journalExpenseQuery->execute($params);
+        } else {
+            $journalExpenseQuery = $db->prepare("
+                SELECT
+                    coa.account_name,
+                    SUM(COALESCE(jel.debit, 0)) as amount
+                FROM chart_of_accounts coa
+                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+                    AND je.status = 'posted'
+                WHERE coa.account_type = 'expense'
+                    AND coa.is_active = 1
+                    AND coa.category NOT IN ('Payroll', 'Salary')
+                GROUP BY coa.id, coa.account_name
+                HAVING amount > 0
+            ");
+            $journalExpenseQuery->execute();
+        }
         $journalExpenseData = $journalExpenseQuery->fetchAll(PDO::FETCH_ASSOC);
 
         // Consolidate expense data
