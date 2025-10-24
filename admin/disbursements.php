@@ -952,10 +952,26 @@ $db = Database::getInstance()->getConnection();
                     // Remove the processed claim row
                     btn.closest('tr').remove();
 
-                    // Refresh disbursements if on records tab
-                    if (document.getElementById('records-tab').classList.contains('active')) {
+                    // Always refresh disbursements records (enhancement for visibility)
+                    console.log('Claim processed, refreshing disbursement records...');
+                    setTimeout(() => {
                         loadDisbursements();
-                    }
+
+                        // Show additional notification on Disbursements Records tab
+                        const recordsTabLink = document.getElementById('records-tab');
+                        if (recordsTabLink) {
+                            // Add visual indicator that records were updated
+                            recordsTabLink.innerHTML += ' <span class="badge bg-success">🔄 Updated</span>';
+                            setTimeout(() => {
+                                recordsTabLink.innerHTML = recordsTabLink.innerHTML.replace(' <span class="badge bg-success">🔄 Updated</span>', '');
+                            }, 3000);
+                        }
+
+                        // If user is on records tab, also update the tab badge
+                        if (document.getElementById('records-tab').classList.contains('active')) {
+                            showAlert('💡 Disbursement records have been updated with the processed claim!', 'info');
+                        }
+                    }, 500); // Small delay to ensure database commit
                 } else {
                     window.showAlert('Error processing claim: ' + (result.error || 'Unknown error'), 'danger');
                 }
