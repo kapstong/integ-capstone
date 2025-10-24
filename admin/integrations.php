@@ -186,10 +186,10 @@ include 'header.php';
                                         onclick="testIntegration('<?php echo $name; ?>')">
                                     <i class="fas fa-vial"></i> Test
                                 </button>
-                                <?php if ($name === 'hr4'): ?>
+                               <?php if ($name === 'hr4'): ?>
                                 <button type="button" class="btn btn-outline-warning btn-sm"
                                         onclick="importPayroll()">
-                                    <i class="fas fa-cloud-download-alt"></i> Import Payroll
+                                    <i class="fas fa-users-cog"></i> Sync Payroll Data
                                 </button>
                                 <?php endif; ?>
                                 <?php endif; ?>
@@ -383,11 +383,11 @@ function testIntegration(integrationName) {
 
 // Import payroll data for HR4
 function importPayroll() {
-    if (confirm('Import payroll data from HR4 API? This will create journal entries.')) {
+    if (confirm('Sync payroll data from HR4 API? This will update department expense tracking for automatic journal entry generation.')) {
         // Show loading state
         const button = event.target.closest('button');
         const originalText = button.innerHTML;
-        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
         button.disabled = true;
 
         // Make API call to execute importPayroll action
@@ -405,18 +405,18 @@ function importPayroll() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Payroll import completed successfully!\n\n' +
-                      'Imported: ' + (data.result.imported_count || 0) + ' records\n' +
-                      'Details: ' + data.result.message);
-                // Reload page to show new journal entries
+                alert('Payroll data sync completed!\n\n' +
+                      'Synced: ' + (data.result.imported_count || 0) + ' payroll records\n' +
+                      'Department expense tracking updated for automatic journal entry generation.');
+                // Payroll will appear in reports through department aggregation
                 location.reload();
             } else {
-                alert('Payroll import failed: ' + (data.error || 'Unknown error'));
+                alert('Payroll sync failed: ' + (data.error || 'Unknown error'));
             }
         })
         .catch(error => {
-            console.error('Payroll import error:', error);
-            alert('Error importing payroll: ' + error.message);
+            console.error('Payroll sync error:', error);
+            alert('Error syncing payroll data: ' + error.message);
         })
         .finally(() => {
             // Restore button state

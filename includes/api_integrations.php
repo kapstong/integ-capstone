@@ -1004,6 +1004,7 @@ class HR4Integration extends BaseIntegration {
 
     /**
      * Import payroll data into financials system
+     * Updates department expense tracking that feeds into automatic journal entry generation
      */
     public function importPayroll($config, $params = []) {
         $payrollData = $this->getPayrollData($config, $params);
@@ -1024,8 +1025,9 @@ class HR4Integration extends BaseIntegration {
                 $entryDate = $payroll['payroll_date'] ?? $payroll['date'] ?? date('Y-m-d');
                 $description = 'Payroll: ' . ($payroll['employee_name'] ?? 'Employee') . ' - ' . ($payroll['payroll_period'] ?? 'Period');
                 $externalId = $payroll['payroll_id'] ?? $payroll['id'] ?? 'PAY' . time() . '_' . $importedCount;
+                $departmentId = $payroll['department_id'] ?? 1;
 
-                // Step 1: First import to imported_transactions for audit trail
+                // Import to imported_transactions for audit trail and system processing
                 $stmt = $db->prepare("
                     INSERT INTO imported_transactions
                     (import_batch, source_system, transaction_date, transaction_type,
@@ -1035,57 +1037,35 @@ class HR4Integration extends BaseIntegration {
 
                 $stmt->execute([
                     $batchId,
-                    'HR4_SYSTEM',
+                    'HR_SYSTEM',
                     $entryDate,
                     'payroll_expense',
                     $externalId,
-                    $payroll['department_id'] ?? 1,
+                    $departmentId,
                     $amount,
                     $description,
                     json_encode($payroll)
                 ]);
 
-                $importedTransactionId = $db->lastInsertId();
-
-                // Step 2: Create actual journal entry (debit expense, credit liability)
-                $entryNumber = 'JE-PAY-' . date('ymd') . '-' . str_pad($importedCount + 1, 4, '0', STR_PAD_LEFT);
-
-                // Insert journal entry
-                $jeStmt = $db->prepare("
-                    INSERT INTO journal_entries
-                    (entry_number, entry_date, description, total_debit, total_credit, status, created_by, posted_by, posted_at)
-                    VALUES (?, ?, ?, ?, ?, 'posted', 1, 1, NOW())
+                // Update daily_expense_summary - this feeds into automatic department reporting
+                $summaryStmt = $db->prepare("
+                    INSERT INTO daily_expense_summary
+                    (business_date, department_id, expense_category, source_system, total_transactions, total_amount)
+                    VALUES (?, ?, ?, ?, 1, ?)
+                    ON DUPLICATE KEY UPDATE
+                        total_transactions = total_transactions + 1,
+                        total_amount = total_amount + VALUES(total_amount),
+                        updated_at = NOW()
                 ");
-                $jeStmt->execute([$entryNumber, $entryDate, $description, $amount, $amount]);
-                $journalEntryId = $db->lastInsertId();
-
-                // Insert journal entry lines (debit payroll expense, credit accrued salaries payable)
-                $jelStmt = $db->prepare("
-                    INSERT INTO journal_entry_lines (journal_entry_id, account_id, debit, credit, description)
-                    VALUES (?, ?, ?, ?, ?)
-                ");
-
-                // Debit: Payroll Expense (5401 - Administrative Salaries)
-                $jelStmt->execute([$journalEntryId, $this->getPayrollExpenseAccount($payroll), $amount, 0, $description]);
-
-                // Credit: Accrued Salaries Payable (2107 - Payroll Taxes Payable or similar liability)
-                $jelStmt->execute([$journalEntryId, $this->getPayrollLiabilityAccount(), 0, $amount, $description]);
-
-                // Step 3: Update imported_transactions with journal_entry_id and mark as posted
-                $updateStmt = $db->prepare("
-                    UPDATE imported_transactions
-                    SET status = 'posted', journal_entry_id = ?
-                    WHERE id = ?
-                ");
-                $updateStmt->execute([$journalEntryId, $importedTransactionId]);
+                $summaryStmt->execute([$entryDate, $departmentId, 'labor_payroll', 'HR_SYSTEM', $amount]);
 
                 $importedCount++;
 
-                Logger::getInstance()->info('Payroll imported to General Ledger', [
+                Logger::getInstance()->info('Payroll imported to department expense tracking', [
                     'payroll_id' => $externalId,
                     'employee' => $payroll['employee_name'] ?? 'Unknown',
                     'amount' => $amount,
-                    'journal_entry' => $entryNumber
+                    'department_id' => $departmentId
                 ]);
 
             } catch (Exception $e) {
@@ -1101,7 +1081,7 @@ class HR4Integration extends BaseIntegration {
             'success' => count($errors) === 0,
             'imported_count' => $importedCount,
             'errors' => $errors,
-            'message' => "Imported {$importedCount} payroll records" . (count($errors) > 0 ? " with " . count($errors) . " errors" : "")
+            'message' => "Imported {$importedCount} payroll records to department expense tracking" . (count($errors) > 0 ? " with " . count($errors) . " errors" : "")
         ];
     }
 
