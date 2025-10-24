@@ -533,6 +533,12 @@ header('Content-Type: application/javascript');
 
             // OCP queue event handlers (must be here to not interfere with other DOMContentLoaded listeners)
             // Google Analytics tracking removed - gtag not available
+        });
+
+        // Initialize department access on DOM ready
+        document.addEventListener('DOMContentLoaded', function() {
+            setupDepartmentAccess();
+        });
 
         // Department-based access control setup
         function setupDepartmentAccess() {
