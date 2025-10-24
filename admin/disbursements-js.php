@@ -525,33 +525,122 @@ header('Content-Type: application/javascript');
                 });
             });
 
-            // Connect process payment button
+            // Connect process payment button and setup access control
             const processBtn = document.querySelector('#processPaymentModal .btn-primary');
             if (processBtn) {
                 processBtn.addEventListener('click', processPayment);
             }
 
-            // Connect tab events
-            document.querySelectorAll('#disbursementsTabs .nav-link').forEach(tab => {
-                tab.addEventListener('shown.bs.tab', function(e) {
-                    const target = e.target.getAttribute('data-bs-target');
-                    switch(target) {
-                        case '#audit':
-                            loadAuditTrail();
-                            break;
-                        case '#reports':
-                            loadDisbursementReports();
-                            break;
-                        case '#vouchers':
-                            loadVouchers();
-                            break;
-                    }
-                });
+            // OCP queue event handlers (must be here to not interfere with other DOMContentLoaded listeners)
+            gtag('event', 'ois_tab_show', {
+                'event_category': 'disbursements',
+                'event_label': 'tab_change',
+                'custom_parameter_1': 'setup_complete'
             });
 
-            // Load initial data
-            loadDisbursements();
-            loadVendors();
+        // Department-based access control setup
+        function setupDepartmentAccess() {
+            // Get user department from PHP session via a hidden element
+            const userDepartment = '<?php echo $_SESSION["user"]["department"] ?? ""; ?>';
+            const userRole = '<?php echo $_SESSION["user"]["role"] ?? ""; ?>';
+
+            // Define permissions (same as PHP backend)
+            const deptPermissions = {
+                'finance': ['view', 'create', 'edit', 'delete', 'approve', 'process_claims'],
+                'accounting': ['view', 'create', 'edit', 'delete', 'approve'],
+                'hr': ['view', 'process_claims', 'upload_vouchers'],
+                'procurement': ['view', 'create', 'upload_vouchers'],
+                'admin': ['view', 'create', 'edit', 'delete', 'approve', 'process_claims', 'configure']
+            };
+
+            // Get user perms or fallback to admin role
+            const userPerms = deptPermissions[userDepartment] || [];
+            const hasAdminRole = userRole === 'admin';
+
+            // Define tab permissions
+            const tabPermissions = {
+                'records-tab': 'view',           // Disbursement Records - basic view permission
+                'processing-tab': 'create',      // Payment Processing - requires create permission
+                'claims-tab': 'process_claims',  // Claims Processing - requires process_claims permission
+                'vouchers-tab': 'upload_vouchers', // Vouchers - requires upload permission
+                'approval-tab': 'approve',       // Approval Workflow - requires approve permission
+                'reports-tab': 'view',           // Reports - basic view permission
+                'audit-tab': 'delete'            // Audit Trail - requires delete permission
+            };
+
+            // Hide tabs based on permissions
+            Object.keys(tabPermissions).forEach(tabId => {
+                const requiredPerm = tabPermissions[tabId];
+                const tabElement = document.getElementById(tabId);
+
+                if (tabElement) {
+                    // Show tab if user has permission OR is admin
+                    if (!userPerms.includes(requiredPerm) && !hasAdminRole) {
+                        tabElement.style.display = 'none';
+                    }
+                }
+            });
+
+            // Hide buttons based on permissions
+            // Bulk delete button - requires delete permission
+            if (!userPerms.includes('delete') && !hasAdminRole) {
+                document.getElementById('bulkDeleteBtn').style.display = 'none';
+            }
+
+            // Add Disbursement button - requires create permission
+            if (!userPerms.includes('create') && !hasAdminRole) {
+                const addBtn = document.querySelector('[onclick="showAddDisbursementModal()"]');
+                if (addBtn) addBtn.style.display = 'none';
+            }
+
+            // Upload Voucher button - requires upload_vouchers permission
+            if (!userPerms.includes('upload_vouchers') && !hasAdminRole) {
+                const uploadBtn = document.querySelector('[data-bs-target="#uploadVoucherModal"]');
+                if (uploadBtn) uploadBtn.style.display = 'none';
+            }
+
+            // Export Report button - requires delete permission (admin-level action)
+            if (!userPerms.includes('delete') && !hasAdminRole) {
+                const exportBtn = document.querySelector('.btn-outline-secondary [href="#"]');
+                if (exportBtn && exportBtn.innerHTML.includes('Export')) {
+                    exportBtn.style.display = 'none';
+                }
+            }
+
+            // Modify table actions based on permissions
+            // This will be applied when rendering table rows
+            window.userPermissions = {
+                canEdit: userPerms.includes('edit') || hasAdminRole,
+                canDelete: userPerms.includes('delete') || hasAdminRole,
+                canView: userPerms.includes('view') || hasAdminRole,
+                canApprove: userPerms.includes('approve') || hasAdminRole,
+                department: userDepartment,
+                role: userRole
+            };
+        }
+
+        // Connect tab events
+        document.querySelectorAll('#disbursementsTabs .nav-link').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function(e) {
+                const target = e.target.getAttribute('data-bs-target');
+                switch(target) {
+                    case '#audit':
+                        loadAuditTrail();
+                        break;
+                    case '#reports':
+                        loadDisbursementReports();
+                        break;
+                    case '#vouchers':
+                        loadVouchers();
+                        break;
+                }
+            });
+        });
+
+        // Load initial data and setup permissions
+        loadDisbursements();
+        loadVendors();
+        setupDepartmentAccess();
         });
 
         function toggleSidebarDesktop() {
@@ -622,7 +711,7 @@ header('Content-Type: application/javascript');
         // Global variables for bulk delete
         let selectedDisbursements = new Set();
 
-        // Update table row rendering to include checkboxes
+        // Update table row rendering to include checkboxes and department permissions
         function renderDisbursementsTable(disbursements) {
             const tbody = document.getElementById('disbursementsTableBody');
 
@@ -631,14 +720,38 @@ header('Content-Type: application/javascript');
                 return;
             }
 
-            tbody.innerHTML = disbursements.map(d =>
-                '<tr><td><input type="checkbox" class="disbursement-checkbox" value="' + d.id + '" onchange="toggleSelection(this)"></td><td>' + (d.disbursement_number || d.id) + '</td><td>' + (d.payee || 'N/A') + '</td><td><span class="badge bg-secondary">' + (d.payment_method || 'N/A') + '</span></td><td>' + formatDate(d.disbursement_date) + '</td><td>₱' + parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td><td>' + getStatusBadge(d.status || 'pending') + '</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="viewDisbursement(' + d.id + ')"><i class="fas fa-eye"></i></button><button class="btn btn-sm btn-outline-secondary me-1" onclick="editDisbursement(' + d.id + ')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteDisbursement(' + d.id + ')"><i class="fas fa-trash"></i></button></td></tr>'
-            ).join('');
+            tbody.innerHTML = disbursements.map(d => {
+                // Build action buttons based on user permissions
+                let actions = '<button class="btn btn-sm btn-outline-primary me-1" onclick="viewDisbursement(' + d.id + ')"><i class="fas fa-eye"></i></button>';
+
+                if (window.userPermissions && window.userPermissions.canEdit) {
+                    actions += '<button class="btn btn-sm btn-outline-secondary me-1" onclick="editDisbursement(' + d.id + ')"><i class="fas fa-edit"></i></button>';
+                }
+
+                if (window.userPermissions && window.userPermissions.canDelete) {
+                    actions += '<button class="btn btn-sm btn-outline-danger" onclick="deleteDisbursement(' + d.id + ')"><i class="fas fa-trash"></i></button>';
+                }
+
+                // Add checkbox only if user can delete (for bulk operations)
+                const checkbox = (window.userPermissions && window.userPermissions.canDelete) ?
+                    '<input type="checkbox" class="disbursement-checkbox" value="' + d.id + '" onchange="toggleSelection(this)">' :
+                    '<input type="checkbox" disabled title="You do not have delete permissions">';
+
+                return '<tr><td>' + checkbox + '</td><td>' + (d.disbursement_number || d.id) + '</td><td>' + (d.payee || 'N/A') + '</td><td><span class="badge bg-secondary">' + (d.payment_method || 'N/A') + '</span></td><td>' + formatDate(d.disbursement_date) + '</td><td>₱' + parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td><td>' + getStatusBadge(d.status || 'pending') + '</td><td>' + actions + '</td></tr>';
+            }).join('');
 
             // Update header checkbox
             const headerCheckbox = document.getElementById('selectAllCheckbox');
             if (headerCheckbox) {
                 headerCheckbox.checked = false; // Reset select all when data changes
+                // Disable header checkbox if user cannot delete
+                if (!(window.userPermissions && window.userPermissions.canDelete)) {
+                    headerCheckbox.disabled = true;
+                    headerCheckbox.title = 'You do not have delete permissions';
+                } else {
+                    headerCheckbox.disabled = false;
+                    headerCheckbox.title = '';
+                }
             }
         }
 

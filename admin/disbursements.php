@@ -4,6 +4,29 @@ require_once '../includes/database.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+// Department-based Access Control for Disbursements
+$auth = new Auth();
+$userDepartment = $_SESSION['user']['department'] ?? '';
+
+// Define department permissions for disbursements module
+$deptPermissions = [
+    'finance' => ['view', 'create', 'edit', 'delete', 'approve', 'process_claims'],
+    'accounting' => ['view', 'create', 'edit', 'delete', 'approve'],
+    'hr' => ['view', 'process_claims', 'upload_vouchers'],
+    'procurement' => ['view', 'create', 'upload_vouchers'],
+    'admin' => ['view', 'create', 'edit', 'delete', 'approve', 'process_claims', 'configure'],
+];
+
+// Check if user has access to disbursements
+$userPerms = isset($deptPermissions[$userDepartment]) ? $deptPermissions[$userDepartment] : [];
+$hasAdminRole = isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'admin';
+if (empty($userPerms) && !$hasAdminRole) {
+    header('Location: ../index.php');
+    exit;
+}
+
+// Load user permissions
 if (!isset($_SESSION['user'])) {
     header('Location: ../index.php');
     exit;
@@ -24,7 +47,7 @@ $db = Database::getInstance()->getConnection();
     <style>
         body {
             background-color: #F1F7EE;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
         }
