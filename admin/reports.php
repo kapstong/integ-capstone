@@ -1252,6 +1252,27 @@ $db = Database::getInstance()->getConnection();
 
             // Load initial income statement
             generateIncomeStatement();
+
+            // Auto-generate reports when tabs are shown
+            const balanceTab = document.getElementById('balance-tab');
+            const cashflowTab = document.getElementById('cashflow-tab');
+
+            let balanceGenerated = false;
+            let cashflowGenerated = false;
+
+            balanceTab.addEventListener('shown.bs.tab', function() {
+                if (!balanceGenerated) {
+                    generateBalanceSheet();
+                    balanceGenerated = true;
+                }
+            });
+
+            cashflowTab.addEventListener('shown.bs.tab', function() {
+                if (!cashflowGenerated) {
+                    generateCashFlow();
+                    cashflowGenerated = true;
+                }
+            });
         });
 
         // Update income statement period selector
