@@ -26,39 +26,90 @@ try {
     $integrationName = $_GET['integration_name'] ?? '';
     $actionName = $_GET['action_name'] ?? '';
 
-    // Simplified HR3 claims response for testing
+    // Connect to REAL HR3 API
     if ($action === 'execute' && $integrationName === 'hr3' && $actionName === 'getApprovedClaims') {
-        // Return sample HR3 claims data
-        $sampleClaims = [
-            [
-                'claim_id' => 'CLM001',
-                'employee_name' => 'John Doe',
-                'employee_id' => 'EMP001',
-                'amount' => 1500.00,
-                'currency_code' => 'PHP',
-                'description' => 'Transportation reimbursement',
-                'status' => 'Approved',
-                'claim_date' => '2025-10-01',
-                'type' => 'Transportation'
-            ],
-            [
-                'claim_id' => 'CLM002',
-                'employee_name' => 'Jane Smith',
-                'employee_id' => 'EMP002',
-                'amount' => 800.00,
-                'currency_code' => 'PHP',
-                'description' => 'Meals during business trip',
-                'status' => 'Approved',
-                'claim_date' => '2025-10-02',
-                'type' => 'Meals'
-            ]
-        ];
+        // Get HR3 API configuration
+        $configFile = '../config/integrations/hr3.json';
+        $config = ['api_url' => 'https://hr3.atierahotelandrestaurant.com/api/claimsApi.php'];
 
-        echo json_encode([
-            'success' => true,
-            'result' => $sampleClaims,
-            'message' => 'Sample HR3 claims data loaded successfully'
-        ]);
+        if (file_exists($configFile) && ($configData = json_decode(file_get_contents($configFile), true))) {
+            $config = array_merge($config, $configData);
+        }
+
+        // Make HTTP request to HR3 API
+        $ch = curl_init($config['api_url']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // For HTTPS - remove in production
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // For HTTPS - remove in production
+
+        // Add headers if authentication is configured
+        $headers = ['Content-Type: application/json'];
+        if (!empty($config['api_key'])) {
+            $headers[] = 'Authorization: Bearer ' . $config['api_key'];
+        }
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError) {
+            echo json_encode([
+                'success' => false,
+                'error' => 'Failed to connect to HR3 API: ' . $curlError
+            ]);
+            exit;
+        }
+
+        if ($httpCode === 200) {
+            $claims = json_decode($response, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Invalid JSON response from HR3 API: ' . json_last_error_msg()
+                ]);
+                exit;
+            }
+
+            // Filter for only "Approved" status claims with amounts > 0
+            $approvedClaims = [];
+            if (is_array($claims)) {
+                foreach ($claims as $claim) {
+                    $amount = isset($claim['total_amount']) ? floatval($claim['total_amount']) : 0;
+                    $status = $claim['status'] ?? '';
+
+                    // Only include approved claims with positive amounts and not cancelled/rejected
+                    if ($status === 'Approved' && $amount > 0 && !isset($claim['cancelled_at'])) {
+                        $approvedClaims[] = [
+                            'id' => $claim['claim_id'],
+                            'claim_id' => $claim['claim_id'],
+                            'employee_name' => $claim['employee_name'] ?? 'Unknown',
+                            'employee_id' => $claim['employee_id'] ?? '',
+                            'amount' => $amount,
+                            'currency_code' => $claim['currency_code'] ?? 'PHP',
+                            'description' => $claim['remarks'] ?? '',
+                            'status' => $status,
+                            'claim_date' => $claim['created_at'] ?? $claim['updated_at'] ?? '',
+                            'reference_id' => $claim['reference_id'] ?? ''
+                        ];
+                    }
+                }
+            }
+
+            echo json_encode([
+                'success' => true,
+                'result' => $approvedClaims,
+                'message' => 'HR3 approved claims loaded successfully (' . count($approvedClaims) . ' claims found)'
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'error' => 'HR3 API returned HTTP ' . $httpCode . ': ' . $response
+            ]);
+        }
         exit;
     }
 
