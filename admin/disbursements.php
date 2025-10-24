@@ -909,7 +909,7 @@ $db = Database::getInstance()->getConnection();
                     payment_method: 'bank_transfer', // Default payment method
                     reference_number: `HR3-CLAIM-${claimId}`,
                     payee: employeeName,
-                    description: `HR3 Claim Payment: ${description}`,
+                    purpose: `HR3 Claim Payment: ${description}`,
                     notes: `Processed from HR3 claim ${claimId} - Status changed to "Paid"`
                 };
 
