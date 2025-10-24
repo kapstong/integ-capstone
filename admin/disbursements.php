@@ -497,8 +497,8 @@ $db = Database::getInstance()->getConnection();
                         <button class="btn btn-success me-2" onclick="loadHR3Claims()">
                             <i class="fas fa-sync me-2"></i>Load HR3 Claims
                         </button>
-                        <button class="btn btn-outline-secondary" id="claimsConfigBtn">
-                            <i class="fas fa-cog me-2"></i>HR3 Config
+                        <button class="btn btn-outline-secondary" id="claimsConfigBtn" onclick="testHR3Connection()">
+                            <i class="fas fa-cog me-2"></i>Test HR3 Connection
                         </button>
                     </div>
                 </div>
@@ -979,6 +979,65 @@ $db = Database::getInstance()->getConnection();
 
             const result = await response.json();
             return result;
+        };
+
+        window.testHR3Connection = async function() {
+            // Show loading
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+            const originalClass = btn.className;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Testing...';
+            btn.className = 'btn btn-warning';
+
+            try {
+                // Test claim status update with a real claim ID from your data
+                const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=updateClaimStatus', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        claim_id: 'claim_68f8b57fada84',  // Real approved claim from your API
+                        status: 'Paid'  // This should work if HR3 allows the status
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    window.showAlert('✅ HR3 Connection SUCCESSFUL! 2-way sync is working.\nHR3 response: ' + JSON.stringify(result), 'success');
+                } else {
+                    // Detailed error information
+                    let errorMessage = '❌ HR3 Connection FAILED:\n';
+                    errorMessage += result.error + '\n\n';
+                    errorMessage += '🔍 DIAGNOSTICS:\n';
+
+                    if (result.debug_info) {
+                        errorMessage += 'Response starts with: ' + (result.debug_info.response_starts_with || 'Unknown') + '\n';
+                        errorMessage += 'Is JSON array: ' + (result.debug_info.is_json_array ? 'Yes (claims list)' : 'No') + '\n';
+                        errorMessage += 'Likely claims list: ' + (result.debug_info.likely_claims_list ? 'Yes' : 'No') + '\n';
+                    }
+
+                    errorMessage += '\n💡 SOLUTION NEEDED:\n';
+                    errorMessage += 'HR3 server needs configuration to properly handle PUT requests.\n';
+                    errorMessage += 'Check Apache/nginx settings and PHP PUT handling.';
+
+                    window.showAlert(errorMessage, 'warning');
+                }
+
+                console.log('HR3 Test Result:', result);
+
+            } catch (error) {
+                window.showAlert('❌ Error testing HR3 connection: ' + error.message, 'danger');
+                console.error('HR3 Test Error:', error);
+            } finally {
+                // Restore button
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                btn.className = originalClass;
+            }
         };
 
         window.showAlert = function(message, type = 'info') {
