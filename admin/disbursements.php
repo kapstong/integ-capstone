@@ -1006,21 +1006,30 @@ $db = Database::getInstance()->getConnection();
 
             try {
                 const response = await fetch('https://hr3.atierahotelandrestaurant.com/api/claimsApi.php', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
+                    method: 'GET'
                 });
 
-                const result = await response.json();
+                console.log('HR3 API Response status:', response.status);
+                console.log('HR3 API Response headers:', response.headers);
 
-                if (result.success) {
-                    window.displayHR3Claims(result.result);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('HR3 API Error response:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const result = await response.json();
+                console.log('HR3 API Parsed result:', result);
+
+                if (result.success || result.result) {
+                    window.displayHR3Claims(result.result || result);
+                    window.showAlert('Successfully loaded claims from HR3 API!', 'success');
                 } else {
-                    window.showAlert('Error loading claims: ' + (result.error || 'Unknown error'), 'danger');
+                    window.showAlert('Error loading claims: ' + (result.error || 'Invalid response format'), 'danger');
                 }
             } catch (error) {
-                window.showAlert('Error: ' + error.message, 'danger');
+                console.error('HR3 Claims loading error:', error);
+                window.showAlert('Error loading claims: ' + error.message, 'danger');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalText;
