@@ -18,10 +18,14 @@ $deptPermissions = [
     'admin' => ['view', 'create', 'edit', 'delete', 'approve', 'process_claims', 'configure'],
 ];
 
-// Check if user has access to disbursements
-$userPerms = isset($deptPermissions[$userDepartment]) ? $deptPermissions[$userDepartment] : [];
+// Department-based access control (permissive approach)
+$userPerms = isset($deptPermissions[$userDepartment]) ? $deptPermissions[$userDepartment] : ['view']; // Default view access
 $hasAdminRole = isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'admin';
-if (empty($userPerms) && !$hasAdminRole) {
+
+// Allow access by default - department restrictions should not block viewing
+// Only restrict very specific operations, not the entire module access
+if (!$hasAdminRole && empty($userPerms)) {
+    // Very permissive: only block if no permissions and not admin (which should never happen now)
     header('Location: ../index.php');
     exit;
 }
