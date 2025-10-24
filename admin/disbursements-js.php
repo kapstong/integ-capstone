@@ -532,11 +532,7 @@ header('Content-Type: application/javascript');
             }
 
             // OCP queue event handlers (must be here to not interfere with other DOMContentLoaded listeners)
-            gtag('event', 'ois_tab_show', {
-                'event_category': 'disbursements',
-                'event_label': 'tab_change',
-                'custom_parameter_1': 'setup_complete'
-            });
+            // Google Analytics tracking removed - gtag not available
 
         // Department-based access control setup
         function setupDepartmentAccess() {
