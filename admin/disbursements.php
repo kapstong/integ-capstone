@@ -928,8 +928,8 @@ body {
             const arrow = document.getElementById('sidebarArrow');
             const toggle = document.querySelector('.sidebar-toggle');
             const logoImg = document.querySelector('.navbar-brand img');
-            // Default state is expanded (not collapsed)
-            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            // Default state is collapsed (consistent with other admin pages)
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') !== 'false';
             if (isCollapsed) {
                 sidebar.classList.add('sidebar-collapsed');
                 logoImg.src = 'atieralogo2.png';
