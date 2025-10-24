@@ -1009,20 +1009,37 @@ $db = Database::getInstance()->getConnection();
                 if (result.success) {
                     window.showAlert('✅ HR3 Connection SUCCESSFUL! 2-way sync is working.\nHR3 response: ' + JSON.stringify(result), 'success');
                 } else {
-                    // Detailed error information
-                    let errorMessage = '❌ HR3 Connection FAILED:\n';
-                    errorMessage += result.error + '\n\n';
-                    errorMessage += '🔍 DIAGNOSTICS:\n';
+                    // Build comprehensive error message with solutions
+                    let errorMessage = '❌ HR3 Connection FAILED: ' + result.error + '\n\n';
 
-                    if (result.debug_info) {
-                        errorMessage += 'Response starts with: ' + (result.debug_info.response_starts_with || 'Unknown') + '\n';
-                        errorMessage += 'Is JSON array: ' + (result.debug_info.is_json_array ? 'Yes (claims list)' : 'No') + '\n';
-                        errorMessage += 'Likely claims list: ' + (result.debug_info.likely_claims_list ? 'Yes' : 'No') + '\n';
+                    // HTTP 405 specific solution
+                    if (result.http_code === 405 && result.detailed_solution) {
+                        errorMessage += '🔧 EXACT FIX REQUIRED (HTTP 405):\n';
+                        errorMessage += 'Choose your HR3 web server and apply the configuration:\n\n';
+
+                        if (result.detailed_solution.apache_htaccess) {
+                            errorMessage += '📄 APACHE (.htaccess):\n';
+                            errorMessage += result.detailed_solution.apache_htaccess + '\n\n';
+                        }
+
+                        if (result.detailed_solution.nginx_location) {
+                            errorMessage += '🌐 NGINX:\n';
+                            errorMessage += result.detailed_solution.nginx_location + '\n\n';
+                        }
+
+                        if (result.detailed_solution.apache_vhost) {
+                            errorMessage += '🖥️ APACHE VHOST:\n';
+                            errorMessage += result.detailed_solution.apache_vhost + '\n';
+                        }
+
+                        errorMessage += '\n✨ After applying, click "Test HR3 Connection" again.';
                     }
 
-                    errorMessage += '\n💡 SOLUTION NEEDED:\n';
-                    errorMessage += 'HR3 server needs configuration to properly handle PUT requests.\n';
-                    errorMessage += 'Check Apache/nginx settings and PHP PUT handling.';
+                    // Generic solution
+                    errorMessage += '\n💡 If above doesn\'t work, also check:\n';
+                    errorMessage += '• Enable PUT support in web server configuration\n';
+                    errorMessage += '• Check PHP always_populate_raw_post_data setting\n';
+                    errorMessage += '• Verify file permissions on HR3 server\n';
 
                     window.showAlert(errorMessage, 'warning');
                 }
