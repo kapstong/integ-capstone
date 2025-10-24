@@ -190,7 +190,7 @@ header('Content-Type: text/html; charset=utf-8');
             $stmt = $db->query("
                 SELECT * FROM imported_transactions
                 WHERE source_system = 'HR_SYSTEM'
-                ORDER BY created_at DESC
+                ORDER BY imported_at DESC
                 LIMIT 10
             ");
             $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);

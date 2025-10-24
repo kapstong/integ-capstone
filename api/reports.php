@@ -76,15 +76,15 @@ try {
             FROM chart_of_accounts coa
             LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
             LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+                AND je.status = 'posted'
+                AND (? IS NULL OR je.entry_date >= ?)
+                AND (? IS NULL OR je.entry_date <= ?)
             WHERE coa.account_type = 'revenue'
                 AND coa.is_active = 1
-                AND je.status = 'posted'
-                AND (:date_from IS NULL OR je.entry_date >= :date_from)
-                AND (:date_to IS NULL OR je.entry_date <= :date_to)
             GROUP BY coa.id, coa.account_name
             HAVING amount > 0
         ");
-        $revenueQuery->execute(['date_from' => $dateFrom, 'date_to' => $dateTo]);
+        $revenueQuery->execute([$dateFrom, $dateFrom, $dateTo, $dateTo]);
         $revenueData = $revenueQuery->fetchAll(PDO::FETCH_ASSOC);
 
         // Calculate total revenue
@@ -113,16 +113,16 @@ try {
             FROM chart_of_accounts coa
             LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
             LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+                AND je.status = 'posted'
+                AND (? IS NULL OR je.entry_date >= ?)
+                AND (? IS NULL OR je.entry_date <= ?)
             WHERE coa.account_type = 'expense'
                 AND coa.is_active = 1
-                AND je.status = 'posted'
-                AND coa.category NOT IN ('Payroll', 'Salary')  -- Exclude payroll since it's in daily_expense_summary
-                AND (:date_from IS NULL OR je.entry_date >= :date_from)
-                AND (:date_to IS NULL OR je.entry_date <= :date_to)
+                AND coa.category NOT IN ('Payroll', 'Salary')
             GROUP BY coa.id, coa.account_name
             HAVING amount > 0
         ");
-        $journalExpenseQuery->execute(['date_from' => $dateFrom, 'date_to' => $dateTo]);
+        $journalExpenseQuery->execute([$dateFrom, $dateFrom, $dateTo, $dateTo]);
         $journalExpenseData = $journalExpenseQuery->fetchAll(PDO::FETCH_ASSOC);
 
         // Consolidate expense data
@@ -189,14 +189,14 @@ try {
             LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
             LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
                 AND je.status = 'posted'
-                AND (:date_from IS NULL OR je.entry_date <= :as_of_date)
+                AND je.entry_date <= ?
             WHERE coa.account_type IN ('asset')
                 AND coa.is_active = 1
             GROUP BY coa.id, coa.account_name, coa.account_type, coa.category
             HAVING account_balance > 0
             ORDER BY coa.account_type, coa.category, coa.account_name
         ");
-        $assetsQuery->execute(['date_from' => $dateFrom, 'as_of_date' => $asOfDate]);
+        $assetsQuery->execute([$asOfDate]);
         $assetsData = $assetsQuery->fetchAll(PDO::FETCH_ASSOC);
 
         // Get liabilities data
@@ -215,14 +215,14 @@ try {
             LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
             LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
                 AND je.status = 'posted'
-                AND (:date_from IS NULL OR je.entry_date <= :as_of_date)
+                AND je.entry_date <= ?
             WHERE coa.account_type IN ('liability')
                 AND coa.is_active = 1
             GROUP BY coa.id, coa.account_name, coa.account_type, coa.category
             HAVING account_balance > 0
             ORDER BY coa.account_type, coa.category, coa.account_name
         ");
-        $liabilitiesQuery->execute(['date_from' => $dateFrom, 'as_of_date' => $asOfDate]);
+        $liabilitiesQuery->execute([$asOfDate]);
         $liabilitiesData = $liabilitiesQuery->fetchAll(PDO::FETCH_ASSOC);
 
         // Get equity data
@@ -241,14 +241,14 @@ try {
             LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
             LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
                 AND je.status = 'posted'
-                AND (:date_from IS NULL OR je.entry_date <= :as_of_date)
+                AND je.entry_date <= ?
             WHERE coa.account_type IN ('equity')
                 AND coa.is_active = 1
             GROUP BY coa.id, coa.account_name, coa.account_type, coa.category
             HAVING account_balance > 0
             ORDER BY coa.account_type, coa.category, coa.account_name
         ");
-        $equityQuery->execute(['date_from' => $dateFrom, 'as_of_date' => $asOfDate]);
+        $equityQuery->execute([$asOfDate]);
         $equityData = $equityQuery->fetchAll(PDO::FETCH_ASSOC);
 
         // Calculate retained earnings (net profit minus distributions, etc.)
