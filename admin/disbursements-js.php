@@ -619,3 +619,132 @@ header('Content-Type: application/javascript');
                 }
             }, 5000);
         }
+
+        // Global variables for bulk delete
+        let selectedDisbursements = new Set();
+
+        // Update table row rendering to include checkboxes
+        function renderDisbursementsTable(disbursements) {
+            const tbody = document.getElementById('disbursementsTableBody');
+
+            if (disbursements.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No disbursements found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = disbursements.map(d =>
+                '<tr><td><input type="checkbox" class="disbursement-checkbox" value="' + d.id + '" onchange="toggleSelection(this)"></td><td>' + (d.disbursement_number || d.id) + '</td><td>' + (d.payee || 'N/A') + '</td><td><span class="badge bg-secondary">' + (d.payment_method || 'N/A') + '</span></td><td>' + formatDate(d.disbursement_date) + '</td><td>₱' + parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td><td>' + getStatusBadge(d.status || 'pending') + '</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="viewDisbursement(' + d.id + ')"><i class="fas fa-eye"></i></button><button class="btn btn-sm btn-outline-secondary me-1" onclick="editDisbursement(' + d.id + ')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteDisbursement(' + d.id + ')"><i class="fas fa-trash"></i></button></td></tr>'
+            ).join('');
+
+            // Update header checkbox
+            const headerCheckbox = document.getElementById('selectAllCheckbox');
+            if (headerCheckbox) {
+                headerCheckbox.checked = false; // Reset select all when data changes
+            }
+        }
+
+        // Toggle individual selection
+        function toggleSelection(checkbox) {
+            const id = checkbox.value;
+            if (checkbox.checked) {
+                selectedDisbursements.add(id);
+            } else {
+                selectedDisbursements.delete(id);
+            }
+            updateBulkDeleteButton();
+        }
+
+        // Select/deselect all
+        function toggleSelectAll(checkbox) {
+            const checkboxes = document.querySelectorAll('.disbursement-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+                toggleSelection(cb);
+            });
+        }
+
+        // Update bulk delete button visibility and count
+        function updateBulkDeleteButton() {
+            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+            const selectedCountSpan = document.getElementById('selectedCount');
+
+            if (selectedDisbursements.size > 0) {
+                bulkDeleteBtn.style.display = 'inline-block';
+                selectedCountSpan.textContent = selectedDisbursements.size;
+            } else {
+                bulkDeleteBtn.style.display = 'none';
+                selectedCountSpan.textContent = '0';
+            }
+        }
+
+        // Bulk delete function
+        async function bulkDeleteDisbursements() {
+            if (selectedDisbursements.size === 0) {
+                showAlert('No disbursements selected', 'warning');
+                return;
+            }
+
+            const count = selectedDisbursements.size;
+            const confirmMessage = `Are you sure you want to delete ${count} disbursement${count === 1 ? '' : 's'}? This action cannot be undone.`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+            const originalText = bulkDeleteBtn.innerHTML;
+            bulkDeleteBtn.disabled = true;
+            bulkDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Deleting...';
+
+            try {
+                let successCount = 0;
+                let failCount = 0;
+
+                // Delete each selected disbursement
+                for (const id of selectedDisbursements) {
+                    try {
+                        const response = await fetch(`api/disbursements.php?id=${id}`, {
+                            method: 'DELETE',
+                            credentials: 'include'
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            if (result.success) {
+                                successCount++;
+                            } else {
+                                failCount++;
+                                console.error('Failed to delete disbursement', id, result.error);
+                            }
+                        } else {
+                            failCount++;
+                            console.error('HTTP error deleting disbursement', id, response.status);
+                        }
+                    } catch (error) {
+                        failCount++;
+                        console.error('Error deleting disbursement', id, error);
+                    }
+                }
+
+                // Clear selections
+                selectedDisbursements.clear();
+                updateBulkDeleteButton();
+
+                // Show results
+                if (failCount === 0) {
+                    showAlert(`Successfully deleted ${successCount} disbursement(s)`, 'success');
+                } else {
+                    showAlert(`Deleted ${successCount} disbursement(s), ${failCount} failed`, 'warning');
+                }
+
+                // Reload table
+                loadDisbursements();
+
+            } catch (error) {
+                console.error('Bulk delete error:', error);
+                showAlert('An error occurred during bulk deletion', 'danger');
+            } finally {
+                bulkDeleteBtn.disabled = false;
+                bulkDeleteBtn.innerHTML = originalText;
+            }
+        }

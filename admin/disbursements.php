@@ -388,6 +388,9 @@ $db = Database::getInstance()->getConnection();
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">Master List of All Disbursements</h6>
                     <div>
+                        <button class="btn btn-outline-danger me-2" id="bulkDeleteBtn" onclick="bulkDeleteDisbursements()" style="display: none;">
+                            <i class="fas fa-trash me-1"></i>Bulk Delete (<span id="selectedCount">0</span>)
+                        </button>
                         <button class="btn btn-outline-secondary me-2" onclick="showFilters()"><i class="fas fa-filter me-2"></i>Filter</button>
                         <button class="btn btn-primary" onclick="showAddDisbursementModal()"><i class="fas fa-plus me-2"></i>Add Disbursement</button>
                     </div>
@@ -429,6 +432,7 @@ $db = Database::getInstance()->getConnection();
                     <table class="table table-striped" id="disbursementsTable">
                         <thead>
                             <tr>
+                                <th width="30"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)"></th>
                                 <th>Reference #</th>
                                 <th>Payee</th>
                                 <th>Payment Method</th>
@@ -440,7 +444,7 @@ $db = Database::getInstance()->getConnection();
                         </thead>
                         <tbody id="disbursementsTableBody">
                             <tr>
-                                <td colspan="7" class="text-center">
+                                <td colspan="8" class="text-center">
                                     <div class="loading">Loading disbursements...</div>
                                 </td>
                             </tr>
