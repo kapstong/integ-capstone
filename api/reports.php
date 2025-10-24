@@ -136,6 +136,251 @@ try {
         exit;
     }
 
+    // Handle balance sheet generation
+    if ($reportType === 'balance_sheet') {
+        $asOfDate = $_GET['as_of'] ?? $dateTo ?? date('Y-m-d');
+
+        // Get assets data from chart of accounts
+        $assetsQuery = $db->prepare("
+            SELECT
+                coa.account_name,
+                coa.account_type,
+                coa.category,
+                COALESCE(SUM(
+                    CASE
+                        WHEN jel.account_id IS NOT NULL THEN COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)
+                        ELSE 0
+                    END
+                ), 0) as account_balance
+            FROM chart_of_accounts coa
+            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+                AND je.status = 'posted'
+                AND (:date_from IS NULL OR je.entry_date <= :as_of_date)
+            WHERE coa.account_type IN ('asset')
+                AND coa.is_active = 1
+            GROUP BY coa.id, coa.account_name, coa.account_type, coa.category
+            HAVING account_balance > 0
+            ORDER BY coa.account_type, coa.category, coa.account_name
+        ");
+        $assetsQuery->execute(['date_from' => $dateFrom, 'as_of_date' => $asOfDate]);
+        $assetsData = $assetsQuery->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get liabilities data
+        $liabilitiesQuery = $db->prepare("
+            SELECT
+                coa.account_name,
+                coa.account_type,
+                coa.category,
+                COALESCE(SUM(
+                    CASE
+                        WHEN jel.account_id IS NOT NULL THEN COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)
+                        ELSE 0
+                    END
+                ), 0) as account_balance
+            FROM chart_of_accounts coa
+            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+                AND je.status = 'posted'
+                AND (:date_from IS NULL OR je.entry_date <= :as_of_date)
+            WHERE coa.account_type IN ('liability')
+                AND coa.is_active = 1
+            GROUP BY coa.id, coa.account_name, coa.account_type, coa.category
+            HAVING account_balance > 0
+            ORDER BY coa.account_type, coa.category, coa.account_name
+        ");
+        $liabilitiesQuery->execute(['date_from' => $dateFrom, 'as_of_date' => $asOfDate]);
+        $liabilitiesData = $liabilitiesQuery->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get equity data
+        $equityQuery = $db->prepare("
+            SELECT
+                coa.account_name,
+                coa.account_type,
+                coa.category,
+                COALESCE(SUM(
+                    CASE
+                        WHEN jel.account_id IS NOT NULL THEN COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)
+                        ELSE 0
+                    END
+                ), 0) as account_balance
+            FROM chart_of_accounts coa
+            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+                AND je.status = 'posted'
+                AND (:date_from IS NULL OR je.entry_date <= :as_of_date)
+            WHERE coa.account_type IN ('equity')
+                AND coa.is_active = 1
+            GROUP BY coa.id, coa.account_name, coa.account_type, coa.category
+            HAVING account_balance > 0
+            ORDER BY coa.account_type, coa.category, coa.account_name
+        ");
+        $equityQuery->execute(['date_from' => $dateFrom, 'as_of_date' => $asOfDate]);
+        $equityData = $equityQuery->fetchAll(PDO::FETCH_ASSOC);
+
+        // Calculate retained earnings (net profit minus distributions, etc.)
+        $retainedEarnings = intval($totalRevenue ?? 0) - intval($totalExpenses ?? 0);
+
+        if ($retainedEarnings > 0) {
+            $equityData[] = [
+                'account_name' => 'Retained Earnings',
+                'account_type' => 'equity',
+                'category' => 'retained_earnings',
+                'account_balance' => $retainedEarnings
+            ];
+        }
+
+        echo json_encode([
+            'success' => true,
+            'as_of_date' => $asOfDate,
+            'assets' => [
+                'accounts' => $assetsData,
+                'total' => array_sum(array_column($assetsData, 'account_balance'))
+            ],
+            'liabilities' => [
+                'accounts' => $liabilitiesData,
+                'total' => array_sum(array_column($liabilitiesData, 'account_balance'))
+            ],
+            'equity' => [
+                'accounts' => $equityData,
+                'total' => array_sum(array_column($equityData, 'account_balance'))
+            ]
+        ]);
+        exit;
+    }
+
+    // Handle cash flow statement generation
+    if ($reportType === 'cash_flow') {
+        $period = $_GET['period'] ?? 'last_quarter';
+
+        // Calculate date range based on period
+        switch ($period) {
+            case 'last_quarter':
+                $endDate = date('Y-m-d');
+                $startDate = date('Y-m-d', strtotime('-3 months'));
+                break;
+            case 'last_6_months':
+                $endDate = date('Y-m-d');
+                $startDate = date('Y-m-d', strtotime('-6 months'));
+                break;
+            case 'year_to_date':
+                $endDate = date('Y-m-d');
+                $startDate = date('Y-m-01', strtotime('this year'));
+                break;
+            default:
+                $endDate = $dateTo ?: date('Y-m-d');
+                $startDate = $dateFrom ?: date('Y-m-d', strtotime('-3 months'));
+        }
+
+        // Operating activities - from daily expenses mostly (cash basis approximation)
+        $operatingQuery = $db->prepare("
+            SELECT
+                department,
+                SUM(daily_expenses) as amount
+            FROM daily_expense_summary
+            WHERE expense_date BETWEEN :start_date AND :end_date
+            GROUP BY department
+        ");
+        $operatingQuery->execute(['start_date' => $startDate, 'end_date' => $endDate]);
+        $operatingData = $operatingQuery->fetchAll(PDO::FETCH_ASSOC);
+
+        // Investing activities (simplified - from journal entries)
+        $investingQuery = $db->prepare("
+            SELECT
+                coa.account_name,
+                SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as amount
+            FROM chart_of_accounts coa
+            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+            WHERE coa.category IN ('fixed_assets', 'investments')
+                AND coa.is_active = 1
+                AND je.status = 'posted'
+                AND je.entry_date BETWEEN :start_date AND :end_date
+            GROUP BY coa.id, coa.account_name
+        ");
+        $investingQuery->execute(['start_date' => $startDate, 'end_date' => $endDate]);
+        $investingData = $investingQuery->fetchAll(PDO::FETCH_ASSOC);
+
+        // Financing activities (loans, equity, etc.)
+        $financingQuery = $db->prepare("
+            SELECT
+                coa.account_name,
+                SUM(COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)) as amount
+            FROM chart_of_accounts coa
+            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+            WHERE coa.account_type = 'liability'
+                AND coa.category IN ('long_term_liabilities', 'current_liabilities')
+                AND coa.is_active = 1
+                AND je.status = 'posted'
+                AND je.entry_date BETWEEN :start_date AND :end_date
+            GROUP BY coa.id, coa.account_name
+        ");
+        $financingQuery->execute(['start_date' => $startDate, 'end_date' => $endDate]);
+        $financingData = $financingQuery->fetchAll(PDO::FETCH_ASSOC);
+
+        $operatingCash = array_sum(array_column($operatingData, 'amount')) ?: 0;
+        $investingCash = -array_sum(array_column($investingData, 'amount')) ?: 0; // Usually negative for purchases
+        $financingCash = array_sum(array_column($financingData, 'amount')) ?: 0;
+
+        echo json_encode([
+            'success' => true,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'cash_flow' => [
+                'operating_activities' => [
+                    'amount' => $operatingCash,
+                    'accounts' => $operatingData
+                ],
+                'investing_activities' => [
+                    'amount' => $investingCash,
+                    'accounts' => $investingData
+                ],
+                'financing_activities' => [
+                    'amount' => $financingCash,
+                    'accounts' => $financingData
+                ]
+            ]
+        ]);
+        exit;
+    }
+
+    // Handle budget vs actual report
+    if ($reportType === 'budget_vs_actual') {
+        // This would require budget data - placeholder for now
+        echo json_encode([
+            'success' => false,
+            'error' => 'Budget vs Actual report not yet implemented'
+        ]);
+        exit;
+    }
+
+    // Handle cash flow summary report
+    if ($reportType === 'cash_flow_summary') {
+        // Similar to cash flow but simplified summary
+        $summaryQuery = $db->prepare("
+            SELECT
+                SUM(CASE WHEN expense_category = 'labor_payroll' THEN total_amount ELSE 0 END) as payroll_expenses,
+                SUM(CASE WHEN expense_category != 'labor_payroll' THEN total_amount ELSE 0 END) as operating_expenses,
+                COUNT(DISTINCT business_date) as days_counted
+            FROM daily_expense_summary
+            WHERE business_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        ");
+        $summaryQuery->execute();
+        $summaryData = $summaryQuery->fetch(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'success' => true,
+            'summary' => [
+                'payroll_expenses' => intval($summaryData['payroll_expenses'] ?? 0),
+                'operating_expenses' => intval($summaryData['operating_expenses'] ?? 0),
+                'total_expenses' => intval(($summaryData['payroll_expenses'] ?? 0) + ($summaryData['operating_expenses'] ?? 0)),
+                'days_counted' => intval($summaryData['days_counted'] ?? 0)
+            ]
+        ]);
+        exit;
+    }
+
     // Handle aging reports
     if (strpos($reportType, 'aging_') === 0) {
         $type = str_replace('aging_', '', $reportType); // 'receivable' or 'payable'

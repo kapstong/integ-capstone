@@ -1583,6 +1583,395 @@ $db = Database::getInstance()->getConnection();
             }, 5000);
         }
 
+        // Generate balance sheet
+        async function generateBalanceSheet() {
+            const container = document.getElementById('balanceSheetContainer');
+            const dateSelect = document.getElementById('balanceDateSelect');
+            const asOfDate = dateSelect ? dateSelect.value : 'current';
+
+            // Show loading state
+            container.innerHTML = `
+                <div class="statement-header">
+                    <h1 class="statement-title">Balance Sheet</h1>
+                    <p class="statement-period">Loading...</p>
+                </div>
+                <div class="text-center py-5">
+                    <div class="loading mb-3"></div>
+                    <p class="text-muted">Generating balance sheet...</p>
+                </div>
+            `;
+
+            try {
+                // Calculate as-of date
+                let apiDate;
+                const now = new Date();
+                if (asOfDate === 'current') {
+                    apiDate = now.toISOString().split('T')[0];
+                } else if (asOfDate === 'last_month') {
+                    apiDate = new Date(now.getFullYear(), now.getMonth() - 1, 0).toISOString().split('T')[0];
+                } else if (asOfDate === 'last_quarter') {
+                    const quarterEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 0);
+                    if (quarterEnd > now) {
+                        // If we're in the current quarter, use previous quarter
+                        quarterEnd.setMonth(quarterEnd.getMonth() - 3);
+                    }
+                    apiDate = quarterEnd.toISOString().split('T')[0];
+                }
+
+                // Fetch balance sheet data
+                const response = await fetch(`api/reports.php?type=balance_sheet&as_of=${apiDate}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Render the balance sheet
+                renderBalanceSheet(data);
+
+            } catch (error) {
+                console.error('Error generating balance sheet:', error);
+                container.innerHTML = `
+                    <div class="statement-header">
+                        <h1 class="statement-title">Balance Sheet</h1>
+                        <p class="statement-period">Error loading report</p>
+                    </div>
+                    <div class="text-center py-5">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error generating balance sheet: ${error.message}
+                        </div>
+                        <button class="btn btn-primary" onclick="generateBalanceSheet()">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Render balance sheet
+        function renderBalanceSheet(data) {
+            const container = document.getElementById('balanceSheetContainer');
+
+            let assetsHtml = '<div class="account-category"><h6>Assets</h6>';
+            if (data.assets.accounts && data.assets.accounts.length > 0) {
+                data.assets.accounts.forEach(account => {
+                    assetsHtml += `
+                        <div class="account-item">
+                            <span class="account-name">${account.account_name}</span>
+                            <span class="account-amount">₱${parseFloat(account.account_balance || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                    `;
+                });
+            }
+            assetsHtml += `
+                <div class="account-item total-row">
+                    <span class="account-name"><strong>Total Assets</strong></span>
+                    <span class="account-amount"><strong>₱${parseFloat(data.assets.total || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                </div>
+            </div>`;
+
+            let liabilitiesHtml = '<div class="account-category"><h6>Liabilities & Equity</h6>';
+            if (data.liabilities.accounts && data.liabilities.accounts.length > 0) {
+                data.liabilities.accounts.forEach(account => {
+                    liabilitiesHtml += `
+                        <div class="account-item">
+                            <span class="account-name">${account.account_name}</span>
+                            <span class="account-amount">₱${parseFloat(account.account_balance || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                    `;
+                });
+            }
+
+            if (data.equity.accounts && data.equity.accounts.length > 0) {
+                data.equity.accounts.forEach(account => {
+                    liabilitiesHtml += `
+                        <div class="account-item">
+                            <span class="account-name">${account.account_name}</span>
+                            <span class="account-amount">₱${parseFloat(account.account_balance || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                    `;
+                });
+            }
+
+            liabilitiesHtml += `
+                <div class="account-item total-row">
+                    <span class="account-name"><strong>Total Liabilities & Equity</strong></span>
+                    <span class="account-amount"><strong>₱${parseFloat((data.liabilities.total || 0) + (data.equity.total || 0)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                </div>
+            </div>`;
+
+            container.innerHTML = `
+                <div class="statement-header">
+                    <h1 class="statement-title">Balance Sheet</h1>
+                    <p class="statement-period">As of ${formatDate(data.as_of_date)}</p>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">${assetsHtml}</div>
+                    <div class="col-md-6">${liabilitiesHtml}</div>
+                </div>
+            `;
+        }
+
+        // Generate cash flow statement
+        async function generateCashFlow() {
+            const container = document.getElementById('cashFlowContainer');
+            const periodSelect = document.getElementById('cashFlowPeriodSelect');
+            const period = periodSelect ? periodSelect.value : 'last_quarter';
+
+            // Show loading state
+            container.innerHTML = `
+                <div class="statement-header">
+                    <h1 class="statement-title">Cash Flow Statement</h1>
+                    <p class="statement-period">Loading...</p>
+                </div>
+                <div class="text-center py-5">
+                    <div class="loading mb-3"></div>
+                    <p class="text-muted">Generating cash flow statement...</p>
+                </div>
+            `;
+
+            try {
+                // Fetch cash flow data
+                const response = await fetch(`api/reports.php?type=cash_flow&period=${period}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Render the cash flow statement
+                renderCashFlow(data);
+
+            } catch (error) {
+                console.error('Error generating cash flow:', error);
+                container.innerHTML = `
+                    <div class="statement-header">
+                        <h1 class="statement-title">Cash Flow Statement</h1>
+                        <p class="statement-period">Error loading report</p>
+                    </div>
+                    <div class="text-center py-5">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error generating cash flow statement: ${error.message}
+                        </div>
+                        <button class="btn btn-primary" onclick="generateCashFlow()">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Render cash flow statement
+        function renderCashFlow(data) {
+            const container = document.getElementById('cashFlowContainer');
+
+            const operating = data.cash_flow.operating_activities;
+            const investing = data.cash_flow.investing_activities;
+            const financing = data.cash_flow.financing_activities;
+            const netCashFlow = operating.amount + investing.amount + financing.amount;
+
+            let html = `
+                <div class="statement-header">
+                    <h1 class="statement-title">Cash Flow Statement</h1>
+                    <p class="statement-period">For the period ${formatDate(data.start_date)} to ${formatDate(data.end_date)}</p>
+                </div>
+
+                <div class="account-category">
+                    <h6>Operating Activities</h6>
+            `;
+
+            if (operating.accounts && operating.accounts.length > 0) {
+                operating.accounts.forEach(account => {
+                    html += `
+                        <div class="account-item">
+                            <span class="account-name">Cash payments: ${account.department || 'General'}</span>
+                            <span class="account-amount">₱${parseFloat(account.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                    `;
+                });
+            }
+
+            html += `
+                    <div class="account-item total-row">
+                        <span class="account-name"><strong>Cash from Operating Activities</strong></span>
+                        <span class="account-amount"><strong>₱${parseFloat(operating.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                    </div>
+                </div>
+
+                <div class="account-category">
+                    <h6>Investing Activities</h6>
+            `;
+
+            if (investing.accounts && investing.accounts.length > 0) {
+                investing.accounts.forEach(account => {
+                    html += `
+                        <div class="account-item">
+                            <span class="account-name">${account.account_name}</span>
+                            <span class="account-amount">₱${parseFloat(account.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                html += `
+                    <div class="account-item">
+                        <span class="account-name">No investing activities</span>
+                        <span class="account-amount">₱0.00</span>
+                    </div>
+                `;
+            }
+
+            html += `
+                    <div class="account-item total-row">
+                        <span class="account-name"><strong>Net Cash from Investing Activities</strong></span>
+                        <span class="account-amount ${investing.amount < 0 ? 'negative-amount' : ''}"><strong>₱${parseFloat(investing.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                    </div>
+                </div>
+
+                <div class="account-category">
+                    <h6>Financing Activities</h6>
+            `;
+
+            if (financing.accounts && financing.accounts.length > 0) {
+                financing.accounts.forEach(account => {
+                    html += `
+                        <div class="account-item">
+                            <span class="account-name">${account.account_name}</span>
+                            <span class="account-amount">₱${parseFloat(account.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                html += `
+                    <div class="account-item">
+                        <span class="account-name">No financing activities</span>
+                        <span class="account-amount">₱0.00</span>
+                    </div>
+                `;
+            }
+
+            html += `
+                    <div class="account-item total-row">
+                        <span class="account-name"><strong>Net Cash from Financing Activities</strong></span>
+                        <span class="account-amount"><strong>₱${parseFloat(financing.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                    </div>
+                </div>
+
+                <div class="account-category">
+                    <h6>Net Cash Flow & Change in Cash</h6>
+                    <div class="account-item total-row">
+                        <span class="account-name"><strong>Net Increase/(Decrease) in Cash</strong></span>
+                        <span class="account-amount ${netCashFlow >= 0 ? 'positive-amount' : 'negative-amount'}"><strong>₱${parseFloat(netCashFlow).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Generate budget report
+        async function generateBudgetReport() {
+            const container = document.getElementById('budgetVsActualContainer');
+
+            // Show loading state
+            container.innerHTML = `
+                <div class="text-center py-3">
+                    <div class="loading mb-3"></div>
+                    <p class="text-muted">Generating budget report...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('api/reports.php?type=budget_vs_actual');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // For now, just show a message that budget reporting is not implemented
+                container.innerHTML = `
+                    <div class="text-center py-3">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Budget vs Actual reporting requires budget data setup first.
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Error generating budget report:', error);
+                container.innerHTML = `
+                    <div class="text-center py-3">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error generating budget report: ${error.message}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Generate cash flow summary
+        async function generateCashFlowSummary() {
+            const container = document.getElementById('cashFlowSummaryContainer');
+
+            // Show loading state
+            container.innerHTML = `
+                <div class="text-center py-3">
+                    <div class="loading mb-3"></div>
+                    <p class="text-muted">Generating cash flow summary...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('api/reports.php?type=cash_flow_summary');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                const summary = data.summary;
+                container.innerHTML = `
+                    <div class="d-flex justify-content-between">
+                        <span>Payroll Expenses (30 days)</span>
+                        <span class="text-danger">-₱${parseFloat(summary.payroll_expenses || 0).toLocaleString()}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Operating Expenses (30 days)</span>
+                        <span class="text-danger">-₱${parseFloat(summary.operating_expenses || 0).toLocaleString()}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Days Monitored</span>
+                        <span>${summary.days_counted || 0} days</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span><strong>Total Cash Outflow</strong></span>
+                        <span class="text-danger"><strong>-₱${parseFloat(summary.total_expenses || 0).toLocaleString()}</strong></span>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Error generating cash flow summary:', error);
+                container.innerHTML = `
+                    <div class="text-center py-3">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error generating cash flow summary: ${error.message}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Export functions (placeholders)
+        function exportBalanceSheet(format) {
+            showAlert('Balance sheet export not yet implemented', 'info');
+        }
+
+        function exportCashFlow(format) {
+            showAlert('Cash flow export not yet implemented', 'info');
+        }
+
         // Add event listeners for aging report buttons
         document.addEventListener('DOMContentLoaded', function() {
             // Find and add click handlers for aging report buttons
