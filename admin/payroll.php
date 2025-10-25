@@ -1,7 +1,8 @@
 <?php
-require_once '../includes/auth.php';
-require_once '../includes/database.php';
-require_once '../includes/api_integrations.php';
+// Payroll functionality has been integrated into Disbursements module
+// Redirect to Disbursements Payroll Processing tab
+header('Location: disbursements.php#payroll');
+exit;
 
 if (!isset($_SESSION['user'])) {
     header('Location: ../index.php');

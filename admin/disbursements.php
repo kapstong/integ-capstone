@@ -401,6 +401,11 @@ body {
                 </button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="payroll-tab" data-bs-toggle="tab" data-bs-target="#payroll" type="button" role="tab">
+                    <i class="fas fa-money-check-alt me-2"></i>Payroll Processing
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="vouchers-tab" data-bs-toggle="tab" data-bs-target="#vouchers" type="button" role="tab">
                     <i class="fas fa-file-invoice me-2"></i>Vouchers & Documentation
                 </button>
@@ -560,6 +565,43 @@ body {
                             <tr>
                                 <td colspan="7" class="text-center">
                                     <div class="text-muted">Click "Load Claims" to fetch approved claims from HR3 system</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Payroll Processing Tab -->
+            <div class="tab-pane fade" id="payroll" role="tabpanel" aria-labelledby="payroll-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">HR4 Payroll Processing - From HR4 API</h6>
+                    <div>
+                        <button class="btn btn-success" onclick="loadPayroll()">
+                            <i class="fas fa-sync me-2"></i>Load Payroll
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped" id="payrollTable">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Department</th>
+                                <th>Position</th>
+                                <th>Basic Salary</th>
+                                <th>Allowances</th>
+                                <th>Deductions</th>
+                                <th>Net Pay</th>
+                                <th>Payroll Period</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payrollTableBody">
+                            <tr>
+                                <td colspan="9" class="text-center">
+                                    <div class="text-muted">Click "Load Payroll" to fetch payroll data from HR4 system</div>
                                 </td>
                             </tr>
                         </tbody>
@@ -1258,6 +1300,201 @@ body {
                 return new Date(dateString).toLocaleDateString();
             } catch (e) {
                 return dateString;
+            }
+        };
+    });
+    </script>
+
+    <!-- HR4 Payroll Processing Functions -->
+    <script>
+        // Wait for DOM to be fully loaded before defining functions
+    window.addEventListener('DOMContentLoaded', function() {
+        // Auto-load HR4 payroll when Payroll Processing tab is activated
+        const payrollTab = document.getElementById('payroll-tab');
+        if (payrollTab) {
+            payrollTab.addEventListener('shown.bs.tab', function() {
+                // Check if payroll table is empty (no payroll loaded yet)
+                const payrollTableBody = document.getElementById('payrollTableBody');
+                if (payrollTableBody && payrollTableBody.children.length === 1) {
+                    const firstChild = payrollTableBody.children[0];
+                    if (firstChild && firstChild.tagName === 'TR' && firstChild.textContent.includes('Click "Load Payroll"')) {
+                        // Auto-load payroll if not already loaded
+                        window.loadPayroll();
+                    }
+                }
+            });
+        }
+
+        window.loadPayroll = async function() {
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading Payroll...';
+
+            try {
+                // Use the integration API to fetch payroll data
+                const response = await fetch('../api/integrations.php?action=execute&integration_name=hr4&action_name=getPayrollData', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    credentials: 'include'
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    window.displayHR4Payroll(result.data);
+                    window.showAlert('Successfully loaded payroll data from HR4 system!', 'success');
+                } else {
+                    window.showAlert('Error loading payroll: ' + (result.error || 'No payroll data found'), 'danger');
+                }
+            } catch (error) {
+                console.error('HR4 Payroll loading error:', error);
+                window.showAlert('Error loading payroll: ' + error.message, 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        };
+
+        window.displayHR4Payroll = function(payrollData) {
+            const tbody = document.getElementById('payrollTableBody');
+
+            if (!payrollData || payrollData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No payroll data found in HR4 system</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+
+            payrollData.forEach(payroll => {
+                // Format amounts
+                const basicSalary = parseFloat(payroll.basic_salary || 0);
+                const allowances = parseFloat(payroll.allowances || 0);
+                const deductions = parseFloat(payroll.deductions || 0);
+                const netPay = parseFloat(payroll.net_pay || 0);
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-size: 0.8em;">
+                                ${payroll.employee_name ? payroll.employee_name.charAt(0).toUpperCase() : 'E'}
+                            </div>
+                            <div>
+                                <strong>${payroll.employee_name || 'Unknown Employee'}</strong>
+                                <br><small class="text-muted">${payroll.employee_id || ''}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${payroll.department || 'N/A'}</td>
+                    <td>${payroll.position || 'Staff'}</td>
+                    <td>₱${basicSalary.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>₱${allowances.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>₱${deductions.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td><strong class="text-success">₱${netPay.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+                    <td>${payroll.payroll_period || 'Current Month'}</td>
+                    <td>
+                        <button class="btn btn-success btn-sm" onclick="processPayrollItem('${payroll.employee_id || payroll.id}', '${payroll.employee_name || 'Unknown'}', ${netPay}, '${payroll.payroll_period || ''}')">
+                            <i class="fas fa-money-bill-wave me-1"></i>Process Payment
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        };
+
+        window.processPayrollItem = async function(employeeId, employeeName, netPay, payrollPeriod) {
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
+
+            try {
+                // Create disbursement record for payroll payment
+                const disbursementData = {
+                    disbursement_date: new Date().toISOString().split('T')[0],
+                    amount: netPay,
+                    payment_method: 'bank_transfer', // Default payment method for payroll
+                    reference_number: `HR4-PAYROLL-${employeeId}`,
+                    payee: employeeName,
+                    purpose: `Payroll Payment for ${payrollPeriod}`,
+                    notes: `Processed from HR4 payroll system - Employee ID: ${employeeId}`
+                };
+
+                // Log payroll processing to audit trail
+                try {
+                    await fetch('../api/audit.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        credentials: 'include',
+                        body: new URLSearchParams({
+                            action: 'log',
+                            table_name: 'hr4_payroll',
+                            record_id: employeeId,
+                            action_type: 'processed_payroll_payment',
+                            description: `Processed HR4 payroll payment for ${employeeName} (₱${netPay}) - Employee ID: ${employeeId}`,
+                            old_values: JSON.stringify({ status: 'Pending Payment' }),
+                            new_values: JSON.stringify({
+                                status: 'Paid',
+                                disbursement_created: true,
+                                amount: netPay,
+                                employee: employeeName
+                            })
+                        })
+                    });
+                } catch (auditError) {
+                    console.warn('HR4 payroll audit logging failed:', auditError);
+                    // Don't fail the main operation if audit logging fails
+                }
+
+                const response = await fetch('../api/disbursements.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams(disbursementData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Success message
+                    window.showAlert(`Payroll payment processed successfully! Reference: ${result.disbursement_number}`, 'success');
+
+                    // Remove the processed payroll row
+                    btn.closest('tr').remove();
+
+                    // Refresh disbursements records
+                    setTimeout(() => {
+                        loadDisbursements();
+
+                        // Show additional notification on Disbursements Records tab
+                        const recordsTabLink = document.getElementById('records-tab');
+                        if (recordsTabLink) {
+                            // Add visual indicator that records were updated
+                            recordsTabLink.innerHTML += ' <span class="badge bg-success">🔄 Updated</span>';
+                            setTimeout(() => {
+                                recordsTabLink.innerHTML = recordsTabLink.innerHTML.replace(' <span class="badge bg-success">🔄 Updated</span>', '');
+                            }, 3000);
+                        }
+
+                        // If user is on records tab, also update the tab badge
+                        if (document.getElementById('records-tab').classList.contains('active')) {
+                            showAlert('💡 Disbursement records have been updated with the processed payroll!', 'info');
+                        }
+                    }, 500); // Small delay to ensure database commit
+                } else {
+                    window.showAlert('Error processing payroll payment: ' + (result.error || 'Unknown error'), 'danger');
+                }
+            } catch (error) {
+                window.showAlert('Error: ' + error.message, 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
         };
     });
