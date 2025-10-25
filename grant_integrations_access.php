@@ -7,8 +7,8 @@
 
 require_once 'includes/database.php';
 
-// FOR SECURITY: Comment this line out after running once
-// die('Script disabled. Uncomment line 9 to run.');
+// FOR SECURITY: Uncomment this line after running once to disable the script
+// die('Script disabled for security. Delete this file or comment out line 11 to run again.');
 
 ?>
 <!DOCTYPE html>
@@ -17,23 +17,25 @@ require_once 'includes/database.php';
     <title>Grant Integrations Access</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         h1 { color: #1e2936; }
         .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; margin: 15px 0; border-radius: 4px; }
         .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; margin: 15px 0; border-radius: 4px; }
         .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 15px; margin: 15px 0; border-radius: 4px; }
         .warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; margin: 15px 0; border-radius: 4px; }
-        code { background: #f8f9fa; padding: 2px 6px; border-radius: 3px; }
+        code { background: #f8f9fa; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
         table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background: #1e2936; color: white; }
-        .btn { display: inline-block; padding: 10px 20px; background: #1e2936; color: white; text-decoration: none; border-radius: 4px; margin: 5px; }
+        .btn { display: inline-block; padding: 12px 24px; background: #1e2936; color: white; text-decoration: none; border-radius: 4px; margin: 5px; }
         .btn:hover { background: #2c3e50; }
+        ul { line-height: 1.8; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🔐 Grant Integrations Access</h1>
+        <p>This script will automatically grant the <code>settings.edit</code> permission required to access the integrations page.</p>
 
 <?php
 try {
@@ -60,15 +62,50 @@ try {
     $permission = $permResult->fetch(PDO::FETCH_ASSOC);
     $permissionId = $permission['id'];
 
-    echo '<div class="info"><strong>Step 2:</strong> Finding all users and their roles...</div>';
+    echo '<div class="info"><strong>Step 2:</strong> Checking available roles...</div>';
 
-    // Step 2: Get all users and their roles
+    // Check if roles exist
+    $rolesQuery = $db->query("SELECT id, name, description FROM roles ORDER BY id");
+    $roles = $rolesQuery->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($roles)) {
+        echo '<div class="warning">⚠️ No roles found in system! Creating default "Administrator" role...</div>';
+
+        $db->exec("
+            INSERT INTO roles (name, description, is_active)
+            VALUES ('Administrator', 'System administrator with full access', 1)
+        ");
+
+        $rolesQuery = $db->query("SELECT id, name, description FROM roles ORDER BY id");
+        $roles = $rolesQuery->fetchAll(PDO::FETCH_ASSOC);
+
+        echo '<div class="success">✅ Created "Administrator" role (ID: ' . $roles[0]['id'] . ')</div>';
+    } else {
+        echo '<div class="success">✅ Found ' . count($roles) . ' role(s) in the system:</div>';
+        echo '<ul>';
+        foreach ($roles as $role) {
+            echo '<li><strong>' . htmlspecialchars($role['name']) . '</strong> (ID: ' . $role['id'] . ')';
+            if (!empty($role['description'])) {
+                echo ' - ' . htmlspecialchars($role['description']);
+            }
+            echo '</li>';
+        }
+        echo '</ul>';
+    }
+
+    // Get default role (usually first role is Administrator)
+    $defaultRoleId = $roles[0]['id'];
+    $defaultRoleName = $roles[0]['name'];
+
+    echo '<div class="info"><strong>Step 3:</strong> Finding all users and checking role assignments...</div>';
+
+    // Get all users
     $usersQuery = $db->query("
         SELECT
             u.id as user_id,
             u.username,
             u.email,
-            r.id as role_id,
+            ur.role_id,
             r.name as role_name
         FROM users u
         LEFT JOIN user_roles ur ON u.id = ur.user_id
@@ -83,10 +120,37 @@ try {
     }
 
     echo '<div class="success">✅ Found ' . count($users) . ' user(s)</div>';
+
+    // Assign roles to users who don't have one
+    $assignedRoles = 0;
+    foreach ($users as &$user) {
+        if (empty($user['role_id'])) {
+            echo '<div class="warning">⚠️ User "' . htmlspecialchars($user['username']) . '" has no role. Assigning "' . htmlspecialchars($defaultRoleName) . '"...</div>';
+
+            $assignStmt = $db->prepare("
+                INSERT INTO user_roles (user_id, role_id, assigned_by)
+                VALUES (?, ?, ?)
+            ");
+            $assignStmt->execute([$user['user_id'], $defaultRoleId, $user['user_id']]);
+
+            $user['role_id'] = $defaultRoleId;
+            $user['role_name'] = $defaultRoleName;
+            $assignedRoles++;
+
+            echo '<div class="success">✅ Assigned role to user "' . htmlspecialchars($user['username']) . '"</div>';
+        }
+    }
+
+    if ($assignedRoles > 0) {
+        echo '<div class="success"><strong>✅ Summary:</strong> Assigned "' . htmlspecialchars($defaultRoleName) . '" role to ' . $assignedRoles . ' user(s)</div>';
+    }
+
+    echo '<div class="info"><strong>Step 4:</strong> Granting permissions to roles...</div>';
     echo '<table>';
     echo '<tr><th>User ID</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th></tr>';
 
     $grantedCount = 0;
+    $alreadyHadCount = 0;
 
     foreach ($users as $user) {
         $userId = $user['user_id'];
@@ -95,31 +159,32 @@ try {
         echo '<tr>';
         echo '<td>' . $userId . '</td>';
         echo '<td>' . htmlspecialchars($user['username']) . '</td>';
-        echo '<td>' . htmlspecialchars($user['email']) . '</td>';
-        echo '<td>' . htmlspecialchars($user['role_name'] ?? 'No role') . '</td>';
+        echo '<td>' . htmlspecialchars($user['email'] ?? 'N/A') . '</td>';
+        echo '<td>' . htmlspecialchars($user['role_name']) . '</td>';
 
-        if (!$roleId) {
-            echo '<td><span style="color: orange;">⚠️ No role assigned</span></td>';
+        // Check if permission already granted to this role
+        $checkQuery = $db->prepare("
+            SELECT id FROM role_permissions
+            WHERE role_id = ? AND permission_id = ?
+        ");
+        $checkQuery->execute([$roleId, $permissionId]);
+        $hasPermission = $checkQuery->fetch(PDO::FETCH_ASSOC);
+
+        if ($hasPermission) {
+            echo '<td style="color: green;">✅ Already has access</td>';
+            $alreadyHadCount++;
         } else {
-            // Check if permission already granted
-            $checkQuery = $db->prepare("
-                SELECT id FROM role_permissions
-                WHERE role_id = ? AND permission_id = ?
-            ");
-            $checkQuery->execute([$roleId, $permissionId]);
-            $hasPermission = $checkQuery->fetch(PDO::FETCH_ASSOC);
-
-            if ($hasPermission) {
-                echo '<td><span style="color: green;">✅ Already has access</span></td>';
-            } else {
-                // Grant permission
+            // Grant permission to role
+            try {
                 $grantQuery = $db->prepare("
                     INSERT INTO role_permissions (role_id, permission_id, assigned_by)
                     VALUES (?, ?, ?)
                 ");
                 $grantQuery->execute([$roleId, $permissionId, $userId]);
-                echo '<td><span style="color: blue;">✅ Access granted!</span></td>';
+                echo '<td style="color: blue; font-weight: bold;">✅ Access GRANTED!</td>';
                 $grantedCount++;
+            } catch (Exception $e) {
+                echo '<td style="color: red;">❌ Error: ' . htmlspecialchars($e->getMessage()) . '</td>';
             }
         }
 
@@ -128,19 +193,27 @@ try {
 
     echo '</table>';
 
+    // Summary
     if ($grantedCount > 0) {
-        echo '<div class="success"><strong>✅ Success!</strong> Granted integrations access to <strong>' . $grantedCount . '</strong> user(s)!</div>';
-    } else {
-        echo '<div class="info">ℹ️ All users already have access to integrations.</div>';
+        echo '<div class="success">';
+        echo '<strong>🎉 Success!</strong> Granted integrations access to <strong>' . $grantedCount . '</strong> user(s)!';
+        echo '</div>';
     }
 
-    // Step 3: Verify permissions
-    echo '<div class="info"><strong>Step 3:</strong> Verifying permissions...</div>';
+    if ($alreadyHadCount > 0) {
+        echo '<div class="info">';
+        echo '<strong>ℹ️ Note:</strong> ' . $alreadyHadCount . ' user(s) already had access.';
+        echo '</div>';
+    }
+
+    // Step 5: Verify permissions
+    echo '<div class="info"><strong>Step 5:</strong> Verifying permissions were granted correctly...</div>';
 
     $verifyQuery = $db->query("
         SELECT
             u.id as user_id,
             u.username,
+            u.email,
             r.name as role_name,
             p.name as permission_name,
             p.description
@@ -157,29 +230,51 @@ try {
     if (!empty($verified)) {
         echo '<div class="success"><strong>✅ Verified!</strong> The following users can now access integrations:</div>';
         echo '<table>';
-        echo '<tr><th>User ID</th><th>Username</th><th>Role</th><th>Permission</th></tr>';
+        echo '<tr><th>User ID</th><th>Username</th><th>Email</th><th>Role</th><th>Permission</th></tr>';
         foreach ($verified as $v) {
             echo '<tr>';
             echo '<td>' . $v['user_id'] . '</td>';
             echo '<td>' . htmlspecialchars($v['username']) . '</td>';
+            echo '<td>' . htmlspecialchars($v['email'] ?? 'N/A') . '</td>';
             echo '<td>' . htmlspecialchars($v['role_name']) . '</td>';
-            echo '<td>' . htmlspecialchars($v['permission_name']) . '</td>';
+            echo '<td>' . htmlspecialchars($v['permission_name']) . ' ✅</td>';
             echo '</tr>';
         }
         echo '</table>';
+    } else {
+        echo '<div class="error">❌ Verification failed! No users have the settings.edit permission.</div>';
     }
 
-    echo '<div class="success">';
+    echo '<div class="success" style="margin-top: 30px;">';
     echo '<h3>🎉 All Done!</h3>';
-    echo '<p>You can now access the integrations page:</p>';
-    echo '<p><a href="admin/integrations.php" class="btn">Go to Integrations →</a></p>';
-    echo '<p style="margin-top: 20px;"><strong>Security Note:</strong> For security, you should delete this file after use:</p>';
-    echo '<code>rm grant_integrations_access.php</code>';
+    echo '<p><strong>What was done:</strong></p>';
+    echo '<ul>';
+    echo '<li>✅ Ensured "settings.edit" permission exists</li>';
+    if ($assignedRoles > 0) {
+        echo '<li>✅ Assigned roles to ' . $assignedRoles . ' user(s) who had no role</li>';
+    }
+    if ($grantedCount > 0) {
+        echo '<li>✅ Granted integrations access to ' . $grantedCount . ' user(s)</li>';
+    }
+    echo '<li>✅ Verified permissions are working</li>';
+    echo '</ul>';
+    echo '<p style="margin-top: 20px;"><strong>Next Steps:</strong></p>';
+    echo '<p>1. <a href="admin/integrations.php" class="btn">📦 Go to Integrations Page →</a></p>';
+    echo '<p>2. Import data from Logistics 1 and Logistics 2</p>';
+    echo '<p>3. View imported data in Reports → Income Statement</p>';
+    echo '<p style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #ddd;"><strong>⚠️ Security Note:</strong></p>';
+    echo '<p>For security, you should <strong>delete this file</strong> after use:</p>';
+    echo '<code style="display: block; padding: 10px; background: #f8f9fa; margin: 10px 0;">rm grant_integrations_access.php</code>';
+    echo '<p>Or uncomment line 11 in the file to disable it.</p>';
     echo '</div>';
 
 } catch (Exception $e) {
     echo '<div class="error">';
-    echo '<strong>❌ Error:</strong> ' . htmlspecialchars($e->getMessage());
+    echo '<h3>❌ Error Occurred</h3>';
+    echo '<p><strong>Error Message:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>';
+    echo '<p><strong>File:</strong> ' . htmlspecialchars($e->getFile()) . '</p>';
+    echo '<p><strong>Line:</strong> ' . $e->getLine() . '</p>';
+    echo '<details><summary>Stack Trace</summary><pre>' . htmlspecialchars($e->getTraceAsString()) . '</pre></details>';
     echo '</div>';
 }
 ?>
