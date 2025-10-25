@@ -1,0 +1,397 @@
+{
+  "info": {
+    "name": "ATIERA - Journal Entries API",
+    "description": "API collection for Journal Entries endpoint - Administrative Module Integration",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost/integ-capstone/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "YOUR_API_KEY_HERE",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Get All Journal Entries",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/journal_entries.php?limit=10&offset=0",
+          "host": ["{{base_url}}"],
+          "path": ["journal_entries.php"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        },
+        "description": "Retrieve a paginated list of journal entries"
+      }
+    },
+    {
+      "name": "Get Journal Entries with Lines",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/journal_entries.php?limit=10&include_lines=true",
+          "host": ["{{base_url}}"],
+          "path": ["journal_entries.php"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "include_lines",
+              "value": "true"
+            }
+          ]
+        },
+        "description": "Retrieve journal entries with their line items included"
+      }
+    },
+    {
+      "name": "Get Posted Journal Entries",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/journal_entries.php?status=posted&include_lines=true",
+          "host": ["{{base_url}}"],
+          "path": ["journal_entries.php"],
+          "query": [
+            {
+              "key": "status",
+              "value": "posted"
+            },
+            {
+              "key": "include_lines",
+              "value": "true"
+            }
+          ]
+        },
+        "description": "Filter journal entries by status (posted)"
+      }
+    },
+    {
+      "name": "Get Journal Entries by Date Range",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/journal_entries.php?date_from=2025-01-01&date_to=2025-12-31&include_lines=true",
+          "host": ["{{base_url}}"],
+          "path": ["journal_entries.php"],
+          "query": [
+            {
+              "key": "date_from",
+              "value": "2025-01-01"
+            },
+            {
+              "key": "date_to",
+              "value": "2025-12-31"
+            },
+            {
+              "key": "include_lines",
+              "value": "true"
+            }
+          ]
+        },
+        "description": "Filter journal entries by date range"
+      }
+    },
+    {
+      "name": "Get Single Journal Entry by ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/journal_entries.php?id=1",
+          "host": ["{{base_url}}"],
+          "path": ["journal_entries.php"],
+          "query": [
+            {
+              "key": "id",
+              "value": "1",
+              "description": "Replace with actual journal entry ID"
+            }
+          ]
+        },
+        "description": "Get detailed information about a specific journal entry"
+      }
+    },
+    {
+      "name": "Get Journal Entry by Reference Number",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/journal_entries.php?reference=JE-2025-0001",
+          "host": ["{{base_url}}"],
+          "path": ["journal_entries.php"],
+          "query": [
+            {
+              "key": "reference",
+              "value": "JE-2025-0001",
+              "description": "Entry number/reference"
+            }
+          ]
+        },
+        "description": "Retrieve journal entry using its entry number"
+      }
+    },
+    {
+      "name": "Get Journal Entries Summary",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/journal_entries.php?action=summary",
+          "host": ["{{base_url}}"],
+          "path": ["journal_entries.php"],
+          "query": [
+            {
+              "key": "action",
+              "value": "summary"
+            }
+          ]
+        },
+        "description": "Get comprehensive summary statistics for administrative reporting"
+      }
+    },
+    {
+      "name": "Create Journal Entry (Simple)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"entry_date\": \"2025-10-25\",\n  \"description\": \"Cash payment for office supplies\",\n  \"status\": \"draft\",\n  \"lines\": [\n    {\n      \"account_id\": 25,\n      \"debit\": 500.00,\n      \"credit\": 0.00,\n      \"description\": \"Office supplies expense\"\n    },\n    {\n      \"account_id\": 10,\n      \"debit\": 0.00,\n      \"credit\": 500.00,\n      \"description\": \"Cash payment\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/journal_entries.php",
+          "host": ["{{base_url}}"],
+          "path": ["journal_entries.php"]
+        },
+        "description": "Create a simple two-line journal entry"
+      }
+    },
+    {
+      "name": "Create Journal Entry (Complex)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"entry_date\": \"2025-10-25\",\n  \"description\": \"Monthly expense allocation - Multiple departments\",\n  \"status\": \"draft\",\n  \"lines\": [\n    {\n      \"account_id\": 25,\n      \"debit\": 1500.00,\n      \"credit\": 0.00,\n      \"description\": \"Office rent - Department A\"\n    },\n    {\n      \"account_id\": 26,\n      \"debit\": 800.00,\n      \"credit\": 0.00,\n      \"description\": \"Utilities - Department A\"\n    },\n    {\n      \"account_id\": 27,\n      \"debit\": 700.00,\n      \"credit\": 0.00,\n      \"description\": \"Supplies - Department B\"\n    },\n    {\n      \"account_id\": 10,\n      \"debit\": 0.00,\n      \"credit\": 3000.00,\n      \"description\": \"Cash payment for monthly expenses\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/journal_entries.php",
+          "host": ["{{base_url}}"],
+          "path": ["journal_entries.php"]
+        },
+        "description": "Create a complex multi-line journal entry with multiple debits"
+      }
+    },
+    {
+      "name": "Create Journal Entry (Custom Entry Number)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"entry_number\": \"CUSTOM-JE-001\",\n  \"entry_date\": \"2025-10-25\",\n  \"description\": \"Import from external system\",\n  \"status\": \"draft\",\n  \"lines\": [\n    {\n      \"account_id\": 15,\n      \"debit\": 2500.00,\n      \"credit\": 0.00,\n      \"description\": \"Accounts Receivable\"\n    },\n    {\n      \"account_id\": 45,\n      \"debit\": 0.00,\n      \"credit\": 2500.00,\n      \"description\": \"Revenue\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/journal_entries.php",
+          "host": ["{{base_url}}"],
+          "path": ["journal_entries.php"]
+        },
+        "description": "Create journal entry with custom entry number (useful for imports)"
+      }
+    },
+    {
+      "name": "Update Journal Entry",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"description\": \"Updated description - Cash payment for office supplies\",\n  \"status\": \"approved\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/journal_entries.php?id=1",
+          "host": ["{{base_url}}"],
+          "path": ["journal_entries.php"],
+          "query": [
+            {
+              "key": "id",
+              "value": "1",
+              "description": "Replace with actual journal entry ID"
+            }
+          ]
+        },
+        "description": "Update journal entry (only draft entries by default)"
+      }
+    },
+    {
+      "name": "Update Journal Entry (with Lines)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"entry_date\": \"2025-10-26\",\n  \"description\": \"Updated cash payment for office supplies\",\n  \"status\": \"draft\",\n  \"lines\": [\n    {\n      \"account_id\": 25,\n      \"debit\": 600.00,\n      \"credit\": 0.00,\n      \"description\": \"Office supplies expense - updated amount\"\n    },\n    {\n      \"account_id\": 10,\n      \"debit\": 0.00,\n      \"credit\": 600.00,\n      \"description\": \"Cash payment - updated amount\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/journal_entries.php?id=1",
+          "host": ["{{base_url}}"],
+          "path": ["journal_entries.php"],
+          "query": [
+            {
+              "key": "id",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Update journal entry including lines (all existing lines will be replaced)"
+      }
+    },
+    {
+      "name": "Delete Journal Entry",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/journal_entries.php?id=1",
+          "host": ["{{base_url}}"],
+          "path": ["journal_entries.php"],
+          "query": [
+            {
+              "key": "id",
+              "value": "1",
+              "description": "Replace with actual journal entry ID"
+            }
+          ]
+        },
+        "description": "Delete journal entry (only draft entries can be deleted)"
+      }
+    }
+  ]
+}

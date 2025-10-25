@@ -1,0 +1,8 @@
+[2025-10-25 03:01:47] ERROR | User: 1 | IP: ::1 | PHP Error [2]: openssl_decrypt(): IV passed is only 7 bytes long, cipher expects an IV of precisely 16 bytes, padding with \0 in C:\wamp64\www\integ-capstone\includes\api_integrations.php on line 274
+[2025-10-25 03:01:47] ERROR | User: 1 | IP: ::1 | PHP Error [2]: openssl_decrypt(): IV passed is only 7 bytes long, cipher expects an IV of precisely 16 bytes, padding with \0 in C:\wamp64\www\integ-capstone\includes\api_integrations.php on line 274
+[2025-10-25 03:01:59] ERROR | User: 1 | IP: ::1 | HR4 getPayrollData failed: cURL Error: Could not resolve host: hr4.atierahotelandrestaurant.com
+[2025-10-25 03:01:59] INFO | User: 1 | IP: ::1 | Payroll imported to department expense tracking | Context: {"payroll_id":"PAY001","employee":"John Doe","amount":28000,"department_id":1}
+[2025-10-25 03:01:59] INFO | User: 1 | IP: ::1 | Payroll imported to department expense tracking | Context: {"payroll_id":"PAY002","employee":"Jane Smith","amount":24700,"department_id":2}
+[2025-10-25 03:01:59] INFO | User: 1 | IP: ::1 | Payroll imported to department expense tracking | Context: {"payroll_id":"PAY003","employee":"Bob Johnson","amount":22400,"department_id":1}
+[2025-10-25 03:01:59] INFO | User: 1 | IP: ::1 | User action: Executed integration action | Context: {"action":"Executed integration action","table":"api_integrations","record_id":null,"old_values":null,"new_values":{"integration":"hr4","action":"importPayroll","params":[]}}
+[2025-10-25 03:01:59] INFO | User: 1 | IP: ::1 | Income statement report triggered HR4 payroll import | Context: {"result":{"success":true,"imported_count":3,"errors":[],"message":"Imported 3 payroll records to department expense tracking"}}
