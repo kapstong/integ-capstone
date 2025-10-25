@@ -992,8 +992,8 @@ $db = Database::getInstance()->getConnection();
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">Analytics & Export Features</h6>
                     <div>
-                        <button class="btn btn-outline-secondary me-2"><i class="fas fa-chart-line me-2"></i>View Charts</button>
-                        <button class="btn btn-primary"><i class="fas fa-download me-2"></i>Export All</button>
+                        <button class="btn btn-outline-secondary me-2" onclick="viewCharts()"><i class="fas fa-chart-line me-2"></i>View Charts</button>
+                        <button class="btn btn-primary" onclick="exportAllReports()"><i class="fas fa-download me-2"></i>Export All</button>
                     </div>
                 </div>
                 <div class="row mb-4">
@@ -1027,16 +1027,16 @@ $db = Database::getInstance()->getConnection();
                             </div>
                             <div class="card-body">
                                 <div class="d-grid gap-2">
-                                    <button class="btn btn-outline-danger">
+                                    <button class="btn btn-outline-danger" onclick="exportCurrentReportPDF()">
                                         <i class="fas fa-file-pdf me-2"></i>Export as PDF
                                     </button>
-                                    <button class="btn btn-outline-success">
+                                    <button class="btn btn-outline-success" onclick="exportCurrentReportExcel()">
                                         <i class="fas fa-file-excel me-2"></i>Export as Excel
                                     </button>
-                                    <button class="btn btn-outline-info">
+                                    <button class="btn btn-outline-info" onclick="printCurrentReport()">
                                         <i class="fas fa-print me-2"></i>Print Report
                                     </button>
-                                    <button class="btn btn-outline-secondary">
+                                    <button class="btn btn-outline-secondary" onclick="emailCurrentReport()">
                                         <i class="fas fa-envelope me-2"></i>Email Report
                                     </button>
                                 </div>
@@ -2156,6 +2156,227 @@ $db = Database::getInstance()->getConnection();
             document.body.removeChild(link);
 
             showAlert('Cash flow statement exported successfully', 'success');
+        }
+
+        // Export all reports at once
+        function exportAllReports() {
+            const format = 'csv';
+            let exportCount = 0;
+
+            // Export Income Statement if available
+            if (currentIncomeStatementData) {
+                exportIncomeStatement(format);
+                exportCount++;
+            }
+
+            // Export Balance Sheet if available
+            if (currentBalanceSheetData) {
+                setTimeout(() => exportBalanceSheet(format), 500);
+                exportCount++;
+            }
+
+            // Export Cash Flow if available
+            if (currentCashFlowData) {
+                setTimeout(() => exportCashFlow(format), 1000);
+                exportCount++;
+            }
+
+            if (exportCount === 0) {
+                showAlert('Please generate at least one report first', 'warning');
+            } else {
+                showAlert(`Exporting ${exportCount} report(s) as CSV files...`, 'success');
+            }
+        }
+
+        // Export current active tab report as PDF
+        function exportCurrentReportPDF() {
+            const activeTab = document.querySelector('.nav-link.active');
+            if (!activeTab) {
+                showAlert('No active report tab found', 'warning');
+                return;
+            }
+
+            const tabId = activeTab.getAttribute('id');
+
+            switch(tabId) {
+                case 'income-tab':
+                    exportIncomeStatement('pdf');
+                    break;
+                case 'balance-tab':
+                    exportBalanceSheet('pdf');
+                    break;
+                case 'cashflow-tab':
+                    exportCashFlow('pdf');
+                    break;
+                default:
+                    showAlert('Please switch to a report tab (Income, Balance Sheet, or Cash Flow)', 'info');
+            }
+        }
+
+        // Export current active tab report as Excel (CSV format)
+        function exportCurrentReportExcel() {
+            const activeTab = document.querySelector('.nav-link.active');
+            if (!activeTab) {
+                showAlert('No active report tab found', 'warning');
+                return;
+            }
+
+            const tabId = activeTab.getAttribute('id');
+
+            switch(tabId) {
+                case 'income-tab':
+                    if (!currentIncomeStatementData) {
+                        showAlert('Please generate the Income Statement first', 'warning');
+                        return;
+                    }
+                    exportIncomeStatement('csv');
+                    break;
+                case 'balance-tab':
+                    if (!currentBalanceSheetData) {
+                        showAlert('Please generate the Balance Sheet first', 'warning');
+                        return;
+                    }
+                    exportBalanceSheet('csv');
+                    break;
+                case 'cashflow-tab':
+                    if (!currentCashFlowData) {
+                        showAlert('Please generate the Cash Flow Statement first', 'warning');
+                        return;
+                    }
+                    exportCashFlow('csv');
+                    break;
+                default:
+                    showAlert('Please switch to a report tab (Income, Balance Sheet, or Cash Flow)', 'info');
+            }
+        }
+
+        // Print current active report
+        function printCurrentReport() {
+            const activeTab = document.querySelector('.nav-link.active');
+            if (!activeTab) {
+                showAlert('No active report tab found', 'warning');
+                return;
+            }
+
+            const tabId = activeTab.getAttribute('id');
+            let printContainer;
+
+            switch(tabId) {
+                case 'income-tab':
+                    printContainer = document.getElementById('incomeStatementContainer');
+                    if (!currentIncomeStatementData) {
+                        showAlert('Please generate the Income Statement first', 'warning');
+                        return;
+                    }
+                    break;
+                case 'balance-tab':
+                    printContainer = document.getElementById('balanceSheetContainer');
+                    if (!currentBalanceSheetData) {
+                        showAlert('Please generate the Balance Sheet first', 'warning');
+                        return;
+                    }
+                    break;
+                case 'cashflow-tab':
+                    printContainer = document.getElementById('cashFlowContainer');
+                    if (!currentCashFlowData) {
+                        showAlert('Please generate the Cash Flow Statement first', 'warning');
+                        return;
+                    }
+                    break;
+                default:
+                    showAlert('Please switch to a report tab (Income, Balance Sheet, or Cash Flow)', 'info');
+                    return;
+            }
+
+            // Open print dialog with the report content
+            const printWindow = window.open('', '', 'height=600,width=800');
+            printWindow.document.write('<html><head><title>Print Report</title>');
+            printWindow.document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">');
+            printWindow.document.write('<style>');
+            printWindow.document.write(`
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                .financial-statement { max-width: 800px; margin: 0 auto; }
+                .statement-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                .statement-period { font-size: 14px; color: #666; margin-bottom: 20px; }
+                .account-category { margin-bottom: 20px; }
+                .account-category h6 { font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 5px; }
+                .account-item { display: flex; justify-content: space-between; padding: 5px 0; }
+                .total-row { font-weight: bold; border-top: 1px solid #000; margin-top: 5px; padding-top: 5px; }
+                @media print {
+                    .no-print { display: none; }
+                }
+            `);
+            printWindow.document.write('</style></head><body>');
+            printWindow.document.write(printContainer.innerHTML);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+
+            setTimeout(() => {
+                printWindow.print();
+            }, 250);
+
+            showAlert('Opening print dialog...', 'info');
+        }
+
+        // Email current report
+        function emailCurrentReport() {
+            const activeTab = document.querySelector('.nav-link.active');
+            if (!activeTab) {
+                showAlert('No active report tab found', 'warning');
+                return;
+            }
+
+            const tabId = activeTab.getAttribute('id');
+            let reportName = '';
+            let hasData = false;
+
+            switch(tabId) {
+                case 'income-tab':
+                    reportName = 'Income Statement';
+                    hasData = !!currentIncomeStatementData;
+                    break;
+                case 'balance-tab':
+                    reportName = 'Balance Sheet';
+                    hasData = !!currentBalanceSheetData;
+                    break;
+                case 'cashflow-tab':
+                    reportName = 'Cash Flow Statement';
+                    hasData = !!currentCashFlowData;
+                    break;
+                default:
+                    showAlert('Please switch to a report tab (Income, Balance Sheet, or Cash Flow)', 'info');
+                    return;
+            }
+
+            if (!hasData) {
+                showAlert(`Please generate the ${reportName} first`, 'warning');
+                return;
+            }
+
+            // For now, show a modal or prompt for email functionality
+            // In a real implementation, this would send the report via backend email service
+            const email = prompt(`Enter email address to send ${reportName}:`);
+
+            if (email && email.trim()) {
+                // TODO: Implement actual email sending via API
+                showAlert(`Email functionality coming soon! Would send ${reportName} to: ${email}`, 'info');
+
+                // Placeholder for future implementation:
+                // fetch('/api/reports/email', {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/json' },
+                //     body: JSON.stringify({
+                //         report_type: tabId.replace('-tab', ''),
+                //         email: email,
+                //         data: getCurrentReportData()
+                //     })
+                // });
+            }
+        }
+
+        // View charts functionality
+        function viewCharts() {
+            showAlert('Chart visualization coming soon! This will display financial trends and analytics.', 'info');
         }
 
         // Add event listeners for aging report buttons
