@@ -4,6 +4,14 @@
  * Handles report generation with integrated payroll data from HR4
  */
 
+// Prevent any HTML output that would break JSON
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
+// Start output buffering to catch any unexpected output
+ob_start();
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -230,6 +238,7 @@ try {
         $netProfit = $totalRevenue - $totalExpenses;
 
         // Return formatted data
+        ob_clean(); // Clear any buffered output
         echo json_encode([
             'success' => true,
             'date_from' => $dateFrom ?: date('Y-m-d', strtotime('first day of this month')),
@@ -341,6 +350,7 @@ try {
             ];
         }
 
+        ob_clean(); // Clear any buffered output
         echo json_encode([
             'success' => true,
             'as_of_date' => $asOfDate,
@@ -469,6 +479,7 @@ try {
         $financingCash = array_sum(array_column($financingData, 'amount')) ?: 0;
 
         // Always return success with cash_flow structure
+        ob_clean(); // Clear any buffered output
         echo json_encode([
             'success' => true,
             'start_date' => $startDate,
@@ -494,6 +505,7 @@ try {
     // Handle budget vs actual report
     if ($reportType === 'budget_vs_actual') {
         // This would require budget data - placeholder for now
+        ob_clean(); // Clear any buffered output
         echo json_encode([
             'success' => false,
             'error' => 'Budget vs Actual report not yet implemented'
@@ -515,6 +527,7 @@ try {
         $summaryQuery->execute();
         $summaryData = $summaryQuery->fetch(PDO::FETCH_ASSOC);
 
+        ob_clean(); // Clear any buffered output
         echo json_encode([
             'success' => true,
             'summary' => [
@@ -542,6 +555,7 @@ try {
             'details' => [] // Would contain detailed aging data
         ];
 
+        ob_clean(); // Clear any buffered output
         echo json_encode([
             'success' => true,
             'totals' => $agingData['totals'],
@@ -551,12 +565,14 @@ try {
     }
 
     // Default response for unsupported report types
+    ob_clean(); // Clear any buffered output
     echo json_encode([
         'success' => false,
         'error' => 'Report type not supported: ' . $reportType
     ]);
 
 } catch (Exception $e) {
+    ob_clean(); // Clear any buffered output
     http_response_code(500);
     echo json_encode([
         'success' => false,

@@ -1224,6 +1224,8 @@ $db = Database::getInstance()->getConnection();
 
         // Global variables
         let currentIncomeStatementData = null;
+        let currentBalanceSheetData = null;
+        let currentCashFlowData = null;
 
         // Initialize sidebar state on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -1647,6 +1649,9 @@ $db = Database::getInstance()->getConnection();
                     throw new Error(data.error || 'Failed to generate balance sheet');
                 }
 
+                // Store data globally for export
+                currentBalanceSheetData = data;
+
                 // Render the balance sheet
                 renderBalanceSheet(data);
 
@@ -1763,6 +1768,9 @@ $db = Database::getInstance()->getConnection();
                 if (!data.cash_flow) {
                     throw new Error('Invalid response format: missing cash_flow data');
                 }
+
+                // Store data globally for export
+                currentCashFlowData = data;
 
                 // Render the cash flow statement
                 renderCashFlow(data);
@@ -2027,13 +2035,127 @@ $db = Database::getInstance()->getConnection();
             }
         }
 
-        // Export functions (placeholders)
+        // Export functions
         function exportBalanceSheet(format) {
-            showAlert('Balance sheet export not yet implemented', 'info');
+            if (!currentBalanceSheetData) {
+                showAlert('Please generate the balance sheet first', 'warning');
+                return;
+            }
+
+            // For now, just CSV export
+            if (format === 'pdf') {
+                showAlert('PDF export not yet implemented. Use CSV format.', 'info');
+                return;
+            }
+
+            // Create CSV content
+            let csvContent = 'data:text/csv;charset=utf-8,';
+            csvContent += 'Balance Sheet\n';
+            csvContent += `As of: ${currentBalanceSheetData.as_of_date}\n\n`;
+
+            // Assets section
+            csvContent += 'ASSETS\n';
+            csvContent += 'Account,Amount\n';
+            if (currentBalanceSheetData.assets.accounts) {
+                currentBalanceSheetData.assets.accounts.forEach(account => {
+                    csvContent += `"${account.account_name}","${account.account_balance || 0}"\n`;
+                });
+            }
+            csvContent += `"Total Assets","${currentBalanceSheetData.assets.total}"\n\n`;
+
+            // Liabilities section
+            csvContent += 'LIABILITIES\n';
+            csvContent += 'Account,Amount\n';
+            if (currentBalanceSheetData.liabilities.accounts) {
+                currentBalanceSheetData.liabilities.accounts.forEach(account => {
+                    csvContent += `"${account.account_name}","${account.account_balance || 0}"\n`;
+                });
+            }
+            csvContent += `"Total Liabilities","${currentBalanceSheetData.liabilities.total}"\n\n`;
+
+            // Equity section
+            csvContent += 'EQUITY\n';
+            csvContent += 'Account,Amount\n';
+            if (currentBalanceSheetData.equity.accounts) {
+                currentBalanceSheetData.equity.accounts.forEach(account => {
+                    csvContent += `"${account.account_name}","${account.account_balance || 0}"\n`;
+                });
+            }
+            csvContent += `"Total Equity","${currentBalanceSheetData.equity.total}"\n\n`;
+
+            csvContent += `"Total Liabilities & Equity","${currentBalanceSheetData.liabilities.total + currentBalanceSheetData.equity.total}"\n`;
+
+            // Download CSV
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `balance_sheet_${currentBalanceSheetData.as_of_date}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showAlert('Balance sheet exported successfully', 'success');
         }
 
         function exportCashFlow(format) {
-            showAlert('Cash flow export not yet implemented', 'info');
+            if (!currentCashFlowData) {
+                showAlert('Please generate the cash flow statement first', 'warning');
+                return;
+            }
+
+            // For now, just CSV export
+            if (format === 'pdf') {
+                showAlert('PDF export not yet implemented. Use CSV format.', 'info');
+                return;
+            }
+
+            // Create CSV content
+            let csvContent = 'data:text/csv;charset=utf-8,';
+            csvContent += 'Cash Flow Statement\n';
+            csvContent += `Period: ${currentCashFlowData.start_date} to ${currentCashFlowData.end_date}\n\n`;
+
+            // Operating Activities
+            csvContent += 'OPERATING ACTIVITIES\n';
+            csvContent += 'Account,Amount\n';
+            if (currentCashFlowData.cash_flow.operating_activities.accounts) {
+                currentCashFlowData.cash_flow.operating_activities.accounts.forEach(account => {
+                    csvContent += `"${account.account_name}","${account.amount || 0}"\n`;
+                });
+            }
+            csvContent += `"Net Cash from Operating Activities","${currentCashFlowData.cash_flow.operating_activities.amount}"\n\n`;
+
+            // Investing Activities
+            csvContent += 'INVESTING ACTIVITIES\n';
+            csvContent += 'Account,Amount\n';
+            if (currentCashFlowData.cash_flow.investing_activities.accounts) {
+                currentCashFlowData.cash_flow.investing_activities.accounts.forEach(account => {
+                    csvContent += `"${account.account_name}","${account.amount || 0}"\n`;
+                });
+            }
+            csvContent += `"Net Cash from Investing Activities","${currentCashFlowData.cash_flow.investing_activities.amount}"\n\n`;
+
+            // Financing Activities
+            csvContent += 'FINANCING ACTIVITIES\n';
+            csvContent += 'Account,Amount\n';
+            if (currentCashFlowData.cash_flow.financing_activities.accounts) {
+                currentCashFlowData.cash_flow.financing_activities.accounts.forEach(account => {
+                    csvContent += `"${account.account_name}","${account.amount || 0}"\n`;
+                });
+            }
+            csvContent += `"Net Cash from Financing Activities","${currentCashFlowData.cash_flow.financing_activities.amount}"\n\n`;
+
+            csvContent += `"Net Change in Cash","${currentCashFlowData.cash_flow.net_change}"\n`;
+
+            // Download CSV
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `cash_flow_${currentCashFlowData.start_date}_to_${currentCashFlowData.end_date}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showAlert('Cash flow statement exported successfully', 'success');
         }
 
         // Add event listeners for aging report buttons
