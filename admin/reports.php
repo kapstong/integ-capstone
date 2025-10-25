@@ -806,7 +806,7 @@ $db = Database::getInstance()->getConnection();
                             <option value="year_to_date">Year to Date</option>
                             <option value="custom">Custom Range</option>
                         </select>
-                        <button class="btn btn-outline-secondary me-2" onclick="exportIncomeStatement('pdf')"><i class="fas fa-download me-2"></i>Export PDF</button>
+                        <button class="btn btn-outline-secondary me-2" onclick="exportIncomeStatement('csv')"><i class="fas fa-download me-2"></i>Export CSV</button>
                         <button class="btn btn-primary" onclick="generateIncomeStatement()"><i class="fas fa-sync me-2"></i>Generate Report</button>
                     </div>
                 </div>
@@ -857,7 +857,7 @@ $db = Database::getInstance()->getConnection();
                             <option value="last_month">Last Month</option>
                             <option value="last_quarter">Last Quarter</option>
                         </select>
-                        <button class="btn btn-outline-secondary me-2" onclick="exportBalanceSheet('pdf')"><i class="fas fa-download me-2"></i>Export PDF</button>
+                        <button class="btn btn-outline-secondary me-2" onclick="exportBalanceSheet('csv')"><i class="fas fa-download me-2"></i>Export CSV</button>
                         <button class="btn btn-primary" onclick="generateBalanceSheet()"><i class="fas fa-sync me-2"></i>Generate Report</button>
                     </div>
                 </div>
@@ -887,7 +887,7 @@ $db = Database::getInstance()->getConnection();
                             <option value="last_6_months">Last 6 Months</option>
                             <option value="year_to_date">Year to Date</option>
                         </select>
-                        <button class="btn btn-outline-secondary me-2" onclick="exportCashFlow('pdf')"><i class="fas fa-download me-2"></i>Export PDF</button>
+                        <button class="btn btn-outline-secondary me-2" onclick="exportCashFlow('csv')"><i class="fas fa-download me-2"></i>Export CSV</button>
                         <button class="btn btn-primary" onclick="generateCashFlow()"><i class="fas fa-sync me-2"></i>Generate Report</button>
                     </div>
                 </div>
@@ -1441,12 +1441,6 @@ $db = Database::getInstance()->getConnection();
         function exportIncomeStatement(format) {
             if (!currentIncomeStatementData) {
                 showAlert('Please generate the report first', 'warning');
-                return;
-            }
-
-            // For now, just show CSV export
-            if (format === 'pdf') {
-                showAlert('PDF export not yet implemented. Use CSV format.', 'info');
                 return;
             }
 
@@ -2042,12 +2036,6 @@ $db = Database::getInstance()->getConnection();
                 return;
             }
 
-            // For now, just CSV export
-            if (format === 'pdf') {
-                showAlert('PDF export not yet implemented. Use CSV format.', 'info');
-                return;
-            }
-
             // Create CSV content
             let csvContent = 'data:text/csv;charset=utf-8,';
             csvContent += 'Balance Sheet\n';
@@ -2100,12 +2088,6 @@ $db = Database::getInstance()->getConnection();
         function exportCashFlow(format) {
             if (!currentCashFlowData) {
                 showAlert('Please generate the cash flow statement first', 'warning');
-                return;
-            }
-
-            // For now, just CSV export
-            if (format === 'pdf') {
-                showAlert('PDF export not yet implemented. Use CSV format.', 'info');
                 return;
             }
 
@@ -2188,7 +2170,7 @@ $db = Database::getInstance()->getConnection();
             }
         }
 
-        // Export current active tab report as PDF
+        // Export current active tab report as PDF (actually CSV)
         function exportCurrentReportPDF() {
             const activeTab = document.querySelector('.nav-link.active');
             if (!activeTab) {
@@ -2200,13 +2182,13 @@ $db = Database::getInstance()->getConnection();
 
             switch(tabId) {
                 case 'income-tab':
-                    exportIncomeStatement('pdf');
+                    exportIncomeStatement('csv');
                     break;
                 case 'balance-tab':
-                    exportBalanceSheet('pdf');
+                    exportBalanceSheet('csv');
                     break;
                 case 'cashflow-tab':
-                    exportCashFlow('pdf');
+                    exportCashFlow('csv');
                     break;
                 default:
                     showAlert('Please switch to a report tab (Income, Balance Sheet, or Cash Flow)', 'info');
