@@ -47,7 +47,9 @@ class APIIntegrationManager {
             'zoom' => new ZoomIntegration(),
             'microsoft_teams' => new MicrosoftTeamsIntegration(),
             'hr3' => new HR3Integration(),
-            'hr4' => new HR4Integration()
+            'hr4' => new HR4Integration(),
+            'logistics1' => new Logistics1Integration(),
+            'logistics2' => new Logistics2Integration()
         ];
     }
 
@@ -1207,6 +1209,556 @@ class HR4Integration extends BaseIntegration {
         // Simple token generation - can be enhanced based on HR4 requirements
         $payload = $config['api_key'] . ':' . $config['api_secret'];
         return base64_encode(hash('sha256', $payload, true));
+    }
+}
+
+/**
+ * Logistics 1 Integration - Purchase Orders, Delivery Receipts, and Invoices
+ */
+class Logistics1Integration extends IntegrationBase {
+    public function getName() {
+        return 'Logistics 1 - Procurement System';
+    }
+
+    public function getDescription() {
+        return 'Import purchase orders, delivery receipts, and supplier invoices from Logistics 1 system';
+    }
+
+    public function getCategory() {
+        return 'Procurement & Inventory';
+    }
+
+    public function getRequiredFields() {
+        return ['api_url'];
+    }
+
+    public function getFormFields() {
+        return [
+            'api_url' => [
+                'label' => 'API URL',
+                'type' => 'url',
+                'required' => true,
+                'default' => 'https://logistics1.atierahotelandrestaurant.com/api/docu/docu.php'
+            ]
+        ];
+    }
+
+    public function validateConfig($config) {
+        if (empty($config['api_url'])) {
+            return ['valid' => false, 'errors' => ['API URL is required']];
+        }
+        return ['valid' => true];
+    }
+
+    public function testConnection($config) {
+        try {
+            $ch = curl_init($config['api_url']);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200) {
+                return ['success' => false, 'message' => 'HTTP ' . $httpCode];
+            }
+
+            $data = json_decode($response, true);
+            if (!isset($data['success'])) {
+                return ['success' => false, 'message' => 'Invalid response format'];
+            }
+
+            $poCount = count($data['purchase_orders'] ?? []);
+            $drCount = count($data['delivery_receipts'] ?? []);
+            $invCount = count($data['invoices'] ?? []);
+
+            return [
+                'success' => true,
+                'message' => "Connected successfully. Found {$poCount} POs, {$drCount} DRs, {$invCount} invoices"
+            ];
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    public function getActions() {
+        return [
+            'importInvoices' => [
+                'label' => 'Import Supplier Invoices',
+                'description' => 'Import supplier invoices to Accounts Payable',
+                'icon' => 'fa-file-invoice-dollar'
+            ],
+            'importPurchaseOrders' => [
+                'label' => 'Import Purchase Orders',
+                'description' => 'Import POs for expense tracking',
+                'icon' => 'fa-shopping-cart'
+            ]
+        ];
+    }
+
+    public function executeAction($action, $config, $params = []) {
+        switch ($action) {
+            case 'importInvoices':
+                return $this->importInvoices($config, $params);
+            case 'importPurchaseOrders':
+                return $this->importPurchaseOrders($config, $params);
+            default:
+                return ['success' => false, 'error' => 'Unknown action'];
+        }
+    }
+
+    /**
+     * Fetch procurement data from Logistics 1 API
+     */
+    private function getProcurementData($config) {
+        $ch = curl_init($config['api_url']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            throw new Exception('Logistics 1 API returned HTTP ' . $httpCode);
+        }
+
+        $data = json_decode($response, true);
+        if (!$data || !isset($data['success']) || !$data['success']) {
+            throw new Exception('Invalid response from Logistics 1 API');
+        }
+
+        return $data;
+    }
+
+    /**
+     * Import supplier invoices to Accounts Payable
+     */
+    public function importInvoices($config, $params = []) {
+        try {
+            $data = $this->getProcurementData($config);
+            $invoices = $data['invoices'] ?? [];
+
+            $importedCount = 0;
+            $errors = [];
+
+            foreach ($invoices as $invoice) {
+                try {
+                    $db = Database::getInstance()->getConnection();
+
+                    $totalAmount = floatval($invoice['total'] ?? 0);
+                    if ($totalAmount <= 0) continue;
+
+                    $batchId = 'LOG1_INV_' . date('Ymd_His');
+                    $invoiceDate = $invoice['date_issued'] ?? date('Y-m-d');
+                    $description = 'Invoice #' . ($invoice['invoice_number'] ?? 'N/A') . ' from ' . ($invoice['supplier_name'] ?? 'Supplier');
+                    $externalId = 'LOG1_INV_' . ($invoice['invoice_id'] ?? time() . '_' . $importedCount);
+
+                    // Map department based on purchase order department
+                    $departmentName = $invoice['department_name'] ?? '';
+                    $departmentId = $this->mapDepartment($departmentName);
+
+                    // Import to imported_transactions
+                    $stmt = $db->prepare("
+                        INSERT INTO imported_transactions
+                        (import_batch, source_system, transaction_date, transaction_type,
+                         external_id, external_reference, department_id, customer_name,
+                         description, amount, raw_data, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+                    ");
+
+                    $stmt->execute([
+                        $batchId,
+                        'LOGISTICS1',
+                        $invoiceDate,
+                        'supplier_invoice',
+                        $externalId,
+                        $invoice['invoice_number'] ?? '',
+                        $departmentId,
+                        $invoice['supplier_name'] ?? '',
+                        $description,
+                        $totalAmount,
+                        json_encode($invoice)
+                    ]);
+
+                    // Update daily_expense_summary for expense tracking
+                    $summaryStmt = $db->prepare("
+                        INSERT INTO daily_expense_summary
+                        (business_date, department_id, expense_category, source_system, total_transactions, total_amount)
+                        VALUES (?, ?, ?, ?, 1, ?)
+                        ON DUPLICATE KEY UPDATE
+                            total_transactions = total_transactions + 1,
+                            total_amount = total_amount + VALUES(total_amount),
+                            updated_at = NOW()
+                    ");
+                    $summaryStmt->execute([$invoiceDate, $departmentId, 'supplies_materials', 'LOGISTICS1', $totalAmount]);
+
+                    $importedCount++;
+
+                    Logger::getInstance()->info('Logistics 1 invoice imported', [
+                        'invoice_id' => $externalId,
+                        'supplier' => $invoice['supplier_name'] ?? 'Unknown',
+                        'amount' => $totalAmount
+                    ]);
+
+                } catch (Exception $e) {
+                    $errors[] = 'Failed to import invoice ' . ($invoice['invoice_number'] ?? 'Unknown') . ': ' . $e->getMessage();
+                    Logger::getInstance()->error('Logistics 1 invoice import error', [
+                        'invoice' => $invoice,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            return [
+                'success' => count($errors) === 0,
+                'imported_count' => $importedCount,
+                'errors' => $errors,
+                'message' => "Imported {$importedCount} supplier invoices" . (count($errors) > 0 ? " with " . count($errors) . " errors" : "")
+            ];
+
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Import purchase orders for expense tracking
+     */
+    public function importPurchaseOrders($config, $params = []) {
+        try {
+            $data = $this->getProcurementData($config);
+            $purchaseOrders = $data['purchase_orders'] ?? [];
+
+            $importedCount = 0;
+            $errors = [];
+
+            foreach ($purchaseOrders as $po) {
+                try {
+                    // Only import approved POs
+                    if (($po['status_type'] ?? '') !== 'Approved') continue;
+
+                    $db = Database::getInstance()->getConnection();
+
+                    // Calculate total from items
+                    $totalAmount = 0;
+                    foreach (($po['items'] ?? []) as $item) {
+                        $totalAmount += floatval($item['total_price'] ?? 0);
+                    }
+
+                    if ($totalAmount <= 0) continue;
+
+                    $batchId = 'LOG1_PO_' . date('Ymd_His');
+                    $poDate = $po['purchase_date'] ?? date('Y-m-d');
+                    $description = 'PO #' . ($po['purchase_number'] ?? 'N/A') . ' - ' . ($po['supplier_name'] ?? 'Supplier');
+                    $externalId = 'LOG1_PO_' . ($po['purchase_id'] ?? time() . '_' . $importedCount);
+
+                    $departmentName = $po['department_name'] ?? '';
+                    $departmentId = $this->mapDepartment($departmentName);
+
+                    // Import to imported_transactions
+                    $stmt = $db->prepare("
+                        INSERT INTO imported_transactions
+                        (import_batch, source_system, transaction_date, transaction_type,
+                         external_id, external_reference, department_id, customer_name,
+                         description, amount, raw_data, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+                    ");
+
+                    $stmt->execute([
+                        $batchId,
+                        'LOGISTICS1',
+                        $poDate,
+                        'purchase_order',
+                        $externalId,
+                        $po['purchase_number'] ?? '',
+                        $departmentId,
+                        $po['supplier_name'] ?? '',
+                        $description,
+                        $totalAmount,
+                        json_encode($po)
+                    ]);
+
+                    $importedCount++;
+
+                    Logger::getInstance()->info('Logistics 1 PO imported', [
+                        'po_id' => $externalId,
+                        'supplier' => $po['supplier_name'] ?? 'Unknown',
+                        'amount' => $totalAmount
+                    ]);
+
+                } catch (Exception $e) {
+                    $errors[] = 'Failed to import PO ' . ($po['purchase_number'] ?? 'Unknown') . ': ' . $e->getMessage();
+                }
+            }
+
+            return [
+                'success' => count($errors) === 0,
+                'imported_count' => $importedCount,
+                'errors' => $errors,
+                'message' => "Imported {$importedCount} purchase orders" . (count($errors) > 0 ? " with " . count($errors) . " errors" : "")
+            ];
+
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Map department name to department ID
+     */
+    private function mapDepartment($departmentName) {
+        $mapping = [
+            'kitchen' => 2,
+            'food' => 2,
+            'beverage' => 2,
+            'front' => 3,
+            'desk' => 3,
+            'reception' => 3,
+            'admin' => 1,
+            'office' => 1,
+            'hr' => 1,
+            'human resources' => 1
+        ];
+
+        $lowerName = strtolower($departmentName);
+        foreach ($mapping as $keyword => $deptId) {
+            if (strpos($lowerName, $keyword) !== false) {
+                return $deptId;
+            }
+        }
+
+        return 1; // Default to Administrative
+    }
+}
+
+/**
+ * Logistics 2 Integration - Trip Costs and Transportation
+ */
+class Logistics2Integration extends IntegrationBase {
+    public function getName() {
+        return 'Logistics 2 - Transportation System';
+    }
+
+    public function getDescription() {
+        return 'Import trip costs, fuel expenses, and vehicle transportation data from Logistics 2 system';
+    }
+
+    public function getCategory() {
+        return 'Transportation & Logistics';
+    }
+
+    public function getRequiredFields() {
+        return ['api_url'];
+    }
+
+    public function getFormFields() {
+        return [
+            'api_url' => [
+                'label' => 'API URL',
+                'type' => 'url',
+                'required' => true,
+                'default' => 'https://logistic2.atierahotelandrestaurant.com/integration/trip-costs-api.php'
+            ]
+        ];
+    }
+
+    public function validateConfig($config) {
+        if (empty($config['api_url'])) {
+            return ['valid' => false, 'errors' => ['API URL is required']];
+        }
+        return ['valid' => true];
+    }
+
+    public function testConnection($config) {
+        try {
+            $ch = curl_init($config['api_url']);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200) {
+                return ['success' => false, 'message' => 'HTTP ' . $httpCode];
+            }
+
+            $data = json_decode($response, true);
+            if (!isset($data['trips'])) {
+                return ['success' => false, 'message' => 'Invalid response format'];
+            }
+
+            $tripCount = count($data['trips'] ?? []);
+            $totalCost = floatval($data['summary']['grand_total'] ?? 0);
+
+            return [
+                'success' => true,
+                'message' => "Connected successfully. Found {$tripCount} trips with total cost of ₱" . number_format($totalCost, 2)
+            ];
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    public function getActions() {
+        return [
+            'importTripCosts' => [
+                'label' => 'Import Trip Costs',
+                'description' => 'Import transportation and fuel expenses',
+                'icon' => 'fa-truck'
+            ]
+        ];
+    }
+
+    public function executeAction($action, $config, $params = []) {
+        switch ($action) {
+            case 'importTripCosts':
+                return $this->importTripCosts($config, $params);
+            default:
+                return ['success' => false, 'error' => 'Unknown action'];
+        }
+    }
+
+    /**
+     * Fetch trip costs from Logistics 2 API
+     */
+    private function getTripData($config) {
+        $ch = curl_init($config['api_url']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            throw new Exception('Logistics 2 API returned HTTP ' . $httpCode);
+        }
+
+        $data = json_decode($response, true);
+        if (!$data || !isset($data['trips'])) {
+            throw new Exception('Invalid response from Logistics 2 API');
+        }
+
+        return $data;
+    }
+
+    /**
+     * Import trip costs to operating expenses
+     */
+    public function importTripCosts($config, $params = []) {
+        try {
+            $data = $this->getTripData($config);
+            $trips = $data['trips'] ?? [];
+
+            $importedCount = 0;
+            $errors = [];
+
+            foreach ($trips as $trip) {
+                try {
+                    $db = Database::getInstance()->getConnection();
+
+                    $totalAmount = floatval($trip['total_amount'] ?? 0);
+                    if ($totalAmount <= 0) continue;
+
+                    // Only import completed trips
+                    if (($trip['status'] ?? '') !== 'Completed') continue;
+
+                    $batchId = 'LOG2_TRIP_' . date('Ymd_His');
+                    $tripDate = isset($trip['date_added']) ? date('Y-m-d', strtotime($trip['date_added'])) : date('Y-m-d');
+                    $description = 'Trip: ' . ($trip['trip_description'] ?? 'N/A') . ' - ' . ($trip['driver_name'] ?? 'Driver') . ' (' . ($trip['vehicle_name'] ?? 'Vehicle') . ')';
+                    $externalId = 'LOG2_TRIP_' . ($trip['trip_ID'] ?? time() . '_' . $importedCount);
+
+                    // Transportation costs go to administrative/operations department
+                    $departmentId = 1; // Administrative
+
+                    // Import to imported_transactions
+                    $stmt = $db->prepare("
+                        INSERT INTO imported_transactions
+                        (import_batch, source_system, transaction_date, transaction_type,
+                         external_id, external_reference, department_id, description,
+                         amount, raw_data, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+                    ");
+
+                    $stmt->execute([
+                        $batchId,
+                        'LOGISTICS2',
+                        $tripDate,
+                        'transportation_expense',
+                        $externalId,
+                        $trip['trip_ID'] ?? '',
+                        $departmentId,
+                        $description,
+                        $totalAmount,
+                        json_encode($trip)
+                    ]);
+
+                    // Update daily_expense_summary - split between fuel and other costs
+                    $fuelCost = floatval($trip['total_fuel_cost'] ?? 0);
+                    $otherCost = floatval($trip['total_cost_amount'] ?? 0);
+
+                    if ($fuelCost > 0) {
+                        $fuelStmt = $db->prepare("
+                            INSERT INTO daily_expense_summary
+                            (business_date, department_id, expense_category, source_system, total_transactions, total_amount)
+                            VALUES (?, ?, ?, ?, 1, ?)
+                            ON DUPLICATE KEY UPDATE
+                                total_transactions = total_transactions + 1,
+                                total_amount = total_amount + VALUES(total_amount),
+                                updated_at = NOW()
+                        ");
+                        $fuelStmt->execute([$tripDate, $departmentId, 'fuel_transportation', 'LOGISTICS2', $fuelCost]);
+                    }
+
+                    if ($otherCost > 0) {
+                        $costStmt = $db->prepare("
+                            INSERT INTO daily_expense_summary
+                            (business_date, department_id, expense_category, source_system, total_transactions, total_amount)
+                            VALUES (?, ?, ?, ?, 1, ?)
+                            ON DUPLICATE KEY UPDATE
+                                total_transactions = total_transactions + 1,
+                                total_amount = total_amount + VALUES(total_amount),
+                                updated_at = NOW()
+                        ");
+                        $costStmt->execute([$tripDate, $departmentId, 'transportation_other', 'LOGISTICS2', $otherCost]);
+                    }
+
+                    $importedCount++;
+
+                    Logger::getInstance()->info('Logistics 2 trip cost imported', [
+                        'trip_id' => $externalId,
+                        'driver' => $trip['driver_name'] ?? 'Unknown',
+                        'amount' => $totalAmount,
+                        'fuel' => $fuelCost,
+                        'other' => $otherCost
+                    ]);
+
+                } catch (Exception $e) {
+                    $errors[] = 'Failed to import trip ' . ($trip['trip_ID'] ?? 'Unknown') . ': ' . $e->getMessage();
+                    Logger::getInstance()->error('Logistics 2 trip import error', [
+                        'trip' => $trip,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            return [
+                'success' => count($errors) === 0,
+                'imported_count' => $importedCount,
+                'errors' => $errors,
+                'message' => "Imported {$importedCount} trip cost records" . (count($errors) > 0 ? " with " . count($errors) . " errors" : "")
+            ];
+
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
     }
 }
 ?>
