@@ -1309,21 +1309,8 @@ body {
     <script>
         // Wait for DOM to be fully loaded before defining functions
     window.addEventListener('DOMContentLoaded', function() {
-        // Auto-load HR4 payroll when Payroll Processing tab is activated
-        const payrollTab = document.getElementById('payroll-tab');
-        if (payrollTab) {
-            payrollTab.addEventListener('shown.bs.tab', function() {
-                // Check if payroll table is empty (no payroll loaded yet)
-                const payrollTableBody = document.getElementById('payrollTableBody');
-                if (payrollTableBody && payrollTableBody.children.length === 1) {
-                    const firstChild = payrollTableBody.children[0];
-                    if (firstChild && firstChild.tagName === 'TR' && firstChild.textContent.includes('Click "Load Payroll"')) {
-                        // Auto-load payroll if not already loaded
-                        window.loadPayroll();
-                    }
-                }
-            });
-        }
+        // Keep auto-load disabled to prevent authentication errors
+        // Manual loading ensures user is authenticated before API calls
 
         window.loadPayroll = async function() {
             const btn = event.target.closest('button');
