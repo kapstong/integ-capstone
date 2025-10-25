@@ -72,8 +72,8 @@ try {
         echo '<div class="warning">⚠️ No roles found in system! Creating default "Administrator" role...</div>';
 
         $db->exec("
-            INSERT INTO roles (name, description, is_active)
-            VALUES ('Administrator', 'System administrator with full access', 1)
+            INSERT INTO roles (name, description, is_system)
+            VALUES ('Administrator', 'System administrator with full access', 0)
         ");
 
         $rolesQuery = $db->query("SELECT id, name, description FROM roles ORDER BY id");
