@@ -46,26 +46,42 @@ try {
         $recentDataCheck->execute();
         $recordCount = $recentDataCheck->fetch(PDO::FETCH_ASSOC)['record_count'];
 
-        // If no recent expense data, try to import from HR4 payroll
-        if ($recordCount == 0) {
-            try {
-                require_once '../includes/api_integrations.php';
-                $integrationManager = APIIntegrationManager::getInstance();
+        // Auto-import from external systems if no recent data
+        try {
+            require_once '../includes/api_integrations.php';
+            $integrationManager = APIIntegrationManager::getInstance();
 
-                // Get HR4 configuration
-                $hr4Config = $integrationManager->getIntegrationConfig('hr4');
-                if ($hr4Config && !empty($hr4Config['api_url'])) {
-                    // Try to execute payroll import
-                    $result = $integrationManager->executeIntegrationAction('hr4', 'importPayroll', []);
-                    Logger::getInstance()->info('Income statement report triggered HR4 payroll import', [
-                        'result' => $result
-                    ]);
+            // Check for recent data from each source and import if needed
+            $sources = [
+                'HR_SYSTEM' => ['integration' => 'hr4', 'action' => 'importPayroll', 'name' => 'HR4 payroll'],
+                'LOGISTICS1' => ['integration' => 'logistics1', 'action' => 'importInvoices', 'name' => 'Logistics 1 invoices'],
+                'LOGISTICS2' => ['integration' => 'logistics2', 'action' => 'importTripCosts', 'name' => 'Logistics 2 trip costs']
+            ];
+
+            foreach ($sources as $sourceSystem => $config) {
+                // Check if this source has recent data
+                $sourceCheck = $db->prepare("
+                    SELECT COUNT(*) as count
+                    FROM daily_expense_summary
+                    WHERE source_system = ?
+                    AND business_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                ");
+                $sourceCheck->execute([$sourceSystem]);
+                $sourceCount = $sourceCheck->fetch(PDO::FETCH_ASSOC)['count'];
+
+                // If no recent data from this source, try to import
+                if ($sourceCount == 0) {
+                    $integrationConfig = $integrationManager->getIntegrationConfig($config['integration']);
+                    if ($integrationConfig && !empty($integrationConfig['api_url'])) {
+                        $result = $integrationManager->executeIntegrationAction($config['integration'], $config['action'], []);
+                        Logger::getInstance()->info("Auto-imported {$config['name']}", ['result' => $result]);
+                    }
                 }
-            } catch (Exception $e) {
-                Logger::getInstance()->warning('HR4 payroll import failed during income statement generation', [
-                    'error' => $e->getMessage()
-                ]);
             }
+        } catch (Exception $e) {
+            Logger::getInstance()->warning('Auto-import failed during report generation', [
+                'error' => $e->getMessage()
+            ]);
         }
 
         // Get revenue data (from journal entries - placeholder for now)
