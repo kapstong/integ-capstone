@@ -535,13 +535,100 @@ body {
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">HR3 Claims Processing - From HR3 API</h6>
                     <div>
+                        <button class="btn btn-success me-2" onclick="loadClaimsBreakdown()">
+                            <i class="fas fa-chart-bar me-2"></i>Load Breakdown
+                        </button>
                         <button class="btn btn-success" onclick="loadClaims()">
                             <i class="fas fa-sync me-2"></i>Load Claims
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="exportClaimsBreakdown()">
+                            <i class="fas fa-download me-2"></i>Export Report
                         </button>
                     </div>
                 </div>
 
+                <!-- Claims Statistics Dashboard -->
+                <div id="claimsDashboard" class="row mb-4" style="display: none;">
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 id="totalClaimsCount">-</h3>
+                                <h6 class="text-muted">Total Claims</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 id="totalClaimsAmount">₱0.00</h3>
+                                <h6 class="text-muted">Total Amount</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 id="approvedClaimsCount">-</h3>
+                                <h6 class="text-muted">Approved Claims</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 id="pendingClaimsCount">-</h3>
+                                <h6 class="text-muted">Other Status</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
+                <!-- Claims Breakdown Visualizations -->
+                <div id="claimsBreakdownSection" class="row mb-4" style="display: none;">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>Claims by Department</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="departmentBreakdownChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>Claims by Status</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="statusBreakdownChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Department Breakdown Table -->
+                <div id="departmentBreakdownTable" class="card mb-4" style="display: none;">
+                    <div class="card-header">
+                        <h6>Department Breakdown</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Department</th>
+                                        <th>Claims Count</th>
+                                        <th>Total Amount</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="departmentBreakdownBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="table-responsive">
                     <table class="table table-striped" id="claimsTable">
@@ -549,8 +636,9 @@ body {
                             <tr>
                                 <th>Claim ID</th>
                                 <th>Employee</th>
-                                <th>Type</th>
+                                <th>Department</th>
                                 <th>Amount</th>
+                                <th>Status</th>
                                 <th>Date</th>
                                 <th>Description</th>
                                 <th>Actions</th>
@@ -558,8 +646,8 @@ body {
                         </thead>
                         <tbody id="claimsTableBody">
                             <tr>
-                                <td colspan="7" class="text-center">
-                                    <div class="text-muted">Click "Load Claims" to fetch approved claims from HR3 system</div>
+                                <td colspan="8" class="text-center">
+                                    <div class="text-muted">Click "Load Breakdown" to fetch claims breakdown from HR3 system</div>
                                 </td>
                             </tr>
                         </tbody>
@@ -1259,6 +1347,204 @@ body {
             } catch (e) {
                 return dateString;
             }
+        };
+
+        // Load HR3 Claims Breakdown with Dashboard
+        window.loadClaimsBreakdown = async function() {
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading Breakdown...';
+
+            try {
+                // Call HR3 getClaimsBreakdown method
+                const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=getClaimsBreakdown', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('HR3 Claims Breakdown Result:', result);
+
+                if (result.success && result.data) {
+                    window.displayHR3ClaimsBreakdown(result.data);
+                    window.showAlert('Successfully loaded claims breakdown from HR3 API!', 'success');
+                } else {
+                    throw new Error(result.error || 'Failed to load breakdown data');
+                }
+            } catch (error) {
+                console.error('HR3 Breakdown loading error:', error);
+                window.showAlert('Error loading breakdown: ' + error.message, 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        };
+
+        // Display HR3 Claims Breakdown
+        window.displayHR3ClaimsBreakdown = function(data) {
+            const breakdown = data;
+
+            // Update dashboard cards
+            document.getElementById('totalClaimsCount').textContent = breakdown.summary.total_claims;
+            document.getElementById('totalClaimsAmount').textContent = '₱' + window.formatCurrency(breakdown.summary.total_amount);
+            document.getElementById('approvedClaimsCount').textContent = breakdown.summary.status_breakdown.approved || 0;
+            document.getElementById('pendingClaimsCount').textContent =
+                (breakdown.summary.status_breakdown.pending || 0) +
+                (breakdown.summary.status_breakdown.rejected || 0);
+
+            // Show dashboard section
+            document.getElementById('claimsDashboard').style.display = 'flex';
+
+            // Populate charts and tables
+            window.createDepartmentBreakdownChart(breakdown.summary.department_breakdown);
+            window.createStatusBreakdownChart(breakdown.summary.status_breakdown);
+            window.populateDepartmentBreakdownTable(breakdown.summary);
+
+            // Show breakdown sections
+            document.getElementById('claimsBreakdownSection').style.display = 'flex';
+            document.getElementById('departmentBreakdownTable').style.display = 'block';
+
+            // Update claims table with breakdown data
+            if (breakdown.claims && breakdown.claims.length > 0) {
+                window.displayHR3Claims(breakdown.claims.map(claim => ({
+                    claim_id: claim.id,
+                    employee_name: claim.employee_name,
+                    status: claim.status === 'approved' ? 'Approved' : 'Pending',
+                    total_amount: claim.amount,
+                    currency_code: 'PHP',
+                    created_at: claim.date_submitted,
+                    remarks: claim.description,
+                    department: claim.department
+                })));
+            }
+        };
+
+        // Create Department Breakdown Chart
+        window.createDepartmentBreakdownChart = function(departmentBreakdown) {
+            const ctx = document.getElementById('departmentBreakdownChart').getContext('2d');
+
+            const labels = Object.keys(departmentBreakdown);
+            const amounts = labels.map(dept => departmentBreakdown[dept].total_amount);
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Amount by Department',
+                        data: amounts,
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ₱' + window.formatCurrency(context.parsed);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        // Create Status Breakdown Chart
+        window.createStatusBreakdownChart = function(statusBreakdown) {
+            const ctx = document.getElementById('statusBreakdownChart').getContext('2d');
+
+            const statusLabels = ['Approved', 'Pending', 'Rejected'];
+            const statusCounts = [
+                statusBreakdown.approved || 0,
+                statusBreakdown.pending || 0,
+                statusBreakdown.rejected || 0
+            ];
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        label: 'Number of Claims',
+                        data: statusCounts,
+                        backgroundColor: [
+                            '#28a745', '#ffc107', '#dc3545'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        };
+
+        // Populate Department Breakdown Table
+        window.populateDepartmentBreakdownTable = function(summary) {
+            const tbody = document.getElementById('departmentBreakdownBody');
+            tbody.innerHTML = '';
+
+            const departments = Object.keys(summary.department_breakdown);
+            if (departments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No department data available</td></tr>';
+                return;
+            }
+
+            departments.forEach(dept => {
+                const data = summary.department_breakdown[dept];
+                const percentage = summary.total_amount > 0 ? (data.total_amount / summary.total_amount * 100).toFixed(1) : 0;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${dept}</td>
+                    <td>${data.claim_count}</td>
+                    <td>₱${window.formatCurrency(data.total_amount)}</td>
+                    <td>${percentage}%</td>
+                `;
+                tbody.appendChild(row);
+            });
+        };
+
+        // Export Claims Breakdown Report
+        window.exportClaimsBreakdown = function() {
+            window.showAlert('Export functionality will be implemented. For now, please use the breakdown visualization above.', 'info');
+        };
+
+        // Helper function to format currency
+        window.formatCurrency = function(amount) {
+            return parseFloat(amount || 0).toLocaleString('en-PH', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
         };
     });
     </script>

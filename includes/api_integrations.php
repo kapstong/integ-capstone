@@ -847,17 +847,321 @@ class MicrosoftTeamsIntegration extends BaseIntegration {
 }
 
 /**
- * HR3 Integration (Placeholder - need to implement)
+ * HR3 Integration - Employee Claims/Expenses System
  */
 class HR3Integration extends BaseIntegration {
     protected $name = 'hr3';
-    protected $displayName = 'HR3 System';
-    protected $description = 'HR3 System Integration';
+    protected $displayName = 'HR3 Employee Claims System';
+    protected $description = 'Process employee expense claims and reimbursements from HR3 system';
     protected $requiredConfig = ['api_url'];
 
     public function testConnection($config) {
-        // Placeholder implementation
-        return ['success' => true, 'message' => 'HR3 connection placeholder'];
+        try {
+            $ch = curl_init($config['api_url']);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200) {
+                return ['success' => false, 'message' => 'HR3 API returned HTTP ' . $httpCode];
+            }
+
+            $data = json_decode($response, true);
+            if (!$data || !isset($data['claims'])) {
+                return ['success' => false, 'message' => 'Invalid HR3 API response format'];
+            }
+
+            $claimCount = count($data['claims'] ?? []);
+            return [
+                'success' => true,
+                'message' => "HR3 connection successful. Found {$claimCount} employee claims"
+            ];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get approved claims from HR3 API
+     */
+    public function getApprovedClaims($config, $params = []) {
+        try {
+            $ch = curl_init($config['api_url']);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200) {
+                throw new Exception('HR3 API returned HTTP ' . $httpCode);
+            }
+
+            $data = json_decode($response, true);
+            if (!$data || !isset($data['claims'])) {
+                throw new Exception('Invalid HR3 API response');
+            }
+
+            // Filter only approved claims
+            $approvedClaims = array_filter($data['claims'], function($claim) {
+                return isset($claim['status']) && strtolower($claim['status']) === 'approved';
+            });
+
+            return $approvedClaims;
+        } catch (Exception $e) {
+            Logger::getInstance()->error('HR3 getApprovedClaims failed: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Import claims to disbursements system
+     */
+    public function importClaimsToDisbursements($config, $params = []) {
+        try {
+            $approvedClaims = $this->getApprovedClaims($config, $params);
+
+            $db = Database::getInstance()->getConnection();
+            $importedCount = 0;
+            $errors = [];
+
+            foreach ($approvedClaims as $claim) {
+                try {
+                    $claimId = $claim['claim_id'] ?? $claim['id'] ?? 'HR3_' . time() . '_' . $importedCount;
+                    $employeeId = $claim['employee_id'] ?? '';
+                    $employeeName = $claim['employee_name'] ?? 'Unknown Employee';
+                    $amount = floatval($claim['amount'] ?? $claim['total_amount'] ?? 0);
+                    $description = $claim['description'] ?? $claim['purpose'] ?? 'Employee Claim';
+                    $claimDate = isset($claim['date_submitted']) ? date('Y-m-d', strtotime($claim['date_submitted'])) : date('Y-m-d');
+
+                    if ($amount <= 0) continue;
+
+                    // Map department if available
+                    $departmentId = $this->mapDepartment($claim['department'] ?? '');
+
+                    // Check if claim already exists
+                    $checkStmt = $db->prepare("SELECT id FROM disbursements WHERE external_reference = ?");
+                    $checkStmt->execute([$claimId]);
+                    if ($checkStmt->fetch()) {
+                        continue; // Skip existing claims
+                    }
+
+                    // Insert claim as disbursement
+                    $stmt = $db->prepare("
+                        INSERT INTO disbursements
+                        (disbursement_type, payee_name, amount, description, status,
+                         department_id, external_reference, external_system, created_at)
+                        VALUES (?, ?, ?, ?, 'approved', ?, ?, 'HR3', NOW())
+                    ");
+
+                    $stmt->execute([
+                        'employee_claim',
+                        $employeeName,
+                        $amount,
+                        $description,
+                        $departmentId,
+                        $claimId
+                    ]);
+
+                    $importedCount++;
+
+                    Logger::getInstance()->info('HR3 claim imported to disbursements', [
+                        'claim_id' => $claimId,
+                        'employee' => $employeeName,
+                        'amount' => $amount
+                    ]);
+
+                } catch (Exception $e) {
+                    $errors[] = 'Failed to import claim ' . ($claim['claim_id'] ?? 'Unknown') . ': ' . $e->getMessage();
+                    Logger::getInstance()->error('HR3 claim import error', [
+                        'claim' => $claim,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            return [
+                'success' => count($errors) === 0,
+                'imported_count' => $importedCount,
+                'errors' => $errors,
+                'message' => "Imported {$importedCount} approved claims to disbursements system"
+            ];
+
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Update claim status back to HR3 (bidirectional sync)
+     */
+    public function updateClaimStatus($config, $params = []) {
+        if (!isset($params['claim_id']) || !isset($params['status'])) {
+            throw new Exception('Missing required parameters: claim_id and status');
+        }
+
+        try {
+            $claimId = $params['claim_id'];
+            $newStatus = $params['status'];
+
+            // Prepare update payload for HR3 API
+            $updateData = [
+                'claim_id' => $claimId,
+                'status' => $newStatus,
+                'updated_at' => date('Y-m-d H:i:s'),
+                'updated_by' => 'ATIERA_FINANCE_SYSTEM'
+            ];
+
+            $ch = curl_init($config['api_url'] . '/update');
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($updateData));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . ($config['api_key'] ?? '')
+            ]);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200) {
+                $result = json_decode($response, true);
+                if (isset($result['success']) && $result['success']) {
+                    return [
+                        'success' => true,
+                        'message' => 'Claim status updated successfully in HR3',
+                        'claim_id' => $claimId,
+                        'new_status' => $newStatus
+                    ];
+                }
+            }
+
+            return [
+                'success' => false,
+                'error' => 'Failed to update claim status in HR3 API',
+                'http_code' => $httpCode
+            ];
+
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get claims summary with breakdown structure
+     */
+    public function getClaimsBreakdown($config, $params = []) {
+        try {
+            $claims = $this->getApprovedClaims($config, $params);
+
+            // Create breakdown by department and status
+            $breakdown = [
+                'summary' => [
+                    'total_claims' => count($claims),
+                    'total_amount' => 0,
+                    'department_breakdown' => [],
+                    'status_breakdown' => [
+                        'approved' => 0,
+                        'pending' => 0,
+                        'rejected' => 0
+                    ]
+                ],
+                'claims' => []
+            ];
+
+            foreach ($claims as $claim) {
+                $amount = floatval($claim['amount'] ?? $claim['total_amount'] ?? 0);
+                $department = $claim['department'] ?? 'General';
+                $status = strtolower($claim['status'] ?? 'approved');
+
+                $breakdown['summary']['total_amount'] += $amount;
+
+                // Department breakdown
+                if (!isset($breakdown['summary']['department_breakdown'][$department])) {
+                    $breakdown['summary']['department_breakdown'][$department] = [
+                        'claim_count' => 0,
+                        'total_amount' => 0
+                    ];
+                }
+                $breakdown['summary']['department_breakdown'][$department]['claim_count']++;
+                $breakdown['summary']['department_breakdown'][$department]['total_amount'] += $amount;
+
+                // Status breakdown
+                if (isset($breakdown['summary']['status_breakdown'][$status])) {
+                    $breakdown['summary']['status_breakdown'][$status]++;
+                }
+
+                // Add to claims list
+                $breakdown['claims'][] = [
+                    'id' => $claim['claim_id'] ?? $claim['id'],
+                    'employee_name' => $claim['employee_name'] ?? 'Unknown',
+                    'department' => $department,
+                    'amount' => $amount,
+                    'description' => $claim['description'] ?? $claim['purpose'] ?? '',
+                    'date_submitted' => $claim['date_submitted'] ?? '',
+                    'status' => $status
+                ];
+            }
+
+            return [
+                'success' => true,
+                'data' => $breakdown
+            ];
+
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'data' => null
+            ];
+        }
+    }
+
+    /**
+     * Map department name to department ID
+     */
+    private function mapDepartment($departmentName = '') {
+        $mapping = [
+            'kitchen' => 2,
+            'food' => 2,
+            'beverage' => 2,
+            'front office' => 3,
+            'front' => 3,
+            'desk' => 3,
+            'reception' => 3,
+            'administration' => 1,
+            'admin' => 1,
+            'office' => 1,
+            'hr' => 1,
+            'human resources' => 1,
+            'housekeeping' => 4,
+            'maintenance' => 5,
+            'security' => 6,
+            'sales' => 7,
+            'marketing' => 7,
+            'events' => 8
+        ];
+
+        $lowerName = strtolower($departmentName);
+        foreach ($mapping as $keyword => $deptId) {
+            if (strpos($lowerName, $keyword) !== false) {
+                return $deptId;
+            }
+        }
+
+        return 1; // Default to Administrative
     }
 }
 
