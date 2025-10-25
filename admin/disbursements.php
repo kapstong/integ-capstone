@@ -1344,8 +1344,8 @@ body {
 
                 const result = await response.json();
 
-                if (result.success && result.data) {
-                    window.displayHR4Payroll(result.data);
+                if (result.success && result.result) {
+                    window.displayHR4Payroll(result.result);
                     window.showAlert('Successfully loaded payroll data from HR4 system!', 'success');
                 } else {
                     window.showAlert('Error loading payroll: ' + (result.error || 'No payroll data found'), 'danger');
