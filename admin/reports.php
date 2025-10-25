@@ -1842,23 +1842,105 @@ $db = Database::getInstance()->getConnection();
 
                 <div class="account-category">
                     <h6>Operating Activities</h6>
+                    <div class="ps-3">
+                        <div class="fw-bold text-success mb-2">Cash Inflows (Revenue):</div>
             `;
 
-            if (operating.accounts && operating.accounts.length > 0) {
-                operating.accounts.forEach(account => {
+            // Revenue breakdown
+            if (operating.revenue && operating.revenue.length > 0) {
+                operating.revenue.forEach(rev => {
                     html += `
-                        <div class="account-item">
-                            <span class="account-name">Cash payments: ${account.department || 'General'}</span>
-                            <span class="account-amount">₱${parseFloat(account.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        <div class="account-item ps-3">
+                            <span class="account-name">${rev.name}</span>
+                            <span class="account-amount text-success">₱${parseFloat(rev.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                         </div>
                     `;
                 });
+            } else {
+                html += `
+                    <div class="account-item ps-3">
+                        <span class="account-name text-muted">No revenue recorded</span>
+                        <span class="account-amount">₱0.00</span>
+                    </div>
+                `;
             }
 
             html += `
-                    <div class="account-item total-row">
-                        <span class="account-name"><strong>Cash from Operating Activities</strong></span>
-                        <span class="account-amount"><strong>₱${parseFloat(operating.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                        <div class="account-item ps-3 border-bottom pb-2">
+                            <span class="account-name"><strong>Total Revenue</strong></span>
+                            <span class="account-amount text-success"><strong>₱${parseFloat(operating.total_revenue || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                        </div>
+
+                        <div class="fw-bold text-danger mb-2 mt-3">Cash Outflows (Operating Expenses):</div>
+            `;
+
+            // Expense category breakdown
+            if (operating.expenses_by_category && operating.expenses_by_category.length > 0) {
+                operating.expenses_by_category.forEach(expense => {
+                    const sourceBadges = expense.sources ? expense.sources.split(',').map(src => {
+                        const badgeClass = src === 'HR_SYSTEM' ? 'bg-primary' : src === 'LOGISTICS1' ? 'bg-warning' : src === 'LOGISTICS2' ? 'bg-info' : 'bg-secondary';
+                        return `<span class="badge ${badgeClass} text-xs">${src}</span>`;
+                    }).join(' ') : '';
+
+                    html += `
+                        <div class="account-item ps-3">
+                            <span class="account-name">
+                                ${expense.name}
+                                ${sourceBadges}
+                                <button class="btn btn-sm btn-link text-decoration-none p-0 ms-2"
+                                        onclick="toggleExpenseDetail('${expense.subcategory}')"
+                                        title="View detailed breakdown">
+                                    <i class="fas fa-chevron-down" id="icon-${expense.subcategory}"></i>
+                                </button>
+                            </span>
+                            <span class="account-amount text-danger">₱${parseFloat(expense.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                        <div id="detail-${expense.subcategory}" class="ps-5 d-none" style="background-color: #f8f9fa; margin: 5px 0; padding: 10px; border-radius: 4px;">
+                    `;
+
+                    // Show detailed breakdown for this category
+                    if (operating.expense_details && operating.expense_details.length > 0) {
+                        const categoryDetails = operating.expense_details.filter(d => d.expense_category === expense.subcategory);
+                        if (categoryDetails.length > 0) {
+                            categoryDetails.forEach(detail => {
+                                const sourceLabel = detail.source_system === 'HR_SYSTEM' ? 'HR4 Payroll' :
+                                                  detail.source_system === 'LOGISTICS1' ? 'Logistics 1' :
+                                                  detail.source_system === 'LOGISTICS2' ? 'Logistics 2' : detail.source_system;
+                                html += `
+                                    <div class="account-item" style="font-size: 0.9em;">
+                                        <span class="account-name text-muted">
+                                            ${detail.department || 'General'}
+                                            <span class="badge bg-light text-dark">${sourceLabel}</span>
+                                            <small>(${detail.transaction_count} transactions)</small>
+                                        </span>
+                                        <span class="account-amount">₱${parseFloat(detail.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                    </div>
+                                `;
+                            });
+                        }
+                    }
+
+                    html += `</div>`;
+                });
+            } else {
+                html += `
+                    <div class="account-item ps-3">
+                        <span class="account-name text-muted">No operating expenses recorded</span>
+                        <span class="account-amount">₱0.00</span>
+                    </div>
+                `;
+            }
+
+            html += `
+                        <div class="account-item ps-3 border-bottom pb-2">
+                            <span class="account-name"><strong>Total Operating Expenses</strong></span>
+                            <span class="account-amount text-danger"><strong>₱${parseFloat(operating.total_expenses || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="account-item total-row mt-2">
+                        <span class="account-name"><strong>Net Cash from Operating Activities</strong></span>
+                        <span class="account-amount ${operating.amount >= 0 ? 'text-success' : 'text-danger'}"><strong>₱${parseFloat(operating.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
                     </div>
                 </div>
 
@@ -2097,14 +2179,36 @@ $db = Database::getInstance()->getConnection();
             csvContent += `Period: ${currentCashFlowData.start_date} to ${currentCashFlowData.end_date}\n\n`;
 
             // Operating Activities
-            csvContent += 'OPERATING ACTIVITIES\n';
+            csvContent += 'OPERATING ACTIVITIES\n\n';
+            csvContent += 'Cash Inflows (Revenue)\n';
             csvContent += 'Account,Amount\n';
-            if (currentCashFlowData.cash_flow.operating_activities.accounts) {
-                currentCashFlowData.cash_flow.operating_activities.accounts.forEach(account => {
-                    csvContent += `"${account.account_name}","${account.amount || 0}"\n`;
+            const operating = currentCashFlowData.cash_flow.operating_activities;
+
+            if (operating.revenue && operating.revenue.length > 0) {
+                operating.revenue.forEach(rev => {
+                    csvContent += `"${rev.name}","${rev.amount || 0}"\n`;
                 });
             }
-            csvContent += `"Net Cash from Operating Activities","${currentCashFlowData.cash_flow.operating_activities.amount}"\n\n`;
+            csvContent += `"Total Revenue","${operating.total_revenue || 0}"\n\n`;
+
+            csvContent += 'Cash Outflows (Operating Expenses)\n';
+            csvContent += 'Category,Source System,Amount\n';
+            if (operating.expenses_by_category && operating.expenses_by_category.length > 0) {
+                operating.expenses_by_category.forEach(expense => {
+                    csvContent += `"${expense.name}","${expense.sources || 'N/A'}","${expense.amount || 0}"\n`;
+                });
+            }
+            csvContent += `"Total Operating Expenses","","${operating.total_expenses || 0}"\n\n`;
+
+            csvContent += 'Detailed Expense Breakdown by Department\n';
+            csvContent += 'Department,Category,Source,Amount,Transactions\n';
+            if (operating.expense_details && operating.expense_details.length > 0) {
+                operating.expense_details.forEach(detail => {
+                    csvContent += `"${detail.department || 'General'}","${detail.expense_category}","${detail.source_system}","${detail.amount || 0}","${detail.transaction_count}"\n`;
+                });
+            }
+
+            csvContent += `\n"Net Cash from Operating Activities","","","${operating.amount}"\n\n`;
 
             // Investing Activities
             csvContent += 'INVESTING ACTIVITIES\n';
@@ -2298,6 +2402,24 @@ $db = Database::getInstance()->getConnection();
             }, 250);
 
             showAlert('Opening print dialog...', 'info');
+        }
+
+        // Toggle expense detail breakdown in cash flow statement
+        function toggleExpenseDetail(categoryId) {
+            const detailDiv = document.getElementById(`detail-${categoryId}`);
+            const icon = document.getElementById(`icon-${categoryId}`);
+
+            if (detailDiv && icon) {
+                if (detailDiv.classList.contains('d-none')) {
+                    detailDiv.classList.remove('d-none');
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                } else {
+                    detailDiv.classList.add('d-none');
+                    icon.classList.remove('fa-chevron-up');
+                    icon.classList.add('fa-chevron-down');
+                }
+            }
         }
 
         // Email current report

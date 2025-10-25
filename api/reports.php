@@ -399,18 +399,70 @@ try {
         $financingData = [];
 
         try {
-            // Operating activities - from daily expenses mostly (cash basis approximation)
-            $operatingQuery = $db->prepare("
+            // Operating activities - Revenue (cash inflows)
+            $revenueQuery = $db->prepare("
                 SELECT
-                    d.dept_name as name,
-                    SUM(des.total_amount) as amount
+                    coa.account_name as name,
+                    'Revenue' as category,
+                    SUM(COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)) as amount
+                FROM chart_of_accounts coa
+                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+                WHERE coa.account_type = 'revenue'
+                    AND je.status = 'posted'
+                    AND je.entry_date BETWEEN :start_date AND :end_date
+                GROUP BY coa.id, coa.account_name
+                HAVING amount != 0
+                ORDER BY amount DESC
+            ");
+            $revenueQuery->execute(['start_date' => $startDate, 'end_date' => $endDate]);
+            $revenueData = $revenueQuery->fetchAll(PDO::FETCH_ASSOC);
+
+            // Operating activities - Expenses by category
+            $expenseByCategory = $db->prepare("
+                SELECT
+                    CASE des.expense_category
+                        WHEN 'labor_payroll' THEN 'Payroll & Salaries'
+                        WHEN 'supplies_materials' THEN 'Materials & Supplies'
+                        WHEN 'fuel_transportation' THEN 'Fuel Costs'
+                        WHEN 'transportation_other' THEN 'Transportation Costs'
+                        ELSE 'Other Operating Expenses'
+                    END as name,
+                    'Operating Expense' as category,
+                    des.expense_category as subcategory,
+                    SUM(des.total_amount) as amount,
+                    GROUP_CONCAT(DISTINCT des.source_system) as sources
+                FROM daily_expense_summary des
+                WHERE des.business_date BETWEEN :start_date AND :end_date
+                GROUP BY des.expense_category
+                ORDER BY amount DESC
+            ");
+            $expenseByCategory->execute(['start_date' => $startDate, 'end_date' => $endDate]);
+            $expenseCategories = $expenseByCategory->fetchAll(PDO::FETCH_ASSOC);
+
+            // Operating activities - Detailed breakdown by department for each category
+            $detailedExpenses = $db->prepare("
+                SELECT
+                    d.dept_name as department,
+                    des.expense_category,
+                    des.source_system,
+                    SUM(des.total_amount) as amount,
+                    COUNT(*) as transaction_count
                 FROM daily_expense_summary des
                 LEFT JOIN departments d ON des.department_id = d.id
                 WHERE des.business_date BETWEEN :start_date AND :end_date
-                GROUP BY d.dept_name
+                GROUP BY d.dept_name, des.expense_category, des.source_system
+                ORDER BY des.expense_category, amount DESC
             ");
-            $operatingQuery->execute(['start_date' => $startDate, 'end_date' => $endDate]);
-            $operatingData = $operatingQuery->fetchAll(PDO::FETCH_ASSOC);
+            $detailedExpenses->execute(['start_date' => $startDate, 'end_date' => $endDate]);
+            $expenseDetails = $detailedExpenses->fetchAll(PDO::FETCH_ASSOC);
+
+            // Combine into operating data structure
+            $operatingData = [
+                'revenue' => $revenueData,
+                'expenses_by_category' => $expenseCategories,
+                'expense_details' => $expenseDetails
+            ];
         } catch (Exception $e) {
             // Continue with empty data if query fails
             $operatingData = [];
@@ -474,7 +526,17 @@ try {
         }
 
         // Calculate totals with safe array handling
-        $operatingCash = array_sum(array_column($operatingData, 'amount')) ?: 0;
+        $totalRevenue = 0;
+        $totalExpenses = 0;
+
+        if (is_array($operatingData) && isset($operatingData['revenue'])) {
+            $totalRevenue = array_sum(array_column($operatingData['revenue'], 'amount')) ?: 0;
+        }
+        if (is_array($operatingData) && isset($operatingData['expenses_by_category'])) {
+            $totalExpenses = array_sum(array_column($operatingData['expenses_by_category'], 'amount')) ?: 0;
+        }
+
+        $operatingCash = $totalRevenue - $totalExpenses;
         $investingCash = -abs(array_sum(array_column($investingData, 'amount')) ?: 0); // Always negative for purchases
         $financingCash = array_sum(array_column($financingData, 'amount')) ?: 0;
 
@@ -487,7 +549,12 @@ try {
             'cash_flow' => [
                 'operating_activities' => [
                     'amount' => intval($operatingCash),
-                    'accounts' => $operatingData ?: []
+                    'revenue' => $operatingData['revenue'] ?? [],
+                    'total_revenue' => intval($totalRevenue),
+                    'expenses_by_category' => $operatingData['expenses_by_category'] ?? [],
+                    'expense_details' => $operatingData['expense_details'] ?? [],
+                    'total_expenses' => intval($totalExpenses),
+                    'breakdown' => $operatingData
                 ],
                 'investing_activities' => [
                     'amount' => intval($investingCash),
@@ -496,7 +563,8 @@ try {
                 'financing_activities' => [
                     'amount' => intval($financingCash),
                     'accounts' => $financingData ?: []
-                ]
+                ],
+                'net_change' => intval($operatingCash + $investingCash + $financingCash)
             ]
         ]);
         exit;
