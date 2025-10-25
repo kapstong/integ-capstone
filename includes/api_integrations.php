@@ -1215,7 +1215,7 @@ class HR4Integration extends BaseIntegration {
 /**
  * Logistics 1 Integration - Purchase Orders, Delivery Receipts, and Invoices
  */
-class Logistics1Integration extends IntegrationBase {
+class Logistics1Integration extends BaseIntegration {
     public function getName() {
         return 'Logistics 1 - Procurement System';
     }
@@ -1538,7 +1538,7 @@ class Logistics1Integration extends IntegrationBase {
 /**
  * Logistics 2 Integration - Trip Costs and Transportation
  */
-class Logistics2Integration extends IntegrationBase {
+class Logistics2Integration extends BaseIntegration {
     public function getName() {
         return 'Logistics 2 - Transportation System';
     }
