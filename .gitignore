@@ -1,0 +1,46 @@
+# Logs and temporary files
+*.log
+logs/
+api/logs/
+tmp/
+*.tmp
+*.swp
+*.swo
+
+# Node modules
+node_modules/
+
+# Cache
+cache/
+*.cache
+
+# Environment variables
+.env
+
+# IDE files
+.vscode/
+.idea/
+
+# Database backups (if not tracked)
+*.sql
+!atiera_finance_master.sql
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Uploaded files
+uploads/*
+!uploads/.gitkeep
+
+# Session files (if used)
+session/*
+
+# Test files
+test/
+tests/
