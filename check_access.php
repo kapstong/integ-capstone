@@ -114,7 +114,9 @@ if (!isset($_SESSION['user'])) {
         echo '<h4>✅ Your Permissions (' . count($user['permissions']) . '):</h4>';
         echo '<ul>';
         foreach ($user['permissions'] as $perm) {
-            echo '<li>' . htmlspecialchars($perm) . '</li>';
+            // Handle if permission is an array or object
+            $permString = is_array($perm) ? (isset($perm['name']) ? $perm['name'] : json_encode($perm)) : (string)$perm;
+            echo '<li>' . htmlspecialchars($permString) . '</li>';
         }
         echo '</ul>';
         echo '</div>';
@@ -133,7 +135,9 @@ if (!isset($_SESSION['user'])) {
         echo '<h4>Your Roles:</h4>';
         echo '<ul>';
         foreach ($user['roles'] as $role) {
-            echo '<li>' . htmlspecialchars($role) . '</li>';
+            // Handle if role is an array or object
+            $roleString = is_array($role) ? (isset($role['name']) ? $role['name'] : json_encode($role)) : (string)$role;
+            echo '<li>' . htmlspecialchars($roleString) . '</li>';
         }
         echo '</ul>';
         echo '</div>';
