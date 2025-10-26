@@ -331,6 +331,109 @@ abstract class BaseIntegration {
     }
 
     /**
+     * Create journal entry for API transaction (Double-Entry Bookkeeping)
+     * This ensures ALL API transactions are recorded in the accounting books
+     */
+    protected function createJournalEntry($params) {
+        try {
+            $db = Database::getInstance()->getConnection();
+
+            // Required parameters
+            $date = $params['date'] ?? date('Y-m-d');
+            $description = $params['description'] ?? 'API Transaction';
+            $debitAccountId = $params['debit_account_id'] ?? null;
+            $creditAccountId = $params['credit_account_id'] ?? null;
+            $amount = floatval($params['amount'] ?? 0);
+            $referenceNumber = $params['reference_number'] ?? 'API_' . time();
+            $sourceSystem = $params['source_system'] ?? 'EXTERNAL_API';
+
+            if (!$debitAccountId || !$creditAccountId || $amount <= 0) {
+                throw new Exception('Invalid journal entry parameters');
+            }
+
+            // Create journal entry header
+            $stmt = $db->prepare("
+                INSERT INTO journal_entries
+                (entry_date, description, reference_number, status, created_by, source_system)
+                VALUES (?, ?, ?, 'posted', 1, ?)
+            ");
+            $stmt->execute([$date, $description, $referenceNumber, $sourceSystem]);
+            $journalEntryId = $db->lastInsertId();
+
+            // Create debit line
+            $debitStmt = $db->prepare("
+                INSERT INTO journal_entry_lines
+                (journal_entry_id, account_id, debit, credit, description)
+                VALUES (?, ?, ?, 0, ?)
+            ");
+            $debitStmt->execute([$journalEntryId, $debitAccountId, $amount, $description]);
+
+            // Create credit line
+            $creditStmt = $db->prepare("
+                INSERT INTO journal_entry_lines
+                (journal_entry_id, account_id, debit, credit, description)
+                VALUES (?, ?, 0, ?, ?)
+            ");
+            $creditStmt->execute([$journalEntryId, $creditAccountId, $amount, $description]);
+
+            Logger::getInstance()->info('Journal entry created for API transaction', [
+                'journal_entry_id' => $journalEntryId,
+                'source_system' => $sourceSystem,
+                'amount' => $amount,
+                'reference' => $referenceNumber
+            ]);
+
+            return [
+                'success' => true,
+                'journal_entry_id' => $journalEntryId
+            ];
+
+        } catch (Exception $e) {
+            Logger::getInstance()->error('Failed to create journal entry for API transaction', [
+                'error' => $e->getMessage(),
+                'params' => $params
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Get chart of accounts ID by account code or name
+     */
+    protected function getAccountId($accountCodeOrName) {
+        try {
+            $db = Database::getInstance()->getConnection();
+
+            // Try by account code first
+            $stmt = $db->prepare("SELECT id FROM chart_of_accounts WHERE account_code = ? AND is_active = 1 LIMIT 1");
+            $stmt->execute([$accountCodeOrName]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($result) {
+                return $result['id'];
+            }
+
+            // Try by account name
+            $stmt = $db->prepare("SELECT id FROM chart_of_accounts WHERE account_name LIKE ? AND is_active = 1 LIMIT 1");
+            $stmt->execute(['%' . $accountCodeOrName . '%']);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($result) {
+                return $result['id'];
+            }
+
+            return null;
+
+        } catch (Exception $e) {
+            Logger::getInstance()->error('Failed to get account ID', [
+                'account' => $accountCodeOrName,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
      * Test connection to the service
      */
     abstract public function testConnection($config);
@@ -993,9 +1096,26 @@ class HR3Integration extends BaseIntegration {
                         $claimId
                     ]);
 
+                    // CREATE JOURNAL ENTRY for proper double-entry bookkeeping
+                    // Debit: Employee Claims Expense, Credit: Accounts Payable
+                    $claimsExpenseAccount = $this->getAccountId('5300'); // Employee Claims/Reimbursements Expense
+                    $accountsPayableAccount = $this->getAccountId('2100'); // Accounts Payable
+
+                    if ($claimsExpenseAccount && $accountsPayableAccount) {
+                        $this->createJournalEntry([
+                            'date' => $claimDate,
+                            'description' => $description,
+                            'debit_account_id' => $claimsExpenseAccount,
+                            'credit_account_id' => $accountsPayableAccount,
+                            'amount' => $amount,
+                            'reference_number' => $claimId,
+                            'source_system' => 'HR3_CLAIMS'
+                        ]);
+                    }
+
                     $importedCount++;
 
-                    Logger::getInstance()->info('HR3 claim imported to disbursements', [
+                    Logger::getInstance()->info('HR3 claim imported with journal entry', [
                         'claim_id' => $claimId,
                         'employee' => $employeeName,
                         'amount' => $amount
@@ -1447,9 +1567,26 @@ class HR4Integration extends BaseIntegration {
                 ");
                 $summaryStmt->execute([$entryDate, $departmentId, 'labor_payroll', 'HR_SYSTEM', $amount]);
 
+                // CREATE JOURNAL ENTRY for proper double-entry bookkeeping
+                // Debit: Salaries Expense, Credit: Accrued Salaries Payable
+                $salariesExpenseAccount = $this->getAccountId('5100'); // Salaries Expense
+                $accruedSalariesAccount = $this->getAccountId('2107'); // Accrued Salaries Payable
+
+                if ($salariesExpenseAccount && $accruedSalariesAccount) {
+                    $this->createJournalEntry([
+                        'date' => $entryDate,
+                        'description' => $description,
+                        'debit_account_id' => $salariesExpenseAccount,
+                        'credit_account_id' => $accruedSalariesAccount,
+                        'amount' => $amount,
+                        'reference_number' => $externalId,
+                        'source_system' => 'HR4_PAYROLL'
+                    ]);
+                }
+
                 $importedCount++;
 
-                Logger::getInstance()->info('Payroll imported to department expense tracking', [
+                Logger::getInstance()->info('Payroll imported with journal entry', [
                     'payroll_id' => $externalId,
                     'employee' => $payroll['employee_name'] ?? 'Unknown',
                     'amount' => $amount,
@@ -1680,9 +1817,26 @@ class Logistics1Integration extends BaseIntegration {
                     ");
                     $summaryStmt->execute([$invoiceDate, $departmentId, 'supplies_materials', 'LOGISTICS1', $totalAmount]);
 
+                    // CREATE JOURNAL ENTRY for proper double-entry bookkeeping
+                    // Debit: Supplies/Materials Expense, Credit: Accounts Payable
+                    $suppliesExpenseAccount = $this->getAccountId('5200'); // Supplies & Materials Expense
+                    $accountsPayableAccount = $this->getAccountId('2100'); // Accounts Payable
+
+                    if ($suppliesExpenseAccount && $accountsPayableAccount) {
+                        $this->createJournalEntry([
+                            'date' => $invoiceDate,
+                            'description' => $description,
+                            'debit_account_id' => $suppliesExpenseAccount,
+                            'credit_account_id' => $accountsPayableAccount,
+                            'amount' => $totalAmount,
+                            'reference_number' => $externalId,
+                            'source_system' => 'LOGISTICS1'
+                        ]);
+                    }
+
                     $importedCount++;
 
-                    Logger::getInstance()->info('Logistics 1 invoice imported', [
+                    Logger::getInstance()->info('Logistics 1 invoice imported with journal entry', [
                         'invoice_id' => $externalId,
                         'supplier' => $invoice['supplier_name'] ?? 'Unknown',
                         'amount' => $totalAmount
@@ -1999,6 +2153,23 @@ class Logistics2Integration extends BaseIntegration {
                                 updated_at = NOW()
                         ");
                         $fuelStmt->execute([$tripDate, $departmentId, 'fuel_transportation', 'LOGISTICS2', $fuelCost]);
+
+                        // CREATE JOURNAL ENTRY for fuel costs
+                        // Debit: Fuel Expense, Credit: Accounts Payable
+                        $fuelExpenseAccount = $this->getAccountId('5400'); // Fuel & Transportation Expense
+                        $accountsPayableAccount = $this->getAccountId('2100'); // Accounts Payable
+
+                        if ($fuelExpenseAccount && $accountsPayableAccount) {
+                            $this->createJournalEntry([
+                                'date' => $tripDate,
+                                'description' => 'Fuel Cost: ' . $description,
+                                'debit_account_id' => $fuelExpenseAccount,
+                                'credit_account_id' => $accountsPayableAccount,
+                                'amount' => $fuelCost,
+                                'reference_number' => $externalId . '_FUEL',
+                                'source_system' => 'LOGISTICS2'
+                            ]);
+                        }
                     }
 
                     if ($otherCost > 0) {
@@ -2012,11 +2183,28 @@ class Logistics2Integration extends BaseIntegration {
                                 updated_at = NOW()
                         ");
                         $costStmt->execute([$tripDate, $departmentId, 'transportation_other', 'LOGISTICS2', $otherCost]);
+
+                        // CREATE JOURNAL ENTRY for other transportation costs
+                        // Debit: Transportation Expense, Credit: Accounts Payable
+                        $transportExpenseAccount = $this->getAccountId('5410'); // Transportation & Delivery Expense
+                        $accountsPayableAccount = $this->getAccountId('2100'); // Accounts Payable
+
+                        if ($transportExpenseAccount && $accountsPayableAccount) {
+                            $this->createJournalEntry([
+                                'date' => $tripDate,
+                                'description' => 'Transportation Cost: ' . $description,
+                                'debit_account_id' => $transportExpenseAccount,
+                                'credit_account_id' => $accountsPayableAccount,
+                                'amount' => $otherCost,
+                                'reference_number' => $externalId . '_OTHER',
+                                'source_system' => 'LOGISTICS2'
+                            ]);
+                        }
                     }
 
                     $importedCount++;
 
-                    Logger::getInstance()->info('Logistics 2 trip cost imported', [
+                    Logger::getInstance()->info('Logistics 2 trip cost imported with journal entries', [
                         'trip_id' => $externalId,
                         'driver' => $trip['driver_name'] ?? 'Unknown',
                         'amount' => $totalAmount,
