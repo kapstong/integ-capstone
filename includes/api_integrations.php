@@ -703,35 +703,47 @@ class XeroIntegration extends BaseIntegration {
 
     public function testConnection($config) {
         try {
-            // Test Xero API connection
-            $ch = curl_init('https://api.xero.com/api.xro/2.0/Organisation');
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Authorization: Bearer ' . $this->getAccessToken($config),
-                'Xero-tenant-id: ' . $config['tenant_id'],
-                'Accept: application/json'
-            ]);
+            $ch = curl_init($config['api_url']);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+            // Add browser-like headers to avoid blocking
+            $headers = [
+                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language: en-US,en;q=0.5',
+                'Accept-Encoding: gzip, deflate',
+                'DNT: 1',
+                'Connection: keep-alive',
+                'Upgrade-Insecure-Requests: 1'
+            ];
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            if ($httpCode === 200) {
-                return ['success' => true, 'message' => 'Xero connection successful'];
-            } else {
-                return ['success' => false, 'error' => 'Xero API returned HTTP ' . $httpCode];
+            if ($httpCode !== 200) {
+                return ['success' => false, 'message' => 'HTTP ' . $httpCode];
             }
+
+            $data = json_decode($response, true);
+            if (!isset($data['trips'])) {
+                return ['success' => false, 'message' => 'Invalid response format'];
+            }
+
+            $tripCount = count($data['trips'] ?? []);
+            $totalCost = floatval($data['summary']['grand_total'] ?? 0);
+
+            return [
+                'success' => true,
+                'message' => "Connected successfully. Found {$tripCount} trips with total cost of ₱" . number_format($totalCost, 2)
+            ];
         } catch (Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
-
-    private function getAccessToken($config) {
-        // Placeholder - OAuth2 token management would be implemented here
-        return 'access_token_placeholder';
-    }
-}
 
 /**
  * Mailchimp Integration
@@ -862,6 +874,18 @@ class HR3Integration extends BaseIntegration {
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+            // Add browser-like headers to avoid blocking
+            $headers = [
+                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language: en-US,en;q=0.5',
+                'Accept-Encoding: gzip, deflate',
+                'DNT: 1',
+                'Connection: keep-alive',
+                'Upgrade-Insecure-Requests: 1'
+            ];
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -1561,6 +1585,18 @@ class Logistics1Integration extends BaseIntegration {
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
+            // Add browser-like headers to avoid blocking
+            $headers = [
+                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language: en-US,en;q=0.5',
+                'Accept-Encoding: gzip, deflate',
+                'DNT: 1',
+                'Connection: keep-alive',
+                'Upgrade-Insecure-Requests: 1'
+            ];
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
@@ -1583,7 +1619,7 @@ class Logistics1Integration extends BaseIntegration {
                 'message' => "Connected successfully. Found {$poCount} POs, {$drCount} DRs, {$invCount} invoices"
             ];
         } catch (Exception $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 
