@@ -776,11 +776,6 @@ $db = Database::getInstance()->getConnection();
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="custom-tab" data-bs-toggle="tab" data-bs-target="#custom" type="button" role="tab">
-                    <i class="fas fa-cogs me-2"></i>Custom Reports
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics" type="button" role="tab">
                     <i class="fas fa-chart-bar me-2"></i>Analytics & Export
                 </button>
@@ -901,86 +896,6 @@ $db = Database::getInstance()->getConnection();
                             <div class="text-center py-5">
                                 <div class="loading mb-3"></div>
                                 <p class="text-muted">Generating cash flow statement...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Custom Reports Tab -->
-            <div class="tab-pane fade" id="custom" role="tabpanel" aria-labelledby="custom-tab">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">Custom Reports</h6>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCustomReportModal"><i class="fas fa-plus me-2"></i>Create Custom Report</button>
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Accounts Receivable Aging Summary</h6>
-                            </div>
-                            <div class="card-body">
-                                <p>Consolidated view of outstanding receivables by age category.</p>
-                                <div class="mb-3" id="arAgingContainer">
-                                    <div class="text-center py-3">
-                                        <div class="loading mb-3"></div>
-                                        <p class="text-muted">Generating aging report...</p>
-                                    </div>
-                                </div>
-                                <button class="btn btn-primary w-100" onclick="generateAgingReport('receivable')">Generate Aging Report</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Accounts Payable Aging Summary</h6>
-                            </div>
-                            <div class="card-body">
-                                <p>Consolidated view of outstanding payables by age category.</p>
-                                <div class="mb-3" id="apAgingContainer">
-                                    <div class="text-center py-3">
-                                        <div class="loading mb-3"></div>
-                                        <p class="text-muted">Generating aging report...</p>
-                                    </div>
-                                </div>
-                                <button class="btn btn-primary w-100" onclick="generateAgingReport('payable')">Generate Aging Report</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row mt-3">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Budget vs Actual Consolidated</h6>
-                            </div>
-                            <div class="card-body">
-                                <p>Comparison of planned vs actual spending across all departments.</p>
-                                <div class="mb-3" id="budgetVsActualContainer">
-                                    <div class="text-center py-3">
-                                        <div class="loading mb-3"></div>
-                                        <p class="text-muted">Generating budget report...</p>
-                                    </div>
-                                </div>
-                                <button class="btn btn-primary w-100" onclick="generateBudgetReport()">Generate Budget Report</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Collections & Disbursements Summary</h6>
-                            </div>
-                            <div class="card-body">
-                                <p>Company-wide summary of cash inflows and outflows.</p>
-                                <div class="mb-3" id="cashFlowSummaryContainer">
-                                    <div class="text-center py-3">
-                                        <div class="loading mb-3"></div>
-                                        <p class="text-muted">Generating cash flow summary...</p>
-                                    </div>
-                                </div>
-                                <button class="btn btn-primary w-100" onclick="generateCashFlowSummary()">Generate Cash Flow Report</button>
                             </div>
                         </div>
                     </div>
@@ -1514,152 +1429,6 @@ $db = Database::getInstance()->getConnection();
                 from: from.toISOString().split('T')[0],
                 to: to.toISOString().split('T')[0]
             };
-        }
-
-        // Generate aging reports
-        async function generateAgingReport(type) {
-            try {
-                const response = await fetch(`../api/reports.php?type=aging_${type}&format=json`);
-                const data = await response.json();
-
-                if (!data.success || data.error) {
-                    throw new Error(data.error || 'Failed to generate aging report');
-                }
-
-                // Update the aging report display
-                updateAgingDisplay(type, data);
-
-                showAlert(`${type === 'receivable' ? 'Accounts Receivable' : 'Accounts Payable'} aging report generated successfully`, 'success');
-
-            } catch (error) {
-                console.error(`Error generating ${type} aging report:`, error);
-                showAlert(`Error generating aging report: ${error.message}`, 'danger');
-            }
-        }
-
-        // Update aging display
-        function updateAgingDisplay(type, data) {
-            const containerId = type === 'receivable' ? 'arAgingContainer' : 'apAgingContainer';
-            const summaryDiv = document.getElementById(containerId);
-
-            // Update totals
-            const totals = data.totals || {};
-            summaryDiv.innerHTML = `
-                <div class="d-flex justify-content-between">
-                    <span>Current (0-30 days)</span>
-                    <span class="text-success">₱${parseFloat(totals.current || 0).toLocaleString()}</span>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span>31-60 days</span>
-                    <span class="text-warning">₱${parseFloat(totals['1-30'] || 0).toLocaleString()}</span>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span>61-90 days</span>
-                    <span class="text-danger">₱${parseFloat(totals['31-60'] || 0).toLocaleString()}</span>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span>90+ days</span>
-                    <span class="text-danger">₱${parseFloat(totals['61-90'] || 0).toLocaleString()}</span>
-                </div>
-            `;
-        }
-
-        // Utility functions
-        function formatDate(dateString) {
-            if (!dateString) return 'N/A';
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
-        }
-
-        function showAlert(message, type = 'info') {
-            // Create alert element
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-            alertDiv.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-
-            document.body.appendChild(alertDiv);
-
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                if (alertDiv.parentNode) {
-                    alertDiv.remove();
-                }
-            }, 5000);
-        }
-
-        // Generate balance sheet
-        async function generateBalanceSheet() {
-            const container = document.getElementById('balanceSheetContainer');
-            const dateSelect = document.getElementById('balanceDateSelect');
-            const asOfDate = dateSelect ? dateSelect.value : 'current';
-
-            // Show loading state
-            container.innerHTML = `
-                <div class="statement-header">
-                    <h1 class="statement-title">Balance Sheet</h1>
-                    <p class="statement-period">Loading...</p>
-                </div>
-                <div class="text-center py-5">
-                    <div class="loading mb-3"></div>
-                    <p class="text-muted">Generating balance sheet...</p>
-                </div>
-            `;
-
-            try {
-                // Calculate as-of date
-                let apiDate;
-                const now = new Date();
-                if (asOfDate === 'current') {
-                    apiDate = now.toISOString().split('T')[0];
-                } else if (asOfDate === 'last_month') {
-                    apiDate = new Date(now.getFullYear(), now.getMonth() - 1, 0).toISOString().split('T')[0];
-                } else if (asOfDate === 'last_quarter') {
-                    const quarterEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 0);
-                    if (quarterEnd > now) {
-                        // If we're in the current quarter, use previous quarter
-                        quarterEnd.setMonth(quarterEnd.getMonth() - 3);
-                    }
-                    apiDate = quarterEnd.toISOString().split('T')[0];
-                }
-
-                // Fetch balance sheet data
-                const response = await fetch(`../api/reports.php?type=balance_sheet&as_of=${apiDate}`);
-                const data = await response.json();
-
-                if (!data.success || data.error) {
-                    throw new Error(data.error || 'Failed to generate balance sheet');
-                }
-
-                // Store data globally for export
-                currentBalanceSheetData = data;
-
-                // Render the balance sheet
-                renderBalanceSheet(data);
-
-            } catch (error) {
-                console.error('Error generating balance sheet:', error);
-                container.innerHTML = `
-                    <div class="statement-header">
-                        <h1 class="statement-title">Balance Sheet</h1>
-                        <p class="statement-period">Error loading report</p>
-                    </div>
-                    <div class="text-center py-5">
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Error generating balance sheet: ${error.message}
-                        </div>
-                        <button class="btn btn-primary" onclick="generateBalanceSheet()">Try Again</button>
-                    </div>
-                `;
-            }
         }
 
         // Render balance sheet
@@ -2478,15 +2247,7 @@ $db = Database::getInstance()->getConnection();
             showAlert('Chart visualization coming soon! This will display financial trends and analytics.', 'info');
         }
 
-        // Add event listeners for aging report buttons
-        document.addEventListener('DOMContentLoaded', function() {
-            // Find and add click handlers for aging report buttons
-            const buttons = document.querySelectorAll('button[onclick*="generateAgingReport"]');
-            buttons.forEach(button => {
-                const type = button.closest('.card').querySelector('h6').textContent.toLowerCase().includes('receivable') ? 'receivable' : 'payable';
-                button.onclick = () => generateAgingReport(type);
-            });
-        });
+
     </script>
 </body>
 </html>
