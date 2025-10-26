@@ -1,11 +1,5 @@
 <?php
 // Audits API for Disbursements Module
-if (isset($_GET['test'])) {
-    header('Content-Type: application/json');
-    echo json_encode(['status' => 'Audit API is working']);
-    exit;
-}
-
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');

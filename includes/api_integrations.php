@@ -619,8 +619,7 @@ class GoogleDriveIntegration extends BaseIntegration {
     }
 
     private function getAccessToken($config) {
-        // Placeholder - OAuth2 token management would be implemented here
-        return 'access_token_placeholder';
+        throw new Exception('OAuth2 token management not implemented. Please configure OAuth2 credentials for Google Drive integration.');
     }
 }
 
@@ -813,8 +812,7 @@ class ZoomIntegration extends BaseIntegration {
     }
 
     private function generateJWT($config) {
-        // Placeholder - JWT token generation would be implemented here
-        return 'jwt_token_placeholder';
+        throw new Exception('JWT token generation not implemented. Please configure JWT credentials for Zoom integration.');
     }
 }
 
@@ -1289,26 +1287,21 @@ class HR4Integration extends BaseIntegration {
                 $result = json_decode($response, true);
 
                 if (json_last_error() !== JSON_ERROR_NONE) {
-                    // If not JSON, return sample payroll data
-                    return $this->getSamplePayrollData();
+                    throw new Exception('HR4 API returned invalid JSON response');
                 }
 
                 // Parse the actual HR4 API response format and convert to our expected format
                 if (isset($result['success']) && $result['success'] && isset($result['payroll_data'])) {
                     return $this->parseHR4PayrollData($result);
                 } else {
-                    // Return sample data if API response is not in expected format
-                    return $this->getSamplePayrollData();
+                    throw new Exception('HR4 API response is not in expected format');
                 }
             } else {
-                // Return sample data for testing if API is not accessible
-                return $this->getSamplePayrollData();
+                throw new Exception('HR4 API returned HTTP status code: ' . $httpCode);
             }
         } catch (Exception $e) {
             Logger::getInstance()->error('HR4 getPayrollData failed: ' . $e->getMessage());
-
-            // Return sample data as fallback
-            return $this->getSamplePayrollData();
+            throw $e; // Re-throw the exception instead of falling back to mock data
         }
     }
 
@@ -1319,7 +1312,7 @@ class HR4Integration extends BaseIntegration {
         $parsedData = [];
 
         if (!isset($apiResponse['payroll_data']) || !is_array($apiResponse['payroll_data'])) {
-            return $this->getSamplePayrollData();
+            throw new Exception('HR4 API response missing payroll_data array');
         }
 
         $payrollMonth = $apiResponse['month'] ?? date('Y-m');
@@ -1480,55 +1473,6 @@ class HR4Integration extends BaseIntegration {
         ];
     }
 
-    /**
-     * Get sample payroll data for testing/fallback
-     */
-    private function getSamplePayrollData() {
-        return [
-            [
-                'payroll_id' => 'PAY001',
-                'employee_id' => 'EMP001',
-                'employee_name' => 'John Doe',
-                'department_id' => 1,
-                'payroll_date' => date('Y-m-d'),
-                'payroll_period' => date('Y-m-01') . ' to ' . date('Y-m-t'),
-                'basic_salary' => 25000.00,
-                'allowances' => 5000.00,
-                'deductions' => 2000.00,
-                'net_pay' => 28000.00,
-                'currency_code' => 'PHP',
-                'status' => 'processed'
-            ],
-            [
-                'payroll_id' => 'PAY002',
-                'employee_id' => 'EMP002',
-                'employee_name' => 'Jane Smith',
-                'department_id' => 2,
-                'payroll_date' => date('Y-m-d'),
-                'payroll_period' => date('Y-m-01') . ' to ' . date('Y-m-t'),
-                'basic_salary' => 22000.00,
-                'allowances' => 4500.00,
-                'deductions' => 1800.00,
-                'net_pay' => 24700.00,
-                'currency_code' => 'PHP',
-                'status' => 'processed'
-            ],
-            [
-                'payroll_id' => 'PAY003',
-                'employee_id' => 'EMP003',
-                'employee_name' => 'Bob Johnson',
-                'department_id' => 1,
-                'payroll_date' => date('Y-m-d'),
-                'payroll_period' => date('Y-m-01') . ' to ' . date('Y-m-t'),
-                'basic_salary' => 20000.00,
-                'allowances' => 4000.00,
-                'deductions' => 1600.00,
-                'net_pay' => 22400.00,
-                'currency_code' => 'PHP',
-                'status' => 'processed'
-            ]
-        ];
-    }
 
     /**
      * Generate authentication token for HR4 API

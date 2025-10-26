@@ -1211,15 +1211,31 @@ body {
             btn.className = 'btn btn-warning';
 
             try {
-                // Test claim status update with a real claim ID from your data
+                // First, get an actual claim from the HR3 API to test with
+                const claimsResponse = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=getApprovedClaims', {
+                    method: 'GET'
+                });
+                const claimsData = await claimsResponse.json();
+
+                if (!claimsData.success || !claimsData.data || claimsData.data.length === 0) {
+                    window.showAlert('No approved claims available from HR3 API to test with', 'warning');
+                    btn.innerHTML = '<i class="fas fa-sync me-2"></i>Test 2-Way Sync';
+                    btn.className = 'btn btn-info';
+                    return;
+                }
+
+                // Use the first available claim for testing
+                const testClaimId = claimsData.data[0].claim_id;
+
+                // Test claim status update with the actual claim ID
                 const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=updateClaimStatus', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
                     body: new URLSearchParams({
-                        claim_id: 'claim_68f8b57fada84',  // Real approved claim from your API
-                        status: 'Paid'  // This should work if HR3 allows the status
+                        claim_id: testClaimId,
+                        status: 'Paid'
                     })
                 });
 

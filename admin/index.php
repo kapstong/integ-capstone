@@ -1597,16 +1597,6 @@ body {
                         <div class="modal-body">
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <div class="card border-primary h-100">
-                                        <div class="card-body text-center">
-                                            <i class="fas fa-plus-circle fa-3x text-primary mb-3"></i>
-                                            <h6>Add Sample Data</h6>
-                                            <p class="text-muted small">Create sample customers, vendors, and initial transactions</p>
-                                            <button class="btn btn-primary btn-sm" onclick="addSampleData()">Add Sample Data</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
                                     <div class="card border-success h-100">
                                         <div class="card-body text-center">
                                             <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
@@ -1660,9 +1650,6 @@ body {
             modal.show();
         }
 
-        function addSampleData() {
-            alert('Sample data functionality will be implemented in a future update.');
-        }
 
         function configureBudgets() {
             window.location.href = 'budget_management.php';

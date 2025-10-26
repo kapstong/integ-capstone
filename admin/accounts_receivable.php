@@ -2067,16 +2067,23 @@ try {
         }
 
         // Reports Functions
-        function loadReportsData() {
-            // Mock data - replace with actual calculations
-            const totalReceivablesEl = document.getElementById('totalReceivables');
-            const overdueAmountEl = document.getElementById('overdueAmount');
+        async function loadReportsData() {
+            try {
+                const response = await fetch('api/invoices.php?action=get_summary_stats');
+                const data = await response.json();
 
-            if (totalReceivablesEl) {
-                totalReceivablesEl.textContent = '₱24,950.00';
-            }
-            if (overdueAmountEl) {
-                overdueAmountEl.textContent = '₱5,200.00';
+                const totalReceivablesEl = document.getElementById('totalReceivables');
+                const overdueAmountEl = document.getElementById('overdueAmount');
+
+                if (totalReceivablesEl && data.total_receivables !== undefined) {
+                    totalReceivablesEl.textContent = formatCurrency(data.total_receivables);
+                }
+                if (overdueAmountEl && data.overdue_amount !== undefined) {
+                    overdueAmountEl.textContent = formatCurrency(data.overdue_amount);
+                }
+            } catch (error) {
+                console.error('Error loading reports data:', error);
+                showAlert('Failed to load reports data', 'danger');
             }
         }
 

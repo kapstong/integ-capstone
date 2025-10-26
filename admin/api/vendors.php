@@ -1,12 +1,5 @@
 <?php
-// Simple test first
-if (isset($_GET['test'])) {
-    header('Content-Type: application/json');
-    echo json_encode(['status' => 'PHP is working in API directory']);
-    exit;
-}
-
-// Normal API code starts here
+// Vendors API
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
