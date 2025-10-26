@@ -1431,6 +1431,75 @@ $db = Database::getInstance()->getConnection();
             };
         }
 
+        // Format date helper function
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        // Update balance sheet when period changes
+        function updateBalanceSheet() {
+            if (typeof generateBalanceSheet === 'function') {
+                generateBalanceSheet();
+            }
+        }
+
+        // Generate balance sheet
+        async function generateBalanceSheet() {
+            const container = document.getElementById('balanceSheetContainer');
+            const dateSelect = document.getElementById('balanceDateSelect');
+            const asOfDate = dateSelect ? dateSelect.value : 'current';
+
+            // Show loading state
+            container.innerHTML = `
+                <div class="statement-header">
+                    <h1 class="statement-title">Balance Sheet</h1>
+                    <p class="statement-period">Loading...</p>
+                </div>
+                <div class="text-center py-5">
+                    <div class="loading mb-3"></div>
+                    <p class="text-muted">Generating balance sheet...</p>
+                </div>
+            `;
+
+            try {
+                // Fetch balance sheet data
+                const response = await fetch(`../api/reports.php?type=balance_sheet&as_of_date=${asOfDate}`);
+                const data = await response.json();
+
+                if (!data.success || data.error) {
+                    throw new Error(data.error || 'Failed to generate balance sheet');
+                }
+
+                // Store data globally for export
+                currentBalanceSheetData = data;
+
+                // Render the balance sheet
+                renderBalanceSheet(data);
+
+            } catch (error) {
+                console.error('Error generating balance sheet:', error);
+                container.innerHTML = `
+                    <div class="statement-header">
+                        <h1 class="statement-title">Balance Sheet</h1>
+                        <p class="statement-period">Error loading report</p>
+                    </div>
+                    <div class="text-center py-5">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error generating balance sheet: ${error.message}
+                        </div>
+                        <button class="btn btn-primary" onclick="generateBalanceSheet()">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+
         // Render balance sheet
         function renderBalanceSheet(data) {
             const container = document.getElementById('balanceSheetContainer');
