@@ -1539,13 +1539,8 @@ $db = Database::getInstance()->getConnection();
 
         // Update aging display
         function updateAgingDisplay(type, data) {
-            const cardSelector = type === 'receivable' ? '.card:contains("Accounts Receivable Aging")' : '.card:contains("Accounts Payable Aging")';
-            const card = document.querySelector(cardSelector);
-
-            if (!card) return;
-
-            const body = card.querySelector('.card-body');
-            const summaryDiv = body.querySelector('.mb-3');
+            const containerId = type === 'receivable' ? 'arAgingContainer' : 'apAgingContainer';
+            const summaryDiv = document.getElementById(containerId);
 
             // Update totals
             const totals = data.totals || {};
