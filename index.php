@@ -14,6 +14,15 @@ if (isset($_GET['logout'])) {
     $info = 'You have been logged out successfully.';
 }
 
+// Handle session timeout message
+if (isset($_GET['info'])) {
+    if ($_GET['info'] === 'session_timeout') {
+        $error = 'Your session expired due to inactivity. Please log in again.';
+    } elseif ($_GET['info'] === '2fa_cancelled') {
+        $info = '2FA verification cancelled. Please log in again.';
+    }
+}
+
 if ($auth->isLoggedIn()) {
     $user = $auth->getCurrentUser();
     $role = strtolower($user['role_name'] ?? '');
@@ -43,8 +52,26 @@ if ($_POST) {
         $error = 'Please enter username and password.';
     } else {
         $result = $auth->login($username, $password);
-        
+
         if ($result['success']) {
+            // Check if user has 2FA enabled
+            require_once 'includes/two_factor_auth.php';
+            $twoFA = TwoFactorAuth::getInstance();
+
+            if ($twoFA->is2FAEnabled($result['user']['id'])) {
+                // Store pending 2FA verification in session
+                $_SESSION['pending_2fa_user_id'] = $result['user']['id'];
+                $_SESSION['pending_2fa_user'] = $result['user'];
+
+                // Clear the logged in session temporarily
+                unset($_SESSION['user']);
+
+                // Redirect to 2FA verification page
+                header('Location: verify_2fa.php');
+                exit();
+            }
+
+            // No 2FA required, proceed with normal login
             // Route users based on their role
             $role = strtolower($result['user']['role_name'] ?? '');
             if ($role === 'admin') {

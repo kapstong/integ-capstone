@@ -106,6 +106,8 @@
             }
         }
     </style>
+
+    <?php include_once __DIR__ . '/../includes/datepicker.php'; ?>
 </head>
 <body>
     <!-- Sidebar -->

@@ -4,6 +4,12 @@
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 
+<!-- Inactivity Timeout -->
+<script src="../includes/inactivity_timeout.js"></script>
+
+<!-- Notification System -->
+<script src="../includes/notifications.js"></script>
+
 <script>
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('show');

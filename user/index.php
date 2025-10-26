@@ -506,5 +506,8 @@ body {
             footer.style.width = `calc(100% - ${marginLeft})`;
         }
     </script>
+
+    <!-- Inactivity Timeout -->
+    <script src="../includes/inactivity_timeout.js"></script>
 </body>
 </html>
