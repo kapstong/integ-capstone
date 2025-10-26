@@ -4,22 +4,27 @@
  * Admin configuration for hiding/blurring sensitive financial data
  */
 
-require_once '../config.php';
-require_once '../includes/database.php';
-require_once '../includes/auth.php';
+// Start session
+session_start();
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-$auth = new Auth();
-$auth->requireLogin();
-
-// Require admin role
-if ($_SESSION['user']['role'] !== 'admin') {
+// Check authentication
+if (!isset($_SESSION['user'])) {
     header('Location: ../index.php');
     exit;
 }
+
+// Check admin role
+if ($_SESSION['user']['role'] !== 'admin') {
+    header('Location: index.php');
+    exit;
+}
+
+// Load dependencies
+require_once '../config.php';
+require_once '../includes/database.php';
+
+// Set page title for header
+$pageTitle = 'Confidential Mode Settings';
 
 include 'header.php';
 ?>
