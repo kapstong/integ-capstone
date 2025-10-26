@@ -54,42 +54,65 @@ try {
         $recentDataCheck->execute();
         $recordCount = $recentDataCheck->fetch(PDO::FETCH_ASSOC)['record_count'];
 
-        // Auto-import from external systems if no recent data
-        try {
-            require_once '../includes/api_integrations.php';
-            $integrationManager = APIIntegrationManager::getInstance();
+        // Suppress all output during auto-import to prevent JSON corruption
+        $autoImportBuffer = '';
+        if ($recordCount == 0) {
+            $autoImportBuffer = ob_get_clean(); // Stop buffering and save current content
+            ob_start(); // Start new buffer for auto-import operations
 
-            // Check for recent data from each source and import if needed
-            $sources = [
-                'HR_SYSTEM' => ['integration' => 'hr4', 'action' => 'importPayroll', 'name' => 'HR4 payroll'],
-                'LOGISTICS1' => ['integration' => 'logistics1', 'action' => 'importInvoices', 'name' => 'Logistics 1 invoices'],
-                'LOGISTICS2' => ['integration' => 'logistics2', 'action' => 'importTripCosts', 'name' => 'Logistics 2 trip costs']
-            ];
+            // Auto-import from external systems if no recent data
+            try {
+                require_once '../includes/api_integrations.php';
+                $integrationManager = APIIntegrationManager::getInstance();
 
-            foreach ($sources as $sourceSystem => $config) {
-                // Check if this source has recent data
-                $sourceCheck = $db->prepare("
-                    SELECT COUNT(*) as count
-                    FROM daily_expense_summary
-                    WHERE source_system = ?
-                    AND business_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-                ");
-                $sourceCheck->execute([$sourceSystem]);
-                $sourceCount = $sourceCheck->fetch(PDO::FETCH_ASSOC)['count'];
+                // Check for recent data from each source and import if needed
+                $sources = [
+                    'HR_SYSTEM' => ['integration' => 'hr4', 'action' => 'importPayroll', 'name' => 'HR4 payroll'],
+                    'LOGISTICS1' => ['integration' => 'logistics1', 'action' => 'importInvoices', 'name' => 'Logistics 1 invoices'],
+                    'LOGISTICS2' => ['integration' => 'logistics2', 'action' => 'importTripCosts', 'name' => 'Logistics 2 trip costs']
+                ];
 
-                // If no recent data from this source, try to import
-                if ($sourceCount == 0) {
-                    $integrationConfig = $integrationManager->getIntegrationConfig($config['integration']);
-                    if ($integrationConfig && !empty($integrationConfig['api_url'])) {
-                        $result = $integrationManager->executeIntegrationAction($config['integration'], $config['action'], []);
-                        Logger::getInstance()->info("Auto-imported {$config['name']}", ['result' => $result]);
+                foreach ($sources as $sourceSystem => $config) {
+                    // Check if this source has recent data
+                    $sourceCheck = $db->prepare("
+                        SELECT COUNT(*) as count
+                        FROM daily_expense_summary
+                        WHERE source_system = ?
+                        AND business_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                    ");
+                    $sourceCheck->execute([$sourceSystem]);
+                    $sourceCount = $sourceCheck->fetch(PDO::FETCH_ASSOC)['count'];
+
+                    // If no recent data from this source, try to import
+                    if ($sourceCount == 0) {
+                        $integrationConfig = $integrationManager->getIntegrationConfig($config['integration']);
+                        if ($integrationConfig && !empty($integrationConfig['api_url'])) {
+                            try {
+                                $result = $integrationManager->executeIntegrationAction($config['integration'], $config['action'], []);
+                                Logger::getInstance()->info("Auto-imported {$config['name']}", ['result' => $result]);
+                            } catch (Exception $importException) {
+                                // Log import failures but don't break the report
+                                Logger::getInstance()->warning("Auto-import failed for {$config['name']}", [
+                                    'error' => $importException->getMessage()
+                                ]);
+                            }
+                        }
                     }
                 }
+            } catch (Exception $e) {
+                Logger::getInstance()->warning('Auto-import setup failed during report generation', [
+                    'error' => $e->getMessage()
+                ]);
             }
-        } catch (Exception $e) {
-            Logger::getInstance()->warning('Auto-import failed during report generation', [
-                'error' => $e->getMessage()
-            ]);
+
+            // Clear any output from auto-import operations
+            if (ob_get_length()) {
+                ob_clean();
+            }
+
+            // Restore original buffer content
+            echo $autoImportBuffer;
+            ob_start();
         }
 
         // Get revenue data (from journal entries - placeholder for now)
