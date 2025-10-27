@@ -91,10 +91,14 @@ try {
     }
 
 } catch (Exception $e) {
+    // Log the actual error for debugging
+    error_log('Privacy Mode Password Verification Error: ' . $e->getMessage());
+    error_log('Stack trace: ' . $e->getTraceAsString());
+
     ob_end_clean();
     echo json_encode([
         'success' => false,
-        'error' => 'Server error'
+        'error' => 'Server error: Unable to verify password'
     ]);
 }
 exit;
