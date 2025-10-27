@@ -231,7 +231,12 @@
      * Send keep-alive request to server
      */
     function sendKeepAlive() {
-        fetch(getBaseURL() + '/api/keep_alive.php', {
+        // Use relative path based on current location
+        const apiPath = window.location.pathname.includes('/admin/')
+            ? '../api/keep_alive.php'
+            : 'api/keep_alive.php';
+
+        fetch(apiPath, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -265,7 +270,15 @@
 
         // Redirect to logout after 2 seconds
         setTimeout(function() {
-            window.location.href = getBaseURL() + '/logout.php?reason=timeout';
+            // Check if we're in admin folder or root
+            const currentPath = window.location.pathname;
+            if (currentPath.includes('/admin/')) {
+                // We're in admin folder, go up one level
+                window.location.href = '../logout.php?reason=timeout';
+            } else {
+                // We're in root, use direct path
+                window.location.href = 'logout.php?reason=timeout';
+            }
         }, 2000);
     }
 
