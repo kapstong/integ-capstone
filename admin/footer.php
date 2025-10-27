@@ -10,9 +10,6 @@
 <!-- Notification System -->
 <script src="../includes/notifications.js"></script>
 
-<!-- Confidential Mode System -->
-<script src="../includes/confidential_mode.js"></script>
-
 <script>
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('show');

@@ -3,11 +3,6 @@
  * ATIERA Financial Management System - Admin Header Template
  * Common HTML head and navigation for all admin pages
  */
-
-// Auto-initialize confidential mode (sets up database and enables by default)
-if (file_exists(__DIR__ . '/../includes/confidential_mode_init.php')) {
-    require_once __DIR__ . '/../includes/confidential_mode_init.php';
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -18,7 +13,6 @@ if (file_exists(__DIR__ . '/../includes/confidential_mode_init.php')) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="../responsive.css" rel="stylesheet">
-    <link href="../includes/confidential_mode.css" rel="stylesheet">
     <style>
         body {
             background-color: #f8f9fa;

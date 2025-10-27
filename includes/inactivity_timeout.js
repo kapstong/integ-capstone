@@ -9,6 +9,7 @@
     // Configuration
     const TIMEOUT_DURATION = 2 * 60 * 1000; // 2 minutes in milliseconds
     const WARNING_DURATION = 30 * 1000; // Show warning 30 seconds before timeout
+    const BLUR_DURATION = 10 * 1000; // Blur screen after 10 seconds
     const CHECK_INTERVAL = 1000; // Check every second
 
     let lastActivity = Date.now();
@@ -16,6 +17,7 @@
     let warningShown = false;
     let warningModal = null;
     let countdownInterval = null;
+    let isBlurred = false;
 
     // Events that count as user activity
     const activityEvents = [
@@ -34,10 +36,86 @@
         lastActivity = Date.now();
         warningShown = false;
 
+        // Remove blur if active
+        if (isBlurred) {
+            removeBlur();
+        }
+
         // Hide warning if shown
         if (warningModal) {
             hideWarning();
         }
+    }
+
+    /**
+     * Apply blur overlay to entire screen
+     */
+    function applyBlur() {
+        if (isBlurred) return;
+
+        let blurOverlay = document.getElementById('inactivity-blur-overlay');
+
+        if (!blurOverlay) {
+            // Create blur overlay
+            blurOverlay = document.createElement('div');
+            blurOverlay.id = 'inactivity-blur-overlay';
+            blurOverlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                backdrop-filter: blur(15px);
+                -webkit-backdrop-filter: blur(15px);
+                background: rgba(0, 0, 0, 0.3);
+                z-index: 99998;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: opacity 0.3s ease;
+            `;
+
+            // Add text overlay
+            const textDiv = document.createElement('div');
+            textDiv.style.cssText = `
+                background: white;
+                padding: 30px 50px;
+                border-radius: 15px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+                text-align: center;
+                pointer-events: none;
+            `;
+            textDiv.innerHTML = `
+                <div style="font-size: 48px; margin-bottom: 15px;">💤</div>
+                <h2 style="margin: 0 0 10px 0; color: #1b2f73; font-size: 24px;">Screen Locked</h2>
+                <p style="margin: 0; color: #64748b; font-size: 16px;">Click anywhere to continue</p>
+            `;
+
+            blurOverlay.appendChild(textDiv);
+            document.body.appendChild(blurOverlay);
+
+            // Click anywhere to remove blur
+            blurOverlay.addEventListener('click', function() {
+                updateActivity();
+            });
+        }
+
+        blurOverlay.style.display = 'flex';
+        isBlurred = true;
+        console.log('🔒 Screen blurred due to 10 seconds inactivity');
+    }
+
+    /**
+     * Remove blur overlay
+     */
+    function removeBlur() {
+        const blurOverlay = document.getElementById('inactivity-blur-overlay');
+        if (blurOverlay) {
+            blurOverlay.style.display = 'none';
+        }
+        isBlurred = false;
+        console.log('✓ Screen unblurred - activity detected');
     }
 
     /**
@@ -219,6 +297,11 @@
     function checkInactivity() {
         const now = Date.now();
         const inactiveTime = now - lastActivity;
+
+        // Apply blur after 10 seconds of inactivity
+        if (inactiveTime >= BLUR_DURATION && !isBlurred) {
+            applyBlur();
+        }
 
         // Show warning when close to timeout
         if (inactiveTime >= TIMEOUT_DURATION - WARNING_DURATION && !warningShown) {
