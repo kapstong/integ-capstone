@@ -1671,10 +1671,10 @@ body {
     </script>
 
     <!-- Privacy Mode - Hide amounts with asterisks + Eye button -->
-    <script src="../includes/privacy_mode.js"></script>
+    <script src="../includes/privacy_mode.js?v=2"></script>
 
     <!-- Inactivity Timeout - Blur screen + Auto logout -->
-    <script src="../includes/inactivity_timeout.js"></script>
+    <script src="../includes/inactivity_timeout.js?v=2"></script>
 
 </body>
 </html>
