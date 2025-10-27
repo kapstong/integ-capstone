@@ -2,6 +2,7 @@
 /**
  * Verify Admin Password API
  * Used by privacy mode to verify password before showing amounts
+ * Also handles checking session status
  */
 
 // Start output buffering to catch any errors
@@ -31,7 +32,18 @@ try {
         exit;
     }
 
-    // Get password from POST
+    // Handle GET request - check if privacy mode is already unlocked
+    if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        $unlocked = isset($_SESSION['privacy_mode_unlocked']) && $_SESSION['privacy_mode_unlocked'] === true;
+        ob_end_clean();
+        echo json_encode([
+            'success' => true,
+            'unlocked' => $unlocked
+        ]);
+        exit;
+    }
+
+    // Handle POST request - verify password
     $password = $_POST['password'] ?? '';
 
     if (empty($password)) {
@@ -62,6 +74,9 @@ try {
 
     // Verify password
     if (password_verify($password, $user['password'])) {
+        // Set session variable to remember password was verified
+        $_SESSION['privacy_mode_unlocked'] = true;
+
         ob_end_clean();
         echo json_encode([
             'success' => true,

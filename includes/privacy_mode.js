@@ -153,7 +153,9 @@
         verifyBtn.disabled = true;
         passwordInput.disabled = true;
 
-        fetch('../api/verify_password.php', {
+        const apiPath = getApiPath('verify_password.php');
+
+        fetch(apiPath, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -186,6 +188,44 @@
             passwordInput.disabled = false;
             passwordInput.focus();
         });
+    }
+
+    /**
+     * Check if privacy mode is already unlocked in session
+     */
+    function checkSessionStatus() {
+        const apiPath = getApiPath('verify_password.php');
+
+        fetch(apiPath, {
+            method: 'GET'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.unlocked) {
+                // Password was already entered, show amounts immediately
+                isHidden = false;
+                updateEyeButton();
+            } else {
+                // Not unlocked, hide amounts
+                hideAmounts();
+            }
+        })
+        .catch(error => {
+            // On error, default to hiding amounts
+            hideAmounts();
+        });
+    }
+
+    /**
+     * Get API path based on current location
+     */
+    function getApiPath(filename) {
+        const currentPath = window.location.pathname;
+        if (currentPath.includes('/admin/')) {
+            return '../api/' + filename;
+        } else {
+            return 'api/' + filename;
+        }
     }
 
     /**
@@ -282,15 +322,16 @@
      */
     function init() {
         createPasswordModal();
+        createEyeButton();
 
+        // Check if password was already entered in this session
         setTimeout(function() {
-            hideAmounts();
-            createEyeButton();
+            checkSessionStatus();
         }, 200);
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function() {
-                setTimeout(hideAmounts, 500);
+                setTimeout(checkSessionStatus, 500);
             });
         }
 

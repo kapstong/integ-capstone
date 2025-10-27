@@ -103,7 +103,6 @@
 
         blurOverlay.style.display = 'flex';
         isBlurred = true;
-        console.log('🔒 Screen blurred due to 10 seconds inactivity');
     }
 
     /**
@@ -115,7 +114,6 @@
             blurOverlay.style.display = 'none';
         }
         isBlurred = false;
-        console.log('✓ Screen unblurred - activity detected');
     }
 
     /**
@@ -243,7 +241,7 @@
             },
             body: JSON.stringify({ action: 'keep_alive' })
         }).catch(function(error) {
-            console.error('Keep-alive request failed:', error);
+            // Silent fail - don't log errors
         });
     }
 
@@ -341,8 +339,6 @@
 
         // Initial activity timestamp
         updateActivity();
-
-        console.log('Inactivity timeout initialized: ' + (TIMEOUT_DURATION / 1000 / 60) + ' minutes');
     }
 
     /**
