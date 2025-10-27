@@ -20,6 +20,7 @@ header('Content-Type: application/json');
 try {
     require_once '../config.php';
     require_once '../includes/database.php';
+    require_once '../includes/mailer.php';
 
     // Check if user is logged in
     if (!isset($_SESSION['user'])) {
@@ -70,33 +71,19 @@ try {
         $_SESSION['privacy_verification_code'] = $code;
         $_SESSION['privacy_code_expires'] = time() + 300; // 5 minutes
 
-        // Prepare email
-        $to = $user['email'];
-        $subject = 'ATIERA - Privacy Mode Verification Code';
-        $message = "Hello " . $user['first_name'] . ",\n\n";
-        $message .= "Your verification code to view financial amounts is:\n\n";
-        $message .= "CODE: " . $code . "\n\n";
-        $message .= "This code will expire in 5 minutes.\n\n";
-        $message .= "If you did not request this code, please ignore this email.\n\n";
-        $message .= "Best regards,\n";
-        $message .= "ATIERA Financial Management System";
-
-        $headers = "From: ATIERA Finance <noreply@atiera.com>\r\n";
-        $headers .= "Reply-To: noreply@atiera.com\r\n";
-        $headers .= "X-Mailer: PHP/" . phpversion();
-
-        // Send email
-        $mailSent = mail($to, $subject, $message, $headers);
+        // Send email using Mailer class
+        $mailer = Mailer::getInstance();
+        $mailSent = $mailer->sendVerificationCode($user['email'], $code, $user['first_name']);
 
         if ($mailSent) {
             // Log the code for development (remove in production)
-            error_log("Privacy Mode Verification Code sent to {$to}: {$code}");
+            error_log("Privacy Mode Verification Code sent to {$user['email']}: {$code}");
 
             ob_end_clean();
             echo json_encode([
                 'success' => true,
                 'message' => 'Verification code sent to your email',
-                'email' => $to,
+                'email' => $user['email'],
                 'dev_code' => $code // Remove this in production!
             ]);
         } else {
