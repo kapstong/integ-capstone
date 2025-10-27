@@ -57,27 +57,33 @@ class Mailer {
                 $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
             }
 
-            // Log email for development
-            if (Config::isDevelopment()) {
-                error_log("=== EMAIL SENT ===");
-                error_log("To: $to");
-                error_log("Subject: $subject");
-                error_log("Message: " . substr(strip_tags($message), 0, 200) . "...");
-                error_log("==================");
-            }
+            // Log email attempt
+            error_log("=== SENDING EMAIL ===");
+            error_log("To: $to");
+            error_log("From: {$this->fromEmail}");
+            error_log("Subject: $subject");
+            error_log("Environment: " . (Config::isDevelopment() ? 'Development' : 'Production'));
+            error_log("====================");
 
-            // Send email
-            $sent = mail($to, $subject, $message, $headers);
+            // Send email using PHP mail() function
+            // CyberPanel/Production servers typically have Postfix configured
+            $sent = @mail($to, $subject, $message, $headers);
 
             if (!$sent) {
+                $lastError = error_get_last();
                 error_log("Mailer Error: Failed to send email to $to");
+                if ($lastError) {
+                    error_log("PHP Error: " . $lastError['message']);
+                }
                 return false;
             }
 
+            error_log("✓ Email sent successfully to $to");
             return true;
 
         } catch (Exception $e) {
             error_log("Mailer Exception: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
             return false;
         }
     }

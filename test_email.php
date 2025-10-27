@@ -234,8 +234,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <div class="warning-box">
-            <h3>⚠️ WAMP Email Configuration Required</h3>
-            <p>WAMP doesn't send emails by default. You need to configure SMTP settings in <code>php.ini</code> or use a mail service.</p>
+            <h3>⚠️ Email Configuration</h3>
+            <p>For CyberPanel servers, email should work automatically if you have email accounts set up. If emails aren't sending, check your server's mail logs.</p>
         </div>
 
         <form method="POST">
@@ -281,26 +281,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <div class="config-section">
-            <h3>🔧 Email Configuration Guide</h3>
-            <p style="margin-bottom: 15px;">To enable email sending in WAMP, edit <code>C:\wamp64\bin\php\php8.x.x\php.ini</code>:</p>
-            <pre>[mail function]
-; For Windows
-SMTP = smtp.gmail.com
-smtp_port = 587
-sendmail_from = your-email@gmail.com
-sendmail_path = "C:\wamp64\sendmail\sendmail.exe -t"
+            <h3>🔧 CyberPanel Email Configuration</h3>
+            <p style="margin-bottom: 15px;"><strong>CyberPanel has built-in email server (Postfix). To set up:</strong></p>
 
-; Or use your company SMTP
-SMTP = mail.yourcompany.com
-smtp_port = 25</pre>
-
-            <p style="margin: 15px 0;"><strong>For Gmail SMTP:</strong></p>
             <ol style="margin-left: 20px; color: #555; font-size: 14px; line-height: 1.8;">
-                <li>Use Gmail App Password (not your regular password)</li>
-                <li>Go to: Google Account → Security → 2-Step Verification → App Passwords</li>
-                <li>Generate password for "Mail" on "Windows Computer"</li>
-                <li>Update <code>.env</code> file with SMTP credentials</li>
+                <li><strong>Create Email Account in CyberPanel:</strong>
+                    <ul style="margin: 10px 0 10px 20px;">
+                        <li>Go to: CyberPanel → Email → Create Email</li>
+                        <li>Create: noreply@yourdomain.com</li>
+                        <li>Set a password</li>
+                    </ul>
+                </li>
+                <li><strong>Update .env file on server:</strong></li>
             </ol>
+
+            <pre>MAIL_FROM_ADDRESS=noreply@yourdomain.com
+MAIL_FROM_NAME="ATIERA Finance"
+COMPANY_EMAIL=admin@yourdomain.com</pre>
+
+            <p style="margin: 15px 0;"><strong>Check Mail Logs:</strong></p>
+            <pre>tail -f /var/log/mail.log
+# or
+tail -f /usr/local/lsws/logs/error.log</pre>
+
+            <p style="margin: 15px 0;"><strong>Test Email from Command Line:</strong></p>
+            <pre>echo "Test email" | mail -s "Test Subject" your-email@example.com</pre>
+
+            <p style="margin: 15px 0; color: #856404; background: #fff3cd; padding: 10px; border-radius: 4px;">
+                <strong>⚠️ Important:</strong> If emails go to SPAM, configure SPF, DKIM, and DMARC records in your domain's DNS settings. CyberPanel has tools for this under Email → DKIM Manager.
+            </p>
         </div>
 
         <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 6px; text-align: center;">
