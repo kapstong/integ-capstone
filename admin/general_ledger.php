@@ -2374,6 +2374,13 @@ try {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
         });
+
+    <!-- Privacy Mode - Hide amounts with asterisks + Eye button -->
+    <script src="../includes/privacy_mode.js"></script>
+
+    <!-- Inactivity Timeout - Blur screen + Auto logout -->
+    <script src="../includes/inactivity_timeout.js"></script>
+
     </script>
 </body>
 </html>
