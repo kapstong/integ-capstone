@@ -3,6 +3,11 @@
  * ATIERA Financial Management System - Admin Header Template
  * Common HTML head and navigation for all admin pages
  */
+
+// Auto-initialize confidential mode (sets up database and enables by default)
+if (file_exists(__DIR__ . '/../includes/confidential_mode_init.php')) {
+    require_once __DIR__ . '/../includes/confidential_mode_init.php';
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

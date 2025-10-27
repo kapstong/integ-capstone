@@ -57,33 +57,44 @@
      * Check confidential mode status
      */
     function checkStatus() {
+        console.log('🔍 Checking confidential mode status...');
+
         fetch(CONFIG.apiUrl + '?action=check_status', {
             method: 'GET',
             credentials: 'same-origin'
         })
         .then(response => response.json())
         .then(data => {
+            console.log('📊 Confidential Mode Status:', data);
+
             if (data.success) {
                 confidentialMode.enabled = data.enabled;
                 confidentialMode.isUnlocked = data.is_unlocked;
                 confidentialMode.blurStyle = data.blur_style;
 
+                console.log(`✅ Confidential Mode: ${data.enabled ? 'ENABLED' : 'DISABLED'}`);
+                console.log(`🔓 Is Unlocked: ${data.is_unlocked ? 'YES' : 'NO'}`);
+                console.log(`🎨 Blur Style: ${data.blur_style}`);
+
                 if (confidentialMode.enabled) {
                     if (confidentialMode.isUnlocked) {
+                        console.log('👁️ Showing data (unlocked)');
                         showConfidentialData();
                         updateLockButton('lock');
                     } else {
+                        console.log('🔒 Hiding data (locked)');
                         hideConfidentialData();
                         updateLockButton('unlock');
                     }
                 } else {
+                    console.log('⚠️ Confidential mode disabled - showing all data');
                     showConfidentialData();
                     hideLockButton();
                 }
             }
         })
         .catch(error => {
-            console.error('Error checking confidential mode status:', error);
+            console.error('❌ Error checking confidential mode status:', error);
         });
     }
 
@@ -91,33 +102,45 @@
      * Hide confidential data (blur amounts)
      */
     function hideConfidentialData() {
-        // Find all elements with currency symbols or marked as confidential
-        const elements = document.querySelectorAll([
-            '[data-confidential="true"]',
-            '.amount',
-            '.account-amount',
-            '.stat-number',
-            '.currency-amount',
-            'td, span, div'
-        ].join(','));
+        console.log('🔒 Confidential Mode: Hiding financial data...');
+
+        let hiddenCount = 0;
+
+        // Find all elements - be aggressive
+        const elements = document.querySelectorAll('*');
 
         elements.forEach(el => {
-            const text = el.textContent || el.innerText;
+            // Skip if already processed or has children with text
+            if (el.hasAttribute('data-confidential-processed')) {
+                return;
+            }
 
-            // Check if element contains currency amount
-            if (text.match(/[₱$€£¥]\s*[\d,]+(\.\d{2})?/) ||
-                text.match(/[\d,]+(\.\d{2})?\s*[₱$€£¥]/)) {
+            // Only process if element has direct text (not in child elements)
+            if (el.children.length === 0 || el.classList.contains('amount') || el.classList.contains('stat-number')) {
+                const text = el.textContent || el.innerText;
 
-                if (!el.hasAttribute('data-confidential-original')) {
-                    // Store original content
-                    el.setAttribute('data-confidential-original', text);
-                    el.setAttribute('data-confidential', 'true');
+                // Check if element contains currency amount - expanded regex
+                const hasCurrency = text.match(/[₱$€£¥]\s*[\d,]+(\.\d{1,2})?/) ||
+                                  text.match(/[\d,]+(\.\d{1,2})?\s*[₱$€£¥]/) ||
+                                  text.match(/PHP\s*[\d,]+(\.\d{1,2})?/) ||
+                                  text.match(/[\d,]+(\.\d{1,2})?\s*PHP/);
 
-                    // Apply blur style
-                    applyBlurStyle(el);
+                if (hasCurrency) {
+                    if (!el.hasAttribute('data-confidential-original')) {
+                        // Store original content
+                        el.setAttribute('data-confidential-original', text);
+                        el.setAttribute('data-confidential', 'true');
+                        el.setAttribute('data-confidential-processed', 'true');
+
+                        // Apply blur style
+                        applyBlurStyle(el);
+                        hiddenCount++;
+                    }
                 }
             }
         });
+
+        console.log(`🔒 Confidential Mode: Hidden ${hiddenCount} amounts`);
     }
 
     /**
@@ -166,7 +189,10 @@
      * Show confidential data (restore original)
      */
     function showConfidentialData() {
+        console.log('👁️ Confidential Mode: Showing financial data...');
+
         const elements = document.querySelectorAll('[data-confidential="true"]');
+        let restoredCount = 0;
 
         elements.forEach(el => {
             const original = el.getAttribute('data-confidential-original');
@@ -178,8 +204,11 @@
                 el.style.userSelect = '';
                 el.style.cursor = '';
                 el.classList.remove('confidential-hidden');
+                restoredCount++;
             }
         });
+
+        console.log(`👁️ Confidential Mode: Restored ${restoredCount} amounts`);
     }
 
     /**

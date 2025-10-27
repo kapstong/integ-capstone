@@ -53,7 +53,7 @@ try {
     $settings = [
         [
             'key' => 'confidential_mode_enabled',
-            'value' => '0',
+            'value' => '1',
             'type' => 'boolean',
             'description' => 'Enable/disable confidential mode to blur sensitive financial data'
         ],
