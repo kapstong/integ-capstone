@@ -2324,6 +2324,5 @@ $db = Database::getInstance()->getConnection();
     <!-- Inactivity Timeout - Blur screen + Auto logout -->
     <script src="../includes/inactivity_timeout.js"></script>
 
-    </script>
 </body>
 </html>
