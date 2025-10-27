@@ -5,8 +5,6 @@
  * - Big red eye button to toggle
  */
 
-console.log('🔐 PRIVACY MODE LOADING...');
-
 (function() {
     'use strict';
 
@@ -18,34 +16,27 @@ console.log('🔐 PRIVACY MODE LOADING...');
      * Hide all amounts with asterisks
      */
     function hideAmounts() {
-        console.log('🔒 HIDING ALL AMOUNTS...');
-
-        hiddenElements = []; // Reset
+        hiddenElements = [];
         let hiddenCount = 0;
 
-        // Find ALL elements
         const allElements = document.querySelectorAll('*');
 
         allElements.forEach(el => {
             if (el.hasAttribute('data-privacy-hidden')) {
-                return; // Already processed
+                return;
             }
 
-            // Get direct text nodes only
             const textNodes = Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
 
             textNodes.forEach(node => {
                 const text = node.nodeValue;
                 if (!text) return;
 
-                // Check if text contains amounts
                 const hasAmount = /[₱$€£¥]\s*[\d,]+\.?\d*/.test(text);
 
                 if (hasAmount) {
-                    // Store original
                     const originalText = text;
 
-                    // Replace with asterisks
                     const hiddenText = text
                         .replace(/₱\s*[\d,]+\.?\d*/g, '₱********')
                         .replace(/\$\s*[\d,]+\.?\d*/g, '$********')
@@ -55,7 +46,6 @@ console.log('🔐 PRIVACY MODE LOADING...');
                         .replace(/PHP\s*[\d,]+\.?\d*/g, 'PHP ********');
 
                     if (hiddenText !== originalText) {
-                        // Save info
                         hiddenElements.push({
                             node: node,
                             element: el,
@@ -66,8 +56,6 @@ console.log('🔐 PRIVACY MODE LOADING...');
                         el.setAttribute('data-privacy-original', originalText);
                         node.nodeValue = hiddenText;
                         hiddenCount++;
-
-                        console.log(`   Hidden: "${originalText}" → "${hiddenText}"`);
                     }
                 }
             });
@@ -75,15 +63,12 @@ console.log('🔐 PRIVACY MODE LOADING...');
 
         isHidden = true;
         updateEyeButton();
-        console.log(`✅ HIDDEN ${hiddenCount} AMOUNTS`);
     }
 
     /**
      * Show all amounts (restore original)
      */
     function showAmounts() {
-        console.log('👁️ SHOWING ALL AMOUNTS...');
-
         let restoredCount = 0;
 
         hiddenElements.forEach(item => {
@@ -91,13 +76,11 @@ console.log('🔐 PRIVACY MODE LOADING...');
                 item.node.nodeValue = item.original;
                 item.element.removeAttribute('data-privacy-hidden');
                 restoredCount++;
-                console.log(`   Restored: "${item.original}"`);
             }
         });
 
         isHidden = false;
         updateEyeButton();
-        console.log(`✅ SHOWN ${restoredCount} AMOUNTS`);
     }
 
     /**
@@ -142,7 +125,6 @@ console.log('🔐 PRIVACY MODE LOADING...');
 
         document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-        // Handle form submission
         document.getElementById('privacyPasswordForm').addEventListener('submit', (e) => {
             e.preventDefault();
             verifyPasswordAndShow();
@@ -166,13 +148,11 @@ console.log('🔐 PRIVACY MODE LOADING...');
             return;
         }
 
-        // Show loading
         const originalBtnText = verifyBtn.innerHTML;
         verifyBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
         verifyBtn.disabled = true;
         passwordInput.disabled = true;
 
-        // Verify password via API
         fetch('../api/verify_password.php', {
             method: 'POST',
             headers: {
@@ -183,27 +163,20 @@ console.log('🔐 PRIVACY MODE LOADING...');
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                console.log('✅ Password verified!');
-
-                // Show amounts
                 showAmounts();
 
-                // Close modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('privacyPasswordModal'));
                 modal.hide();
 
-                // Clear password
                 passwordInput.value = '';
                 passwordInput.classList.remove('is-invalid');
 
             } else {
-                console.error('❌ Password incorrect');
                 passwordInput.classList.add('is-invalid');
                 errorDiv.textContent = data.error || 'Incorrect password';
             }
         })
         .catch(error => {
-            console.error('❌ Error:', error);
             passwordInput.classList.add('is-invalid');
             errorDiv.textContent = 'Network error. Please try again.';
         })
@@ -222,7 +195,6 @@ console.log('🔐 PRIVACY MODE LOADING...');
         const modal = new bootstrap.Modal(document.getElementById('privacyPasswordModal'));
         modal.show();
 
-        // Focus password field after modal is shown
         document.getElementById('privacyPasswordModal').addEventListener('shown.bs.modal', function() {
             document.getElementById('privacyPassword').focus();
         });
@@ -232,13 +204,9 @@ console.log('🔐 PRIVACY MODE LOADING...');
      * Toggle amounts visibility
      */
     function toggleAmounts() {
-        console.log('🔄 TOGGLE CLICKED');
-
         if (isHidden) {
-            // Show password modal
             showPasswordModal();
         } else {
-            // Hide amounts
             hideAmounts();
         }
     }
@@ -247,8 +215,6 @@ console.log('🔐 PRIVACY MODE LOADING...');
      * Create BIG RED eye button
      */
     function createEyeButton() {
-        console.log('👁️ CREATING EYE BUTTON...');
-
         const button = document.createElement('button');
         button.id = 'privacyEyeButton';
         button.style.cssText = `
@@ -276,7 +242,6 @@ console.log('🔐 PRIVACY MODE LOADING...');
         button.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            console.log('👁️ EYE BUTTON CLICKED!');
             toggleAmounts();
         });
 
@@ -292,8 +257,6 @@ console.log('🔐 PRIVACY MODE LOADING...');
 
         document.body.appendChild(button);
         eyeButton = button;
-
-        console.log('✅ BIG RED EYE BUTTON CREATED!');
     }
 
     /**
@@ -304,12 +267,10 @@ console.log('🔐 PRIVACY MODE LOADING...');
         if (!icon || !eyeButton) return;
 
         if (isHidden) {
-            // Hidden - show red with eye-slash
             icon.className = 'fas fa-eye-slash';
             eyeButton.style.background = 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)';
             eyeButton.title = 'Amounts Hidden - Click to Show (Password Required)';
         } else {
-            // Visible - show green with open eye
             icon.className = 'fas fa-eye';
             eyeButton.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
             eyeButton.title = 'Amounts Visible - Click to Hide';
@@ -320,25 +281,19 @@ console.log('🔐 PRIVACY MODE LOADING...');
      * Initialize privacy mode
      */
     function init() {
-        console.log('🚀 PRIVACY MODE INITIALIZING...');
-
-        // Create password modal
         createPasswordModal();
 
-        // Hide amounts immediately
         setTimeout(function() {
             hideAmounts();
             createEyeButton();
         }, 200);
 
-        // Also run after DOM loaded
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function() {
                 setTimeout(hideAmounts, 500);
             });
         }
 
-        // Watch for new content (AJAX updates)
         const observer = new MutationObserver(function() {
             if (isHidden) {
                 setTimeout(hideAmounts, 100);
@@ -349,11 +304,8 @@ console.log('🔐 PRIVACY MODE LOADING...');
             childList: true,
             subtree: true
         });
-
-        console.log('✅ PRIVACY MODE READY!');
     }
 
-    // Expose API
     window.PrivacyMode = {
         hide: hideAmounts,
         show: showAmounts,
@@ -361,9 +313,6 @@ console.log('🔐 PRIVACY MODE LOADING...');
         isHidden: function() { return isHidden; }
     };
 
-    // Start immediately
     init();
 
 })();
-
-console.log('✅ PRIVACY MODE SCRIPT LOADED!');
