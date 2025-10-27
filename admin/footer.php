@@ -4,7 +4,10 @@
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Inactivity Timeout -->
+<!-- Privacy Mode - Hide amounts with asterisks -->
+<script src="../includes/privacy_mode.js"></script>
+
+<!-- Inactivity Timeout - Blur screen after 10 sec, logout after 2 min -->
 <script src="../includes/inactivity_timeout.js"></script>
 
 <!-- Notification System -->
