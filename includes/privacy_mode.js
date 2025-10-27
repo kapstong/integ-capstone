@@ -1,121 +1,123 @@
 /**
- * SIMPLE Privacy Mode - Hide amounts with asterisks
- * NO DATABASE, NO API, NO SETUP - JUST WORKS!
+ * PRIVACY MODE - Hide amounts with asterisks + Eye button
+ * AGGRESSIVE VERSION - LOGS EVERYTHING!
  */
+
+console.log('🚀 PRIVACY MODE SCRIPT LOADED!!!');
 
 (function() {
     'use strict';
 
-    let isHidden = true; // Start with amounts hidden
+    let isHidden = true;
     let eyeButton = null;
 
     /**
-     * Hide all amounts - replace with asterisks
+     * Hide all amounts - SUPER AGGRESSIVE
      */
     function hideAmounts() {
-        console.log('🔒 Hiding all amounts with asterisks...');
+        console.log('🔒🔒🔒 HIDING AMOUNTS - STARTING NOW!');
 
         let hiddenCount = 0;
 
-        // Find ALL text in the document
-        const walker = document.createTreeWalker(
-            document.body,
-            NodeFilter.SHOW_TEXT,
-            null,
-            false
-        );
+        // Method 1: Find ALL elements containing peso symbol or numbers
+        const allElements = document.querySelectorAll('*');
 
-        const nodesToProcess = [];
-        let node;
+        console.log(`Found ${allElements.length} elements to scan`);
 
-        while (node = walker.nextNode()) {
-            const text = node.nodeValue;
-
-            // Check if text contains currency amounts
-            if (text && (
-                text.match(/[₱$€£¥]\s*[\d,]+(\.\d{1,2})?/) ||
-                text.match(/[\d,]+(\.\d{1,2})?\s*[₱$€£¥]/) ||
-                text.match(/PHP\s*[\d,]+(\.\d{1,2})?/)
-            )) {
-                nodesToProcess.push(node);
-            }
-        }
-
-        // Process nodes
-        nodesToProcess.forEach(node => {
-            const parent = node.parentElement;
-
-            if (!parent || parent.hasAttribute('data-privacy-processed')) {
+        allElements.forEach(el => {
+            // Skip if already processed
+            if (el.hasAttribute('data-privacy-processed')) {
                 return;
             }
 
-            const originalText = node.nodeValue;
+            // Get direct text content only (not children)
+            const nodes = Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
 
-            // Replace amounts with asterisks
-            const hiddenText = originalText.replace(
-                /([₱$€£¥])\s*[\d,]+(\.\d{1,2})?/g,
-                '$1 ********'
-            ).replace(
-                /[\d,]+(\.\d{1,2})?\s*([₱$€£¥])/g,
-                '******** $2'
-            ).replace(
-                /PHP\s*[\d,]+(\.\d{1,2})?/g,
-                'PHP ********'
-            );
+            nodes.forEach(node => {
+                const text = node.nodeValue;
 
-            if (hiddenText !== originalText) {
-                parent.setAttribute('data-privacy-original', originalText);
-                parent.setAttribute('data-privacy-processed', 'true');
-                node.nodeValue = hiddenText;
-                hiddenCount++;
-            }
+                if (!text) return;
+
+                // Check for ANY amount pattern - VERY AGGRESSIVE
+                const hasAmount =
+                    /₱/.test(text) || // Has peso sign
+                    /\$/.test(text) || // Has dollar
+                    /PHP/.test(text) || // Has PHP
+                    /\d+\.\d{2}/.test(text); // Has decimal number
+
+                if (hasAmount) {
+                    console.log(`FOUND AMOUNT: "${text}"`);
+
+                    const originalText = text;
+
+                    // Replace ALL amounts with asterisks - MULTIPLE PATTERNS
+                    let hiddenText = text
+                        .replace(/₱\s*[\d,]+\.?\d*/g, '₱ ********')  // ₱0.00 or ₱123,456.78
+                        .replace(/\$\s*[\d,]+\.?\d*/g, '$ ********')  // $123.45
+                        .replace(/PHP\s*[\d,]+\.?\d*/g, 'PHP ********')  // PHP 1000
+                        .replace(/€\s*[\d,]+\.?\d*/g, '€ ********')  // €100
+                        .replace(/£\s*[\d,]+\.?\d*/g, '£ ********')  // £100
+                        .replace(/¥\s*[\d,]+\.?\d*/g, '¥ ********');  // ¥100
+
+                    if (hiddenText !== originalText) {
+                        el.setAttribute('data-privacy-original', originalText);
+                        el.setAttribute('data-privacy-processed', 'true');
+                        node.nodeValue = hiddenText;
+                        hiddenCount++;
+                        console.log(`HIDDEN: "${originalText}" → "${hiddenText}"`);
+                    }
+                }
+            });
         });
 
         isHidden = true;
         updateEyeButton();
-        console.log(`🔒 Hidden ${hiddenCount} amounts`);
+
+        console.log(`✅✅✅ HIDDEN ${hiddenCount} AMOUNTS!`);
+
+        if (hiddenCount === 0) {
+            console.error('❌❌❌ NO AMOUNTS FOUND! CHECK IF PAGE HAS AMOUNTS!');
+        }
     }
 
     /**
-     * Show all amounts - restore original values
+     * Show all amounts
      */
     function showAmounts() {
-        console.log('👁️ Showing all amounts...');
+        console.log('👁️👁️👁️ SHOWING AMOUNTS!');
 
         let shownCount = 0;
         const elements = document.querySelectorAll('[data-privacy-processed]');
 
+        console.log(`Found ${elements.length} hidden elements`);
+
         elements.forEach(el => {
             const original = el.getAttribute('data-privacy-original');
             if (original) {
-                // Find the text node and restore it
-                const walker = document.createTreeWalker(
-                    el,
-                    NodeFilter.SHOW_TEXT,
-                    null,
-                    false
-                );
+                const nodes = Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
 
-                let textNode;
-                while (textNode = walker.nextNode()) {
-                    if (textNode.nodeValue.includes('********')) {
-                        textNode.nodeValue = original;
+                nodes.forEach(node => {
+                    if (node.nodeValue.includes('********')) {
+                        console.log(`RESTORING: "${node.nodeValue}" → "${original}"`);
+                        node.nodeValue = original;
                         shownCount++;
-                        break;
                     }
-                }
+                });
             }
         });
 
         isHidden = false;
         updateEyeButton();
-        console.log(`👁️ Shown ${shownCount} amounts`);
+
+        console.log(`✅✅✅ SHOWN ${shownCount} AMOUNTS!`);
     }
 
     /**
-     * Toggle between hide and show
+     * Toggle
      */
     function toggleAmounts() {
+        console.log('🔄 TOGGLING AMOUNTS!');
+
         if (isHidden) {
             showAmounts();
         } else {
@@ -124,79 +126,59 @@
     }
 
     /**
-     * Create eye button in navbar
+     * Create BIG VISIBLE eye button
      */
     function createEyeButton() {
-        console.log('👁️ Creating eye button...');
+        console.log('👁️ CREATING EYE BUTTON...');
 
-        // Find navbar
-        const navbar = document.querySelector('.navbar-nav');
-        if (!navbar) {
-            console.log('⚠️ Navbar not found, creating floating button');
-            createFloatingButton();
-            return;
-        }
-
-        // Create button
-        const li = document.createElement('li');
-        li.className = 'nav-item';
-        li.innerHTML = `
-            <a class="nav-link" href="javascript:void(0)" id="privacyEyeButton"
-               style="font-size: 1.5rem; padding: 0.5rem 1rem;"
-               title="Toggle Amount Visibility">
-                <i class="fas fa-eye-slash" id="privacyEyeIcon"></i>
-            </a>
-        `;
-
-        navbar.appendChild(li);
-        eyeButton = document.getElementById('privacyEyeButton');
-
-        eyeButton.addEventListener('click', toggleAmounts);
-
-        console.log('✅ Eye button created in navbar');
-    }
-
-    /**
-     * Create floating eye button (fallback)
-     */
-    function createFloatingButton() {
+        // Create FLOATING button - ALWAYS visible
         const button = document.createElement('button');
         button.id = 'privacyEyeButton';
         button.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #1b2f73 0%, #2342a6 100%);
-            color: white;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            z-index: 9999;
-            transition: all 0.3s ease;
+            position: fixed !important;
+            top: 80px !important;
+            right: 20px !important;
+            width: 70px !important;
+            height: 70px !important;
+            border-radius: 50% !important;
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
+            color: white !important;
+            border: 4px solid white !important;
+            font-size: 2rem !important;
+            cursor: pointer !important;
+            box-shadow: 0 8px 30px rgba(220, 38, 38, 0.6) !important;
+            z-index: 99999 !important;
+            transition: all 0.3s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         `;
         button.innerHTML = '<i class="fas fa-eye-slash" id="privacyEyeIcon"></i>';
-        button.title = 'Toggle Amount Visibility';
+        button.title = 'Click to Show/Hide Amounts';
 
-        button.addEventListener('click', toggleAmounts);
-        button.addEventListener('mouseenter', function() {
-            this.style.transform = 'scale(1.1)';
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('👁️ EYE BUTTON CLICKED!');
+            toggleAmounts();
         });
+
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.2) rotate(10deg)';
+        });
+
         button.addEventListener('mouseleave', function() {
-            this.style.transform = 'scale(1)';
+            this.style.transform = 'scale(1) rotate(0deg)';
         });
 
         document.body.appendChild(button);
         eyeButton = button;
 
-        console.log('✅ Floating eye button created');
+        console.log('✅ EYE BUTTON CREATED! Look for RED CIRCLE in top-right!');
     }
 
     /**
-     * Update eye button icon
+     * Update eye icon
      */
     function updateEyeButton() {
         const icon = document.getElementById('privacyEyeIcon');
@@ -204,41 +186,48 @@
 
         if (isHidden) {
             icon.className = 'fas fa-eye-slash';
-            if (eyeButton) eyeButton.title = 'Show Amounts';
+            if (eyeButton) {
+                eyeButton.title = 'Amounts Hidden - Click to Show';
+                eyeButton.style.background = 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)';
+            }
         } else {
             icon.className = 'fas fa-eye';
-            if (eyeButton) eyeButton.title = 'Hide Amounts';
+            if (eyeButton) {
+                eyeButton.title = 'Amounts Visible - Click to Hide';
+                eyeButton.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
+            }
         }
     }
 
     /**
-     * Initialize privacy mode
+     * Initialize - IMMEDIATE!
      */
     function init() {
-        console.log('🚀 Privacy Mode: Initializing...');
+        console.log('🚀🚀🚀 PRIVACY MODE INITIALIZING NOW!');
 
-        // Wait for DOM to be fully loaded
+        // Run immediately AND after page loads
+        setTimeout(function() {
+            console.log('🔄 Running hide amounts...');
+            hideAmounts();
+            createEyeButton();
+        }, 100);
+
+        // Run again after DOM fully loaded
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function() {
+                console.log('📄 DOM LOADED - Running again...');
                 setTimeout(function() {
                     hideAmounts();
-                    createEyeButton();
-                    console.log('✅ Privacy Mode: ACTIVE - Amounts hidden by default');
+                    if (!eyeButton) createEyeButton();
                 }, 500);
             });
-        } else {
-            setTimeout(function() {
-                hideAmounts();
-                createEyeButton();
-                console.log('✅ Privacy Mode: ACTIVE - Amounts hidden by default');
-            }, 500);
         }
 
-        // Re-hide amounts when navigating or AJAX updates
+        // Watch for new content
         const observer = new MutationObserver(function(mutations) {
             if (isHidden) {
-                // Re-scan for new amounts
-                setTimeout(hideAmounts, 100);
+                console.log('🔄 Content changed - re-hiding amounts...');
+                setTimeout(hideAmounts, 50);
             }
         });
 
@@ -246,9 +235,11 @@
             childList: true,
             subtree: true
         });
+
+        console.log('✅ PRIVACY MODE INITIALIZED!');
     }
 
-    // Expose API
+    // Expose globally
     window.PrivacyMode = {
         hide: hideAmounts,
         show: showAmounts,
@@ -256,7 +247,9 @@
         isHidden: function() { return isHidden; }
     };
 
-    // Auto-init
+    // START IMMEDIATELY
     init();
 
 })();
+
+console.log('✅ PRIVACY MODE SCRIPT READY!');
