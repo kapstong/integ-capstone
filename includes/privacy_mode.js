@@ -369,10 +369,36 @@
      */
     function toggleAmounts() {
         if (isHidden) {
-            showPasswordModal();
+            // Check if already verified in this session
+            checkIfUnlockedThenToggle();
         } else {
             hideAmounts();
         }
+    }
+
+    /**
+     * Check if privacy mode is unlocked, then toggle or show modal
+     */
+    function checkIfUnlockedThenToggle() {
+        const apiPath = getApiPath('privacy_code.php');
+
+        fetch(apiPath + '?action=check_status', {
+            method: 'GET'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.unlocked) {
+                // Already verified in this session, just show amounts
+                showAmounts();
+            } else {
+                // Not verified, show modal to enter code
+                showPasswordModal();
+            }
+        })
+        .catch(error => {
+            // On error, show modal
+            showPasswordModal();
+        });
     }
 
     /**
