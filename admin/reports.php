@@ -700,7 +700,7 @@ $db = Database::getInstance()->getConnection();
             </a>
         </nav>
     </div>
-    <div class="sidebar-toggle" onclick="toggleSidebarDesktop()">
+    <div class="sidebar-toggle" onclick="toggleSidebar()">
         <i class="fas fa-chevron-right" id="sidebarArrow"></i>
     </div>
 
@@ -2311,17 +2311,49 @@ $db = Database::getInstance()->getConnection();
             }
         }
 
+        // Show alert function
+        function showAlert(message, type = 'info') {
+            // Create alert element
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = `
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                max-width: 400px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            `;
+
+            const icons = {
+                success: 'fas fa-check-circle',
+                danger: 'fas fa-exclamation-triangle',
+                warning: 'fas fa-exclamation-triangle',
+                info: 'fas fa-info-circle'
+            };
+
+            alertDiv.innerHTML = `
+                <i class="${icons[type] || 'fas fa-info-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(alertDiv);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
         // View charts functionality
         function viewCharts() {
             showAlert('Chart visualization coming soon! This will display financial trends and analytics.', 'info');
         }
+    </script>
 
-
-
-    <!-- Privacy Mode - Hide amounts with asterisks + Eye button -->
     <script src="../includes/privacy_mode.js?v=4"></script>
-
-    <!-- Inactivity Timeout - Blur screen + Auto logout -->
     <script src="../includes/inactivity_timeout.js?v=3"></script>
 
 </body>
