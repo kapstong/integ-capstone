@@ -29,7 +29,24 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Initialize auth and database
 $auth = new Auth();
-$auth->requireLogin();
+
+// For AJAX/fetch requests, return JSON error instead of redirecting
+$isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest')
+          || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
+          || isset($_SERVER['HTTP_FETCH_ID']); // Fetch API might set this
+
+if (!$auth->isLoggedIn()) {
+    if ($isAjax) {
+        ob_clean();
+        echo json_encode([
+            'success' => false,
+            'error' => 'Authentication required'
+        ]);
+        exit;
+    } else {
+        $auth->requireLogin();
+    }
+}
 $db = Database::getInstance()->getConnection();
 
 // Handle preflight OPTIONS request
