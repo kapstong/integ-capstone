@@ -1237,7 +1237,26 @@ $db = Database::getInstance()->getConnection();
 
                 // Fetch income statement data
                 const response = await fetch(`../api/reports.php?type=income_statement&date_from=${dateFrom}&date_to=${dateTo}`);
-                const data = await response.json();
+
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Get the response text first to check if it's empty
+                const responseText = await response.text();
+                if (!responseText) {
+                    throw new Error('Empty response from server');
+                }
+
+                // Parse JSON
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('Response text:', responseText);
+                    throw new Error('Invalid JSON response from server');
+                }
 
                 if (!data.success || data.error) {
                     throw new Error(data.error || 'Failed to generate income statement');
@@ -1470,7 +1489,26 @@ $db = Database::getInstance()->getConnection();
             try {
                 // Fetch balance sheet data
                 const response = await fetch(`../api/reports.php?type=balance_sheet&as_of_date=${asOfDate}`);
-                const data = await response.json();
+
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Get the response text first to check if it's empty
+                const responseText = await response.text();
+                if (!responseText) {
+                    throw new Error('Empty response from server');
+                }
+
+                // Parse JSON
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('Response text:', responseText);
+                    throw new Error('Invalid JSON response from server');
+                }
 
                 if (!data.success || data.error) {
                     throw new Error(data.error || 'Failed to generate balance sheet');
@@ -1585,7 +1623,26 @@ $db = Database::getInstance()->getConnection();
             try {
                 // Fetch cash flow data
                 const response = await fetch(`../api/reports.php?type=cash_flow&period=${period}`);
-                const data = await response.json();
+
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Get the response text first to check if it's empty
+                const responseText = await response.text();
+                if (!responseText) {
+                    throw new Error('Empty response from server');
+                }
+
+                // Parse JSON
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('Response text:', responseText);
+                    throw new Error('Invalid JSON response from server');
+                }
 
                 if (!data.success || data.error) {
                     throw new Error(data.error || 'Failed to generate cash flow statement');
@@ -1861,7 +1918,26 @@ $db = Database::getInstance()->getConnection();
 
             try {
                 const response = await fetch('../api/reports.php?type=budget_vs_actual');
-                const data = await response.json();
+
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Get the response text first to check if it's empty
+                const responseText = await response.text();
+                if (!responseText) {
+                    throw new Error('Empty response from server');
+                }
+
+                // Parse JSON
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('Response text:', responseText);
+                    throw new Error('Invalid JSON response from server');
+                }
 
                 if (data.error) {
                     throw new Error(data.error);
@@ -1904,7 +1980,26 @@ $db = Database::getInstance()->getConnection();
 
             try {
                 const response = await fetch('../api/reports.php?type=cash_flow_summary');
-                const data = await response.json();
+
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Get the response text first to check if it's empty
+                const responseText = await response.text();
+                if (!responseText) {
+                    throw new Error('Empty response from server');
+                }
+
+                // Parse JSON
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('Response text:', responseText);
+                    throw new Error('Invalid JSON response from server');
+                }
 
                 if (!data.success || data.error) {
                     throw new Error(data.error || 'Failed to generate cash flow summary');
