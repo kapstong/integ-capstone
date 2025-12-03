@@ -665,6 +665,8 @@ $db = Database::getInstance()->getConnection();
     </style>
 </head>
 <body>
+    <?php include_once __DIR__ . '/../includes/loading_screen.php'; ?>
+
     <div class="sidebar sidebar-collapsed" id="sidebar">
         <div class="p-3">
             <h5 class="navbar-brand"><img src="atieralogo.png" alt="Atiera Logo" style="height: 100px;"></h5>
