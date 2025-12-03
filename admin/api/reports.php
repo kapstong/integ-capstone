@@ -1,6 +1,13 @@
 <?php
 // For API endpoints, we don't want to redirect on auth failure
 // So we'll handle authentication differently
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../../logs/api_reports_admin_error.log');
+
+error_log('[ADMIN API] Reports API called with params: ' . json_encode($_GET));
+
 require_once __DIR__ . '/../../includes/database.php';
 require_once __DIR__ . '/../../includes/logger.php';
 
