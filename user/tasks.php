@@ -35,15 +35,17 @@ try {
     <title>Financial Management System - My Tasks</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="../includes/enhanced-ui.css" rel="stylesheet">
     <style>
         body {
-            background-color: #F1F7EE;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e8ecf7 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
             margin: 0;
             padding: 0;
+            min-height: 100vh;
         }
         .sidebar {
-            background-color: #1e2936;
+            background: linear-gradient(180deg, #0f1c49 0%, #1b2f73 50%, #15265e 100%);
             color: white;
             min-height: 100vh;
             position: fixed;
@@ -52,7 +54,8 @@ try {
             width: 300px;
             z-index: 1000;
             transition: transform 0.3s ease, width 0.3s ease;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 4px 0 20px rgba(15, 28, 73, 0.15);
+            border-right: 2px solid rgba(212, 175, 55, 0.2);
         }
         .sidebar.sidebar-collapsed {
             width: 120px;
@@ -68,21 +71,32 @@ try {
             text-align: center;
         }
         .sidebar .nav-link {
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            margin-bottom: 10px;
-            font-size: 1.1em;
+            color: rgba(255,255,255,0.85);
+            padding: 14px 24px;
+            border-radius: 12px;
+            margin: 4px 16px;
+            font-size: 1.05em;
+            font-weight: 500;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
         .sidebar .nav-link i {
-            font-size: 1.4em;
+            font-size: 1.3em;
+            width: 24px;
+            text-align: center;
         }
         .sidebar .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.12);
             color: white;
+            transform: translateX(4px);
         }
         .sidebar .nav-link.active {
-            background-color: rgba(255, 255, 255, 0.2);
+            background: linear-gradient(135deg, #d4af37 0%, #b8961f 100%);
+            color: #0f1c49;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
         }
         .content {
             margin-left: 120px;
@@ -114,17 +128,20 @@ try {
             font-size: 1.5em;
             width: 40px;
             height: 40px;
-            background-color: #1e2936;
-            border: 2px solid white;
+            background: linear-gradient(135deg, #1b2f73 0%, #0f1c49 100%);
+            border: 2px solid #d4af37;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: left 0.3s ease, background-color 0.3s ease;
+            transition: left 0.3s ease, transform 0.2s ease;
             z-index: 1001;
+            box-shadow: 0 4px 12px rgba(15, 28, 73, 0.3);
         }
         .sidebar-toggle:hover {
-            background-color: rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, #d4af37 0%, #b8961f 100%);
+            color: #0f1c49;
+            transform: translateY(-50%) scale(1.1);
         }
         .toggle-btn {
             display: none;
