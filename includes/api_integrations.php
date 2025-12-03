@@ -846,6 +846,7 @@ class XeroIntegration extends BaseIntegration {
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
+}
 
 /**
  * Mailchimp Integration
