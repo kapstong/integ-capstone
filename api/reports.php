@@ -24,46 +24,44 @@ try {
     require_once '../includes/database.php';
     require_once '../includes/auth.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Initialize auth and database
-$auth = new Auth();
-
-// For AJAX/fetch requests, return JSON error instead of redirecting
-// More reliable detection for fetch API and AJAX calls
-$isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest')
-          || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
-          || (isset($_SERVER['REQUEST_METHOD']) && in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST', 'PUT', 'DELETE']) && isset($_GET['type']))
-          || isset($_SERVER['HTTP_FETCH_ID'])
-          || isset($_SERVER['HTTP_FETCH_UID']); // Fetch API headers
-
-// Additional check: if URL contains API parameters, treat as AJAX
-if (!$isAjax && isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], 'api/') !== false) {
-    $isAjax = true;
-}
-
-if (!$auth->isLoggedIn()) {
-    if ($isAjax) {
-        ob_clean();
-        echo json_encode([
-            'success' => false,
-            'error' => 'Authentication required'
-        ]);
-        exit;
-    } else {
-        $auth->requireLogin();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
     }
-}
-$db = Database::getInstance()->getConnection();
 
-// Handle preflight OPTIONS request
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    exit(0);
-}
+    // Initialize auth and database
+    $auth = new Auth();
 
-try {
+    // For AJAX/fetch requests, return JSON error instead of redirecting
+    // More reliable detection for fetch API and AJAX calls
+    $isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest')
+              || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
+              || (isset($_SERVER['REQUEST_METHOD']) && in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST', 'PUT', 'DELETE']) && isset($_GET['type']))
+              || isset($_SERVER['HTTP_FETCH_ID'])
+              || isset($_SERVER['HTTP_FETCH_UID']); // Fetch API headers
+
+    // Additional check: if URL contains API parameters, treat as AJAX
+    if (!$isAjax && isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], 'api/') !== false) {
+        $isAjax = true;
+    }
+
+    if (!$auth->isLoggedIn()) {
+        if ($isAjax) {
+            ob_clean();
+            echo json_encode([
+                'success' => false,
+                'error' => 'Authentication required'
+            ]);
+            exit;
+        } else {
+            $auth->requireLogin();
+        }
+    }
+    $db = Database::getInstance()->getConnection();
+
+    // Handle preflight OPTIONS request
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        exit(0);
+    }
     $reportType = $_GET['type'] ?? '';
     $dateFrom = $_GET['date_from'] ?? '';
     $dateTo = $_GET['date_to'] ?? '';
