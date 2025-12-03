@@ -1221,6 +1221,7 @@ $db = Database::getInstance()->getConnection();
                 </div>
             `;
 
+            let data = null;
             try {
                 // Get date range based on selection
                 const periodSelect = document.getElementById('incomePeriodSelect');
@@ -1250,12 +1251,11 @@ $db = Database::getInstance()->getConnection();
                 }
 
                 // Parse JSON
-                let data;
                 try {
                     data = JSON.parse(responseText);
                 } catch (parseError) {
                     console.error('Response text:', responseText);
-                    throw new Error('Invalid JSON response from server');
+                    throw new Error('Invalid JSON response from server. Response: ' + responseText.substring(0, 200));
                 }
 
                 if (!data.success || data.error) {
@@ -1270,15 +1270,26 @@ $db = Database::getInstance()->getConnection();
 
             } catch (error) {
                 console.error('Error generating income statement:', error);
+                console.error('Response data:', data);
+
+                // Build detailed error message
+                let errorHTML = `Error generating income statement: ${error.message}`;
+                if (data && data.file) {
+                    errorHTML += `<br><small><strong>File:</strong> ${data.file}:${data.line}</small>`;
+                }
+                if (data && data.trace) {
+                    errorHTML += `<br><details><summary>Stack trace</summary><pre style="text-align: left; font-size: 11px; max-height: 200px; overflow: auto; background: #f5f5f5; padding: 10px; margin-top: 10px;">${data.trace}</pre></details>`;
+                }
+
                 container.innerHTML = `
                     <div class="statement-header">
                         <h1 class="statement-title">Profit & Loss Statement</h1>
                         <p class="statement-period">Error loading report</p>
                     </div>
                     <div class="text-center py-5">
-                        <div class="alert alert-danger">
+                        <div class="alert alert-danger" style="text-align: left;">
                             <i class="fas fa-exclamation-triangle me-2"></i>
-                            Error generating income statement: ${error.message}
+                            ${errorHTML}
                         </div>
                         <button class="btn btn-primary" onclick="generateIncomeStatement()">Try Again</button>
                     </div>

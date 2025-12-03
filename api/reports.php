@@ -1,7 +1,4 @@
 <?php
-// EARLY DEBUG - Write immediately to confirm script execution
-file_put_contents(__DIR__ . '/../logs/api_start.txt', date('Y-m-d H:i:s') . " - Script started\n", FILE_APPEND);
-
 /**
  * ATIERA Financial Management System - Reports API
  * Handles report generation with integrated payroll data from HR4
@@ -9,27 +6,23 @@ file_put_contents(__DIR__ . '/../logs/api_start.txt', date('Y-m-d H:i:s') . " - 
 
 // Prevent any HTML output that would break JSON
 error_reporting(E_ALL);
-ini_set('display_errors', 1); // TEMPORARILY ENABLE for debugging
-ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/../logs/api_reports_error.log');
-
-// Start output buffering to catch any unexpected output
-ob_start();
-
-// Log that API was called
-error_log('API Reports called with params: ' . json_encode($_GET));
-file_put_contents(__DIR__ . '/../logs/api_debug.txt', date('Y-m-d H:i:s') . ' - API called with: ' . json_encode($_GET) . "\n", FILE_APPEND);
+ini_set('display_errors', 1);
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
-// Require core files
-require_once '../config.php';
-require_once '../includes/logger.php';
-require_once '../includes/database.php';
-require_once '../includes/auth.php';
+// Start output buffering to catch any unexpected output
+ob_start();
+
+// Wrap everything in try-catch to capture ANY error
+try {
+    // Require core files
+    require_once '../config.php';
+    require_once '../includes/logger.php';
+    require_once '../includes/database.php';
+    require_once '../includes/auth.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -938,16 +931,25 @@ try {
     ]);
 
 } catch (Exception $e) {
-    // Log the full error with stack trace
-    error_log('API Reports Error: ' . $e->getMessage());
-    error_log('Stack trace: ' . $e->getTraceAsString());
-
     ob_clean(); // Clear any buffered output
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'error' => 'System Error: ' . $e->getMessage(),
-        'trace' => $e->getTraceAsString()
+        'trace' => $e->getTraceAsString(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine()
+    ]);
+} catch (Error $e) {
+    // Catch fatal errors too
+    ob_clean();
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Fatal Error: ' . $e->getMessage(),
+        'trace' => $e->getTraceAsString(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine()
     ]);
 }
 ?>
