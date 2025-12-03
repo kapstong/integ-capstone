@@ -18,8 +18,18 @@ function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('show');
 }
 
-// Initialize tooltips and popovers
+// Initialize eye button functionality
 document.addEventListener('DOMContentLoaded', function() {
+    const eyeButton = document.getElementById('eye-toggle-btn');
+    if (eyeButton) {
+        eyeButton.addEventListener('click', function() {
+            // Use the existing PrivacyMode system
+            if (window.PrivacyMode) {
+                window.PrivacyMode.toggle();
+            }
+        });
+    }
+
     // Initialize Bootstrap tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {

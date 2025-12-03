@@ -253,14 +253,8 @@ if ($_POST) {
             <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
           </div>
           <div class="field">
-            <input id="password" name="password" type="password" autocomplete="current-password" class="input pr-12 peer" placeholder=" " required <?php echo $isLocked ? 'disabled' : ''; ?>>
+            <input id="password" name="password" type="password" autocomplete="current-password" class="input peer" placeholder=" " required <?php echo $isLocked ? 'disabled' : ''; ?>>
             <label for="password" class="float-label">••••••••</label>
-            <div class="icon-right flex items-center gap-1">
-              <button type="button" id="togglePw" class="w-9 h-9 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center" aria-label="Show password" aria-pressed="false" title="Show/Hide password" <?php echo $isLocked ? 'disabled' : ''; ?>>
-                <svg id="eyeOn" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5C7 5 2.73 8.11 1 12c1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7Zm0 11a4 4 0 1 1 4-4 4 4 0 0 1-4 4Z" fill="currentColor"/></svg>
-                <svg id="eyeOff" class="hidden" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 4.27 4.28 3 21 19.72 19.73 21l-2.2-2.2A11.73 11.73 0 0 1 12 19c-5 0-9.27-3.11-11-7a12.71 12.71 0 0 1 4.1-4.73L3 4.27ZM12 7a5 5 0 0 1 5 5 5 5 0 0 1-.46 2.11L14.6 12.17A2.5 2.5 0 0 0 11.83 9.4L9.9 7.46A4.84 4.84 0 0 1 12 7Z" fill="currentColor"/></svg>
-              </button>
-            </div>
           </div>
         </div>
 
@@ -276,10 +270,6 @@ if ($_POST) {
 <script>
   const $ = (s, r=document)=>r.querySelector(s);
 
-  const toggle = $('#togglePw');
-  const pwEl = $('#password');
-  const eyeOn = $('#eyeOn');
-  const eyeOff = $('#eyeOff');
   const modeBtn = $('#modeBtn');
   const wmImg = $('#wm');
 
@@ -288,16 +278,6 @@ if ($_POST) {
     const dark = root.classList.toggle('dark');
     modeBtn.setAttribute('aria-pressed', String(dark));
     wmImg.style.transform = 'scale(1.01)'; setTimeout(()=> wmImg.style.transform = '', 220);
-  });
-
-  toggle.addEventListener('click', () => {
-    const show = pwEl.type === 'password';
-    pwEl.type = show ? 'text' : 'password';
-    toggle.setAttribute('aria-pressed', String(show));
-    toggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
-    eyeOn.classList.toggle('hidden', show);
-    eyeOff.classList.toggle('hidden', !show);
-    pwEl.focus();
   });
 
   // Handle lockout countdown
