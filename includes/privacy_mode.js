@@ -419,37 +419,36 @@
     }
 
     /**
-     * Create modern privacy toggle button
+     * Create modern privacy toggle button integrated in navbar
      */
     function createEyeButton() {
+        // Create a container that can be placed in navbar or as fallback
+        const container = document.createElement('li');
+        container.className = 'nav-item ms-auto';
+        container.id = 'privacyToggleContainer';
+        container.style.cssText = 'display: flex; align-items: center;';
+
         const button = document.createElement('button');
         button.id = 'privacyEyeButton';
-        button.className = 'btn';
+        button.className = 'btn btn-sm';
         button.style.cssText = `
-            position: fixed !important;
-            top: 80px !important;
-            right: 30px !important;
-            width: 140px !important;
-            height: 50px !important;
-            border-radius: 25px !important;
             background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
             color: white !important;
             border: 2px solid rgba(255, 255, 255, 0.3) !important;
-            font-size: 0.9rem !important;
+            border-radius: 20px !important;
+            font-size: 0.85rem !important;
             font-weight: 600 !important;
+            padding: 8px 16px !important;
             cursor: pointer !important;
-            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4) !important;
-            z-index: 999999 !important;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3) !important;
             transition: all 0.3s ease !important;
             display: flex !important;
             align-items: center !important;
-            justify-content: center !important;
             gap: 8px !important;
-            padding: 0 20px !important;
-            backdrop-filter: blur(10px) !important;
+            white-space: nowrap !important;
         `;
         button.innerHTML = `
-            <i class="fas fa-eye-slash" id="privacyEyeIcon" style="font-size: 1.2rem;"></i>
+            <i class="fas fa-eye-slash" id="privacyEyeIcon"></i>
             <span id="privacyEyeText">Hidden</span>
         `;
         button.title = 'Click to Show Amounts (Email Verification Required)';
@@ -461,16 +460,28 @@
         });
 
         button.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-2px)';
-            this.style.boxShadow = '0 6px 20px rgba(220, 38, 38, 0.6)';
+            this.style.transform = 'translateY(-1px)';
+            this.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.5)';
         });
 
         button.addEventListener('mouseleave', function() {
             this.style.transform = 'translateY(0)';
-            this.style.boxShadow = '0 4px 15px rgba(220, 38, 38, 0.4)';
+            this.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.3)';
         });
 
-        document.body.appendChild(button);
+        container.appendChild(button);
+
+        // Try to find navbar tabs and append there
+        const navTabs = document.querySelector('.nav.nav-tabs, .navbar .navbar-nav, nav.nav');
+        if (navTabs) {
+            // Insert at the end of the nav
+            navTabs.appendChild(container);
+        } else {
+            // Fallback: create a fixed position wrapper if no navbar found
+            container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 999999; list-style: none;';
+            document.body.appendChild(container);
+        }
+
         eyeButton = button;
     }
 
@@ -484,17 +495,15 @@
 
         if (isHidden) {
             icon.className = 'fas fa-eye-slash';
-            icon.style.fontSize = '1.2rem';
             text.textContent = 'Hidden';
             eyeButton.style.background = 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)';
-            eyeButton.style.boxShadow = '0 4px 15px rgba(220, 38, 38, 0.4)';
+            eyeButton.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.3)';
             eyeButton.title = 'Amounts Hidden - Click to Show (Email Verification Required)';
         } else {
             icon.className = 'fas fa-eye';
-            icon.style.fontSize = '1.2rem';
             text.textContent = 'Visible';
             eyeButton.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
-            eyeButton.style.boxShadow = '0 4px 15px rgba(34, 197, 94, 0.4)';
+            eyeButton.style.boxShadow = '0 2px 8px rgba(34, 197, 94, 0.3)';
             eyeButton.title = 'Amounts Visible - Click to Hide';
         }
     }
