@@ -422,8 +422,10 @@
      * Create simple eye icon button in navbar
      */
     function createEyeButton() {
+        console.log('Privacy button: createEyeButton function called');
         // Wait a bit for DOM to be fully ready
         setTimeout(function() {
+            console.log('Privacy button: setTimeout callback triggered');
             const button = document.createElement('button');
             button.id = 'privacyEyeButton';
             button.className = 'btn btn-link me-3';
