@@ -32,18 +32,35 @@
                 const text = node.nodeValue;
                 if (!text) return;
 
-                const hasAmount = /[₱$€£¥]\s*[\d,]+\.?\d*/.test(text);
+                // Enhanced regex to catch all amount patterns including:
+                // - Currency symbols: ₱, $, €, £, ¥
+                // - P prefix (without peso symbol)
+                // - PHP prefix
+                // - Negative amounts with minus sign
+                // - Amounts in parentheses (accounting format for negatives)
+                // - With or without decimal points
+                const hasAmount = /(?:[₱$€£¥P]\s*-?[\d,]+\.?\d*)|(?:PHP\s*-?[\d,]+\.?\d*)|(?:\(\s*[₱$€£¥P]?\s*[\d,]+\.?\d*\s*\))/.test(text);
 
                 if (hasAmount) {
                     const originalText = text;
 
                     const hiddenText = text
-                        .replace(/₱\s*[\d,]+\.?\d*/g, '₱********')
-                        .replace(/\$\s*[\d,]+\.?\d*/g, '$********')
-                        .replace(/€\s*[\d,]+\.?\d*/g, '€********')
-                        .replace(/£\s*[\d,]+\.?\d*/g, '£********')
-                        .replace(/¥\s*[\d,]+\.?\d*/g, '¥********')
-                        .replace(/PHP\s*[\d,]+\.?\d*/g, 'PHP ********');
+                        // Match ₱ with optional minus and numbers
+                        .replace(/₱\s*-?[\d,]+\.?\d*/g, '₱*********')
+                        // Match $ with optional minus and numbers
+                        .replace(/\$\s*-?[\d,]+\.?\d*/g, '$*********')
+                        // Match € with optional minus and numbers
+                        .replace(/€\s*-?[\d,]+\.?\d*/g, '€*********')
+                        // Match £ with optional minus and numbers
+                        .replace(/£\s*-?[\d,]+\.?\d*/g, '£*********')
+                        // Match ¥ with optional minus and numbers
+                        .replace(/¥\s*-?[\d,]+\.?\d*/g, '¥*********')
+                        // Match PHP with optional minus and numbers
+                        .replace(/PHP\s*-?[\d,]+\.?\d*/g, 'PHP *********')
+                        // Match P (without peso symbol) with optional minus and numbers - CRITICAL FIX
+                        .replace(/P\s*-?[\d,]+\.?\d*/g, 'P*********')
+                        // Match amounts in parentheses (accounting format)
+                        .replace(/\(\s*([₱$€£¥P]?)\s*[\d,]+\.?\d*\s*\)/g, '($1********)');
 
                     if (hiddenText !== originalText) {
                         hiddenElements.push({
@@ -402,31 +419,39 @@
     }
 
     /**
-     * Create BIG RED eye button
+     * Create modern privacy toggle button
      */
     function createEyeButton() {
         const button = document.createElement('button');
         button.id = 'privacyEyeButton';
+        button.className = 'btn';
         button.style.cssText = `
             position: fixed !important;
-            top: 100px !important;
-            right: 20px !important;
-            width: 80px !important;
-            height: 80px !important;
-            border-radius: 50% !important;
+            top: 80px !important;
+            right: 30px !important;
+            width: 140px !important;
+            height: 50px !important;
+            border-radius: 25px !important;
             background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
             color: white !important;
-            border: 5px solid white !important;
-            font-size: 2.5rem !important;
+            border: 2px solid rgba(255, 255, 255, 0.3) !important;
+            font-size: 0.9rem !important;
+            font-weight: 600 !important;
             cursor: pointer !important;
-            box-shadow: 0 10px 40px rgba(220, 38, 38, 0.7) !important;
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4) !important;
             z-index: 999999 !important;
             transition: all 0.3s ease !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
+            gap: 8px !important;
+            padding: 0 20px !important;
+            backdrop-filter: blur(10px) !important;
         `;
-        button.innerHTML = '<i class="fas fa-eye-slash" id="privacyEyeIcon"></i>';
+        button.innerHTML = `
+            <i class="fas fa-eye-slash" id="privacyEyeIcon" style="font-size: 1.2rem;"></i>
+            <span id="privacyEyeText">Hidden</span>
+        `;
         button.title = 'Click to Show Amounts (Email Verification Required)';
 
         button.addEventListener('click', function(e) {
@@ -436,13 +461,13 @@
         });
 
         button.addEventListener('mouseenter', function() {
-            this.style.transform = 'scale(1.15) rotate(5deg)';
-            this.style.boxShadow = '0 15px 50px rgba(220, 38, 38, 0.9)';
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '0 6px 20px rgba(220, 38, 38, 0.6)';
         });
 
         button.addEventListener('mouseleave', function() {
-            this.style.transform = 'scale(1) rotate(0deg)';
-            this.style.boxShadow = '0 10px 40px rgba(220, 38, 38, 0.7)';
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '0 4px 15px rgba(220, 38, 38, 0.4)';
         });
 
         document.body.appendChild(button);
@@ -454,15 +479,22 @@
      */
     function updateEyeButton() {
         const icon = document.getElementById('privacyEyeIcon');
-        if (!icon || !eyeButton) return;
+        const text = document.getElementById('privacyEyeText');
+        if (!icon || !eyeButton || !text) return;
 
         if (isHidden) {
             icon.className = 'fas fa-eye-slash';
+            icon.style.fontSize = '1.2rem';
+            text.textContent = 'Hidden';
             eyeButton.style.background = 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)';
+            eyeButton.style.boxShadow = '0 4px 15px rgba(220, 38, 38, 0.4)';
             eyeButton.title = 'Amounts Hidden - Click to Show (Email Verification Required)';
         } else {
             icon.className = 'fas fa-eye';
+            icon.style.fontSize = '1.2rem';
+            text.textContent = 'Visible';
             eyeButton.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
+            eyeButton.style.boxShadow = '0 4px 15px rgba(34, 197, 94, 0.4)';
             eyeButton.title = 'Amounts Visible - Click to Hide';
         }
     }
