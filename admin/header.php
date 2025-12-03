@@ -111,6 +111,8 @@
     <?php include_once __DIR__ . '/../includes/datepicker.php'; ?>
 </head>
 <body>
+    <?php include_once __DIR__ . '/../includes/loading_screen.php'; ?>
+
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="p-4">
