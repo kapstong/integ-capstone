@@ -1,4 +1,7 @@
 <?php
+// EARLY DEBUG - Write immediately to confirm script execution
+file_put_contents(__DIR__ . '/../logs/api_start.txt', date('Y-m-d H:i:s') . " - Script started\n", FILE_APPEND);
+
 /**
  * ATIERA Financial Management System - Reports API
  * Handles report generation with integrated payroll data from HR4
