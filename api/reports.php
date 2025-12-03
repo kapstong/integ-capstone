@@ -8,9 +8,13 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../logs/api_reports_error.log');
 
 // Start output buffering to catch any unexpected output
 ob_start();
+
+// Log that API was called
+error_log('API Reports called with params: ' . json_encode($_GET));
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -930,11 +934,16 @@ try {
     ]);
 
 } catch (Exception $e) {
+    // Log the full error with stack trace
+    error_log('API Reports Error: ' . $e->getMessage());
+    error_log('Stack trace: ' . $e->getTraceAsString());
+
     ob_clean(); // Clear any buffered output
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'System Error: ' . $e->getMessage()
+        'error' => 'System Error: ' . $e->getMessage(),
+        'trace' => $e->getTraceAsString()
     ]);
 }
 ?>
