@@ -213,6 +213,11 @@
             </button>
             <span class="navbar-brand mb-0 h1"><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle) : 'Admin Panel'; ?></span>
             <div class="d-flex align-items-center ms-auto">
+                <!-- Eye Button -->
+                <button class="btn btn-link text-dark me-3" type="button" id="eye-toggle-btn" title="Toggle Privacy Mode">
+                    <i class="fas fa-eye fa-lg"></i>
+                </button>
+
                 <div class="dropdown">
                     <button class="btn btn-link text-dark dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                         <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
