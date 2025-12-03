@@ -422,67 +422,89 @@
      * Create modern privacy toggle button integrated in navbar
      */
     function createEyeButton() {
-        // Create a container that can be placed in navbar or as fallback
-        const container = document.createElement('li');
-        container.className = 'nav-item ms-auto';
-        container.id = 'privacyToggleContainer';
-        container.style.cssText = 'display: flex; align-items: center;';
+        // Wait a bit for DOM to be fully ready
+        setTimeout(function() {
+            const button = document.createElement('button');
+            button.id = 'privacyEyeButton';
+            button.className = 'btn btn-sm';
+            button.style.cssText = `
+                background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
+                color: white !important;
+                border: 2px solid rgba(255, 255, 255, 0.3) !important;
+                border-radius: 20px !important;
+                font-size: 0.85rem !important;
+                font-weight: 600 !important;
+                padding: 8px 16px !important;
+                cursor: pointer !important;
+                box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3) !important;
+                transition: all 0.3s ease !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                gap: 8px !important;
+                white-space: nowrap !important;
+                margin-left: 10px !important;
+            `;
+            button.innerHTML = `
+                <i class="fas fa-eye-slash" id="privacyEyeIcon"></i>
+                <span id="privacyEyeText">Hidden</span>
+            `;
+            button.title = 'Click to Show Amounts (Email Verification Required)';
 
-        const button = document.createElement('button');
-        button.id = 'privacyEyeButton';
-        button.className = 'btn btn-sm';
-        button.style.cssText = `
-            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
-            color: white !important;
-            border: 2px solid rgba(255, 255, 255, 0.3) !important;
-            border-radius: 20px !important;
-            font-size: 0.85rem !important;
-            font-weight: 600 !important;
-            padding: 8px 16px !important;
-            cursor: pointer !important;
-            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3) !important;
-            transition: all 0.3s ease !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 8px !important;
-            white-space: nowrap !important;
-        `;
-        button.innerHTML = `
-            <i class="fas fa-eye-slash" id="privacyEyeIcon"></i>
-            <span id="privacyEyeText">Hidden</span>
-        `;
-        button.title = 'Click to Show Amounts (Email Verification Required)';
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleAmounts();
+            });
 
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleAmounts();
-        });
+            button.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-1px)';
+                this.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.5)';
+            });
 
-        button.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-1px)';
-            this.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.5)';
-        });
+            button.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+                this.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.3)';
+            });
 
-        button.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-            this.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.3)';
-        });
+            // Try multiple selectors to find the right navbar location
+            const possibleLocations = [
+                document.querySelector('#reportsTabs'),           // Reports page tabs
+                document.querySelector('.nav.nav-tabs'),          // Any Bootstrap nav tabs
+                document.querySelector('.navbar-nav'),            // Bootstrap navbar
+                document.querySelector('ul.nav'),                 // Generic nav
+                document.querySelector('.content .nav'),          // Nav inside content area
+            ];
 
-        container.appendChild(button);
+            let navLocation = null;
+            for (let location of possibleLocations) {
+                if (location) {
+                    navLocation = location;
+                    console.log('Privacy button: Found navbar at', location);
+                    break;
+                }
+            }
 
-        // Try to find navbar tabs and append there
-        const navTabs = document.querySelector('.nav.nav-tabs, .navbar .navbar-nav, nav.nav');
-        if (navTabs) {
-            // Insert at the end of the nav
-            navTabs.appendChild(container);
-        } else {
-            // Fallback: create a fixed position wrapper if no navbar found
-            container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 999999; list-style: none;';
-            document.body.appendChild(container);
-        }
+            if (navLocation) {
+                // Found a navbar, create a list item container
+                const li = document.createElement('li');
+                li.className = 'nav-item';
+                li.style.cssText = 'margin-left: auto; display: flex; align-items: center;';
+                li.appendChild(button);
+                navLocation.appendChild(li);
+                console.log('Privacy button: Appended to navbar');
+            } else {
+                // No navbar found, just append button to a container near the top
+                const topContainer = document.querySelector('.content') || document.body;
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = 'position: absolute; top: 10px; right: 20px; z-index: 999999;';
+                wrapper.appendChild(button);
+                topContainer.insertBefore(wrapper, topContainer.firstChild);
+                console.log('Privacy button: No navbar found, using fallback position');
+            }
 
-        eyeButton = button;
+            eyeButton = button;
+            updateEyeButton();
+        }, 300); // Wait 300ms for DOM to be ready
     }
 
     /**
