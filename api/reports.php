@@ -6,7 +6,7 @@
 
 // Prevent any HTML output that would break JSON
 error_reporting(E_ALL);
-ini_set('display_errors', 0);
+ini_set('display_errors', 1); // TEMPORARILY ENABLE for debugging
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/../logs/api_reports_error.log');
 
@@ -15,6 +15,7 @@ ob_start();
 
 // Log that API was called
 error_log('API Reports called with params: ' . json_encode($_GET));
+file_put_contents(__DIR__ . '/../logs/api_debug.txt', date('Y-m-d H:i:s') . ' - API called with: ' . json_encode($_GET) . "\n", FILE_APPEND);
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
