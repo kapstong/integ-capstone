@@ -1239,12 +1239,7 @@ $db = Database::getInstance()->getConnection();
                 // Fetch income statement data
                 const response = await fetch(`../api/reports.php?type=income_statement&date_from=${dateFrom}&date_to=${dateTo}`);
 
-                // Check if response is OK
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                // Get the response text first to check if it's empty
+                // Get the response text first (even if status is error, API returns JSON with details)
                 const responseText = await response.text();
                 if (!responseText) {
                     throw new Error('Empty response from server');
@@ -1255,7 +1250,12 @@ $db = Database::getInstance()->getConnection();
                     data = JSON.parse(responseText);
                 } catch (parseError) {
                     console.error('Response text:', responseText);
-                    throw new Error('Invalid JSON response from server. Response: ' + responseText.substring(0, 200));
+                    throw new Error('Invalid JSON response from server. Response: ' + responseText.substring(0, 500));
+                }
+
+                // Check for errors in the response
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
                 }
 
                 if (!data.success || data.error) {
