@@ -419,36 +419,23 @@
     }
 
     /**
-     * Create modern privacy toggle button integrated in navbar
+     * Create simple eye icon button in navbar
      */
     function createEyeButton() {
         // Wait a bit for DOM to be fully ready
         setTimeout(function() {
             const button = document.createElement('button');
             button.id = 'privacyEyeButton';
-            button.className = 'btn btn-sm';
+            button.className = 'btn btn-link me-3';
             button.style.cssText = `
-                background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
-                color: white !important;
-                border: 2px solid rgba(255, 255, 255, 0.3) !important;
-                border-radius: 20px !important;
-                font-size: 0.85rem !important;
-                font-weight: 600 !important;
-                padding: 8px 16px !important;
-                cursor: pointer !important;
-                box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3) !important;
-                transition: all 0.3s ease !important;
-                display: inline-flex !important;
-                align-items: center !important;
-                gap: 8px !important;
-                white-space: nowrap !important;
-                margin-left: 10px !important;
+                color: #64748b !important;
+                padding: 0.5rem !important;
+                border: none !important;
+                background: none !important;
+                transition: color 0.2s ease !important;
             `;
-            button.innerHTML = `
-                <i class="fas fa-eye-slash" id="privacyEyeIcon"></i>
-                <span id="privacyEyeText">Hidden</span>
-            `;
-            button.title = 'Click to Show Amounts (Email Verification Required)';
+            button.innerHTML = `<i class="fas fa-eye fa-lg" id="privacyEyeIcon"></i>`;
+            button.title = 'Toggle Privacy Mode - Show/Hide Amounts';
 
             button.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -457,13 +444,11 @@
             });
 
             button.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-1px)';
-                this.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.5)';
+                this.style.color = '#1e2936 !important';
             });
 
             button.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0)';
-                this.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.3)';
+                this.style.color = '#64748b !important';
             });
 
             // Find the top navbar container with notification bell and user dropdown
@@ -473,9 +458,9 @@
             if (userDropdown && userDropdown.parentElement) {
                 // Get the parent container (the d-flex div)
                 const navbarContainer = userDropdown.parentElement.parentElement;
-                // Insert button before the dropdown
+                // Insert button before the dropdown (between notification bell and user dropdown)
                 navbarContainer.insertBefore(button, userDropdown.parentElement);
-                console.log('Privacy button: Added to top navbar next to admin dropdown');
+                console.log('Privacy eye button: Added to top navbar between bell and dropdown');
             } else {
                 console.error('Privacy button: Could not find user dropdown in navbar');
             }
@@ -490,20 +475,13 @@
      */
     function updateEyeButton() {
         const icon = document.getElementById('privacyEyeIcon');
-        const text = document.getElementById('privacyEyeText');
-        if (!icon || !eyeButton || !text) return;
+        if (!icon || !eyeButton) return;
 
         if (isHidden) {
             icon.className = 'fas fa-eye-slash';
-            text.textContent = 'Hidden';
-            eyeButton.style.background = 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)';
-            eyeButton.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.3)';
             eyeButton.title = 'Amounts Hidden - Click to Show (Email Verification Required)';
         } else {
             icon.className = 'fas fa-eye';
-            text.textContent = 'Visible';
-            eyeButton.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
-            eyeButton.style.boxShadow = '0 2px 8px rgba(34, 197, 94, 0.3)';
             eyeButton.title = 'Amounts Visible - Click to Hide';
         }
     }
