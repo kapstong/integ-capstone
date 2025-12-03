@@ -1769,9 +1769,6 @@ try {
 
                 const result = await response.json();
 
-                console.log('Bill creation API response:', result);
-                console.log('Success property:', result.success, 'Bill number:', result.bill_number);
-
                 const hasSuccess = result.success !== undefined && result.success !== null;
 
                 if (hasSuccess) {
@@ -3159,9 +3156,123 @@ try {
         }
 
         // View collection details
-        function viewCollection(collectionId) {
-            // TODO: Implement view collection details modal
-            showAlert('View collection details coming soon', 'info');
+        async function viewCollection(collectionId) {
+            try {
+                const response = await fetch(`api/payments.php?id=${collectionId}&type=made`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                let collection = data;
+                if (Array.isArray(data)) {
+                    collection = data[0];
+                }
+
+                if (!collection || !collection.id) {
+                    throw new Error('Collection not found');
+                }
+
+                // Create modal content
+                const modalContent = `
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Collection Details - ${collection.reference_number || collection.payment_number}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Reference Number</label>
+                                            <p class="form-control-plaintext">${collection.reference_number || collection.payment_number}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Vendor</label>
+                                            <p class="form-control-plaintext">${collection.vendor_name || 'Unknown Vendor'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Collection Date</label>
+                                            <p class="form-control-plaintext">${new Date(collection.payment_date).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Amount Collected</label>
+                                            <p class="form-control-plaintext">₱${parseFloat(collection.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Payment Method</label>
+                                            <p class="form-control-plaintext">${collection.payment_method ? collection.payment_method.replace('_', ' ').toUpperCase() : 'Unknown'}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Type</label>
+                                            <p class="form-control-plaintext"><span class="badge bg-success">Supplier Refund / Credit</span></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Related Bill</label>
+                                            <p class="form-control-plaintext">${collection.bill_number ? `Bill ${collection.bill_number}` : 'No specific bill'}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Created</label>
+                                            <p class="form-control-plaintext">${collection.created_at ? new Date(collection.created_at).toLocaleDateString() : 'N/A'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                ${collection.notes ? `
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Notes</label>
+                                    <p class="form-control-plaintext">${collection.notes}</p>
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-danger" onclick="deleteCollection(${collection.id})">
+                                    <i class="fas fa-trash me-1"></i>Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Create modal
+                const modalDiv = document.createElement('div');
+                modalDiv.className = 'modal fade';
+                modalDiv.innerHTML = modalContent;
+                document.body.appendChild(modalDiv);
+
+                const modal = new bootstrap.Modal(modalDiv);
+                modal.show();
+
+                // Remove modal from DOM when hidden
+                modalDiv.addEventListener('hidden.bs.modal', function() {
+                    document.body.removeChild(modalDiv);
+                });
+
+            } catch (error) {
+                showAlert('Error loading collection details: ' + error.message, 'danger');
+            }
         }
 
         // Delete collection
@@ -3200,8 +3311,6 @@ try {
                 }
 
                 const adjustment = await response.json();
-
-                console.log('Adjustment data received:', adjustment); // Debug log
 
                 // Check if we got a single object or an array
                 let adjustmentData = adjustment;

@@ -460,9 +460,6 @@
                 const navbarContainer = userDropdown.parentElement.parentElement;
                 // Insert button before the dropdown (between notification bell and user dropdown)
                 navbarContainer.insertBefore(button, userDropdown.parentElement);
-                console.log('Privacy eye button: Added to top navbar between bell and dropdown');
-            } else {
-                console.error('Privacy button: Could not find user dropdown in navbar');
             }
 
             eyeButton = button;

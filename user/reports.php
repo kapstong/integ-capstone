@@ -1068,8 +1068,6 @@ try {
         // Update charts with new data
         function updateCharts(data) {
             // This would update the charts with real data
-            // For now, just log the data
-            console.log('Chart data:', data);
         }
 
         // Export report

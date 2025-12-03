@@ -194,9 +194,6 @@ function initializeDatePickers(container) {
         flatpickr(input, config);
 
         // Store instance for later access
-        if (!input._flatpickr) {
-            console.log('Flatpickr initialized on:', input);
-        }
     });
 }
 
@@ -246,7 +243,7 @@ window.getDatePicker = getDatePicker;
  *
  * <script>
  * function handleDateChange(selectedDates, dateStr, instance) {
- *     console.log('Selected date:', dateStr);
+ *     // Handle date change
  * }
  * </script>
  */

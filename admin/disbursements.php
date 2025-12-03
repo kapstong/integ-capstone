@@ -995,17 +995,12 @@ body {
                     method: 'GET'
                 });
 
-                console.log('HR3 API Response status:', response.status);
-                console.log('HR3 API Response headers:', response.headers);
-
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('HR3 API Error response:', errorText);
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
 
                 const result = await response.json();
-                console.log('HR3 API Parsed result:', result);
 
                 if (Array.isArray(result) && result.length > 0) {
                     window.displayHR3Claims(result);
@@ -1085,7 +1080,6 @@ body {
                 try {
                     hr3SyncResult = await window.markHR3ClaimAsPaid(claimId);
                 } catch (hr3Error) {
-                    console.log('HR3 status update attempted but failed:', hr3Error);
                     hr3SyncResult = { success: false, error: hr3Error.message };
                 }
 
@@ -1153,7 +1147,6 @@ body {
                     btn.closest('tr').remove();
 
                     // Always refresh disbursements records (enhancement for visibility)
-                    console.log('Claim processed, refreshing disbursement records...');
                     setTimeout(() => {
                         loadDisbursements();
 
@@ -1280,11 +1273,8 @@ body {
                     window.showAlert(errorMessage, 'warning');
                 }
 
-                console.log('HR3 Test Result:', result);
-
             } catch (error) {
                 window.showAlert('❌ Error testing HR3 connection: ' + error.message, 'danger');
-                console.error('HR3 Test Error:', error);
             } finally {
                 // Restore button
                 btn.disabled = false;

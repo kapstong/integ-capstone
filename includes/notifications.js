@@ -22,8 +22,6 @@
         createToastContainer();
         loadNotifications();
         startPolling();
-
-        console.log('Notification system initialized');
     }
 
     /**

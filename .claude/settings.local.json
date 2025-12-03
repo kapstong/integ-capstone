@@ -5,7 +5,8 @@
       "Bash(dir)",
       "Bash(php:*)",
       "Bash(if exist populate_test_data.php del populate_test_data.php)",
-      "Bash(if exist populate_ap_test_data.php del populate_ap_test_data.php)"
+      "Bash(if exist populate_ap_test_data.php del populate_ap_test_data.php)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

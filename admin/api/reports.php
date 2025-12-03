@@ -10,6 +10,7 @@ error_log('[ADMIN API] Reports API called with params: ' . json_encode($_GET));
 
 require_once __DIR__ . '/../../includes/database.php';
 require_once __DIR__ . '/../../includes/logger.php';
+require_once __DIR__ . '/../../includes/mailer.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -41,6 +42,9 @@ try {
     switch ($method) {
         case 'GET':
             handleGet($db, $logger);
+            break;
+        case 'POST':
+            handlePost($db, $logger);
             break;
         default:
             http_response_code(405);
@@ -643,5 +647,170 @@ function outputCSV($report, $filename) {
 
     fclose($output);
     exit();
+}
+
+/**
+ * Handle POST requests - Email report functionality
+ */
+function handlePost($db, $logger) {
+    try {
+        // Get POST data
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        if (!$input) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid JSON data']);
+            return;
+        }
+
+        $action = $input['action'] ?? null;
+
+        if ($action === 'email') {
+            handleEmailReport($db, $logger, $input);
+        } else {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid action']);
+        }
+
+    } catch (Exception $e) {
+        error_log("Error in handlePost: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Internal server error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Send report via email
+ */
+function handleEmailReport($db, $logger, $data) {
+    try {
+        // Validate required fields
+        $email = $data['email'] ?? null;
+        $reportType = $data['report_type'] ?? null;
+        $reportName = $data['report_name'] ?? 'Financial Report';
+
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Valid email address is required']);
+            return;
+        }
+
+        if (!$reportType) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Report type is required']);
+            return;
+        }
+
+        // Get report data
+        $dateFrom = $data['date_from'] ?? date('Y-m-01');
+        $dateTo = $data['date_to'] ?? date('Y-m-t');
+        $reportData = $data['report_data'] ?? null;
+
+        // If report data not provided, fetch it
+        if (!$reportData) {
+            // Fetch report data based on type
+            $reportData = fetchReportData($db, $reportType, $dateFrom, $dateTo);
+        }
+
+        // Build email content
+        $subject = "ATIERA Finance - {$reportName}";
+        $message = buildReportEmailBody($reportName, $reportType, $reportData, $dateFrom, $dateTo);
+
+        // Send email using Mailer class
+        $mailer = Mailer::getInstance();
+        $sent = $mailer->send($email, $subject, $message, ['html' => true]);
+
+        if ($sent) {
+            // Log the action
+            if ($logger) {
+                $logger->log("Report '{$reportName}' emailed to {$email} by user " . ($_SESSION['user']['username'] ?? 'unknown'), 'INFO');
+            }
+
+            http_response_code(200);
+            echo json_encode([
+                'success' => true,
+                'message' => "Report successfully sent to {$email}"
+            ]);
+        } else {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Failed to send email. Please check email configuration.'
+            ]);
+        }
+
+    } catch (Exception $e) {
+        error_log("Error sending report email: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Error sending email: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Fetch report data for email
+ */
+function fetchReportData($db, $reportType, $dateFrom, $dateTo) {
+    // This is a simplified version - you can expand this based on report type
+    switch ($reportType) {
+        case 'balance_sheet':
+        case 'balance-sheet':
+            return ['type' => 'Balance Sheet', 'period' => "$dateFrom to $dateTo"];
+        case 'income_statement':
+        case 'income-statement':
+            return ['type' => 'Income Statement', 'period' => "$dateFrom to $dateTo"];
+        case 'cash_flow':
+        case 'cash-flow':
+            return ['type' => 'Cash Flow Statement', 'period' => "$dateFrom to $dateTo"];
+        case 'trial_balance':
+        case 'trial-balance':
+            return ['type' => 'Trial Balance', 'period' => "$dateFrom to $dateTo"];
+        case 'budget_variance':
+        case 'budget-variance':
+            return ['type' => 'Budget Variance Report', 'period' => "$dateFrom to $dateTo"];
+        default:
+            return ['type' => ucwords(str_replace(['_', '-'], ' ', $reportType)), 'period' => "$dateFrom to $dateTo"];
+    }
+}
+
+/**
+ * Build HTML email body for report
+ */
+function buildReportEmailBody($reportName, $reportType, $reportData, $dateFrom, $dateTo) {
+    $periodText = date('M d, Y', strtotime($dateFrom)) . ' to ' . date('M d, Y', strtotime($dateTo));
+
+    $html = '
+    <div style="color: #333; line-height: 1.6;">
+        <h2 style="color: #1b2f73; margin-bottom: 20px;">' . htmlspecialchars($reportName) . '</h2>
+
+        <div style="background-color: #f8f9fa; border-left: 4px solid #1b2f73; padding: 15px; margin: 20px 0;">
+            <p style="margin: 5px 0; font-size: 14px;"><strong>Report Type:</strong> ' . htmlspecialchars($reportType) . '</p>
+            <p style="margin: 5px 0; font-size: 14px;"><strong>Period:</strong> ' . htmlspecialchars($periodText) . '</p>
+            <p style="margin: 5px 0; font-size: 14px;"><strong>Generated:</strong> ' . date('M d, Y h:i A') . '</p>
+        </div>
+
+        <p style="font-size: 14px; color: #666; margin: 20px 0;">
+            Your financial report has been generated successfully. Please log in to the ATIERA Financial Management System to view the complete details and download the report in your preferred format.
+        </p>
+
+        <div style="margin: 30px 0;">
+            <a href="' . (Config::get('app.url') ?: 'http://localhost') . '/admin/reports.php"
+               style="display: inline-block; background: linear-gradient(135deg, #1b2f73 0%, #0f1c49 100%); color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                View Full Report
+            </a>
+        </div>
+
+        <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0; color: #856404; font-size: 13px;">
+                <strong>Note:</strong> This is a notification email. For detailed report data, charts, and export options, please access the system directly.
+            </p>
+        </div>
+
+        <p style="font-size: 14px; color: #333; margin-top: 30px;">
+            Best regards,<br>
+            <strong>ATIERA Financial Management System</strong>
+        </p>
+    </div>';
+
+    return $html;
 }
 ?>

@@ -499,7 +499,6 @@ function showOptimizationSuggestions() {
 setInterval(function() {
     // This would typically make an AJAX call to refresh stats
     // For now, we'll just update the timestamp
-    console.log('Performance monitoring active - ' + new Date().toLocaleTimeString());
 }, 30000);
 </script>
 

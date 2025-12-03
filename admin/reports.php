@@ -2418,24 +2418,48 @@ $db = Database::getInstance()->getConnection();
                 return;
             }
 
-            // For now, show a modal or prompt for email functionality
-            // In a real implementation, this would send the report via backend email service
+            // Prompt for email address
             const email = prompt(`Enter email address to send ${reportName}:`);
 
             if (email && email.trim()) {
-                // TODO: Implement actual email sending via API
-                showAlert(`Email functionality coming soon! Would send ${reportName} to: ${email}`, 'info');
+                // Validate email format
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    showAlert('Please enter a valid email address', 'warning');
+                    return;
+                }
 
-                // Placeholder for future implementation:
-                // fetch('/api/reports/email', {
-                //     method: 'POST',
-                //     headers: { 'Content-Type': 'application/json' },
-                //     body: JSON.stringify({
-                //         report_type: tabId.replace('-tab', ''),
-                //         email: email,
-                //         data: getCurrentReportData()
-                //     })
-                // });
+                // Show loading indicator
+                const loadingAlert = showAlert('Sending email...', 'info');
+
+                // Get current date range from filters
+                const dateFrom = document.getElementById('reportDateFrom')?.value || '';
+                const dateTo = document.getElementById('reportDateTo')?.value || '';
+
+                // Send email via API
+                fetch('api/reports.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'email',
+                        report_type: tabId.replace('-tab', ''),
+                        report_name: reportName,
+                        email: email,
+                        date_from: dateFrom,
+                        date_to: dateTo
+                    })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showAlert(`Report successfully sent to ${email}!`, 'success');
+                    } else {
+                        throw new Error(result.error || 'Failed to send email');
+                    }
+                })
+                .catch(error => {
+                    showAlert('Error sending email: ' + error.message, 'danger');
+                });
             }
         }
 
