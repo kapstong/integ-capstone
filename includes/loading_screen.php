@@ -1,23 +1,23 @@
 <?php
 /**
  * ATIERA Financial Management System - Loading Screen Component
- * Shows a branded loading screen during page navigation
+ * Premium branded loading screen matching system color palette
  */
 ?>
 <style>
-/* Loading Screen Styles */
+/* ATIERA Loading Screen - Matches System Color Palette */
 .loading-screen {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    background: #F1F7EE;
     z-index: 10000;
     display: none;
     opacity: 0;
-    transition: opacity 0.3s ease;
-    backdrop-filter: blur(2px);
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(8px);
 }
 
 .loading-screen.show {
@@ -31,38 +31,82 @@
     left: 50%;
     transform: translate(-50%, -50%);
     text-align: center;
-    max-width: 400px;
-    padding: 3rem;
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(30, 41, 54, 0.15);
-    border: 1px solid rgba(30, 41, 54, 0.1);
+    padding: 3rem 2.5rem;
+    background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 20px;
+    box-shadow:
+        0 25px 50px rgba(30, 41, 54, 0.15),
+        0 15px 35px rgba(30, 41, 54, 0.1),
+        0 0 0 1px rgba(30, 41, 54, 0.05);
+    border: 1px solid rgba(30, 41, 54, 0.08);
+    max-width: 420px;
+    width: 90%;
+}
+
+.loading-header {
+    margin-bottom: 2rem;
 }
 
 .loading-logo {
-    width: 120px;
+    width: 140px;
     height: auto;
     margin-bottom: 1.5rem;
-    opacity: 0.9;
+    filter: drop-shadow(0 4px 12px rgba(30, 41, 54, 0.15));
 }
 
-.loading-text {
+.loading-title {
     color: #1e2936;
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-    letter-spacing: -0.02em;
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin: 0 0 0.5rem 0;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    text-shadow: 0 1px 2px rgba(30, 41, 54, 0.1);
+}
+
+.loading-subtitle {
+    color: #6c757d;
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin: 0;
+    opacity: 0.8;
+}
+
+.loading-animation {
+    margin: 2rem 0;
 }
 
 .loading-spinner {
-    width: 60px;
-    height: 60px;
-    border: 4px solid rgba(30, 41, 54, 0.1);
-    border-left: 4px solid #1e2936;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1.5rem auto;
+    position: relative;
+}
+
+.loading-spinner::before,
+.loading-spinner::after {
+    content: '';
+    position: absolute;
     border-radius: 50%;
-    animation: spin 1.2s linear infinite;
-    margin: 0 auto;
-    margin-bottom: 1.5rem;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.loading-spinner::before {
+    width: 100%;
+    height: 100%;
+    border: 3px solid rgba(30, 41, 54, 0.1);
+    border-top: 3px solid #1e2936;
+    animation: spin 1.5s linear infinite;
+}
+
+.loading-spinner::after {
+    width: 80%;
+    height: 80%;
+    background: linear-gradient(135deg, #1e2936 0%, #2342a6 100%);
+    top: 10%;
+    left: 10%;
+    opacity: 0.15;
+    filter: blur(8px);
 }
 
 @keyframes spin {
@@ -70,50 +114,109 @@
     100% { transform: rotate(360deg); }
 }
 
-.loading-progress {
-    width: 100%;
-    height: 4px;
-    background: rgba(30, 41, 54, 0.1);
-    border-radius: 2px;
-    overflow: hidden;
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+}
+
+.loading-progress-container {
+    position: relative;
     margin-top: 1rem;
 }
 
-.loading-progress-bar {
+.loading-progress-bg {
+    width: 100%;
+    height: 3px;
+    background: #e9ecef;
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+}
+
+.loading-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #1e2936 0%, #2c3e50 100%);
+    background: linear-gradient(90deg, #1e2936 0%, #2342a6 50%, #1e2936 100%);
     border-radius: 2px;
     width: 0%;
-    animation: progress 2s ease-in-out infinite;
+    animation: progress 2.5s ease-in-out infinite;
+    position: relative;
+}
+
+.loading-progress-fill::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 20px;
+    height: 100%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 100%);
+    animation: shimmer 2.5s ease-in-out infinite;
 }
 
 @keyframes progress {
     0% { width: 0%; }
-    50% { width: 70%; }
+    50% { width: 85%; }
     100% { width: 100%; }
 }
 
-.loading-subtitle {
-    color: #6c757d;
-    font-size: 0.9rem;
-    font-weight: 500;
-    margin-top: 0.5rem;
+@keyframes shimmer {
+    0% { transform: translateX(-20px); }
+    100% { transform: translateX(40px); }
 }
 
-/* Responsive adjustments */
+.loading-accent {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1e2936 0%, #d4af37 50%, #1e2936 100%);
+    border-radius: 20px 20px 0 0;
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
     .loading-screen-content {
-        padding: 2rem;
-        max-width: 90%;
+        padding: 2.5rem 2rem;
+        margin: 1rem;
+        width: calc(100% - 2rem);
     }
 
-    .loading-text {
-        font-size: 1.3rem;
+    .loading-title {
+        font-size: 1.5rem;
+    }
+
+    .loading-subtitle {
+        font-size: 0.9rem;
     }
 
     .loading-spinner {
-        width: 50px;
-        height: 50px;
+        width: 56px;
+        height: 56px;
+    }
+
+    .loading-logo {
+        width: 120px;
+    }
+}
+
+@media (max-width: 480px) {
+    .loading-screen-content {
+        padding: 2rem 1.5rem;
+    }
+
+    .loading-title {
+        font-size: 1.4rem;
+    }
+
+    .loading-logo {
+        width: 100px;
     }
 }
 </style>
@@ -121,12 +224,20 @@
 <!-- Loading Screen HTML -->
 <div id="loading-screen" class="loading-screen">
     <div class="loading-screen-content">
-        <img src="../logo.png" alt="ATIERA" class="loading-logo" onerror="this.src='../logo2.png'">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">Loading ATIERA</div>
-        <div class="loading-subtitle">Securing your financial data...</div>
-        <div class="loading-progress">
-            <div class="loading-progress-bar"></div>
+        <div class="loading-accent"></div>
+        <div class="loading-header">
+            <img src="../logo.png" alt="ATIERA" class="loading-logo" onerror="this.src='../logo2.png'">
+            <h2 class="loading-title">Loading ATIERA</h2>
+            <p class="loading-subtitle">Securing your financial data...</p>
+        </div>
+
+        <div class="loading-animation">
+            <div class="loading-spinner"></div>
+            <div class="loading-progress-container">
+                <div class="loading-progress-bg">
+                    <div class="loading-progress-fill"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
