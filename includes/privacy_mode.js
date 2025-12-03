@@ -466,26 +466,18 @@
                 this.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.3)';
             });
 
-            // Find the top navbar (where notification bell and user dropdown are)
-            const topNavbar = document.querySelector('.navbar .container-fluid .d-flex.align-items-center.me-4');
+            // Find the top navbar container with notification bell and user dropdown
+            // Look for the user dropdown first, then get its parent container
+            const userDropdown = document.querySelector('#userDropdown');
 
-            if (topNavbar) {
-                // Insert button BEFORE the dropdown (after the notification bell)
-                topNavbar.appendChild(button);
-                console.log('Privacy button: Added to top navbar');
+            if (userDropdown && userDropdown.parentElement) {
+                // Get the parent container (the d-flex div)
+                const navbarContainer = userDropdown.parentElement.parentElement;
+                // Insert button before the dropdown
+                navbarContainer.insertBefore(button, userDropdown.parentElement);
+                console.log('Privacy button: Added to top navbar next to admin dropdown');
             } else {
-                // Fallback: try to find the tab navigation and add at the end
-                const tabNav = document.querySelector('#reportsTabs');
-                if (tabNav) {
-                    const li = document.createElement('li');
-                    li.className = 'nav-item ms-auto';
-                    li.role = 'presentation';
-                    li.appendChild(button);
-                    tabNav.appendChild(li);
-                    console.log('Privacy button: Added to tabs navbar');
-                } else {
-                    console.error('Privacy button: Could not find navbar, button not added');
-                }
+                console.error('Privacy button: Could not find user dropdown in navbar');
             }
 
             eyeButton = button;
