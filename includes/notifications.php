@@ -235,6 +235,129 @@ class NotificationManager {
     }
 
     /**
+     * Send payment made notification (internal)
+     */
+    public function sendPaymentMadeNotification($paymentId) {
+        try {
+            // Get payment details
+            $stmt = $this->db->prepare("
+                SELECT p.*, v.company_name, b.bill_number, u.email as recorded_by_email, ua.email as approved_by_email
+                FROM payments_made p
+                LEFT JOIN vendors v ON p.vendor_id = v.id
+                LEFT JOIN bills b ON p.bill_id = b.id
+                LEFT JOIN users u ON p.recorded_by = u.id
+                LEFT JOIN users ua ON p.approved_by = ua.id
+                WHERE p.id = ?
+            ");
+            $stmt->execute([$paymentId]);
+            $payment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$payment) {
+                throw new Exception('Payment not found');
+            }
+
+            $variables = [
+                'payment_number' => $payment['payment_number'],
+                'vendor_name' => $payment['company_name'],
+                'amount' => number_format($payment['amount'], 2),
+                'payment_date' => date('M j, Y', strtotime($payment['payment_date'])),
+                'bill_number' => $payment['bill_number'] ?: 'N/A'
+            ];
+
+            // Send internal notification to approver
+            if ($payment['approved_by_email']) {
+                $this->sendEmail(
+                    $payment['approved_by_email'],
+                    "Payment Processed - {$payment['payment_number']} to {$payment['company_name']}",
+                    '',
+                    'payment_made_internal',
+                    $variables
+                );
+            }
+
+            // Send internal notification to recorder (if different from approver)
+            if ($payment['recorded_by_email'] && $payment['recorded_by_email'] !== $payment['approved_by_email']) {
+                $this->sendEmail(
+                    $payment['recorded_by_email'],
+                    "Payment Recorded - {$payment['payment_number']} to {$payment['company_name']}",
+                    '',
+                    'payment_made_internal',
+                    $variables
+                );
+            }
+
+            return ['success' => true, 'message' => 'Payment made notifications sent'];
+
+        } catch (Exception $e) {
+            error_log("Failed to send payment made notification: " . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Send bill notification (internal)
+     */
+    public function sendBillNotification($billId, $type = 'created') {
+        try {
+            // Get bill details
+            $stmt = $this->db->prepare("
+                SELECT b.*, v.company_name, u.email as created_by_email, ua.email as approved_by_email,
+                       creator.first_name as creator_first, creator.last_name as creator_last,
+                       approver.first_name as approver_first, approver.last_name as approver_last
+                FROM bills b
+                LEFT JOIN vendors v ON b.vendor_id = v.id
+                LEFT JOIN users u ON b.created_by = u.id
+                LEFT JOIN users ua ON b.approved_by = ua.id
+                LEFT JOIN users creator ON b.created_by = creator.id
+                LEFT JOIN users approver ON b.approved_by = approver.id
+                WHERE b.id = ?
+            ");
+            $stmt->execute([$billId]);
+            $bill = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$bill) {
+                throw new Exception('Bill not found');
+            }
+
+            $variables = [
+                'bill_number' => $bill['bill_number'],
+                'vendor_name' => $bill['company_name'],
+                'amount' => number_format($bill['total_amount'], 2),
+                'bill_date' => date('M j, Y', strtotime($bill['bill_date'])),
+                'due_date' => date('M j, Y', strtotime($bill['due_date'])),
+                'creator_name' => $bill['creator_first'] . ' ' . $bill['creator_last'],
+                'approver_name' => $bill['approver_first'] ? $bill['approver_first'] . ' ' . $bill['approver_last'] : 'Pending Approval'
+            ];
+
+            if ($type === 'created') {
+                // Send to finance team for approval
+                $this->sendEmail(
+                    'finance@atiera.com', // Could be configurable
+                    "New Bill Requires Approval - {$bill['bill_number']} from {$bill['company_name']}",
+                    '',
+                    'bill_created_internal',
+                    $variables
+                );
+            } elseif ($type === 'approved') {
+                // Send approval confirmation
+                $this->sendEmail(
+                    $bill['created_by_email'],
+                    "Bill Approved - {$bill['bill_number']} from {$bill['company_name']}",
+                    '',
+                    'bill_approved_internal',
+                    $variables
+                );
+            }
+
+            return ['success' => true, 'message' => 'Bill notification sent'];
+
+        } catch (Exception $e) {
+            error_log("Failed to send bill notification: " . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Send task notification
      */
     public function sendTaskNotification($taskId, $type = 'assigned') {
@@ -294,7 +417,126 @@ class NotificationManager {
     }
 
     /**
-     * Send overdue notifications
+     * Send overdue invoice notification (individual)
+     */
+    public function sendOverdueInvoiceNotification($invoiceId) {
+        try {
+            // Get invoice details
+            $stmt = $this->db->prepare("
+                SELECT i.*, c.company_name, c.email, u.email as creator_email
+                FROM invoices i
+                LEFT JOIN customers c ON i.customer_id = c.id
+                LEFT JOIN users u ON i.created_by = u.id
+                WHERE i.id = ?
+            ");
+            $stmt->execute([$invoiceId]);
+            $invoice = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$invoice) {
+                throw new Exception('Invoice not found');
+            }
+
+            $daysOverdue = floor((time() - strtotime($invoice['due_date'])) / (60*60*24));
+            $variables = [
+                'invoice_number' => $invoice['invoice_number'],
+                'customer_name' => $invoice['company_name'],
+                'amount' => number_format($invoice['balance'], 2),
+                'due_date' => date('M j, Y', strtotime($invoice['due_date'])),
+                'days_overdue' => $daysOverdue
+            ];
+
+            // Send to customer
+            if ($invoice['email']) {
+                $this->sendEmail(
+                    $invoice['email'],
+                    "OVERDUE: Invoice {$invoice['invoice_number']} - {$daysOverdue} Days Past Due",
+                    '',
+                    'invoice_overdue',
+                    $variables
+                );
+            }
+
+            // Send internal notification to invoice creator
+            if ($invoice['creator_email']) {
+                $this->sendEmail(
+                    $invoice['creator_email'],
+                    "OVERDUE: Invoice {$invoice['invoice_number']} - Customer {$invoice['company_name']}",
+                    '',
+                    'invoice_overdue_internal',
+                    $variables
+                );
+            }
+
+            return ['success' => true, 'message' => 'Overdue invoice notification sent'];
+
+        } catch (Exception $e) {
+            error_log("Failed to send overdue invoice notification: " . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Send overdue bill notification (individual)
+     */
+    public function sendOverdueBillNotification($billId) {
+        try {
+            // Get bill details
+            $stmt = $this->db->prepare("
+                SELECT b.*, v.company_name, u.email as approver_email, creator.email as creator_email
+                FROM bills b
+                LEFT JOIN vendors v ON b.vendor_id = v.id
+                LEFT JOIN users u ON b.approved_by = u.id
+                LEFT JOIN users creator ON b.created_by = creator.id
+                WHERE b.id = ?
+            ");
+            $stmt->execute([$billId]);
+            $bill = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$bill) {
+                throw new Exception('Bill not found');
+            }
+
+            $daysOverdue = floor((time() - strtotime($bill['due_date'])) / (60*60*24));
+            $variables = [
+                'bill_number' => $bill['bill_number'],
+                'vendor_name' => $bill['company_name'],
+                'amount' => number_format($bill['balance'], 2),
+                'due_date' => date('M j, Y', strtotime($bill['due_date'])),
+                'days_overdue' => $daysOverdue
+            ];
+
+            // Send internal notification to bill approver
+            if ($bill['approver_email']) {
+                $this->sendEmail(
+                    $bill['approver_email'],
+                    "OVERDUE: Bill {$bill['bill_number']} Payment Due - {$bill['company_name']}",
+                    '',
+                    'bill_overdue',
+                    $variables
+                );
+            }
+
+            // Send internal notification to bill creator
+            if ($bill['creator_email'] && $bill['creator_email'] !== $bill['approver_email']) {
+                $this->sendEmail(
+                    $bill['creator_email'],
+                    "OVERDUE: Bill {$bill['bill_number']} Payment Due - {$bill['company_name']}",
+                    '',
+                    'bill_overdue',
+                    $variables
+                );
+            }
+
+            return ['success' => true, 'message' => 'Overdue bill notification sent'];
+
+        } catch (Exception $e) {
+            error_log("Failed to send overdue bill notification: " . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Send overdue notifications (bulk - legacy method)
      */
     public function sendOverdueNotifications() {
         try {

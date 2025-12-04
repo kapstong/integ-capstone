@@ -148,6 +148,13 @@ ADD COLUMN IF NOT EXISTS liquidation_status ENUM('none', 'partial', 'complete') 
 ADD COLUMN IF NOT EXISTS liquidated_amount DECIMAL(15,2) DEFAULT 0.00,
 ADD COLUMN IF NOT EXISTS can_create_new_proposal BOOLEAN DEFAULT TRUE COMMENT 'Can create new proposal based on liquidation';
 
+-- Add notification tracking columns
+ALTER TABLE invoices
+ADD COLUMN IF NOT EXISTS last_overdue_notification DATETIME NULL COMMENT 'Last time overdue notification was sent';
+
+ALTER TABLE bills
+ADD COLUMN IF NOT EXISTS last_overdue_notification DATETIME NULL COMMENT 'Last time overdue notification was sent';
+
 -- =============================================================================
 -- 8. CREATE VIEWS FOR REPORTING
 -- =============================================================================

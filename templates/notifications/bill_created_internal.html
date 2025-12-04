@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Bill Requires Approval</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; }
+        .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; padding: 30px 40px; text-align: center; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 40px; }
+        .bill-details { background-color: #f8f9fa; border-radius: 8px; padding: 30px; margin: 30px 0; border-left: 4px solid #17a2b8; }
+        .detail-row { display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #e9ecef; }
+        .detail-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .amount { font-size: 20px; font-weight: 700; color: #17a2b8; }
+        .footer { background-color: #f8f9fa; padding: 30px 40px; text-align: center; color: #6c757d; font-size: 14px; }
+        .button { display: inline-block; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin-top: 20px; font-weight: 600; }
+        .footer a { color: #1e2936; text-decoration: none; }
+        .action-required { background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px 0; color: #856404; }
+        .action-required strong { color: #533f00; }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>📄 Bill Requires Approval</h1>
+        </div>
+        <div class="content">
+            <p>Dear Finance Team,</p>
+            <p>A new bill has been submitted and requires your approval:</p>
+
+            <div class="action-required">
+                <strong>⚠️ ACTION REQUIRED:</strong> Please review and approve this bill to allow payment processing.
+            </div>
+
+            <div class="bill-details">
+                <div class="detail-row"><strong>Bill:</strong> <span>{{bill_number}}</span></div>
+                <div class="detail-row"><strong>Vendor:</strong> <span>{{vendor_name}}</span></div>
+                <div class="detail-row"><strong>Bill Date:</strong> <span>{{bill_date}}</span></div>
+                <div class="detail-row"><strong>Due Date:</strong> <span>{{due_date}}</span></div>
+                <div class="detail-row"><strong class="amount">Amount: ₱{{amount}}</strong><span></span></div>
+                <div class="detail-row"><strong>Created By:</strong> <span>{{creator_name}}</span></div>
+            </div>
+
+            <p>Please review the bill details and approve if everything is in order.</p>
+
+            <div style="text-align: center;">
+                <a href="#" class="button">Review Bill Details</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>This is an automated notification from ATIERA Financial Management System.<br>
+            <a href="mailto:support@atiera.com">Contact Support</a> | <a href="#">Access System</a></p>
+            <p><small>© 2025 ATIERA Finance. All rights reserved.</small></p>
+        </div>
+    </div>
+</body>
+</html>

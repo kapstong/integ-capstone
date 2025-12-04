@@ -5,9 +5,10 @@ ini_set('display_errors', 0);
 error_reporting(E_ERROR);
 
 try {
-    require_once '../../includes/auth.php';
-    require_once '../../includes/database.php';
-    require_once '../../includes/logger.php';
+require_once '../../includes/auth.php';
+require_once '../../includes/database.php';
+require_once '../../includes/logger.php';
+require_once '../../includes/notifications.php';
 
     // Session is already started in auth.php
 
@@ -210,6 +211,17 @@ try {
 
                 $db->commit();
 
+                // Send notifications
+                $notificationManager = NotificationManager::getInstance();
+
+                // Send bill creation notification (internal)
+                $notificationManager->sendBillNotification($billId, 'created');
+
+                // If bill is auto-approved, send approval notification
+                if (($data['status'] ?? 'draft') === 'approved') {
+                    $notificationManager->sendBillNotification($billId, 'approved');
+                }
+
                 // Log the action
                 Logger::getInstance()->logUserAction('Created bill', 'bills', $billId, null, $data);
 
@@ -332,6 +344,15 @@ try {
                 $sql = "UPDATE bills SET " . implode(', ', $fields) . " WHERE id = ?";
 
                 $affected = $db->execute($sql, $params);
+
+                // Send notifications for status changes
+                $notificationManager = NotificationManager::getInstance();
+
+                // Check if status changed to approved
+                if (isset($data['status']) && $data['status'] === 'approved' && ($oldValues['status'] ?? null) !== 'approved') {
+                    $notificationManager->sendBillNotification($_GET['id'], 'approved');
+                }
+
                 $db->commit();
 
                 // Log the action

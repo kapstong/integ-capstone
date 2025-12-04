@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill Approved Notification</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; }
+        .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px 40px; text-align: center; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 40px; }
+        .bill-details { background-color: #f8f9fa; border-radius: 8px; padding: 30px; margin: 30px 0; border-left: 4px solid #28a745; }
+        .detail-row { display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #e9ecef; }
+        .detail-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .amount { font-size: 20px; font-weight: 700; color: #28a745; }
+        .footer { background-color: #f8f9fa; padding: 30px 40px; text-align: center; color: #6c757d; font-size: 14px; }
+        .button { display: inline-block; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin-top: 20px; font-weight: 600; }
+        .footer a { color: #1e2936; text-decoration: none; }
+        .approved-badge { background-color: #d4edda; color: #155724; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; }
+        .next-steps { background-color: #e7f3ff; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .next-steps ul { margin: 10px 0 0 20px; padding: 0; }
+        .next-steps li { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>✅ Bill Approved</h1>
+        </div>
+        <div class="content">
+            <p>Dear {{creator_name}},</p>
+            <p>Great news! Your submitted bill has been approved and is ready for payment processing:</p>
+
+            <div class="bill-details">
+                <div class="detail-row"><strong>Bill:</strong> <span>{{bill_number}}</span></div>
+                <div class="detail-row"><strong>Vendor:</strong> <span>{{vendor_name}}</span></div>
+                <div class="detail-row"><strong>Bill Date:</strong> <span>{{bill_date}}</span></div>
+                <div class="detail-row"><strong>Due Date:</strong> <span>{{due_date}}</span></div>
+                <div class="detail-row"><strong class="amount">Amount: ₱{{amount}}</strong><span></span></div>
+                <div class="detail-row"><strong>Approved By:</strong> <span>{{approver_name}}</span></div>
+                <div class="detail-row"><strong>Status:</strong> <span class="approved-badge">✅ Approved</span></div>
+            </div>
+
+            <div class="next-steps">
+                <h3>Next Steps:</h3>
+                <ul>
+                    <li>The bill is now eligible for payment processing</li>
+                    <li>Payment can be scheduled according to the due date</li>
+                    <li>You will receive notification when payment is processed</li>
+                    <li>Keep an eye on the due date to avoid late fees</li>
+                </ul>
+            </div>
+
+            <div style="text-align: center;">
+                <a href="#" class="button">View Bill Details</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>This is an automated notification from ATIERA Financial Management System.<br>
+            <a href="mailto:support@atiera.com">Contact Support</a> | <a href="#">Access System</a></p>
+            <p><small>© 2025 ATIERA Finance. All rights reserved.</small></p>
+        </div>
+    </div>
+</body>
+</html>
