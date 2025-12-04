@@ -17,11 +17,23 @@
      * Initialize notification system
      */
     function init() {
-        createNotificationBell();
-        createNotificationPanel();
-        createToastContainer();
-        loadNotifications();
-        startPolling();
+        console.log('Notification System: Initializing...');
+
+        // Wait for navbar to be available
+        const initBell = () => {
+            if (document.querySelector('.navbar .container-fluid')) {
+                createNotificationBell();
+                createNotificationPanel();
+                createToastContainer();
+                loadNotifications();
+                startPolling();
+            } else {
+                console.log('Notification System: Waiting for navbar...');
+                setTimeout(initBell, 100);
+            }
+        };
+
+        initBell();
     }
 
     /**
@@ -30,7 +42,16 @@
     function createNotificationBell() {
         // Find user dropdown or navbar element
         const navbar = document.querySelector('.navbar .container-fluid');
-        if (!navbar) return;
+        if (!navbar) {
+            console.error('Notification System: Could not find navbar container-fluid');
+            return;
+        }
+
+        // Check if bell already exists
+        if (document.getElementById('notification-bell-container')) {
+            console.log('Notification System: Bell already exists');
+            return;
+        }
 
         const bellHTML = `
             <div class="dropdown me-3" id="notification-bell-container">
@@ -66,6 +87,9 @@
         const userDropdown = navbar.querySelector('.dropdown');
         if (userDropdown) {
             userDropdown.insertAdjacentHTML('beforebegin', bellHTML);
+            console.log('Notification System: Bell created successfully');
+        } else {
+            console.error('Notification System: Could not find user dropdown');
         }
     }
 
