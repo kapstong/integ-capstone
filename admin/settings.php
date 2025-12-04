@@ -694,12 +694,6 @@ session_start();
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" id="rbac-tab" data-bs-toggle="tab" data-bs-target="#rbac" type="button" role="tab" aria-controls="rbac" aria-selected="false">RBAC Settings</button>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab" aria-controls="system" aria-selected="false">System Backend</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit" type="button" role="tab" aria-controls="audit" aria-selected="false">Audit & Logs</button>
-                            </li>
                         </ul>
                         <div class="tab-content mt-3" id="settingsTabContent">
                             <div class="tab-pane fade show active" id="maintenance" role="tabpanel" aria-labelledby="maintenance-tab">
@@ -739,43 +733,7 @@ session_start();
                                     <button type="submit" class="btn btn-primary">Save Changes</button>
                                 </form>
                             </div>
-                            <div class="tab-pane fade" id="system" role="tabpanel" aria-labelledby="system-tab">
-                                <h6>System Backend Settings</h6>
-                                <form>
-                                    <div class="mb-3">
-                                        <label for="dbConnection" class="form-label">Database Connection</label>
-                                        <input type="text" class="form-control" id="dbConnection" placeholder="Database host/connection string">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="apiEndpoints" class="form-label">API Endpoints</label>
-                                        <textarea class="form-control" id="apiEndpoints" rows="3" placeholder="Configure backend API endpoints"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="systemLogs" class="form-label">System Logs Level</label>
-                                        <select class="form-select" id="systemLogs">
-                                            <option selected>INFO</option>
-                                            <option>DEBUG</option>
-                                            <option>WARNING</option>
-                                            <option>ERROR</option>
-                                        </select>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                </form>
-                            </div>
-                            <div class="tab-pane fade" id="audit" role="tabpanel" aria-labelledby="audit-tab">
-                                <h6>Audit & Change Logs</h6>
-                                <form>
-                                    <div class="mb-3">
-                                        <label for="changeLogs" class="form-label">Logs for COA, Taxes, Number Series, Roles, Period Locks, Integrations</label>
-                                        <textarea class="form-control" id="changeLogs" rows="3" placeholder="View change logs"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="sequenceGaps" class="form-label">Report of Document Sequence Gaps</label>
-                                        <textarea class="form-control" id="sequenceGaps" rows="3" placeholder="Monitor gaps in SI/OR/PV/CV"></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                </form>
-                            </div>
+
                         </div>
                     </div>
                 </div>
