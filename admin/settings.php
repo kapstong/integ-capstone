@@ -689,234 +689,75 @@ session_start();
                     <div class="card-body">
                         <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="company-tab" data-bs-toggle="tab" data-bs-target="#company" type="button" role="tab" aria-controls="company" aria-selected="true">A. Company & Identity</button>
+                                <button class="nav-link active" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance" type="button" role="tab" aria-controls="maintenance" aria-selected="true">Maintenance Mode</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="coa-tab" data-bs-toggle="tab" data-bs-target="#coa" type="button" role="tab" aria-controls="coa" aria-selected="false">B. Chart of Accounts</button>
+                                <button class="nav-link" id="rbac-tab" data-bs-toggle="tab" data-bs-target="#rbac" type="button" role="tab" aria-controls="rbac" aria-selected="false">RBAC Settings</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="numbers-tab" data-bs-toggle="tab" data-bs-target="#numbers" type="button" role="tab" aria-controls="numbers" aria-selected="false">C. Number Series</button>
+                                <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab" aria-controls="system" aria-selected="false">System Backend</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="tax-tab" data-bs-toggle="tab" data-bs-target="#tax" type="button" role="tab" aria-controls="tax" aria-selected="false">D. Tax & Compliance</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="period-tab" data-bs-toggle="tab" data-bs-target="#period" type="button" role="tab" aria-controls="period" aria-selected="false">E. Period Management</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="integrations-tab" data-bs-toggle="tab" data-bs-target="#integrations" type="button" role="tab" aria-controls="integrations" aria-selected="false">F. Integrations</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="reconciliation-tab" data-bs-toggle="tab" data-bs-target="#reconciliation" type="button" role="tab" aria-controls="reconciliation" aria-selected="false">G. Bank Reconciliation</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="budget-tab" data-bs-toggle="tab" data-bs-target="#budget" type="button" role="tab" aria-controls="budget" aria-selected="false">H. Budget Controls</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab" aria-controls="security" aria-selected="false">I. Security & Roles</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="data-tab" data-bs-toggle="tab" data-bs-target="#data" type="button" role="tab" aria-controls="data" aria-selected="false">J. Data Retention</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="notices-tab" data-bs-toggle="tab" data-bs-target="#notices" type="button" role="tab" aria-controls="notices" aria-selected="false">K. Notices & Maintenance</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit" type="button" role="tab" aria-controls="audit" aria-selected="false">L. Audit & Logs</button>
+                                <button class="nav-link" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit" type="button" role="tab" aria-controls="audit" aria-selected="false">Audit & Logs</button>
                             </li>
                         </ul>
                         <div class="tab-content mt-3" id="settingsTabContent">
-                            <div class="tab-pane fade show active" id="company" role="tabpanel" aria-labelledby="company-tab">
-                                <h6>Company & Identity</h6>
+                            <div class="tab-pane fade show active" id="maintenance" role="tabpanel" aria-labelledby="maintenance-tab">
+                                <h6>Maintenance Mode</h6>
                                 <form>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <label for="companyName" class="form-label">Company/Legal Name</label>
-                                            <input type="text" class="form-control" id="companyName" placeholder="Enter company name">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="tin" class="form-label">TIN</label>
-                                            <input type="text" class="form-control" id="tin" placeholder="Enter TIN">
-                                        </div>
-                                    </div>
-                                    <div class="row mt-3">
-                                        <div class="col-md-6">
-                                            <label for="address" class="form-label">Address</label>
-                                            <textarea class="form-control" id="address" rows="3" placeholder="Enter address"></textarea>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="timezone" class="form-label">Default Timezone</label>
-                                            <select class="form-select" id="timezone">
-                                                <option selected>Asia/Manila</option>
-                                                <option>UTC</option>
-                                            </select>
+                                    <div class="mb-3">
+                                        <label for="maintenanceToggle" class="form-label">Enable Maintenance Mode</label>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="maintenanceToggle">
+                                            <label class="form-check-label" for="maintenanceToggle">
+                                                Toggle maintenance mode on/off (will be available soon)
+                                            </label>
                                         </div>
                                     </div>
-                                    <div class="row mt-3">
-                                        <div class="col-md-6">
-                                            <label for="logo" class="form-label">Logo/Brand</label>
-                                            <input type="file" class="form-control" id="logo">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="properties" class="form-label">Properties/Branches/Outlets Registry</label>
-                                            <textarea class="form-control" id="properties" rows="3" placeholder="List properties/branches/outlets"></textarea>
-                                        </div>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary mt-3">Save Changes</button>
-                                </form>
-                            </div>
-                            <div class="tab-pane fade" id="coa" role="tabpanel" aria-labelledby="coa-tab">
-                                <h6>Chart of Accounts & Segments</h6>
-                                <form>
                                     <div class="mb-3">
-                                        <label for="coaCrud" class="form-label">COA CRUD Operations</label>
-                                        <textarea class="form-control" id="coaCrud" rows="3" placeholder="Manage COA entries"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="segments" class="form-label">Segments Definitions & Masks</label>
-                                        <textarea class="form-control" id="segments" rows="3" placeholder="Define segments (property/branch/outlet/cost center/project)"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="mapping" class="form-label">Mapping Tables (POS/PMS items → GL accounts)</label>
-                                        <textarea class="form-control" id="mapping" rows="3" placeholder="Configure mappings"></textarea>
+                                        <label for="maintenanceMessage" class="form-label">Maintenance Banner Message</label>
+                                        <textarea class="form-control" id="maintenanceMessage" rows="3" placeholder="Enter message to display during maintenance"></textarea>
                                     </div>
                                     <button type="submit" class="btn btn-primary">Save Changes</button>
                                 </form>
                             </div>
-                            <div class="tab-pane fade" id="numbers" role="tabpanel" aria-labelledby="numbers-tab">
-                                <h6>Number Series & Documents</h6>
+                            <div class="tab-pane fade" id="rbac" role="tabpanel" aria-labelledby="rbac-tab">
+                                <h6>RBAC Settings for Financial Manager and Staff</h6>
                                 <form>
                                     <div class="mb-3">
-                                        <label for="series" class="form-label">Series per Branch/Year (SI, OR, PV, CV, JE)</label>
-                                        <textarea class="form-control" id="series" rows="3" placeholder="Configure number series"></textarea>
+                                        <label for="financialManagerRoles" class="form-label">Financial Manager Roles</label>
+                                        <textarea class="form-control" id="financialManagerRoles" rows="4" placeholder="Define permissions and access levels for Financial Manager (will implement soon)"></textarea>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="templates" class="form-label">Print Templates</label>
-                                        <textarea class="form-control" id="templates" rows="3" placeholder="Manage templates (logo, headers, footers, etc.)"></textarea>
+                                        <label for="staffRoles" class="form-label">Staff Roles</label>
+                                        <textarea class="form-control" id="staffRoles" rows="4" placeholder="Define permissions and access levels for Staff (will implement soon)"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="roleHierarchy" class="form-label">Role Hierarchy</label>
+                                        <textarea class="form-control" id="roleHierarchy" rows="3" placeholder="Set up role hierarchy and approval workflows"></textarea>
                                     </div>
                                     <button type="submit" class="btn btn-primary">Save Changes</button>
                                 </form>
                             </div>
-                            <div class="tab-pane fade" id="tax" role="tabpanel" aria-labelledby="tax-tab">
-                                <h6>Tax & Compliance (PH)</h6>
+                            <div class="tab-pane fade" id="system" role="tabpanel" aria-labelledby="system-tab">
+                                <h6>System Backend Settings</h6>
                                 <form>
                                     <div class="mb-3">
-                                        <label for="vatTags" class="form-label">VAT Tags (12/0/exempt)</label>
-                                        <input type="text" class="form-control" id="vatTags" placeholder="Configure VAT tags">
+                                        <label for="dbConnection" class="form-label">Database Connection</label>
+                                        <input type="text" class="form-control" id="dbConnection" placeholder="Database host/connection string">
                                     </div>
                                     <div class="mb-3">
-                                        <label for="ewt" class="form-label">EWT (ATC) Rate Tables</label>
-                                        <textarea class="form-control" id="ewt" rows="3" placeholder="Manage EWT rates"></textarea>
+                                        <label for="apiEndpoints" class="form-label">API Endpoints</label>
+                                        <textarea class="form-control" id="apiEndpoints" rows="3" placeholder="Configure backend API endpoints"></textarea>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="birForms" class="form-label">BIR Forms Mapping</label>
-                                        <textarea class="form-control" id="birForms" rows="3" placeholder="Map forms (2550M/Q, 0619E, 1601EQ)"></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                </form>
-                            </div>
-                            <div class="tab-pane fade" id="period" role="tabpanel" aria-labelledby="period-tab">
-                                <h6>Period & Close Management</h6>
-                                <form>
-                                    <div class="mb-3">
-                                        <label for="calendar" class="form-label">Fiscal Calendar</label>
-                                        <input type="text" class="form-control" id="calendar" placeholder="Set fiscal calendar">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="closeRules" class="form-label">Open/Soft Close/Hard Close per Subledger</label>
-                                        <textarea class="form-control" id="closeRules" rows="3" placeholder="Configure close rules"></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                </form>
-                            </div>
-                            <div class="tab-pane fade" id="integrations" role="tabpanel" aria-labelledby="integrations-tab">
-                                <h6>Integrations</h6>
-                                <form>
-                                    <div class="mb-3">
-                                        <label for="posPms" class="form-label">POS/PMS Data Feeds</label>
-                                        <textarea class="form-control" id="posPms" rows="3" placeholder="Configure feeds (formats, schedules, alerts)"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="bankImports" class="form-label">Bank Statement Imports</label>
-                                        <textarea class="form-control" id="bankImports" rows="3" placeholder="Set up imports (CSV layouts, matching keys)"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="paymentFiles" class="form-label">Payment File Formats</label>
-                                        <textarea class="form-control" id="paymentFiles" rows="3" placeholder="Configure formats (PESONet/Instapay/check)"></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                </form>
-                            </div>
-                            <div class="tab-pane fade" id="reconciliation" role="tabpanel" aria-labelledby="reconciliation-tab">
-                                <h6>Bank Reconciliation Rules</h6>
-                                <form>
-                                    <div class="mb-3">
-                                        <label for="autoMatch" class="form-label">Auto-Match Logic</label>
-                                        <textarea class="form-control" id="autoMatch" rows="3" placeholder="Set logic (amount ± tolerance, date window, ref priority)"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="aging" class="form-label">Unmatched Aging Thresholds & Alerts</label>
-                                        <textarea class="form-control" id="aging" rows="3" placeholder="Configure thresholds"></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                </form>
-                            </div>
-                            <div class="tab-pane fade" id="budget" role="tabpanel" aria-labelledby="budget-tab">
-                                <h6>Budget & Forecast Controls</h6>
-                                <form>
-                                    <div class="mb-3">
-                                        <label for="budgetVersions" class="form-label">Budget Versions (Original/Reforecast)</label>
-                                        <textarea class="form-control" id="budgetVersions" rows="3" placeholder="Manage versions"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="variance" class="form-label">Variance Tolerance (warn/block)</label>
-                                        <textarea class="form-control" id="variance" rows="3" placeholder="Set tolerances and driver definitions"></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                </form>
-                            </div>
-                            <div class="tab-pane fade" id="security" role="tabpanel" aria-labelledby="security-tab">
-                                <h6>Security, Roles & Approvals</h6>
-                                <form>
-                                    <div class="mb-3">
-                                        <label for="roleMatrix" class="form-label">Role Matrix per Module/Action</label>
-                                        <textarea class="form-control" id="roleMatrix" rows="3" placeholder="Define roles and maker-checker thresholds"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="passwordPolicy" class="form-label">Password/2FA Policy, Session Timeout</label>
-                                        <textarea class="form-control" id="passwordPolicy" rows="3" placeholder="Configure policies"></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                </form>
-                            </div>
-                            <div class="tab-pane fade" id="data" role="tabpanel" aria-labelledby="data-tab">
-                                <h6>Data, Retention & Legal Hold</h6>
-                                <form>
-                                    <div class="mb-3">
-                                        <label for="retention" class="form-label">Retention Policies</label>
-                                        <textarea class="form-control" id="retention" rows="3" placeholder="Set retention (e.g., 10 years vouchers)"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="legalHold" class="form-label">Legal Hold Flags, Export Logs</label>
-                                        <textarea class="form-control" id="legalHold" rows="3" placeholder="Manage holds and logs"></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                </form>
-                            </div>
-                            <div class="tab-pane fade" id="notices" role="tabpanel" aria-labelledby="notices-tab">
-                                <h6>Notices & Maintenance</h6>
-                                <form>
-                                    <div class="mb-3">
-                                        <label for="maintenance" class="form-label">Maintenance Mode Toggle + Banner Message</label>
-                                        <textarea class="form-control" id="maintenance" rows="3" placeholder="Configure maintenance settings"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="holidays" class="form-label">Holidays Calendar</label>
-                                        <textarea class="form-control" id="holidays" rows="3" placeholder="Set holidays"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="announcements" class="form-label">In-App Announcement Bar</label>
-                                        <textarea class="form-control" id="announcements" rows="3" placeholder="Manage announcements"></textarea>
+                                        <label for="systemLogs" class="form-label">System Logs Level</label>
+                                        <select class="form-select" id="systemLogs">
+                                            <option selected>INFO</option>
+                                            <option>DEBUG</option>
+                                            <option>WARNING</option>
+                                            <option>ERROR</option>
+                                        </select>
                                     </div>
                                     <button type="submit" class="btn btn-primary">Save Changes</button>
                                 </form>
