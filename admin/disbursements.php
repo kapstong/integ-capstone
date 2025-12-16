@@ -1009,9 +1009,8 @@ body {
                 const responseText = await response.text();
                 console.log('Raw response:', responseText);
 
-                try {
-                    const result = JSON.parse(responseText);
-                    console.log('Parsed result:', result);
+                const result = JSON.parse(responseText);
+                console.log('Parsed result:', result);
 
                 if (Array.isArray(result) && result.length > 0) {
                     window.displayHR3Claims(result);
