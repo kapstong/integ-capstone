@@ -263,7 +263,7 @@ if ($_POST) {
           <span><?php echo $isLocked ? 'Account Locked' : 'Sign In'; ?></span>
         </button>
 
-        <p class="text-xs text-center text-slate-500 dark:text-slate-400">© 2025 ATIERA BSIT 4101 CLUSTER 1</p>
+        <p class="text-xs text-center text-slate-500 dark:text-slate-400">© 2025 ATIERA</p>
       </form>
     </div>
   </main>
