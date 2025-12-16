@@ -991,23 +991,17 @@ body {
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading Claims...';
 
             try {
-                console.log('Loading HR3 claims from integrations API...');
                 const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=getApprovedClaims', {
                     method: 'GET',
                     credentials: 'include' // Include cookies for session
                 });
 
-                console.log('Response status:', response.status);
-                console.log('Response headers:', response.headers);
-
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('Error response:', errorText);
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
 
                 let responseText = await response.text();
-                console.log('Raw response:', responseText);
 
                 // Handle PHP warnings/errors that appear before JSON
                 if (responseText.includes('{"success":') || responseText.includes('{"error":')) {
@@ -1017,12 +1011,10 @@ body {
                         responseText.indexOf('{"error":');
                     if (jsonStart !== -1) {
                         responseText = responseText.substring(jsonStart);
-                        console.log('Extracted JSON:', responseText);
                     }
                 }
 
                 const result = JSON.parse(responseText);
-                console.log('Parsed result:', result);
 
                 if (Array.isArray(result) && result.length > 0) {
                     window.displayHR3Claims(result);
