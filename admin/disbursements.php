@@ -1006,8 +1006,20 @@ body {
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
 
-                const responseText = await response.text();
+                let responseText = await response.text();
                 console.log('Raw response:', responseText);
+
+                // Handle PHP warnings/errors that appear before JSON
+                if (responseText.includes('{"success":') || responseText.includes('{"error":')) {
+                    // Extract JSON from mixed HTML/JSON response
+                    const jsonStart = responseText.indexOf('{"success":') !== -1 ?
+                        responseText.indexOf('{"success":') :
+                        responseText.indexOf('{"error":');
+                    if (jsonStart !== -1) {
+                        responseText = responseText.substring(jsonStart);
+                        console.log('Extracted JSON:', responseText);
+                    }
+                }
 
                 const result = JSON.parse(responseText);
                 console.log('Parsed result:', result);
