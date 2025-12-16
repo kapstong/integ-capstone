@@ -187,25 +187,25 @@ CREATE OR REPLACE VIEW v_budget_liquidation_status AS
 SELECT
     b.id as budget_id,
     b.department_id,
-    d.name as department_name,
-    b.fiscal_year,
-    b.allocated_amount,
+    d.dept_name as department_name,
+    b.budget_year as fiscal_year,
+    b.annual_total as allocated_amount,
     COALESCE(SUM(bl.total_amount), 0) as total_liquidated,
     COALESCE(SUM(CASE WHEN bl.status = 'approved' THEN bl.total_amount ELSE 0 END), 0) as approved_liquidated,
-    ROUND((COALESCE(SUM(CASE WHEN bl.status = 'approved' THEN bl.total_amount ELSE 0 END), 0) / b.allocated_amount * 100), 2) as liquidation_percentage,
+    ROUND((COALESCE(SUM(CASE WHEN bl.status = 'approved' THEN bl.total_amount ELSE 0 END), 0) / b.annual_total * 100), 2) as liquidation_percentage,
     COUNT(bl.id) as liquidation_count,
     dlr.requires_liquidation,
     dlr.min_liquidation_percentage,
     CASE
         WHEN dlr.requires_liquidation = FALSE THEN TRUE
-        WHEN COALESCE(SUM(CASE WHEN bl.status = 'approved' THEN bl.total_amount ELSE 0 END), 0) / b.allocated_amount * 100 >= dlr.min_liquidation_percentage THEN TRUE
+        WHEN COALESCE(SUM(CASE WHEN bl.status = 'approved' THEN bl.total_amount ELSE 0 END), 0) / b.annual_total * 100 >= dlr.min_liquidation_percentage THEN TRUE
         ELSE FALSE
     END as can_create_new_budget
-FROM budgets b
+FROM department_budgets b
 JOIN departments d ON b.department_id = d.id
 LEFT JOIN budget_liquidations bl ON b.id = bl.budget_id
 LEFT JOIN department_liquidation_requirements dlr ON d.id = dlr.department_id
-GROUP BY b.id, b.department_id, d.name, b.fiscal_year, b.allocated_amount, dlr.requires_liquidation, dlr.min_liquidation_percentage;
+GROUP BY b.id, b.department_id, d.dept_name, b.budget_year, b.annual_total, dlr.requires_liquidation, dlr.min_liquidation_percentage;
 
 -- View for user activity log
 CREATE OR REPLACE VIEW v_user_activity_log AS

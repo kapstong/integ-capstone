@@ -991,7 +991,7 @@ body {
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading Claims...';
 
             try {
-                const response = await fetch('https://hr3.atierahotelandrestaurant.com/api/claimsApi.php', {
+                const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=getApprovedClaims', {
                     method: 'GET'
                 });
 
