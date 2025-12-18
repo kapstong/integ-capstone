@@ -536,6 +536,233 @@ class NotificationManager {
     }
 
     /**
+     * Create in-app notification (for real-time alerts)
+     */
+    public function createInAppNotification($userId, $type, $title, $message, $metadata = []) {
+        try {
+            $stmt = $this->db->prepare("
+                INSERT INTO notifications (user_id, type, title, message, metadata, created_at)
+                VALUES (?, ?, ?, ?, ?, NOW())
+            ");
+            $stmt->execute([
+                $userId,
+                $type,
+                $title,
+                $message,
+                !empty($metadata) ? json_encode($metadata) : null
+            ]);
+
+            return ['success' => true, 'notification_id' => $this->db->lastInsertId()];
+        } catch (Exception $e) {
+            error_log("Failed to create in-app notification: " . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Send low cash balance alert
+     */
+    public function sendLowCashBalanceAlert($currentBalance, $threshold = 10000) {
+        try {
+            // Get all admin users
+            $stmt = $this->db->prepare("SELECT id, email, full_name FROM users WHERE role = 'admin'");
+            $stmt->execute();
+            $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($admins)) {
+                return ['success' => false, 'message' => 'No admin users found'];
+            }
+
+            $message = "Cash balance is low: ₱" . number_format($currentBalance, 2) . ". Consider reviewing cash flow.";
+
+            foreach ($admins as $admin) {
+                // Create in-app notification
+                $this->createInAppNotification(
+                    $admin['id'],
+                    'warning',
+                    'Low Cash Balance Alert',
+                    $message,
+                    ['balance' => $currentBalance, 'threshold' => $threshold]
+                );
+
+                // Send email if configured
+                if ($admin['email']) {
+                    $this->sendEmail(
+                        $admin['email'],
+                        'LOW CASH BALANCE ALERT - ATIERA Finance',
+                        $message
+                    );
+                }
+            }
+
+            return ['success' => true, 'message' => 'Low cash balance alerts sent'];
+
+        } catch (Exception $e) {
+            error_log("Failed to send low cash balance alert: " . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Send large transaction alert
+     */
+    public function sendLargeTransactionAlert($transactionId, $type = 'payment') {
+        try {
+            $table = $type === 'payment' ? 'payments_made' : 'payments_received';
+            $stmt = $this->db->prepare("
+                SELECT p.*, u.email, u.full_name,
+                       " . ($type === 'payment' ? 'v.company_name' : 'c.company_name') . " as counterparty_name
+                FROM {$table} p
+                LEFT JOIN users u ON p.recorded_by = u.id
+                " . ($type === 'payment' ? 'LEFT JOIN vendors v ON p.vendor_id = v.id' : 'LEFT JOIN customers c ON p.customer_id = c.id') . "
+                WHERE p.id = ?
+            ");
+            $stmt->execute([$transactionId]);
+            $transaction = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$transaction) {
+                throw new Exception('Transaction not found');
+            }
+
+            $amount = $transaction['amount'];
+            $threshold = 50000; // Large transaction threshold
+
+            if ($amount < $threshold) {
+                return ['success' => true, 'message' => 'Transaction amount below threshold'];
+            }
+
+            // Get all admin users
+            $stmt = $this->db->prepare("SELECT id, email FROM users WHERE role = 'admin'");
+            $stmt->execute();
+            $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $transactionType = $type === 'payment' ? 'Payment Made' : 'Payment Received';
+            $message = "Large {$transactionType}: ₱" . number_format($amount, 2) . " to {$transaction['counterparty_name']}";
+
+            foreach ($admins as $admin) {
+                $this->createInAppNotification(
+                    $admin['id'],
+                    'warning',
+                    'Large Transaction Alert',
+                    $message,
+                    [
+                        'transaction_id' => $transactionId,
+                        'type' => $type,
+                        'amount' => $amount,
+                        'counterparty' => $transaction['counterparty_name']
+                    ]
+                );
+            }
+
+            return ['success' => true, 'message' => 'Large transaction alerts sent'];
+
+        } catch (Exception $e) {
+            error_log("Failed to send large transaction alert: " . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Send budget threshold alert
+     */
+    public function sendBudgetThresholdAlert($departmentId, $currentSpent, $budgetAmount) {
+        try {
+            // Get department details and users
+            $stmt = $this->db->prepare("
+                SELECT d.dept_name,
+                       GROUP_CONCAT(DISTINCT u.id) as user_ids,
+                       GROUP_CONCAT(DISTINCT u.email) as emails
+                FROM departments d
+                LEFT JOIN users u ON u.role IN ('admin', 'staff')
+                WHERE d.id = ?
+                GROUP BY d.id, d.dept_name
+            ");
+            $stmt->execute([$departmentId]);
+            $dept = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$dept) {
+                throw new Exception('Department not found');
+            }
+
+            $percentage = ($currentSpent / $budgetAmount) * 100;
+            $message = "Budget alert for {$dept['dept_name']}: ₱" . number_format($currentSpent, 2) .
+                      " spent of ₱" . number_format($budgetAmount, 2) . " ({$percentage}%)";
+
+            // Create notifications for all users
+            $userIds = explode(',', $dept['user_ids']);
+            foreach ($userIds as $userId) {
+                if (!empty($userId)) {
+                    $this->createInAppNotification(
+                        $userId,
+                        'warning',
+                        'Budget Threshold Alert',
+                        $message,
+                        [
+                            'department_id' => $departmentId,
+                            'current_spent' => $currentSpent,
+                            'budget_amount' => $budgetAmount,
+                            'percentage' => $percentage
+                        ]
+                    );
+                }
+            }
+
+            return ['success' => true, 'message' => 'Budget threshold alerts sent'];
+
+        } catch (Exception $e) {
+            error_log("Failed to send budget threshold alert: " . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Send approval required notification
+     */
+    public function sendApprovalRequiredNotification($itemId, $type = 'invoice', $approverId = null) {
+        try {
+            $approvers = [];
+            if ($approverId) {
+                $stmt = $this->db->prepare("SELECT id, email, full_name FROM users WHERE id = ?");
+                $stmt->execute([$approverId]);
+                $approvers = [$stmt->fetch(PDO::FETCH_ASSOC)];
+            } else {
+                // Get all admin users as default approvers
+                $stmt = $this->db->prepare("SELECT id, email, full_name FROM users WHERE role = 'admin'");
+                $stmt->execute();
+                $approvers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+
+            $typeLabels = [
+                'invoice' => 'Invoice',
+                'bill' => 'Bill',
+                'budget' => 'Budget Proposal'
+            ];
+
+            $typeLabel = $typeLabels[$type] ?? ucfirst($type);
+
+            foreach ($approvers as $approver) {
+                $this->createInAppNotification(
+                    $approver['id'],
+                    'info',
+                    'Approval Required',
+                    "A new {$typeLabel} requires your approval.",
+                    [
+                        'item_id' => $itemId,
+                        'type' => $type,
+                        'action_url' => "/admin/{$type}s.php?action=review&id={$itemId}"
+                    ]
+                );
+            }
+
+            return ['success' => true, 'message' => 'Approval notifications sent'];
+
+        } catch (Exception $e) {
+            error_log("Failed to send approval notification: " . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Send overdue notifications (bulk - legacy method)
      */
     public function sendOverdueNotifications() {

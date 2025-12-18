@@ -180,6 +180,64 @@ try {
             ]);
             break;
 
+        case 'create_sample':
+            // Create sample notifications for testing
+            $sampleNotifications = [
+                [
+                    'type' => 'login',
+                    'title' => 'Welcome Back!',
+                    'message' => 'You successfully logged in to ATIERA Finance',
+                    'metadata' => ['login_time' => date('Y-m-d H:i:s')]
+                ],
+                [
+                    'type' => 'warning',
+                    'title' => 'Low Cash Balance Alert',
+                    'message' => 'Cash balance is below ₱10,000. Consider reviewing cash flow.',
+                    'metadata' => ['balance' => 8500, 'threshold' => 10000]
+                ],
+                [
+                    'type' => 'info',
+                    'title' => 'Large Transaction Detected',
+                    'message' => 'Payment of ₱75,000 was processed to ABC Corporation',
+                    'metadata' => ['amount' => 75000, 'vendor' => 'ABC Corporation']
+                ],
+                [
+                    'type' => 'warning',
+                    'title' => 'Budget Threshold Alert',
+                    'message' => 'IT Department budget is 85% utilized (₱85,000 of ₱100,000)',
+                    'metadata' => ['department' => 'IT', 'used' => 85000, 'budget' => 100000]
+                ],
+                [
+                    'type' => 'error',
+                    'title' => 'Overdue Invoice',
+                    'message' => 'Invoice INV-2025-0001 is 15 days overdue',
+                    'metadata' => ['invoice' => 'INV-2025-0001', 'days_overdue' => 15]
+                ]
+            ];
+
+            $created = 0;
+            foreach ($sampleNotifications as $notification) {
+                $stmt = $db->prepare("
+                    INSERT INTO notifications (user_id, type, title, message, metadata, created_at)
+                    VALUES (?, ?, ?, ?, ?, NOW())
+                ");
+                $stmt->execute([
+                    $userId,
+                    $notification['type'],
+                    $notification['title'],
+                    $notification['message'],
+                    json_encode($notification['metadata'])
+                ]);
+                $created++;
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => "Created {$created} sample notifications",
+                'notifications' => $sampleNotifications
+            ]);
+            break;
+
         default:
             echo json_encode([
                 'success' => false,

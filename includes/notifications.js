@@ -40,16 +40,19 @@
      * Create notification bell icon in navbar
      */
     function createNotificationBell() {
-        // Find user dropdown or navbar element
-        const navbar = document.querySelector('.navbar .container-fluid');
-        if (!navbar) {
-            console.error('Notification System: Could not find navbar container-fluid');
-            return;
-        }
-
         // Check if bell already exists
         if (document.getElementById('notification-bell-container')) {
             console.log('Notification System: Bell already exists');
+            return;
+        }
+
+        // Try different navbar selectors for different pages
+        let navbarContainer = document.querySelector('.navbar .container-fluid') ||
+                            document.querySelector('.navbar .d-flex') ||
+                            document.querySelector('.navbar');
+
+        if (!navbarContainer) {
+            console.error('Notification System: Could not find navbar container');
             return;
         }
 
@@ -83,13 +86,18 @@
             </div>
         `;
 
-        // Insert before user dropdown
-        const userDropdown = navbar.querySelector('.dropdown');
+        // Find where to insert the bell - look for user dropdown or profile area
+        const userDropdown = navbarContainer.querySelector('.dropdown') ||
+                           navbarContainer.querySelector('[id*="user"]') ||
+                           navbarContainer.querySelector('.d-flex .dropdown');
+
         if (userDropdown) {
             userDropdown.insertAdjacentHTML('beforebegin', bellHTML);
-            console.log('Notification System: Bell created successfully');
+            console.log('Notification System: Bell created successfully before user dropdown');
         } else {
-            console.error('Notification System: Could not find user dropdown');
+            // Fallback: insert at the end of the navbar container
+            navbarContainer.insertAdjacentHTML('beforeend', bellHTML);
+            console.log('Notification System: Bell created successfully at end of navbar');
         }
     }
 

@@ -247,9 +247,15 @@ try {
                 if ($paymentType === 'received') {
                     // Send payment received notification
                     $notificationManager->sendPaymentNotification($paymentId, 'received');
+
+                    // Check for large transaction alert
+                    $notificationManager->sendLargeTransactionAlert($paymentId, 'received');
                 } else {
                     // Send payment made notification (internal)
                     $notificationManager->sendPaymentMadeNotification($paymentId);
+
+                    // Check for large transaction alert
+                    $notificationManager->sendLargeTransactionAlert($paymentId, 'payment');
                 }
 
                 // Log the action

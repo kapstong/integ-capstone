@@ -377,7 +377,7 @@
         modal.show();
 
         document.getElementById('privacyPasswordModal').addEventListener('shown.bs.modal', function() {
-            document.getElementById('privacyPassword').focus();
+            document.getElementById('privacyCode').focus();
         });
     }
 
