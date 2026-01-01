@@ -194,7 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-weight: bold;
         }
         .sidebar .navbar-brand img {
-            height: 100px;
+            height: 50px;
             width: auto;
             max-width: 100%;
             transition: height 0.3s ease;
@@ -204,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         .sidebar-toggle {
             position: fixed;
-            left: 290px;
+            left: 10px;
             top: 50%;
             transform: translateY(-50%);
             cursor: pointer;
@@ -310,7 +310,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #495057;
         }
         .content {
-            margin-left: 300px;
+            margin-left: 120px;
             padding: 20px;
             transition: margin-left 0.3s ease;
             position: relative;
@@ -627,7 +627,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <!-- Profile Information Tab -->
                 <div class="tab-pane fade show active" id="profile" role="tabpanel" aria-labelledby="profile-tab">
                     <div class="card">
-                        <div class="card-header" style="background: linear-gradient(135deg, #1b2f73 0%, #0f1c49 100%); color: white; border-bottom: 3px solid #d4af37;">
+                        <div class="card-header">
                             <h5 class="mb-0"><i class="fas fa-user me-2"></i>Personal Information</h5>
                         </div>
                         <div class="card-body">
@@ -677,7 +677,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <small class="text-muted">Role is managed by administrators</small>
                                     </div>
                                 </div>
-                                <button type="submit" name="update_profile" class="btn btn-primary" style="background: linear-gradient(135deg, #1b2f73 0%, #0f1c49 100%); border: none;">
+                                <button type="submit" name="update_profile" class="btn btn-primary">
                                     <i class="fas fa-save me-2"></i>Save Changes
                                 </button>
                             </form>
@@ -688,7 +688,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <!-- Security Tab -->
                 <div class="tab-pane fade" id="security" role="tabpanel" aria-labelledby="security-tab">
                     <div class="card">
-                        <div class="card-header" style="background: linear-gradient(135deg, #1b2f73 0%, #0f1c49 100%); color: white; border-bottom: 3px solid #d4af37;">
+                        <div class="card-header">
                             <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Security Settings</h5>
                         </div>
                         <div class="card-body">
@@ -709,7 +709,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
                                     </div>
                                 </div>
-                                <button type="submit" name="change_password" class="btn btn-warning" style="background: linear-gradient(135deg, #d4af37 0%, #b8961f 100%); border: none; color: #0f1c49; font-weight: 600;">
+                                <button type="submit" name="change_password" class="btn btn-warning">
                                     <i class="fas fa-key me-2"></i>Change Password
                                 </button>
                             </form>
@@ -735,7 +735,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </label>
                                 <small class="d-block text-muted ms-4">Receive codes via text message</small>
                             </div>
-                            <button type="button" class="btn btn-outline-primary" style="border-color: #1b2f73; color: #1b2f73;">
+                            <button type="button" class="btn btn-outline-primary">
                                 <i class="fas fa-mobile-alt me-2"></i>Enable 2FA
                             </button>
                         </div>
@@ -745,7 +745,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <!-- Preferences Tab -->
                 <div class="tab-pane fade" id="preferences" role="tabpanel" aria-labelledby="preferences-tab">
                     <div class="card">
-                        <div class="card-header" style="background: linear-gradient(135deg, #1b2f73 0%, #0f1c49 100%); color: white; border-bottom: 3px solid #d4af37;">
+                        <div class="card-header">
                             <h5 class="mb-0"><i class="fas fa-cog me-2"></i>System Preferences</h5>
                         </div>
                         <div class="card-body">
@@ -805,7 +805,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         </select>
                                     </div>
                                 </div>
-                                <button type="submit" name="update_preferences" class="btn btn-primary" style="background: linear-gradient(135deg, #1b2f73 0%, #0f1c49 100%); border: none;">
+                                <button type="submit" name="update_preferences" class="btn btn-primary">
                                     <i class="fas fa-save me-2"></i>Save Preferences
                                 </button>
                             </form>
@@ -816,7 +816,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <!-- Notifications Tab -->
                 <div class="tab-pane fade" id="notifications" role="tabpanel" aria-labelledby="notifications-tab">
                     <div class="card">
-                        <div class="card-header" style="background: linear-gradient(135deg, #1b2f73 0%, #0f1c49 100%); color: white; border-bottom: 3px solid #d4af37;">
+                        <div class="card-header">
                             <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Notification Settings</h5>
                         </div>
                         <div class="card-body">
@@ -879,7 +879,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <small class="d-block text-muted ms-4">Monthly reminders for account reconciliation</small>
                                 </div>
 
-                                <button type="submit" name="update_notifications" class="btn btn-primary" style="background: linear-gradient(135deg, #1b2f73 0%, #0f1c49 100%); border: none;">
+                                <button type="submit" name="update_notifications" class="btn btn-primary">
                                     <i class="fas fa-save me-2"></i>Save Notification Settings
                                 </button>
                             </form>
