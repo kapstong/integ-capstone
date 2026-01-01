@@ -64,7 +64,7 @@
                         0
                     </span>
                 </button>
-                <div class="dropdown-menu dropdown-menu-end p-0" id="notification-dropdown" style="min-width: 350px; max-width: 400px;">
+                <div class="dropdown-menu dropdown-menu-end p-0" id="notification-dropdown" style="min-width: 350px; max-width: 400px; right: 0; left: auto;">
                     <div class="dropdown-header d-flex justify-content-between align-items-center bg-light">
                         <h6 class="mb-0">Notifications</h6>
                         <button class="btn btn-sm btn-link text-primary p-0" onclick="window.NotificationSystem.markAllAsRead()" title="Mark all as read">
@@ -112,8 +112,14 @@
      * Create toast container for popup notifications
      */
     function createToastContainer() {
+        // Remove existing container if present
+        const existingContainer = document.getElementById('toast-container');
+        if (existingContainer) {
+            existingContainer.remove();
+        }
+
         const toastHTML = `
-            <div id="toast-container" style="position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 300px; max-width: 400px;">
+            <div id="toast-container" style="position: fixed; top: 80px; right: 20px; z-index: 1060; min-width: 320px; max-width: 420px; pointer-events: none;">
             </div>
         `;
 
@@ -237,14 +243,14 @@
         const toastId = 'toast-' + notification.id;
 
         const toastHTML = `
-            <div id="${toastId}" class="toast show mb-2" role="alert" style="box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-left: 4px solid ${iconColor};">
-                <div class="toast-header">
+            <div id="${toastId}" class="toast show mb-2" role="alert" style="box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-left: 4px solid ${iconColor}; background: white; border: 1px solid #e9ecef; border-radius: 8px; pointer-events: auto;">
+                <div class="toast-header" style="background: #f8f9fa; border-bottom: 1px solid #e9ecef; border-radius: 8px 8px 0 0;">
                     <i class="fas ${icon} me-2" style="color: ${iconColor};"></i>
                     <strong class="me-auto">${escapeHtml(notification.title)}</strong>
                     <small class="text-muted">just now</small>
-                    <button type="button" class="btn-close" onclick="document.getElementById('${toastId}').remove()"></button>
+                    <button type="button" class="btn-close" onclick="document.getElementById('${toastId}').remove()" style="margin-left: 8px;"></button>
                 </div>
-                <div class="toast-body">
+                <div class="toast-body" style="padding: 12px 16px;">
                     ${escapeHtml(notification.message)}
                 </div>
             </div>
