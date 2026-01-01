@@ -500,7 +500,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
     <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
+    <div class="sidebar sidebar-collapsed" id="sidebar">
         <div class="p-3">
             <h5 class="navbar-brand"><img src="atieralogo.png" alt="Atiera Logo" style="height: 100px;"></h5>
             <hr style="border-top: 2px solid white; margin: 10px 0;">
@@ -513,7 +513,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <a class="nav-link" href="general_ledger.php">
                     <i class="fas fa-book me-2"></i><span>General Ledger</span>
                 </a>
-                <i class="fas fa-chevron-right" data-bs-toggle="collapse" data-bs-target="#generalLedgerMenu" aria-expanded="false"></i>
+                <i class="fas fa-chevron-right" data-bs-toggle="collapse" data-bs-target="#generalLedgerMenu" aria-expanded="false" style="cursor: pointer; color: white; padding: 5px 10px;"></i>
                 <div class="collapse" id="generalLedgerMenu">
                     <div class="submenu">
                         <a class="nav-link" href="accounts_payable.php">
@@ -525,24 +525,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
             </div>
+            <a class="nav-link" href="payroll.php">
+                <i class="fas fa-money-check-alt me-2"></i><span>Payroll</span>
+            </a>
             <a class="nav-link" href="disbursements.php">
                 <i class="fas fa-money-check me-2"></i><span>Disbursements</span>
-            </a>
-            <a class="nav-link" href="budget_management.php">
-                <i class="fas fa-chart-line me-2"></i><span>Budget Management</span>
             </a>
             <a class="nav-link" href="reports.php">
                 <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
             </a>
-            <a class="nav-link active" href="admin-profile-settings.php">
-                <i class="fas fa-user-cog me-2"></i><span>Profile Settings</span>
-            </a>
-            <a class="nav-link" href="settings.php">
-                <i class="fas fa-cog me-2"></i><span>Settings</span>
-            </a>
         </nav>
     </div>
-
     <div class="sidebar-toggle" onclick="toggleSidebarDesktop()">
         <i class="fas fa-chevron-right" id="sidebarArrow"></i>
     </div>
