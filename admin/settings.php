@@ -617,9 +617,6 @@ session_start();
             <a class="nav-link" href="reports.php">
                 <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
             </a>
-            <a class="nav-link active" href="settings.php">
-                <i class="fas fa-cog me-2"></i><span>Settings</span>
-            </a>
         </nav>
     </div>
     <div class="sidebar-toggle" onclick="toggleSidebarDesktop()">
