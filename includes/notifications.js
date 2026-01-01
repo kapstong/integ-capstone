@@ -58,8 +58,8 @@
 
         const bellHTML = `
             <div class="dropdown me-3" id="notification-bell-container">
-                <button class="btn btn-link position-relative p-2" type="button" id="notificationBell" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
-                    <i class="fas fa-bell fa-lg" style="color: #64748b;"></i>
+                <button class="btn btn-link position-relative p-2" type="button" id="notificationBell" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications" style="transition: all 0.2s ease;">
+                    <i class="fas fa-bell fa-lg" style="color: #1e2936; transition: all 0.2s ease;"></i>
                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notification-badge" style="display: none; font-size: 0.7rem;">
                         0
                     </span>
