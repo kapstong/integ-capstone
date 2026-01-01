@@ -87,13 +87,13 @@
         `;
 
         // Find where to insert the bell - look for user dropdown or profile area
-        const userDropdown = navbarContainer.querySelector('.dropdown') ||
-                           navbarContainer.querySelector('[id*="user"]') ||
-                           navbarContainer.querySelector('.d-flex .dropdown');
+        const userDropdownContainer = navbarContainer.querySelector('.d-flex.align-items-center.me-4') ||
+                                     navbarContainer.querySelector('.d-flex.align-items-center') ||
+                                     navbarContainer.querySelector('.dropdown');
 
-        if (userDropdown) {
-            userDropdown.insertAdjacentHTML('beforebegin', bellHTML);
-            console.log('Notification System: Bell created successfully before user dropdown');
+        if (userDropdownContainer) {
+            userDropdownContainer.insertAdjacentHTML('beforebegin', bellHTML);
+            console.log('Notification System: Bell created successfully before user dropdown container');
         } else {
             // Fallback: insert at the end of the navbar container
             navbarContainer.insertAdjacentHTML('beforeend', bellHTML);
