@@ -585,7 +585,7 @@ session_start();
 <body>
     <div class="sidebar sidebar-collapsed" id="sidebar">
         <div class="p-3">
-            <h5 class="navbar-brand"><img src="atieralogo.png" alt="Atiera Logo" style="height: 100px;"></h5>
+            <h5 class="navbar-brand"><img src="atieralogo.png" alt="Atiera Logo" style="height: 50px;"></h5>
             <hr style="border-top: 2px solid white; margin: 10px 0;">
         </div>
         <nav class="nav flex-column">
