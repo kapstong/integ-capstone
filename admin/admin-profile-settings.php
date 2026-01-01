@@ -189,6 +189,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .sidebar .nav-item {
             position: relative;
         }
+        .sidebar .nav-item i[data-bs-toggle="collapse"] {
+            position: absolute;
+            right: 20px;
+            top: 10px;
+            transition: transform 0.3s ease;
+        }
+        .sidebar .nav-item i[aria-expanded="true"] {
+            transform: rotate(90deg);
+        }
+        .sidebar .nav-item i[aria-expanded="false"] {
+            transform: rotate(0deg);
+        }
         .sidebar .navbar-brand {
             color: white !important;
             font-weight: bold;
@@ -501,7 +513,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <a class="nav-link" href="general_ledger.php">
                     <i class="fas fa-book me-2"></i><span>General Ledger</span>
                 </a>
-                <i class="fas fa-chevron-right" data-bs-toggle="collapse" data-bs-target="#generalLedgerMenu" aria-expanded="false" style="cursor: pointer; color: white; padding: 5px 10px;"></i>
+                <i class="fas fa-chevron-right" data-bs-toggle="collapse" data-bs-target="#generalLedgerMenu" aria-expanded="false"></i>
                 <div class="collapse" id="generalLedgerMenu">
                     <div class="submenu">
                         <a class="nav-link" href="accounts_payable.php">
