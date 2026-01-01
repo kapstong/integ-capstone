@@ -1665,6 +1665,9 @@ body {
         }
     </script>
 
+    <!-- Notification System -->
+    <script src="../includes/notifications.js"></script>
+
     <!-- Privacy Mode - Hide amounts with asterisks + Eye button -->
     <script src="../includes/privacy_mode.js?v=4"></script>
 
