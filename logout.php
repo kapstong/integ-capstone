@@ -14,6 +14,27 @@ if ($userId) {
     try {
         $db = Database::getInstance()->getConnection();
 
+        // Create logout notification
+        require_once 'includes/notifications.php';
+        $notificationManager = NotificationManager::getInstance();
+
+        // Get client IP address
+        $clientIP = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['HTTP_X_REAL_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+
+        // Create logout notification
+        $notificationManager->createInAppNotification(
+            $userId,
+            'logout',
+            'Logged Out',
+            'You successfully logged out from IP address: ' . $clientIP,
+            [
+                'logout_time' => date('Y-m-d H:i:s'),
+                'ip_address' => $clientIP,
+                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown',
+                'logout_type' => $logoutType
+            ]
+        );
+
         // Try to use stored procedure if it exists
         try {
             $stmt = $db->prepare("CALL sp_log_logout_session(?, ?)");
