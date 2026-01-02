@@ -251,9 +251,6 @@
     </style>
 
     <?php include_once __DIR__ . '/../includes/datepicker.php'; ?>
-
-    <!-- Notification System -->
-    <script src="../includes/notifications.js"></script>
 </head>
 <body>
     <?php include_once __DIR__ . '/../includes/loading_screen.php'; ?>

@@ -294,9 +294,6 @@ return [
     'profile.theme.light' => 'Light',
     'profile.theme.dark' => 'Dark',
     'profile.theme.auto' => 'Auto',
-    'profile.notifications' => 'Notifications',
-    'profile.email_notifications' => 'Email Notifications',
-    'profile.sms_notifications' => 'SMS Notifications',
     'profile.dashboard_layout' => 'Dashboard Layout',
     'profile.items_per_page' => 'Items Per Page',
 

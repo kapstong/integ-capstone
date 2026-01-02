@@ -2,7 +2,6 @@
 require_once '../../includes/auth.php';
 require_once '../../includes/database.php';
 require_once '../../includes/logger.php';
-require_once '../../includes/notifications.php';
 
 header('Content-Type: application/json');
 
@@ -145,11 +144,6 @@ try {
                 }
 
                 $db->commit();
-
-                // Send notification if invoice status is sent
-                if (($data['status'] ?? 'draft') === 'sent') {
-                    NotificationManager::getInstance()->sendInvoiceNotification($invoiceId, 'created');
-                }
 
                 // Log the action
                 Logger::getInstance()->logUserAction('Created invoice', 'invoices', $invoiceId, null, $data);

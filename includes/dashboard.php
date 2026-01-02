@@ -141,15 +141,7 @@ class DashboardManager {
                 'refresh_interval' => 120, // 2 minutes
                 'default_config' => ['limit' => 10, 'show_user_actions' => true]
             ],
-            'notifications' => [
-                'name' => 'Notifications',
-                'description' => 'Important alerts and reminders',
-                'category' => 'system',
-                'size' => 'small',
-                'permissions' => ['notifications.view'],
-                'refresh_interval' => 60,
-                'default_config' => ['show_unread_only' => true, 'limit' => 5]
-            ],
+
 
             // Quick Actions Widgets
             'quick_actions' => [
@@ -294,16 +286,7 @@ class DashboardManager {
             ];
         }
 
-        if ($this->hasPermission($userId, 'notifications.view')) {
-            $defaultWidgets[] = [
-                'id' => 'notifications',
-                'x' => 4,
-                'y' => 7,
-                'width' => 4,
-                'height' => 2,
-                'config' => $this->availableWidgets['notifications']['default_config']
-            ];
-        }
+
 
         $defaultWidgets[] = [
             'id' => 'quick_actions',
@@ -575,33 +558,7 @@ class DashboardManager {
         }
     }
 
-    private function getNotificationsData($config) {
-        try {
-            $userId = $_SESSION['user']['id'] ?? null;
-            $limit = $config['limit'] ?? 5;
-            $unreadOnly = $config['show_unread_only'] ?? true;
 
-            $unreadClause = $unreadOnly ? "AND status = 'unread'" : "";
-
-            $stmt = $this->db->prepare("
-                SELECT id, type, title, message, created_at
-                FROM notifications
-                WHERE user_id = ? $unreadClause
-                ORDER BY created_at DESC
-                LIMIT ?
-            ");
-            $stmt->execute([$userId, $limit]);
-            $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            return [
-                'notifications' => $notifications,
-                'unread_count' => count($notifications)
-            ];
-
-        } catch (Exception $e) {
-            return ['error' => 'Failed to load notifications'];
-        }
-    }
 
     /**
      * Get date range for period

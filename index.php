@@ -55,26 +55,6 @@ if ($_POST) {
         $result = $auth->login($username, $password);
 
         if ($result['success']) {
-            // Create login notification with IP address
-            require_once 'includes/notifications.php';
-            $notificationManager = NotificationManager::getInstance();
-
-            // Get client IP address
-            $clientIP = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['HTTP_X_REAL_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
-
-            // Create in-app notification for the user
-            $notificationManager->createInAppNotification(
-                $result['user']['id'],
-                'login',
-                'Welcome Back!',
-                'You successfully logged in from IP address: ' . $clientIP,
-                [
-                    'login_time' => date('Y-m-d H:i:s'),
-                    'ip_address' => $clientIP,
-                    'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown'
-                ]
-            );
-
             // Check if user has 2FA enabled
             require_once 'includes/two_factor_auth.php';
             $twoFA = TwoFactorAuth::getInstance();

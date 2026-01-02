@@ -548,12 +548,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </button>
                 <span class="navbar-brand mb-0 h1 me-4">Profile Settings</span>
                 <div class="d-flex align-items-center me-4">
-                    <button class="btn btn-link text-dark me-3 position-relative" type="button">
-                        <i class="fas fa-bell fa-lg"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7em;">
-                            3
-                        </span>
-                    </button>
                     <div class="dropdown">
                         <button class="btn btn-link text-dark dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
@@ -620,11 +614,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <i class="fas fa-cog me-2"></i>Preferences
                     </button>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notifications" type="button" role="tab" aria-controls="notifications" aria-selected="false">
-                        <i class="fas fa-bell me-2"></i>Notifications
-                    </button>
-                </li>
+
             </ul>
 
             <!-- Tab Content -->
@@ -818,79 +808,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
 
-                <!-- Notifications Tab -->
-                <div class="tab-pane fade" id="notifications" role="tabpanel" aria-labelledby="notifications-tab">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Notification Settings</h5>
-                        </div>
-                        <div class="card-body">
-                            <form method="POST" action="">
-                                <h6 class="text-primary fw-bold mb-3" style="color: #1b2f73 !important;">Notification Channels</h6>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="email_notif" name="email_notif" checked>
-                                    <label class="form-check-label fw-bold" for="email_notif">
-                                        Email Notifications
-                                    </label>
-                                </div>
-                                <div class="form-check mb-4">
-                                    <input class="form-check-input" type="checkbox" id="in_app_notif" name="in_app_notif" checked>
-                                    <label class="form-check-label fw-bold" for="in_app_notif">
-                                        In-App Notifications
-                                    </label>
-                                </div>
 
-                                <h6 class="text-primary fw-bold mb-3" style="color: #1b2f73 !important;">Financial Notifications</h6>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="invoice_overdue" name="invoice_overdue" checked>
-                                    <label class="form-check-label fw-bold" for="invoice_overdue">
-                                        Overdue Invoices
-                                    </label>
-                                    <small class="d-block text-muted ms-4">Notify when customer invoices become overdue</small>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="payment_received" name="payment_received" checked>
-                                    <label class="form-check-label fw-bold" for="payment_received">
-                                        Payment Received
-                                    </label>
-                                    <small class="d-block text-muted ms-4">Notify when payments are received</small>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="bill_due" name="bill_due" checked>
-                                    <label class="form-check-label fw-bold" for="bill_due">
-                                        Bills Due Soon (7 days)
-                                    </label>
-                                    <small class="d-block text-muted ms-4">Notify when vendor bills are due within 7 days</small>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="check_deposit" name="check_deposit" checked>
-                                    <label class="form-check-label fw-bold" for="check_deposit">
-                                        Post-Dated Checks Due Today
-                                    </label>
-                                    <small class="d-block text-muted ms-4">Notify when PDCs are due for deposit</small>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="budget_alert" name="budget_alert" checked>
-                                    <label class="form-check-label fw-bold" for="budget_alert">
-                                        Budget Threshold Alerts
-                                    </label>
-                                    <small class="d-block text-muted ms-4">Notify when budget utilization exceeds 80%</small>
-                                </div>
-                                <div class="form-check mb-4">
-                                    <input class="form-check-input" type="checkbox" id="reconciliation" name="reconciliation" checked>
-                                    <label class="form-check-label fw-bold" for="reconciliation">
-                                        Reconciliation Reminders
-                                    </label>
-                                    <small class="d-block text-muted ms-4">Monthly reminders for account reconciliation</small>
-                                </div>
-
-                                <button type="submit" name="update_notifications" class="btn btn-primary">
-                                    <i class="fas fa-save me-2"></i>Save Notification Settings
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>

@@ -2,7 +2,6 @@
 require_once '../../includes/auth.php';
 require_once '../../includes/database.php';
 require_once '../../includes/logger.php';
-require_once '../../includes/notifications.php';
 
 header('Content-Type: application/json');
 
@@ -241,22 +240,6 @@ try {
                 }
 
                 $db->commit();
-
-                // Send notifications
-                $notificationManager = NotificationManager::getInstance();
-                if ($paymentType === 'received') {
-                    // Send payment received notification
-                    $notificationManager->sendPaymentNotification($paymentId, 'received');
-
-                    // Check for large transaction alert
-                    $notificationManager->sendLargeTransactionAlert($paymentId, 'received');
-                } else {
-                    // Send payment made notification (internal)
-                    $notificationManager->sendPaymentMadeNotification($paymentId);
-
-                    // Check for large transaction alert
-                    $notificationManager->sendLargeTransactionAlert($paymentId, 'payment');
-                }
 
                 // Log the action
                 Logger::getInstance()->logUserAction("Created $paymentType payment", $paymentType === 'received' ? 'payments_received' : 'payments_made', $paymentId, null, $data);

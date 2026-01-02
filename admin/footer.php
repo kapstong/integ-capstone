@@ -10,9 +10,6 @@
 <!-- Inactivity Timeout - Blur screen after 10 sec, logout after 2 min -->
 <script src="../includes/inactivity_timeout.js"></script>
 
-<!-- Notification System -->
-<script src="../includes/notifications.js"></script>
-
 <script>
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('show');
