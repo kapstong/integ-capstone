@@ -8,10 +8,11 @@ $auth = new Auth();
 $info = '';
 $error = '';
 
-// Handle logout success message - logout is already handled by logout.php
-if (isset($_GET['logout'])) {
+// Handle logout success message from session flash
+if (isset($_SESSION['logout_success']) && $_SESSION['logout_success']) {
     regenerate_csrf_token(); // Ensure fresh CSRF token after logout
     $info = 'You have been logged out successfully.';
+    unset($_SESSION['logout_success']); // Clear the flash message
 }
 
 // Handle session timeout message
@@ -327,7 +328,7 @@ if ($_POST) {
   <?php endif; ?>
 
   // Auto-hide logout message after 5 seconds
-  <?php if (isset($_GET['logout'])): ?>
+  <?php if (!empty($info) && strpos($info, 'logged out') !== false): ?>
   setTimeout(() => {
     const alertBox = document.querySelector('.alert');
     if (alertBox) {
