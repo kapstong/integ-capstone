@@ -842,11 +842,11 @@ body {
             <hr style="border-top: 2px solid white; margin: 10px 0;">
         </div>
         <nav class="nav flex-column">
-        <a class="nav-link" href="index.php">
+        <a class="nav-link active" href="index.php">
             <i class="fas fa-tachometer-alt me-2"></i><span>Dashboard</span>
         </a>
         <div class="nav-item">
-            <a class="nav-link active" href="general_ledger.php">
+            <a class="nav-link" href="general_ledger.php">
                 <i class="fas fa-book me-2"></i><span>General Ledger</span>
             </a>
             <i class="fas fa-chevron-right" data-bs-toggle="collapse" data-bs-target="#generalLedgerMenu" aria-expanded="true" style="cursor: pointer; color: white; padding: 5px 10px;"></i>
