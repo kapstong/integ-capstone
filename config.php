@@ -44,7 +44,7 @@ ini_set('session.cookie_lifetime', $sessionLifetime);
 // Set session cookie parameters for proper cookie handling
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_only_cookies', 1);
-ini_set('session.cookie_secure', 0); // Set to 1 for HTTPS
+ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 1 : 0);
 ini_set('session.cookie_samesite', 'Lax');
 
 // Configuration class

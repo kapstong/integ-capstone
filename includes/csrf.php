@@ -6,6 +6,11 @@ function csrf_token() {
     return $_SESSION['csrf_token'];
 }
 
+function regenerate_csrf_token() {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    return $_SESSION['csrf_token'];
+}
+
 function csrf_verify_request() {
     $token = $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? '';
     $session_token = $_SESSION['csrf_token'] ?? '';

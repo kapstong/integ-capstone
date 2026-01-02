@@ -11,6 +11,7 @@ $error = '';
 // Handle logout first, before any other logic
 if (isset($_GET['logout'])) {
     $auth->logout();
+    regenerate_csrf_token(); // Ensure fresh CSRF token after logout
     $info = 'You have been logged out successfully.';
 }
 
