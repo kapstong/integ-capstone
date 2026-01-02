@@ -8,9 +8,8 @@ $auth = new Auth();
 $info = '';
 $error = '';
 
-// Handle logout first, before any other logic
+// Handle logout success message - logout is already handled by logout.php
 if (isset($_GET['logout'])) {
-    $auth->logout();
     regenerate_csrf_token(); // Ensure fresh CSRF token after logout
     $info = 'You have been logged out successfully.';
 }
