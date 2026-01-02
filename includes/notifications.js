@@ -64,7 +64,7 @@
                         0
                     </span>
                 </button>
-                <div class="dropdown-menu dropdown-menu-end p-0" id="notification-dropdown" style="min-width: 350px; max-width: 400px; right: 0; left: auto;">
+                <div class="dropdown-menu p-0" id="notification-dropdown" style="min-width: 350px; max-width: 400px; position: absolute; left: 100%; top: 0; z-index: 1050;">
                     <div class="dropdown-header d-flex justify-content-between align-items-center bg-light">
                         <h6 class="mb-0">Notifications</h6>
                         <button class="btn btn-sm btn-link text-primary p-0" onclick="window.NotificationSystem.markAllAsRead()" title="Mark all as read">
