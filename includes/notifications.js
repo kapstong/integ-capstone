@@ -86,14 +86,12 @@
             </div>
         `;
 
-        // Find where to insert the bell - look for user dropdown or profile area
-        const userDropdownContainer = navbarContainer.querySelector('.d-flex.align-items-center.me-4') ||
-                                     navbarContainer.querySelector('.d-flex.align-items-center') ||
-                                     navbarContainer.querySelector('.dropdown');
+        // Find where to insert the bell - place it on the right side after the search bar
+        const searchContainer = navbarContainer.querySelector('.d-flex.align-items-center.flex-grow-1');
 
-        if (userDropdownContainer) {
-            userDropdownContainer.insertAdjacentHTML('beforebegin', bellHTML);
-            console.log('Notification System: Bell created successfully before user dropdown container');
+        if (searchContainer) {
+            searchContainer.insertAdjacentHTML('afterend', bellHTML);
+            console.log('Notification System: Bell created successfully on the right side after search bar');
         } else {
             // Fallback: insert at the end of the navbar container
             navbarContainer.insertAdjacentHTML('beforeend', bellHTML);
