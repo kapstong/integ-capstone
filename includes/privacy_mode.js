@@ -489,6 +489,15 @@
      * Initialize privacy mode
      */
     function init() {
+        // Check if privacy mode is enabled for this user
+        const privacyEnabled = window.userSettings && window.userSettings.amountPrivacyEnabled;
+
+        if (!privacyEnabled) {
+            // Privacy mode disabled - amounts always visible
+            isHidden = false;
+            return;
+        }
+
         createPasswordModal();
         createEyeButton();
 
