@@ -28,7 +28,7 @@ try {
         'items_per_page' => 10,
         'date_format' => 'M j, Y',
         'currency' => 'PHP',
-        'amount_privacy_enabled' => 1
+        'amount_privacy_enabled' => 0
     ];
 
 } catch (Exception $e) {
