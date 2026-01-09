@@ -2405,7 +2405,4 @@ $db = Database::getInstance()->getConnection();
 
 </body>
 </html>
-    <script src="../includes/privacy_mode.js?v=4"></script>
 </body>
-            // Prompt for email address
-</html>
