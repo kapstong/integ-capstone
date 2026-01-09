@@ -44,23 +44,28 @@
                 if (hasAmount) {
                     const originalText = text;
 
+                    // Function to create asterisks of same length as match
+                    function createAsterisks(match) {
+                        return '*'.repeat(match.length);
+                    }
+
                     const hiddenText = text
-                        // Match ₱ with optional minus and numbers
-                        .replace(/₱\s*-?[\d,]+\.?\d*/g, '₱*********')
-                        // Match $ with optional minus and numbers
-                        .replace(/\$\s*-?[\d,]+\.?\d*/g, '$*********')
-                        // Match € with optional minus and numbers
-                        .replace(/€\s*-?[\d,]+\.?\d*/g, '€*********')
-                        // Match £ with optional minus and numbers
-                        .replace(/£\s*-?[\d,]+\.?\d*/g, '£*********')
-                        // Match ¥ with optional minus and numbers
-                        .replace(/¥\s*-?[\d,]+\.?\d*/g, '¥*********')
-                        // Match PHP with optional minus and numbers
-                        .replace(/PHP\s*-?[\d,]+\.?\d*/g, 'PHP *********')
-                        // Match P (without peso symbol) with optional minus and numbers - CRITICAL FIX
-                        .replace(/P\s*-?[\d,]+\.?\d*/g, 'P*********')
-                        // Match amounts in parentheses (accounting format)
-                        .replace(/\(\s*([₱$€£¥P]?)\s*[\d,]+\.?\d*\s*\)/g, '($1********)');
+                        // Match ₱ with optional minus and numbers - preserve length
+                        .replace(/₱\s*-?[\d,]+\.?\d*/g, createAsterisks)
+                        // Match $ with optional minus and numbers - preserve length
+                        .replace(/\$\s*-?[\d,]+\.?\d*/g, createAsterisks)
+                        // Match € with optional minus and numbers - preserve length
+                        .replace(/€\s*-?[\d,]+\.?\d*/g, createAsterisks)
+                        // Match £ with optional minus and numbers - preserve length
+                        .replace(/£\s*-?[\d,]+\.?\d*/g, createAsterisks)
+                        // Match ¥ with optional minus and numbers - preserve length
+                        .replace(/¥\s*-?[\d,]+\.?\d*/g, createAsterisks)
+                        // Match PHP with optional minus and numbers - preserve length
+                        .replace(/PHP\s*-?[\d,]+\.?\d*/g, createAsterisks)
+                        // Match P (without peso symbol) with optional minus and numbers - preserve length
+                        .replace(/P\s*-?[\d,]+\.?\d*/g, createAsterisks)
+                        // Match amounts in parentheses (accounting format) - preserve length
+                        .replace(/\(\s*[₱$€£¥P]?\s*[\d,]+\.?\d*\s*\)/g, createAsterisks);
 
                     if (hiddenText !== originalText) {
                         hiddenElements.push({
