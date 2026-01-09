@@ -4,6 +4,12 @@
  * Loads environment variables and provides configuration management
  */
 
+// Load production config if on production domain
+if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'financial.atierahotelandrestaurant.com') {
+    require_once __DIR__ . '/config_production.php';
+    exit;
+}
+
 // Load environment variables from .env file
 function loadEnv($path) {
     if (!file_exists($path)) {

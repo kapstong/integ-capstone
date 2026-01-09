@@ -7,8 +7,8 @@
 // Production Database Configuration
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'fina_financialmngmnt'); // Update this to your actual production database name
-define('DB_USER', 'financia'); // Update this to your actual database username
-define('DB_PASS', 'Atiera@123'); // Update this to your actual database password
+define('DB_USER', 'fina_financialg10'); // Update this to your actual database username
+define('DB_PASS', 'jekjek123'); // Update this to your actual database password
 define('DB_CHARSET', 'utf8mb4');
 
 // Other production settings
