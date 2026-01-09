@@ -775,11 +775,7 @@ $db = Database::getInstance()->getConnection();
                     <i class="fas fa-chart-bar me-2"></i>Analytics & Export
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="integration-tab" data-bs-toggle="tab" data-bs-target="#integration" type="button" role="tab">
-                    <i class="fas fa-link me-2"></i>Integration
-                </button>
-            </li>
+
         </ul>
 
         <!-- Tab Content -->
@@ -969,102 +965,7 @@ $db = Database::getInstance()->getConnection();
                 </div>
             </div>
 
-            <!-- Integration Tab -->
-            <div class="tab-pane fade" id="integration" role="tabpanel" aria-labelledby="integration-tab">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">Module Integration</h6>
-                    <button class="btn btn-outline-secondary"><i class="fas fa-sync me-2"></i>Sync All Data</button>
-                </div>
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Data Sources for Reports</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-3">
-                                        <div class="text-center mb-4">
-                                            <i class="fas fa-book fa-3x text-primary mb-3"></i>
-                                            <h6>General Ledger</h6>
-                                            <p class="text-muted small">Master financial postings and account balances</p>
-                                            <span class="badge bg-success">Primary Source</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="text-center mb-4">
-                                            <i class="fas fa-credit-card fa-3x text-success mb-3"></i>
-                                            <h6>Accounts Payable</h6>
-                                            <p class="text-muted small">Vendor invoices and payment obligations</p>
-                                            <span class="badge bg-success">Connected</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="text-center mb-4">
-                                            <i class="fas fa-money-bill-wave fa-3x text-info mb-3"></i>
-                                            <h6>Accounts Receivable</h6>
-                                            <p class="text-muted small">Customer invoices and collections</p>
-                                            <span class="badge bg-success">Connected</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="text-center mb-4">
-                                            <i class="fas fa-money-check fa-3x text-warning mb-3"></i>
-                                            <h6>Disbursements</h6>
-                                            <p class="text-muted small">Cash payments and expenditures</p>
-                                            <span class="badge bg-success">Connected</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="text-center mb-4">
-                                            <i class="fas fa-chart-line fa-3x text-secondary mb-3"></i>
-                                            <h6>Budget Management</h6>
-                                            <p class="text-muted small">Budget planning and variance analysis</p>
-                                            <span class="badge bg-success">Connected</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="text-center mb-4">
-                                            <i class="fas fa-tachometer-alt fa-3x text-dark mb-3"></i>
-                                            <h6>Dashboard</h6>
-                                            <p class="text-muted small">Real-time metrics and KPIs</p>
-                                            <span class="badge bg-success">Connected</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row mt-3">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Data Synchronization</h6>
-                            </div>
-                            <div class="card-body text-center py-5">
-                                <i class="fas fa-sync-alt fa-3x mb-4 text-muted"></i>
-                                <h5>No Sync History Available</h5>
-                                <p class="text-muted small">Sync status will be displayed once integrations are active and data syncing starts.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Report Users & Access</h6>
-                            </div>
-                            <div class="card-body text-center py-5">
-                                <i class="fas fa-users fa-3x mb-4 text-muted"></i>
-                                <h5>No User Activity Data</h5>
-                                <p class="text-muted small">User access and permissions will be displayed once the system is in active use.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+
         </div>
     </div>
 
@@ -2505,3 +2406,5 @@ $db = Database::getInstance()->getConnection();
 </body>
 </html>
     <script src="../includes/privacy_mode.js?v=4"></script>
+</body>
+            // Prompt for email address

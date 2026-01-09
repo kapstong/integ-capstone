@@ -740,11 +740,7 @@ $db = Database::getInstance()->getConnection();
                     <i class="fas fa-chart-bar me-2"></i>Reports & Analytics
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="integration-tab" data-bs-toggle="tab" data-bs-target="#integration" type="button" role="tab">
-                    <i class="fas fa-link me-2"></i>Integration
-                </button>
-            </li>
+
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit" type="button" role="tab">
                     <i class="fas fa-history me-2"></i>Audit Trail
@@ -1269,76 +1265,7 @@ $db = Database::getInstance()->getConnection();
                 </div>
             </div>
 
-            <!-- Integration Tab -->
-            <div class="tab-pane fade" id="integration" role="tabpanel" aria-labelledby="integration-tab">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">Module Integration</h6>
-                    <button class="btn btn-outline-secondary"><i class="fas fa-sync me-2"></i>Sync Data</button>
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Data Sources</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-flex align-items-center mb-3">
-                                    <i class="fas fa-book text-primary me-3 fa-2x"></i>
-                                    <div>
-                                        <h6 class="mb-0">General Ledger</h6>
-                                        <small class="text-muted">Actual transaction data</small>
-                                    </div>
-                                    <span class="badge bg-success ms-auto">Connected</span>
-                                </div>
-                                <div class="d-flex align-items-center mb-3">
-                                    <i class="fas fa-credit-card text-success me-3 fa-2x"></i>
-                                    <div>
-                                        <h6 class="mb-0">Accounts Payable</h6>
-                                        <small class="text-muted">Vendor payment data</small>
-                                    </div>
-                                    <span class="badge bg-success ms-auto">Connected</span>
-                                </div>
-                                <div class="d-flex align-items-center mb-3">
-                                    <i class="fas fa-money-bill-wave text-info me-3 fa-2x"></i>
-                                    <div>
-                                        <h6 class="mb-0">Accounts Receivable</h6>
-                                        <small class="text-muted">Revenue data</small>
-                                    </div>
-                                    <span class="badge bg-success ms-auto">Connected</span>
-                                </div>
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-money-check text-warning me-3 fa-2x"></i>
-                                    <div>
-                                        <h6 class="mb-0">Disbursements</h6>
-                                        <small class="text-muted">Cash outflow data</small>
-                                    </div>
-                                    <span class="badge bg-success ms-auto">Connected</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Data Flow</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="text-center">
-                                    <div class="mb-3">
-                                        <i class="fas fa-chart-line fa-3x text-primary"></i>
-                                    </div>
-                                    <h6>Real-time Synchronization</h6>
-                                    <p class="text-muted small">Budget variances are automatically calculated and updated as transactions occur across all connected modules.</p>
-                                    <div class="mt-3">
-                                        <span class="badge bg-success me-2">Auto-sync enabled</span>
-                                        <span class="badge bg-info">Last sync: 5 min ago</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+
 
             <!-- Audit Trail Tab -->
             <div class="tab-pane fade" id="audit" role="tabpanel" aria-labelledby="audit-tab">
@@ -2097,3 +2024,5 @@ $db = Database::getInstance()->getConnection();
 </body>
 </html>
     <script src="../includes/inactivity_timeout.js?v=3"></script>
+</body>
+                            </div>
