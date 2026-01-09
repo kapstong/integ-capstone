@@ -179,7 +179,7 @@
 
         // Auto-verify when 6 digits entered
         document.getElementById('privacyCode').addEventListener('input', (e) => {
-            const code = e.target.value;
+            const code = e.target.value.trim();
             if (code.length === 6 && /^\d{6}$/.test(code)) {
                 verifyCodeAndShow();
             }
@@ -272,7 +272,7 @@
         const codeInput = document.getElementById('privacyCode');
         const errorDiv = document.getElementById('privacyCodeError');
         const verifyBtn = document.getElementById('privacyVerifyBtn');
-        const code = codeInput.value;
+        const code = codeInput.value.trim();
 
         if (!code || code.length !== 6) {
             codeInput.classList.add('is-invalid');

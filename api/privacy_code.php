@@ -102,7 +102,7 @@ try {
 
     // Handle verify code request
     if ($action === 'verify_code') {
-        $code = $_POST['code'] ?? '';
+        $code = trim($_POST['code'] ?? '');
 
         if (empty($code)) {
             ob_end_clean();
