@@ -565,6 +565,9 @@ body {
         }
     </script>
 
+    <!-- Privacy Mode - Hide amounts with asterisks + Eye button -->
+    <script src="../includes/privacy_mode.js"></script>
+
     <!-- Inactivity Timeout -->
     <script src="../includes/inactivity_timeout.js"></script>
 </body>

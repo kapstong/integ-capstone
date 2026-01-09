@@ -38,8 +38,9 @@
                 // - PHP prefix
                 // - Negative amounts with minus sign
                 // - Amounts in parentheses (accounting format for negatives)
-                // - With or without decimal points
-                const hasAmount = /(?:[₱$€£¥P]\s*-?[\d,]+\.?\d*)|(?:PHP\s*-?[\d,]+\.?\d*)|(?:\(\s*[₱$€£¥P]?\s*[\d,]+\.?\d*\s*\))/.test(text);
+                // - Plain numeric amounts (for edge cases)
+                // - With or without decimal points and commas
+                const hasAmount = /(?:[₱$€£¥]\s*-?[\d,]+\.?\d*)|(?:P\s*-?[\d,]+\.?\d*)|(?:PHP\s*-?[\d,]+\.?\d*)|(?:\(\s*[₱$€£¥P]?\s*[\d,]+\.?\d*\s*\))|(?:\b\d{1,3}(?:,\d{3})*(?:\.\d{2})?\b)/.test(text);
 
                 if (hasAmount) {
                     const originalText = text;
@@ -60,7 +61,9 @@
                         // Match P (without peso symbol) with optional minus and numbers - CRITICAL FIX
                         .replace(/P\s*-?[\d,]+\.?\d*/g, 'P*********')
                         // Match amounts in parentheses (accounting format)
-                        .replace(/\(\s*([₱$€£¥P]?)\s*[\d,]+\.?\d*\s*\)/g, '($1********)');
+                        .replace(/\(\s*([₱$€£¥P]?)\s*[\d,]+\.?\d*\s*\)/g, '($1********)')
+                        // Match plain numeric amounts (fallback for edge cases)
+                        .replace(/\b\d{1,3}(?:,\d{3})*(?:\.\d{2})?\b/g, '*********');
 
                     if (hiddenText !== originalText) {
                         hiddenElements.push({
@@ -88,10 +91,37 @@
     function showAmounts() {
         let restoredCount = 0;
 
+        // First, restore elements from the hiddenElements array
         hiddenElements.forEach(item => {
             if (item.node && item.node.nodeValue) {
                 item.node.nodeValue = item.original;
                 item.element.removeAttribute('data-privacy-hidden');
+                item.element.removeAttribute('data-privacy-original');
+                restoredCount++;
+            }
+        });
+
+        // Then, scan the entire DOM for any remaining elements with data-privacy-hidden
+        // This handles dynamically loaded content that wasn't in the original hiddenElements array
+        const remainingHiddenElements = document.querySelectorAll('[data-privacy-hidden]');
+        remainingHiddenElements.forEach(el => {
+            const originalText = el.getAttribute('data-privacy-original');
+            if (originalText) {
+                // Find text nodes within this element and restore them
+                const textNodes = Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
+                textNodes.forEach(node => {
+                    // Replace any asterisk patterns with the original text
+                    // This is a fallback since we don't have the exact original for dynamically loaded content
+                    if (node.nodeValue && node.nodeValue.includes('*********')) {
+                        // Try to restore from data-privacy-original if available
+                        const originalNodeText = el.getAttribute('data-privacy-original');
+                        if (originalNodeText && node.nodeValue.includes('*********')) {
+                            node.nodeValue = originalNodeText;
+                        }
+                    }
+                });
+                el.removeAttribute('data-privacy-hidden');
+                el.removeAttribute('data-privacy-original');
                 restoredCount++;
             }
         });
@@ -511,9 +541,39 @@
             });
         }
 
-        const observer = new MutationObserver(function() {
-            if (isHidden) {
-                setTimeout(hideAmounts, 100);
+        const observer = new MutationObserver(function(mutations) {
+            // Check if any new nodes were added
+            let hasNewNodes = false;
+            mutations.forEach(mutation => {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    hasNewNodes = true;
+                }
+            });
+
+            if (hasNewNodes) {
+                if (isHidden) {
+                    // Hide any new amounts that were added
+                    setTimeout(hideAmounts, 100);
+                } else {
+                    // If privacy mode is disabled, ensure any newly loaded content is visible
+                    // This handles cases where content is loaded via AJAX after privacy mode was disabled
+                    setTimeout(function() {
+                        const hiddenElements = document.querySelectorAll('[data-privacy-hidden]');
+                        hiddenElements.forEach(el => {
+                            const originalText = el.getAttribute('data-privacy-original');
+                            if (originalText) {
+                                const textNodes = Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
+                                textNodes.forEach(node => {
+                                    if (node.nodeValue && node.nodeValue.includes('*********')) {
+                                        node.nodeValue = originalText;
+                                    }
+                                });
+                                el.removeAttribute('data-privacy-hidden');
+                                el.removeAttribute('data-privacy-original');
+                            }
+                        });
+                    }, 100);
+                }
             }
         });
 
