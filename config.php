@@ -100,9 +100,9 @@ class Config {
 
             'database' => [
                 'host' => getenv('DB_HOST') ?: 'localhost',
-                'name' => getenv('DB_NAME') ?: 'atiera_finance',
-                'user' => getenv('DB_USER') ?: 'root',
-                'pass' => getenv('DB_PASS') ?: '',
+                'name' => getenv('DB_NAME') ?: 'fina_financialmngmnt',
+                'user' => getenv('DB_USER') ?: 'fina_financialg10',
+                'pass' => getenv('DB_PASS') ?: 'jekjek123',
                 'charset' => 'utf8mb4',
             ],
 
