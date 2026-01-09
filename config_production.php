@@ -26,6 +26,7 @@ ini_set('session.cookie_secure', 1); // HTTPS only
 ini_set('session.cookie_samesite', 'Lax');
 
 // Configuration class for production
+if (!class_exists('Config')) {
 class Config {
     private static $config = [];
 
@@ -126,6 +127,7 @@ class Config {
     public static function isDevelopment() {
         return self::get('app.env') === 'development';
     }
+}
 }
 
 // Production error handling
