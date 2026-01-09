@@ -525,9 +525,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
             </div>
-            <a class="nav-link" href="payroll.php">
-                <i class="fas fa-money-check-alt me-2"></i><span>Payroll</span>
-            </a>
+
             <a class="nav-link" href="disbursements.php">
                 <i class="fas fa-money-check me-2"></i><span>Disbursements</span>
             </a>
@@ -870,4 +868,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
     </script>
 </body>
+</html>
 </html>

@@ -645,9 +645,7 @@ $db = Database::getInstance()->getConnection();
             <a class="nav-link" href="disbursements.php">
                 <i class="fas fa-money-check me-2"></i><span>Disbursements</span>
             </a>
-            <a class="nav-link" href="payroll.php">
-                <i class="fas fa-money-check-alt me-2"></i><span>Payroll</span>
-            </a>
+
             <a class="nav-link active" href="budget_management.php">
                 <i class="fas fa-chart-line me-2"></i><span>Budget Management</span>
             </a>
@@ -2235,4 +2233,5 @@ $db = Database::getInstance()->getConnection();
 </html>
     <script src="../includes/inactivity_timeout.js?v=3"></script>
 </body>
+                            </div>
                             </div>
