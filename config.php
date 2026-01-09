@@ -101,8 +101,8 @@ class Config {
             'database' => [
                 'host' => getenv('DB_HOST') ?: 'localhost',
                 'name' => getenv('DB_NAME') ?: 'fina_financialmngmnt',
-                'user' => getenv('DB_USER') ?: 'fina_financialg10',
-                'pass' => getenv('DB_PASS') ?: 'jekjek123',
+                'user' => getenv('DB_USER') ?: 'financia',
+                'pass' => getenv('DB_PASS') ?: 'Atiera@123',
                 'charset' => 'utf8mb4',
             ],
 
