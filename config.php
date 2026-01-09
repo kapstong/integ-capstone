@@ -42,15 +42,17 @@ try {
 }
 
 // Set session configuration BEFORE any session is started
-$sessionLifetime = getenv('SESSION_LIFETIME') ?: 7200;
-ini_set('session.gc_maxlifetime', $sessionLifetime);
-ini_set('session.cookie_lifetime', $sessionLifetime);
+if (session_status() === PHP_SESSION_NONE) {
+    $sessionLifetime = getenv('SESSION_LIFETIME') ?: 7200;
+    ini_set('session.gc_maxlifetime', $sessionLifetime);
+    ini_set('session.cookie_lifetime', $sessionLifetime);
 
-// Set session cookie parameters for proper cookie handling
-ini_set('session.cookie_httponly', 1);
-ini_set('session.use_only_cookies', 1);
-ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 1 : 0);
-ini_set('session.cookie_samesite', 'Lax');
+    // Set session cookie parameters for proper cookie handling
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.use_only_cookies', 1);
+    ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 1 : 0);
+    ini_set('session.cookie_samesite', 'Lax');
+}
 
 // Configuration class
 if (!class_exists('Config')) {
