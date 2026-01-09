@@ -4,6 +4,9 @@
  * This file contains production-ready database configuration
  */
 
+// Debug: Confirm production config is loaded
+echo "Production config loaded<br>";
+
 // Production Database Configuration
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'fina_financialmngmnt'); // Update this to your actual production database name
