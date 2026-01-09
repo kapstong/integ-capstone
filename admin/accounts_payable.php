@@ -676,7 +676,7 @@ try {
                 </button>
                 <span class="navbar-brand mb-0 h1 me-4">Accounts Payable</span>
                 <div class="d-flex align-items-center me-4">
-                    <button class="btn btn-link text-dark me-3 position-relative" type="button">
+                    <button  type="button">
                         <i class="fas fa-bell fa-lg"></i>
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7em;">
                             3

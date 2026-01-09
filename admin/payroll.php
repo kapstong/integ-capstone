@@ -592,12 +592,7 @@ try {
                             <i class="fas fa-sync-alt me-2"></i>Sync Payroll
                         </button>
                     </form>
-                    <button class="btn btn-link text-dark me-3 position-relative" type="button">
-                        <i class="fas fa-bell fa-lg"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7em;">
-                            0
-                        </span>
-                    </button>
+
                     <div class="dropdown">
                         <button class="btn btn-link text-dark dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
@@ -945,3 +940,4 @@ try {
 
 </body>
 </html>
+    <script src="../includes/inactivity_timeout.js?v=3"></script>
