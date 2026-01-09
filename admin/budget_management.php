@@ -726,6 +726,11 @@ $db = Database::getInstance()->getConnection();
                 </button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="alerts-tab" data-bs-toggle="tab" data-bs-target="#alerts" type="button" role="tab">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Budget Alerts
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="forecasting-tab" data-bs-toggle="tab" data-bs-target="#forecasting" type="button" role="tab">
                     <i class="fas fa-crystal-ball me-2"></i>Forecasting
                 </button>
@@ -1046,6 +1051,83 @@ $db = Database::getInstance()->getConnection();
                                                 <td class="variance-negative">-10.0%</td>
                                                 <td><span class="badge bg-success">Under Budget</span></td>
                                             </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Budget Alerts Tab -->
+            <div class="tab-pane fade" id="alerts" role="tabpanel" aria-labelledby="alerts-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">Budget Alerts & Notifications</h6>
+                    <div>
+                        <select class="form-select form-select-sm me-2" style="width: auto;" id="alertsFilter">
+                            <option value="all">All Alerts</option>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                        </select>
+                        <button class="btn btn-outline-secondary" onclick="loadAlerts()"><i class="fas fa-sync me-2"></i>Refresh</button>
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="reports-card alert-card">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-3 text-danger"></i>
+                            <h6>Critical Alerts</h6>
+                            <h3 id="criticalCount">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="reports-card alert-card">
+                            <i class="fas fa-exclamation-circle fa-2x mb-3 text-warning"></i>
+                            <h6>High Priority</h6>
+                            <h3 id="highCount">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="reports-card alert-card">
+                            <i class="fas fa-info-circle fa-2x mb-3 text-info"></i>
+                            <h6>Medium Alerts</h6>
+                            <h3 id="mediumCount">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="reports-card alert-card">
+                            <i class="fas fa-bell fa-2x mb-3 text-secondary"></i>
+                            <h6>Total Alerts</h6>
+                            <h3 id="totalAlerts">0</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>Departments Over Budget</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped" id="alertsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Department</th>
+                                                <th>Budget Year</th>
+                                                <th>Budgeted Amount</th>
+                                                <th>Actual Amount</th>
+                                                <th>Over Amount</th>
+                                                <th>Over %</th>
+                                                <th>Severity</th>
+                                                <th>Alert Date</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="alertsTableBody">
+                                            <!-- Alerts will be loaded here -->
                                         </tbody>
                                     </table>
                                 </div>
@@ -1405,6 +1487,7 @@ $db = Database::getInstance()->getConnection();
         let currentBudgets = [];
         let currentAllocations = [];
         let currentTrackingData = [];
+        let currentAlerts = [];
 
         // Initialize sidebar state on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -1828,6 +1911,93 @@ $db = Database::getInstance()->getConnection();
             });
         }
 
+        // Load alerts
+        async function loadAlerts() {
+            try {
+                const response = await fetch('api/budgets.php?action=alerts');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                currentAlerts = data.alerts || [];
+                renderAlertsTable();
+                updateAlertsCards();
+
+            } catch (error) {
+                console.error('Error loading alerts:', error);
+                showAlert('Error loading alerts: ' + error.message, 'danger');
+            }
+        }
+
+        // Render alerts table
+        function renderAlertsTable() {
+            const tbody = document.getElementById('alertsTableBody');
+            tbody.innerHTML = '';
+
+            if (currentAlerts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No budget alerts at this time.</td></tr>';
+                return;
+            }
+
+            // Apply filter if selected
+            const filterValue = document.getElementById('alertsFilter').value;
+            let filteredAlerts = currentAlerts;
+
+            if (filterValue !== 'all') {
+                filteredAlerts = currentAlerts.filter(alert => alert.severity === filterValue);
+            }
+
+            filteredAlerts.forEach(alert => {
+                const severityClass = {
+                    'critical': 'bg-danger text-white',
+                    'high': 'bg-warning text-dark',
+                    'medium': 'bg-info text-white'
+                }[alert.severity] || 'bg-secondary';
+
+                const row = `
+                    <tr>
+                        <td><strong>${alert.department}</strong></td>
+                        <td>${alert.budget_year}</td>
+                        <td>₱${parseFloat(alert.budgeted_amount).toLocaleString()}</td>
+                        <td>₱${parseFloat(alert.actual_amount).toLocaleString()}</td>
+                        <td class="variance-positive">₱${parseFloat(alert.over_amount).toLocaleString()}</td>
+                        <td class="variance-positive">${parseFloat(alert.over_percent).toFixed(1)}%</td>
+                        <td><span class="badge ${severityClass}">${alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)}</span></td>
+                        <td>${alert.alert_date}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewAlertDetails(${alert.id})">View Details</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // Update alerts cards
+        function updateAlertsCards() {
+            const criticalCount = currentAlerts.filter(a => a.severity === 'critical').length;
+            const highCount = currentAlerts.filter(a => a.severity === 'high').length;
+            const mediumCount = currentAlerts.filter(a => a.severity === 'medium').length;
+
+            document.getElementById('criticalCount').textContent = criticalCount;
+            document.getElementById('highCount').textContent = highCount;
+            document.getElementById('mediumCount').textContent = mediumCount;
+            document.getElementById('totalAlerts').textContent = currentAlerts.length;
+        }
+
+        // View alert details
+        function viewAlertDetails(alertId) {
+            const alert = currentAlerts.find(a => a.id == alertId);
+            if (!alert) {
+                showAlert('Alert not found', 'warning');
+                return;
+            }
+
+            showAlert(`Alert Details: ${alert.department} is ${alert.over_percent.toFixed(1)}% over budget`, 'warning');
+        }
+
         // Update initialize section to load vendors and start polling
         document.addEventListener('DOMContentLoaded', function() {
             // ... existing code ...
@@ -1836,10 +2006,50 @@ $db = Database::getInstance()->getConnection();
             loadBudgets();
             loadAllocations();
             loadTrackingData();
+            loadAlerts(); // Add alerts loading
             loadVendors(); // Add vendor loading
 
             // Start polling for vendor updates (check every 10 seconds)
             startVendorPolling();
+        });
+
+        // Event listeners for dynamic functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle create budget form submission
+            const createBudgetForm = document.getElementById('createBudgetForm');
+            if (createBudgetForm) {
+                createBudgetForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    const formData = new FormData(this);
+                    const budgetData = {
+                        name: formData.get('budgetName'),
+                        department: formData.get('department'),
+                        start_date: formData.get('startDate'),
+                        end_date: formData.get('endDate'),
+                        total_amount: parseFloat(formData.get('totalAmount')),
+                        description: formData.get('description')
+                    };
+
+                    createBudget(budgetData);
+                });
+            }
+
+            // Handle tracking period change
+            const trackingPeriodSelect = document.querySelector('#tracking select');
+            if (trackingPeriodSelect) {
+                trackingPeriodSelect.addEventListener('change', function() {
+                    loadTrackingData();
+                });
+            }
+
+            // Handle alerts filter change
+            const alertsFilter = document.getElementById('alertsFilter');
+            if (alertsFilter) {
+                alertsFilter.addEventListener('change', function() {
+                    renderAlertsTable();
+                });
+            }
         });
 
         // Polling function to check for vendor updates

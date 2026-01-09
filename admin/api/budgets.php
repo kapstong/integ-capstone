@@ -65,6 +65,9 @@ function handleGet($db, $logger) {
             case 'tracking':
                 getTrackingData($db);
                 break;
+            case 'alerts':
+                getAlerts($db);
+                break;
             default:
                 getBudgets($db);
         }
@@ -177,6 +180,47 @@ function getTrackingData($db) {
         'tracking' => $trackingData,
         'summary' => $summary
     ]);
+}
+
+function getAlerts($db) {
+    // Get departments/categories that are over budget
+    $stmt = $db->prepare("
+        SELECT
+            bc.category_name as department,
+            SUM(bi.budgeted_amount) as budgeted_amount,
+            SUM(bi.actual_amount) as actual_amount,
+            bc.category_type,
+            b.budget_year
+        FROM budget_items bi
+        JOIN budget_categories bc ON bi.category_id = bc.id
+        JOIN budgets b ON bi.budget_id = b.id
+        WHERE b.status = 'active'
+        GROUP BY bc.id, bc.category_name, bc.category_type, b.budget_year
+        HAVING SUM(bi.actual_amount) > SUM(bi.budgeted_amount)
+        ORDER BY (SUM(bi.actual_amount) - SUM(bi.budgeted_amount)) DESC
+    ");
+    $stmt->execute();
+    $overBudgetItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $alerts = [];
+    foreach ($overBudgetItems as $item) {
+        $overAmount = $item['actual_amount'] - $item['budgeted_amount'];
+        $overPercent = $item['budgeted_amount'] > 0 ? ($overAmount / $item['budgeted_amount']) * 100 : 0;
+
+        $alerts[] = [
+            'id' => count($alerts) + 1,
+            'department' => $item['department'],
+            'budget_year' => $item['budget_year'],
+            'budgeted_amount' => (float)$item['budgeted_amount'],
+            'actual_amount' => (float)$item['actual_amount'],
+            'over_amount' => (float)$overAmount,
+            'over_percent' => (float)$overPercent,
+            'severity' => $overPercent > 50 ? 'critical' : ($overPercent > 20 ? 'high' : 'medium'),
+            'alert_date' => date('Y-m-d H:i:s')
+        ];
+    }
+
+    echo json_encode(['alerts' => $alerts]);
 }
 
 function handlePost($db, $logger) {
