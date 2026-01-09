@@ -668,12 +668,6 @@ $db = Database::getInstance()->getConnection();
                 </button>
                 <span class="navbar-brand mb-0 h1 me-4">Budget Management</span>
                 <div class="d-flex align-items-center me-4">
-                    <button  type="button">
-                        <i class="fas fa-bell fa-lg"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7em;">
-                            3
-                        </span>
-                    </button>
                     <div class="dropdown">
                         <button class="btn btn-link text-dark dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
@@ -2102,3 +2096,4 @@ $db = Database::getInstance()->getConnection();
     </div>
 </body>
 </html>
+    <script src="../includes/inactivity_timeout.js?v=3"></script>
