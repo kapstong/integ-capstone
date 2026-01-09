@@ -101,15 +101,25 @@ class Mailer {
             return false;
         }
 
-        // Read server greeting
-        $response = fgets($socket, 515);
-        if (!$this->checkSMTPResponse($response, '220')) {
+        // Read server greeting (may be multi-line)
+        $firstLine = fgets($socket, 515);
+
+        // Read any additional lines of the greeting
+        while (($line = fgets($socket, 515)) !== false) {
+            if (substr($line, 3, 1) === ' ') { // Last line of multi-line response
+                break;
+            }
+        }
+
+        // Check only the first line for the greeting code
+        if (!$this->checkSMTPResponse($firstLine, '220')) {
             fclose($socket);
             return false;
         }
 
         // Send EHLO
-        fputs($socket, "EHLO " . $_SERVER['SERVER_NAME'] . "\r\n");
+        $serverName = $_SERVER['SERVER_NAME'] ?? $_SERVER['HTTP_HOST'] ?? 'localhost';
+        fputs($socket, "EHLO " . $serverName . "\r\n");
         $response = fgets($socket, 515);
         if (!$this->checkSMTPResponse($response, '250')) {
             fclose($socket);
@@ -247,9 +257,13 @@ class Mailer {
      * Check SMTP response code
      */
     private function checkSMTPResponse($response, $expectedCode) {
-        $code = substr($response, 0, 3);
+        // Get the first line of the response
+        $lines = explode("\r\n", trim($response));
+        $firstLine = $lines[0];
+        $code = substr($firstLine, 0, 3);
+
         if ($code !== $expectedCode) {
-            error_log("SMTP Error: Expected $expectedCode, got $code - $response");
+            error_log("SMTP Error: Expected $expectedCode, got $code - $firstLine");
             return false;
         }
         return true;
