@@ -65,10 +65,14 @@ class Mailer {
             error_log("====================");
 
             if ($this->smtpEnabled) {
-                return $this->sendViaSMTP($to, $subject, $message, $options);
-            } else {
-                return $this->sendViaMail($to, $subject, $message, $options);
+                $smtpResult = $this->sendViaSMTP($to, $subject, $message, $options);
+                if ($smtpResult) {
+                    return true;
+                }
+                // Fall back to PHP mail() if SMTP fails
+                error_log("SMTP failed, falling back to PHP mail() function");
             }
+            return $this->sendViaMail($to, $subject, $message, $options);
 
         } catch (Exception $e) {
             error_log("Mailer Exception: " . $e->getMessage());
@@ -93,7 +97,7 @@ class Mailer {
             $mailPort,
             $errno,
             $errstr,
-            30
+            10 // Reduced timeout from 30 to 10 seconds
         );
 
         if (!$socket) {
@@ -101,18 +105,12 @@ class Mailer {
             return false;
         }
 
-        // Read server greeting (may be multi-line)
-        $firstLine = fgets($socket, 515);
+        // Set socket timeout
+        stream_set_timeout($socket, 10);
 
-        // Read any additional lines of the greeting
-        while (($line = fgets($socket, 515)) !== false) {
-            if (substr($line, 3, 1) === ' ') { // Last line of multi-line response
-                break;
-            }
-        }
-
-        // Check only the first line for the greeting code
-        if (!$this->checkSMTPResponse($firstLine, '220')) {
+        // Read server greeting
+        $response = $this->readSMTPResponse($socket);
+        if (!$this->checkSMTPResponse($response, '220')) {
             fclose($socket);
             return false;
         }
@@ -120,43 +118,55 @@ class Mailer {
         // Send EHLO
         $serverName = $_SERVER['SERVER_NAME'] ?? $_SERVER['HTTP_HOST'] ?? 'localhost';
         fputs($socket, "EHLO " . $serverName . "\r\n");
-        $response = fgets($socket, 515);
+        $response = $this->readSMTPResponse($socket);
         if (!$this->checkSMTPResponse($response, '250')) {
             fclose($socket);
             return false;
         }
 
-        // Start TLS if required
+        // Start TLS if required (STARTTLS on port 587)
         if ($mailEncryption === 'tls') {
             fputs($socket, "STARTTLS\r\n");
-            $response = fgets($socket, 515);
+            $response = $this->readSMTPResponse($socket);
             if (!$this->checkSMTPResponse($response, '220')) {
                 fclose($socket);
                 return false;
             }
 
             // Upgrade to TLS
-            stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+            if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+                error_log("SMTP TLS upgrade failed");
+                fclose($socket);
+                return false;
+            }
+
+            // Send EHLO again after TLS upgrade
+            fputs($socket, "EHLO " . $serverName . "\r\n");
+            $response = $this->readSMTPResponse($socket);
+            if (!$this->checkSMTPResponse($response, '250')) {
+                fclose($socket);
+                return false;
+            }
         }
 
         // Authenticate
         if (!empty($mailUsername) && !empty($mailPassword)) {
             fputs($socket, "AUTH LOGIN\r\n");
-            $response = fgets($socket, 515);
+            $response = $this->readSMTPResponse($socket);
             if (!$this->checkSMTPResponse($response, '334')) {
                 fclose($socket);
                 return false;
             }
 
             fputs($socket, base64_encode($mailUsername) . "\r\n");
-            $response = fgets($socket, 515);
+            $response = $this->readSMTPResponse($socket);
             if (!$this->checkSMTPResponse($response, '334')) {
                 fclose($socket);
                 return false;
             }
 
             fputs($socket, base64_encode($mailPassword) . "\r\n");
-            $response = fgets($socket, 515);
+            $response = $this->readSMTPResponse($socket);
             if (!$this->checkSMTPResponse($response, '235')) {
                 fclose($socket);
                 return false;
@@ -165,7 +175,7 @@ class Mailer {
 
         // Send MAIL FROM
         fputs($socket, "MAIL FROM:<{$this->fromEmail}>\r\n");
-        $response = fgets($socket, 515);
+        $response = $this->readSMTPResponse($socket);
         if (!$this->checkSMTPResponse($response, '250')) {
             fclose($socket);
             return false;
@@ -173,7 +183,7 @@ class Mailer {
 
         // Send RCPT TO
         fputs($socket, "RCPT TO:<$to>\r\n");
-        $response = fgets($socket, 515);
+        $response = $this->readSMTPResponse($socket);
         if (!$this->checkSMTPResponse($response, '250')) {
             fclose($socket);
             return false;
@@ -181,7 +191,7 @@ class Mailer {
 
         // Send DATA
         fputs($socket, "DATA\r\n");
-        $response = fgets($socket, 515);
+        $response = $this->readSMTPResponse($socket);
         if (!$this->checkSMTPResponse($response, '354')) {
             fclose($socket);
             return false;
@@ -207,7 +217,7 @@ class Mailer {
         fputs($socket, $emailBody);
 
         // Check response
-        $response = fgets($socket, 515);
+        $response = $this->readSMTPResponse($socket);
         if (!$this->checkSMTPResponse($response, '250')) {
             fclose($socket);
             return false;
@@ -215,11 +225,38 @@ class Mailer {
 
         // Send QUIT
         fputs($socket, "QUIT\r\n");
-        fgets($socket, 515);
+        $this->readSMTPResponse($socket); // Read QUIT response but don't check
         fclose($socket);
 
         error_log("✓ Email sent successfully via SMTP to $to");
         return true;
+    }
+
+    /**
+     * Read complete SMTP response (handles multi-line responses)
+     */
+    private function readSMTPResponse($socket) {
+        $response = '';
+        $timeout = 0;
+
+        while (!feof($socket)) {
+            $line = fgets($socket, 515);
+            if ($line === false) {
+                $timeout++;
+                if ($timeout > 5) break; // Prevent infinite loop
+                continue;
+            }
+
+            $response .= $line;
+
+            // Check if this is the last line of a multi-line response
+            // Last line has space in 4th position, continuation lines have dash
+            if (strlen($line) >= 4 && substr($line, 3, 1) === ' ') {
+                break;
+            }
+        }
+
+        return trim($response);
     }
 
     /**
