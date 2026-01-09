@@ -321,8 +321,7 @@ $VALIDATION_RULES = [
         'items_per_page' => ['integer', 'min:5', 'max:100'],
         'date_format' => ['max:20'],
         'currency' => ['max:10'],
-        'email_notifications' => ['boolean'],
-        'sms_notifications' => ['boolean']
+
     ]
 ];
 

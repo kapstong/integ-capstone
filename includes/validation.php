@@ -282,7 +282,7 @@ class ValidationEngine {
                 // Validate steps
                 foreach ($data['steps'] as $step) {
                     if (!isset($step['name']) || !isset($step['type'])) return false;
-                    if (!in_array($step['type'], ['approval', 'action', 'notification', 'delay'])) return false;
+                    if (!in_array($step['type'], ['approval', 'action', 'delay'])) return false;
                 }
 
                 return true;

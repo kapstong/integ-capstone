@@ -611,7 +611,7 @@ class TwilioIntegration extends BaseIntegration {
 class SlackIntegration extends BaseIntegration {
     protected $name = 'slack';
     protected $displayName = 'Slack';
-    protected $description = 'Team communication and notifications';
+    protected $description = 'Team communication platform';
     protected $requiredConfig = ['webhook_url'];
     protected $webhookSupport = false; // Uses webhooks but not receiving them
 
