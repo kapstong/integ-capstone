@@ -16,7 +16,11 @@ class Mailer {
 
         // Check if SMTP is configured
         $mailHost = Config::get('mail.host');
-        if (!empty($mailHost) && $mailHost !== 'smtp.gmail.com') {
+        $mailUsername = Config::get('mail.username');
+        $mailPassword = Config::get('mail.password');
+
+        // Enable SMTP if credentials are provided or host is configured
+        if (!empty($mailHost) && (!empty($mailUsername) || $mailHost !== 'smtp.gmail.com')) {
             $this->smtpEnabled = true;
         }
     }
@@ -45,16 +49,10 @@ class Mailer {
                 return false;
             }
 
-            // Build headers
-            $headers = $this->buildHeaders($options);
-
             // Check if HTML email
             $isHtml = isset($options['html']) && $options['html'] === true;
             if ($isHtml) {
-                $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
                 $message = $this->wrapHtmlMessage($message, $subject);
-            } else {
-                $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
             }
 
             // Log email attempt
@@ -62,30 +60,199 @@ class Mailer {
             error_log("To: $to");
             error_log("From: {$this->fromEmail}");
             error_log("Subject: $subject");
+            error_log("SMTP Enabled: " . ($this->smtpEnabled ? 'Yes' : 'No'));
             error_log("Environment: " . (Config::isDevelopment() ? 'Development' : 'Production'));
             error_log("====================");
 
-            // Send email using PHP mail() function
-            // CyberPanel/Production servers typically have Postfix configured
-            $sent = @mail($to, $subject, $message, $headers);
-
-            if (!$sent) {
-                $lastError = error_get_last();
-                error_log("Mailer Error: Failed to send email to $to");
-                if ($lastError) {
-                    error_log("PHP Error: " . $lastError['message']);
-                }
-                return false;
+            if ($this->smtpEnabled) {
+                return $this->sendViaSMTP($to, $subject, $message, $options);
+            } else {
+                return $this->sendViaMail($to, $subject, $message, $options);
             }
-
-            error_log("✓ Email sent successfully to $to");
-            return true;
 
         } catch (Exception $e) {
             error_log("Mailer Exception: " . $e->getMessage());
             error_log("Stack trace: " . $e->getTraceAsString());
             return false;
         }
+    }
+
+    /**
+     * Send email via SMTP
+     */
+    private function sendViaSMTP($to, $subject, $message, $options = []) {
+        $mailHost = Config::get('mail.host');
+        $mailPort = Config::get('mail.port') ?: 587;
+        $mailUsername = Config::get('mail.username');
+        $mailPassword = Config::get('mail.password');
+        $mailEncryption = Config::get('mail.encryption') ?: 'tls';
+
+        // Create socket connection
+        $socket = @fsockopen(
+            ($mailEncryption === 'ssl' ? 'ssl://' : '') . $mailHost,
+            $mailPort,
+            $errno,
+            $errstr,
+            30
+        );
+
+        if (!$socket) {
+            error_log("SMTP Connection failed: $errstr ($errno)");
+            return false;
+        }
+
+        // Read server greeting
+        $response = fgets($socket, 515);
+        if (!$this->checkSMTPResponse($response, '220')) {
+            fclose($socket);
+            return false;
+        }
+
+        // Send EHLO
+        fputs($socket, "EHLO " . $_SERVER['SERVER_NAME'] . "\r\n");
+        $response = fgets($socket, 515);
+        if (!$this->checkSMTPResponse($response, '250')) {
+            fclose($socket);
+            return false;
+        }
+
+        // Start TLS if required
+        if ($mailEncryption === 'tls') {
+            fputs($socket, "STARTTLS\r\n");
+            $response = fgets($socket, 515);
+            if (!$this->checkSMTPResponse($response, '220')) {
+                fclose($socket);
+                return false;
+            }
+
+            // Upgrade to TLS
+            stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+        }
+
+        // Authenticate
+        if (!empty($mailUsername) && !empty($mailPassword)) {
+            fputs($socket, "AUTH LOGIN\r\n");
+            $response = fgets($socket, 515);
+            if (!$this->checkSMTPResponse($response, '334')) {
+                fclose($socket);
+                return false;
+            }
+
+            fputs($socket, base64_encode($mailUsername) . "\r\n");
+            $response = fgets($socket, 515);
+            if (!$this->checkSMTPResponse($response, '334')) {
+                fclose($socket);
+                return false;
+            }
+
+            fputs($socket, base64_encode($mailPassword) . "\r\n");
+            $response = fgets($socket, 515);
+            if (!$this->checkSMTPResponse($response, '235')) {
+                fclose($socket);
+                return false;
+            }
+        }
+
+        // Send MAIL FROM
+        fputs($socket, "MAIL FROM:<{$this->fromEmail}>\r\n");
+        $response = fgets($socket, 515);
+        if (!$this->checkSMTPResponse($response, '250')) {
+            fclose($socket);
+            return false;
+        }
+
+        // Send RCPT TO
+        fputs($socket, "RCPT TO:<$to>\r\n");
+        $response = fgets($socket, 515);
+        if (!$this->checkSMTPResponse($response, '250')) {
+            fclose($socket);
+            return false;
+        }
+
+        // Send DATA
+        fputs($socket, "DATA\r\n");
+        $response = fgets($socket, 515);
+        if (!$this->checkSMTPResponse($response, '354')) {
+            fclose($socket);
+            return false;
+        }
+
+        // Build email content
+        $isHtml = isset($options['html']) && $options['html'] === true;
+        $contentType = $isHtml ? 'text/html' : 'text/plain';
+
+        $emailBody = "From: {$this->fromName} <{$this->fromEmail}>\r\n";
+        $emailBody .= "To: $to\r\n";
+        $emailBody .= "Subject: $subject\r\n";
+        $emailBody .= "MIME-Version: 1.0\r\n";
+        $emailBody .= "Content-Type: $contentType; charset=UTF-8\r\n";
+        $emailBody .= "X-Mailer: PHP/" . phpversion() . "\r\n";
+        if (isset($options['priority'])) {
+            $emailBody .= "X-Priority: {$options['priority']}\r\n";
+        }
+        $emailBody .= "\r\n";
+        $emailBody .= $message;
+        $emailBody .= "\r\n.\r\n";
+
+        fputs($socket, $emailBody);
+
+        // Check response
+        $response = fgets($socket, 515);
+        if (!$this->checkSMTPResponse($response, '250')) {
+            fclose($socket);
+            return false;
+        }
+
+        // Send QUIT
+        fputs($socket, "QUIT\r\n");
+        fgets($socket, 515);
+        fclose($socket);
+
+        error_log("✓ Email sent successfully via SMTP to $to");
+        return true;
+    }
+
+    /**
+     * Send email via PHP mail() function
+     */
+    private function sendViaMail($to, $subject, $message, $options = []) {
+        // Build headers
+        $headers = $this->buildHeaders($options);
+
+        // Check if HTML email
+        $isHtml = isset($options['html']) && $options['html'] === true;
+        if ($isHtml) {
+            $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+        } else {
+            $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        }
+
+        // Send email using PHP mail() function
+        $sent = @mail($to, $subject, $message, $headers);
+
+        if (!$sent) {
+            $lastError = error_get_last();
+            error_log("Mailer Error: Failed to send email to $to");
+            if ($lastError) {
+                error_log("PHP Error: " . $lastError['message']);
+            }
+            return false;
+        }
+
+        error_log("✓ Email sent successfully via mail() to $to");
+        return true;
+    }
+
+    /**
+     * Check SMTP response code
+     */
+    private function checkSMTPResponse($response, $expectedCode) {
+        $code = substr($response, 0, 3);
+        if ($code !== $expectedCode) {
+            error_log("SMTP Error: Expected $expectedCode, got $code - $response");
+            return false;
+        }
+        return true;
     }
 
     /**
