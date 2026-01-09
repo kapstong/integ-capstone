@@ -218,33 +218,13 @@
                 // Show email address
                 document.getElementById('userEmail').textContent = data.email;
 
-                // Check if in development mode
-                if (data.development && data.dev_code) {
-                    // Show development message and auto-fill code
-                    document.getElementById('emailSentAlert').innerHTML = `
-                        <i class="fas fa-code me-2"></i>
-                        <strong>Development Mode</strong><br>
-                        Code: <strong>${data.dev_code}</strong> (automatically filled)<br>
-                        <small class="text-muted">This code was logged to server logs for debugging.</small>
-                    `;
+                // Start countdown timer
+                startCodeTimer();
 
-                    // Auto-fill the code
-                    document.getElementById('privacyCode').value = data.dev_code;
-
-                    // Focus verify button instead of code input
-                    setTimeout(() => {
-                        document.getElementById('privacyVerifyBtn').focus();
-                    }, 100);
-                } else {
-                    // Normal email mode
-                    // Start countdown timer
-                    startCodeTimer();
-
-                    // Focus on code input
-                    setTimeout(() => {
-                        document.getElementById('privacyCode').focus();
-                    }, 100);
-                }
+                // Focus on code input
+                setTimeout(() => {
+                    document.getElementById('privacyCode').focus();
+                }, 100);
 
             } else {
                 alert('Error: ' + (data.error || 'Failed to send code'));

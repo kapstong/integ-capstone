@@ -71,48 +71,31 @@ try {
         $_SESSION['privacy_verification_code'] = $code;
         $_SESSION['privacy_code_expires'] = time() + 300; // 5 minutes
 
-        // Check if we're in development mode
-        $isDevelopment = Config::isDevelopment();
+        // Send email using Mailer class
+        $mailer = Mailer::getInstance();
 
-        if ($isDevelopment) {
-            // In development, just return the code directly
-            error_log("Development mode: Privacy Mode Verification Code for {$user['email']}: {$code}");
+        error_log("About to send verification code to {$user['email']} for user {$user['first_name']}");
+        $mailSent = $mailer->sendVerificationCode($user['email'], $code, $user['first_name']);
+
+        if ($mailSent) {
+            // Log the code for security monitoring
+            error_log("Privacy Mode Verification Code sent to {$user['email']}: {$code}");
 
             ob_end_clean();
             echo json_encode([
                 'success' => true,
-                'message' => 'Development mode: Check server logs for verification code',
-                'email' => $user['email'],
-                'dev_code' => $code,
-                'development' => true
+                'message' => 'Verification code sent to your email',
+                'email' => $user['email']
             ]);
         } else {
-            // In production, try to send email
-            $mailer = Mailer::getInstance();
+            error_log("Failed to send verification code to {$user['email']}");
 
-            error_log("About to send verification code to {$user['email']} for user {$user['first_name']}");
-            $mailSent = $mailer->sendVerificationCode($user['email'], $code, $user['first_name']);
-
-            if ($mailSent) {
-                // Log the code for development (remove in production)
-                error_log("Privacy Mode Verification Code sent to {$user['email']}: {$code}");
-
-                ob_end_clean();
-                echo json_encode([
-                    'success' => true,
-                    'message' => 'Verification code sent to your email',
-                    'email' => $user['email']
-                ]);
-            } else {
-                error_log("Failed to send verification code to {$user['email']}");
-
-                ob_end_clean();
-                echo json_encode([
-                    'success' => false,
-                    'error' => 'Failed to send email. Please check your email configuration.',
-                    'debug_info' => 'Email sending failed - check server logs'
-                ]);
-            }
+            ob_end_clean();
+            echo json_encode([
+                'success' => false,
+                'error' => 'Failed to send email. Please contact system administrator.',
+                'debug_info' => 'Email sending failed - check server mail configuration'
+            ]);
         }
         exit;
     }
