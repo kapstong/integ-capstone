@@ -346,14 +346,16 @@
                 // Code was already verified, show amounts immediately
                 isHidden = false;
                 updateEyeButton();
+                // Since amounts were hidden by default, we need to show them now
+                showAmounts();
             } else {
-                // Not unlocked, hide amounts
-                hideAmounts();
+                // Not unlocked, keep amounts hidden (already hidden by default)
+                // hideAmounts() was already called during init
             }
         })
         .catch(error => {
-            // On error, default to hiding amounts
-            hideAmounts();
+            // On error, keep amounts hidden (already hidden by default)
+            // hideAmounts() was already called during init
         });
     }
 
@@ -490,14 +492,22 @@
         createPasswordModal();
         createEyeButton();
 
-        // Check if password was already entered in this session
+        // Hide amounts by default immediately
         setTimeout(function() {
-            checkSessionStatus();
-        }, 200);
+            hideAmounts();
+
+            // Then check if password was already entered in this session
+            setTimeout(function() {
+                checkSessionStatus();
+            }, 100);
+        }, 100);
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function() {
-                setTimeout(checkSessionStatus, 500);
+                setTimeout(function() {
+                    hideAmounts();
+                    setTimeout(checkSessionStatus, 100);
+                }, 100);
             });
         }
 
