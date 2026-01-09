@@ -58,15 +58,11 @@ if (isset($_COOKIE[session_name()])) {
     setcookie(session_name(), '', time() - 3600, '/');
 }
 
-// Start a new session for flash message
-session_start();
-
 // Redirect to login page with appropriate message
 if ($logoutType === 'timeout') {
     header('Location: index.php?info=session_timeout');
 } else {
-    $_SESSION['logout_success'] = true;
-    header('Location: index.php');
+    header('Location: index.php?logout=success');
 }
 exit;
 ?>
