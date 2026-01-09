@@ -7,7 +7,6 @@
 // Load production config if on production domain
 if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'financial.atierahotelandrestaurant.com') {
     require_once __DIR__ . '/config_production.php';
-    exit;
 }
 
 // Load environment variables from .env file
@@ -54,6 +53,7 @@ ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] =
 ini_set('session.cookie_samesite', 'Lax');
 
 // Configuration class
+if (!class_exists('Config')) {
 class Config {
     private static $config = [];
 
@@ -172,6 +172,7 @@ class Config {
     public static function isDevelopment() {
         return self::get('app.env') === 'development';
     }
+}
 }
 
 // Include required files
