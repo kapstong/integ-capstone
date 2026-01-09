@@ -1011,9 +1011,7 @@ body {
                             <li class="nav-item">
                                 <a class="nav-link" id="analytics-tab" data-bs-toggle="tab" href="#analytics" role="tab" aria-controls="analytics" aria-selected="false"><i class="fas fa-chart-line me-1"></i>Analytics</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" id="alerts-tab" data-bs-toggle="tab" href="#alerts" role="tab" aria-controls="alerts" aria-selected="false"><i class="fas fa-bell me-1"></i>Alerts</a>
-                            </li>
+
                             <li class="nav-item">
                                 <a class="nav-link" id="reports-tab" data-bs-toggle="tab" href="#reports" role="tab" aria-controls="reports" aria-selected="false"><i class="fas fa-chart-bar me-1"></i>Reports</a>
                             </li>
@@ -1235,52 +1233,7 @@ body {
                                     </div>
                                 </div>
                             </div>
-                            <!-- Alerts Tab -->
-                            <div class="tab-pane fade" id="alerts" role="tabpanel" aria-labelledby="alerts-tab" style="padding-bottom: 100px;">
-                                <div class="d-flex align-items-start mb-3">
-                                    <div class="alert-icon me-3">
-                                        <i class="fas fa-exclamation-triangle text-danger fa-lg"></i>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1 text-danger">Overdue Receivables</h6>
-                                        <p class="mb-1 small text-muted">Invoices are past due</p>
-                                        <small class="text-danger fw-bold">Action Required</small>
-                                    </div>
-                                </div>
 
-                                <div class="d-flex align-items-start mb-3">
-                                    <div class="alert-icon me-3">
-                                        <i class="fas fa-clock text-warning fa-lg"></i>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1 text-warning">Upcoming Payables</h6>
-                                        <p class="mb-1 small text-muted">Payments are due soon</p>
-                                        <small class="text-warning">Due Soon</small>
-                                    </div>
-                                </div>
-
-                                <div class="d-flex align-items-start mb-3">
-                                    <div class="alert-icon me-3">
-                                        <i class="fas fa-boxes text-info fa-lg"></i>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1 text-info">Low Stock Alert</h6>
-                                        <p class="mb-1 small text-muted">Inventory low</p>
-                                        <small class="text-info">Monitor Required</small>
-                                    </div>
-                                </div>
-
-                                <div class="d-flex align-items-start mb-3">
-                                    <div class="alert-icon me-3">
-                                        <i class="fas fa-calendar-check text-success fa-lg"></i>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1 text-success">Payroll Reminder</h6>
-                                        <p class="mb-1 small text-muted">Payroll due soon</p>
-                                        <small class="text-success">Upcoming Task</small>
-                                    </div>
-                                </div>
-                            </div>
                             <!-- Reports Tab -->
                             <div class="tab-pane fade" id="reports" role="tabpanel" aria-labelledby="reports-tab" style="padding-bottom: 100px;">
                                 <div class="row g-3">
@@ -1664,9 +1617,6 @@ body {
             modal.hide();
         }
     </script>
-
-    <!-- Notification System -->
-    <script src="../includes/notifications.js"></script>
 
     <!-- Privacy Mode - Hide amounts with asterisks + Eye button -->
     <script src="../includes/privacy_mode.js?v=4"></script>

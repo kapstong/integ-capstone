@@ -24,8 +24,6 @@ try {
         'theme' => 'light',
         'language' => 'en',
         'timezone' => 'Asia/Manila',
-        'email_notifications' => 1,
-        'sms_notifications' => 0,
         'dashboard_layout' => 'default',
         'items_per_page' => 10,
         'date_format' => 'M j, Y',
@@ -39,8 +37,6 @@ try {
         'theme' => 'light',
         'language' => 'en',
         'timezone' => 'Asia/Manila',
-        'email_notifications' => 1,
-        'sms_notifications' => 0,
         'dashboard_layout' => 'default',
         'items_per_page' => 10,
         'date_format' => 'M j, Y',
@@ -57,8 +53,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_preferences'])
         $theme = $_POST['theme'] ?? 'light';
         $language = $_POST['language'] ?? 'en';
         $timezone = $_POST['timezone'] ?? 'Asia/Manila';
-        $email_notifications = isset($_POST['email_notifications']) ? 1 : 0;
-        $sms_notifications = isset($_POST['sms_notifications']) ? 1 : 0;
         $dashboard_layout = $_POST['dashboard_layout'] ?? 'default';
         $items_per_page = (int)($_POST['items_per_page'] ?? 10);
         $date_format = $_POST['date_format'] ?? 'M j, Y';
@@ -67,14 +61,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_preferences'])
         // Update or insert user preferences
         $stmt = $db->prepare("
             INSERT INTO user_preferences
-            (user_id, theme, language, timezone, email_notifications, sms_notifications, dashboard_layout, items_per_page, date_format, currency, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            (user_id, theme, language, timezone, dashboard_layout, items_per_page, date_format, currency, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ON DUPLICATE KEY UPDATE
             theme = VALUES(theme),
             language = VALUES(language),
             timezone = VALUES(timezone),
-            email_notifications = VALUES(email_notifications),
-            sms_notifications = VALUES(sms_notifications),
             dashboard_layout = VALUES(dashboard_layout),
             items_per_page = VALUES(items_per_page),
             date_format = VALUES(date_format),
@@ -82,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_preferences'])
             updated_at = NOW()
         ");
         $stmt->execute([
-            $user_id, $theme, $language, $timezone, $email_notifications, $sms_notifications,
+            $user_id, $theme, $language, $timezone,
             $dashboard_layout, $items_per_page, $date_format, $currency
         ]);
 
@@ -94,8 +86,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_preferences'])
             'theme' => $theme,
             'language' => $language,
             'timezone' => $timezone,
-            'email_notifications' => $email_notifications,
-            'sms_notifications' => $sms_notifications,
             'dashboard_layout' => $dashboard_layout,
             'items_per_page' => $items_per_page,
             'date_format' => $date_format,
@@ -609,11 +599,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_privacy'])) {
                                     <i class="fas fa-sliders-h me-2"></i>Preferences
                                 </button>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notifications" type="button" role="tab">
-                                    <i class="fas fa-bell me-2"></i>Notifications
-                                </button>
-                            </li>
+
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" id="privacy-tab" data-bs-toggle="tab" data-bs-target="#privacy" type="button" role="tab">
                                     <i class="fas fa-shield-alt me-2"></i>Privacy
@@ -774,106 +760,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_privacy'])) {
                 </div>
             </div>
 
-            <!-- Notifications Tab -->
-            <div class="tab-pane fade" id="notifications" role="tabpanel">
-                <div class="row">
-                    <div class="col-md-8">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Notification Preferences</h6>
-                            </div>
-                            <div class="card-body">
-                                <form method="POST" action="">
-                                    <div class="settings-section">
-                                        <h6>Email Notifications</h6>
-                                        <div class="form-check mb-3">
-                                            <input class="form-check-input" type="checkbox" name="email_notifications" id="email_notifications" <?php echo $preferences['email_notifications'] ? 'checked' : ''; ?>>
-                                            <label class="form-check-label" for="email_notifications">
-                                                Receive email notifications for important updates
-                                            </label>
-                                        </div>
-                                        <div class="form-check mb-3">
-                                            <input class="form-check-input" type="checkbox" name="email_invoice_reminders" id="email_invoice_reminders">
-                                            <label class="form-check-label" for="email_invoice_reminders">
-                                                Invoice payment reminders
-                                            </label>
-                                        </div>
-                                        <div class="form-check mb-3">
-                                            <input class="form-check-input" type="checkbox" name="email_task_updates" id="email_task_updates">
-                                            <label class="form-check-label" for="email_task_updates">
-                                                Task assignments and updates
-                                            </label>
-                                        </div>
-                                    </div>
 
-                                    <div class="settings-section">
-                                        <h6>SMS Notifications</h6>
-                                        <div class="form-check mb-3">
-                                            <input class="form-check-input" type="checkbox" name="sms_notifications" id="sms_notifications" <?php echo $preferences['sms_notifications'] ? 'checked' : ''; ?>>
-                                            <label class="form-check-label" for="sms_notifications">
-                                                Receive SMS notifications for critical alerts
-                                            </label>
-                                        </div>
-                                        <div class="form-check mb-3">
-                                            <input class="form-check-input" type="checkbox" name="sms_overdue" id="sms_overdue">
-                                            <label class="form-check-label" for="sms_overdue">
-                                                Overdue payment alerts
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div class="settings-section">
-                                        <h6>In-App Notifications</h6>
-                                        <div class="form-check mb-3">
-                                            <input class="form-check-input" type="checkbox" name="inapp_notifications" id="inapp_notifications" checked>
-                                            <label class="form-check-label" for="inapp_notifications">
-                                                Show in-app notifications
-                                            </label>
-                                        </div>
-                                        <div class="form-check mb-3">
-                                            <input class="form-check-input" type="checkbox" name="sound_notifications" id="sound_notifications" checked>
-                                            <label class="form-check-label" for="sound_notifications">
-                                                Play notification sounds
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div class="d-flex justify-content-end">
-                                        <button type="submit" name="update_notifications" class="btn btn-primary">
-                                            <i class="fas fa-save me-2"></i>Save Notification Settings
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <!-- Notification Status -->
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Notification Status</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <strong>Email:</strong>
-                                    <span class="badge bg-<?php echo $preferences['email_notifications'] ? 'success' : 'secondary'; ?> ms-2">
-                                        <?php echo $preferences['email_notifications'] ? 'Enabled' : 'Disabled'; ?>
-                                    </span>
-                                </div>
-                                <div class="mb-3">
-                                    <strong>SMS:</strong>
-                                    <span class="badge bg-<?php echo $preferences['sms_notifications'] ? 'success' : 'secondary'; ?> ms-2">
-                                        <?php echo $preferences['sms_notifications'] ? 'Enabled' : 'Disabled'; ?>
-                                    </span>
-                                </div>
-                                <hr>
-                                <small class="text-muted">You can test notifications by creating a sample invoice or task.</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Privacy Tab -->
             <div class="tab-pane fade" id="privacy" role="tabpanel">
@@ -1250,3 +1137,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_privacy'])) {
     </script>
 </body>
 </html>
+    </script>
+            const sidebar = document.getElementById('sidebar');
+            const sidebar = document.getElementById('sidebar');
+            const sidebar = document.getElementById('sidebar');
+            const sidebar = document.getElementById('sidebar');
+            const sidebar = document.getElementById('sidebar');
+            const sidebar = document.getElementById('sidebar');

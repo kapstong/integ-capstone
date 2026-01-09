@@ -61,8 +61,6 @@ CREATE TABLE user_preferences (
     theme ENUM('light', 'dark', 'auto') DEFAULT 'light',
     language VARCHAR(10) DEFAULT 'en',
     timezone VARCHAR(50) DEFAULT 'Asia/Manila',
-    email_notifications BOOLEAN DEFAULT TRUE,
-    sms_notifications BOOLEAN DEFAULT FALSE,
     dashboard_layout VARCHAR(20) DEFAULT 'default',
     items_per_page INT DEFAULT 10,
     date_format VARCHAR(20) DEFAULT 'M j, Y',
@@ -384,18 +382,7 @@ CREATE TABLE saved_reports (
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
--- Notification Log
-CREATE TABLE notification_log (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    type ENUM('email', 'sms') NOT NULL,
-    recipient VARCHAR(255) NOT NULL,
-    subject VARCHAR(255),
-    content TEXT NOT NULL,
-    status ENUM('sent', 'failed', 'pending') DEFAULT 'pending',
-    error_message TEXT,
-    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+
 
 -- Uploaded Files
 CREATE TABLE uploaded_files (
@@ -628,7 +615,7 @@ CREATE TABLE workflow_steps (
     instance_id INT NOT NULL,
     step_index INT NOT NULL,
     step_name VARCHAR(100) NOT NULL,
-    step_type ENUM('approval', 'action', 'notification', 'delay') NOT NULL,
+    step_type ENUM('approval', 'action', 'delay') NOT NULL,
     status ENUM('pending', 'running', 'completed', 'failed', 'timed_out', 'scheduled') DEFAULT 'pending',
     related_task_id INT NULL,
     scheduled_at TIMESTAMP NULL,
@@ -678,13 +665,6 @@ INSERT INTO workflows (name, description, definition, created_by) VALUES
       "action": "schedule_payment",
       "delay_days": 0,
       "conditions": [{"field": "payment_terms", "operator": "==", "value": "Net 30"}]
-    },
-    {
-      "name": "Payment Reminder",
-      "type": "notification",
-      "template": "payment_reminder",
-      "delay_days": 25,
-      "recipients": ["finance_team"]
     }
   ]
 }', 1),
@@ -693,12 +673,6 @@ INSERT INTO workflows (name, description, definition, created_by) VALUES
   "trigger": "invoice.overdue",
   "conditions": [],
   "steps": [
-    {
-      "name": "Send Overdue Notice",
-      "type": "notification",
-      "template": "overdue_notice",
-      "recipients": ["customer"]
-    },
     {
       "name": "Escalate to Collections",
       "type": "action",
@@ -1320,3 +1294,7 @@ CREATE INDEX idx_integration_sync_logs_sync_date ON integration_sync_logs(sync_d
 -- - FINANCIALS_SCOPE.md
 -- - INTEGRATION_GUIDE.md
 -- ========================================================================================================
+-- 1. Login with default credentials: username=admin, password=admin123
+-- 1. Login with default credentials: username=admin, password=admin123
+-- - README_FINANCIALS.md
+-- - INTEGRATION_GUIDE.md

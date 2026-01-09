@@ -42,8 +42,8 @@ class WorkflowEngine {
                         'assignee_role' => 'manager',
                         'timeout_hours' => 24,
                         'actions' => [
-                            'approve' => ['status' => 'approved', 'notification' => 'Invoice approved by manager'],
-                            'reject' => ['status' => 'rejected', 'notification' => 'Invoice rejected by manager']
+                            'approve' => ['status' => 'approved'],
+                            'reject' => ['status' => 'rejected']
                         ]
                     ],
                     [
@@ -52,8 +52,8 @@ class WorkflowEngine {
                         'assignee_role' => 'finance',
                         'timeout_hours' => 48,
                         'actions' => [
-                            'approve' => ['status' => 'approved', 'notification' => 'Invoice approved by finance'],
-                            'reject' => ['status' => 'rejected', 'notification' => 'Invoice rejected by finance']
+                            'approve' => ['status' => 'approved'],
+                            'reject' => ['status' => 'rejected']
                         ]
                     ]
                 ]
@@ -73,13 +73,6 @@ class WorkflowEngine {
                         'conditions' => [
                             ['field' => 'payment_terms', 'operator' => '==', 'value' => 'Net 30']
                         ]
-                    ],
-                    [
-                        'name' => 'Payment Reminder',
-                        'type' => 'notification',
-                        'template' => 'payment_reminder',
-                        'delay_days' => 25,
-                        'recipients' => ['finance_team']
                     ]
                 ]
             ],
@@ -90,12 +83,6 @@ class WorkflowEngine {
                 'trigger' => 'invoice.overdue',
                 'conditions' => [],
                 'steps' => [
-                    [
-                        'name' => 'Send Overdue Notice',
-                        'type' => 'notification',
-                        'template' => 'overdue_notice',
-                        'recipients' => ['customer']
-                    ],
                     [
                         'name' => 'Escalate to Collections',
                         'type' => 'action',
@@ -117,12 +104,6 @@ class WorkflowEngine {
                 ],
                 'steps' => [
                     [
-                        'name' => 'Budget Alert',
-                        'type' => 'notification',
-                        'template' => 'budget_alert',
-                        'recipients' => ['budget_managers', 'department_head']
-                    ],
-                    [
                         'name' => 'Freeze Transactions',
                         'type' => 'action',
                         'action' => 'require_approval',
@@ -138,12 +119,6 @@ class WorkflowEngine {
                 'trigger' => 'customer.created',
                 'conditions' => [],
                 'steps' => [
-                    [
-                        'name' => 'Send Welcome Email',
-                        'type' => 'notification',
-                        'template' => 'customer_welcome',
-                        'recipients' => ['customer']
-                    ],
                     [
                         'name' => 'Create Credit Application',
                         'type' => 'action',
@@ -347,9 +322,7 @@ class WorkflowEngine {
                 case 'action':
                     $this->executeActionStep($stepId, $step, $data);
                     break;
-                case 'notification':
-                    $this->executeNotificationStep($stepId, $step, $data);
-                    break;
+
                 case 'delay':
                     $this->scheduleDelayedStep($stepId, $step, $data);
                     break;
@@ -439,26 +412,7 @@ class WorkflowEngine {
         }
     }
 
-    /**
-     * Execute notification step
-     */
-    private function executeNotificationStep($stepId, $step, $data) {
-        try {
-            $template = $step['template'];
-            $recipients = $step['recipients'];
 
-            $this->sendNotification($template, $recipients, $data);
-
-            // Mark step as completed
-            $this->updateStepStatus($stepId, 'completed');
-
-        } catch (Exception $e) {
-            Logger::getInstance()->error("Notification step execution failed: $stepId", [
-                'template' => $template,
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
 
     /**
      * Schedule delayed step execution
@@ -598,45 +552,7 @@ class WorkflowEngine {
         Logger::getInstance()->info("Approval required", ['step' => $step, 'data' => $data]);
     }
 
-    /**
-     * Send notification
-     */
-    private function sendNotification($template, $recipients, $data) {
-        try {
-            $notificationSystem = new NotificationSystem();
 
-            foreach ($recipients as $recipientType) {
-                switch ($recipientType) {
-                    case 'customer':
-                        if (isset($data['customer_email'])) {
-                            $notificationSystem->sendEmail($data['customer_email'], $template, $data);
-                        }
-                        break;
-                    case 'finance_team':
-                        // Send to finance team
-                        $notificationSystem->sendToRole('finance', $template, $data);
-                        break;
-                    case 'budget_managers':
-                        // Send to budget managers
-                        $notificationSystem->sendToRole('manager', $template, $data);
-                        break;
-                    case 'department_head':
-                        // Send to department head
-                        if (isset($data['department'])) {
-                            $notificationSystem->sendToDepartment($data['department'], $template, $data);
-                        }
-                        break;
-                }
-            }
-
-        } catch (Exception $e) {
-            Logger::getInstance()->error("Failed to send notification", [
-                'template' => $template,
-                'recipients' => $recipients,
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
 
     /**
      * Update step status
@@ -851,3 +767,10 @@ class WorkflowEngine {
     }
 }
 ?>
+?>
+                       COUNT(CASE WHEN ws.status = 'completed' THEN 1 END) as completed_steps
+        }
+    }
+?>
+?>
+                       COUNT(CASE WHEN ws.status = 'completed' THEN 1 END) as completed_steps
