@@ -130,10 +130,10 @@ class Config {
 }
 }
 
-// Production error handling
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(E_ERROR | E_PARSE);
+// Production error handling - temporarily enable for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
 // Include required files
 require_once __DIR__ . '/includes/database.php';
