@@ -44,28 +44,23 @@
                 if (hasAmount) {
                     const originalText = text;
 
-                    // Function to create asterisks of same length as match
-                    function createAsterisks(match) {
-                        return '*'.repeat(match.length);
-                    }
-
                     const hiddenText = text
-                        // Match ₱ with optional minus and numbers - preserve length
-                        .replace(/₱\s*-?[\d,]+\.?\d*/g, createAsterisks)
-                        // Match $ with optional minus and numbers - preserve length
-                        .replace(/\$\s*-?[\d,]+\.?\d*/g, createAsterisks)
-                        // Match € with optional minus and numbers - preserve length
-                        .replace(/€\s*-?[\d,]+\.?\d*/g, createAsterisks)
-                        // Match £ with optional minus and numbers - preserve length
-                        .replace(/£\s*-?[\d,]+\.?\d*/g, createAsterisks)
-                        // Match ¥ with optional minus and numbers - preserve length
-                        .replace(/¥\s*-?[\d,]+\.?\d*/g, createAsterisks)
-                        // Match PHP with optional minus and numbers - preserve length
-                        .replace(/PHP\s*-?[\d,]+\.?\d*/g, createAsterisks)
-                        // Match P (without peso symbol) with optional minus and numbers - preserve length
-                        .replace(/P\s*-?[\d,]+\.?\d*/g, createAsterisks)
-                        // Match amounts in parentheses (accounting format) - preserve length
-                        .replace(/\(\s*[₱$€£¥P]?\s*[\d,]+\.?\d*\s*\)/g, createAsterisks);
+                        // Match ₱ with optional minus and numbers
+                        .replace(/₱\s*-?[\d,]+\.?\d*/g, '₱*********')
+                        // Match $ with optional minus and numbers
+                        .replace(/\$\s*-?[\d,]+\.?\d*/g, '$*********')
+                        // Match € with optional minus and numbers
+                        .replace(/€\s*-?[\d,]+\.?\d*/g, '€*********')
+                        // Match £ with optional minus and numbers
+                        .replace(/£\s*-?[\d,]+\.?\d*/g, '£*********')
+                        // Match ¥ with optional minus and numbers
+                        .replace(/¥\s*-?[\d,]+\.?\d*/g, '¥*********')
+                        // Match PHP with optional minus and numbers
+                        .replace(/PHP\s*-?[\d,]+\.?\d*/g, 'PHP *********')
+                        // Match P (without peso symbol) with optional minus and numbers - CRITICAL FIX
+                        .replace(/P\s*-?[\d,]+\.?\d*/g, 'P*********')
+                        // Match amounts in parentheses (accounting format)
+                        .replace(/\(\s*([₱$€£¥P]?)\s*[\d,]+\.?\d*\s*\)/g, '($1********)');
 
                     if (hiddenText !== originalText) {
                         hiddenElements.push({
@@ -184,7 +179,7 @@
 
         // Auto-verify when 6 digits entered
         document.getElementById('privacyCode').addEventListener('input', (e) => {
-            const code = e.target.value.trim();
+            const code = e.target.value;
             if (code.length === 6 && /^\d{6}$/.test(code)) {
                 verifyCodeAndShow();
             }
@@ -277,7 +272,7 @@
         const codeInput = document.getElementById('privacyCode');
         const errorDiv = document.getElementById('privacyCodeError');
         const verifyBtn = document.getElementById('privacyVerifyBtn');
-        const code = codeInput.value.trim();
+        const code = codeInput.value;
 
         if (!code || code.length !== 6) {
             codeInput.classList.add('is-invalid');
@@ -494,15 +489,6 @@
      * Initialize privacy mode
      */
     function init() {
-        // Check if privacy mode is enabled for this user
-        const privacyEnabled = window.userSettings && window.userSettings.amountPrivacyEnabled;
-
-        if (!privacyEnabled) {
-            // Privacy mode disabled - amounts always visible
-            isHidden = false;
-            return;
-        }
-
         createPasswordModal();
         createEyeButton();
 

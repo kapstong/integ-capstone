@@ -836,7 +836,7 @@ body {
 </style>
 </head>
 <body>
-    <div class="sidebar" id="sidebar">
+    <div class="sidebar sidebar-collapsed" id="sidebar">
         <div class="p-3">
             <h5 class="navbar-brand"><img src="atieralogo.png" alt="Atiera Logo" style="height: 100px;"></h5>
             <hr style="border-top: 2px solid white; margin: 10px 0;">
@@ -1308,19 +1308,6 @@ body {
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Pass user settings to JavaScript
-        window.userSettings = {
-            amountPrivacyEnabled: <?php
-                // Get user preferences
-                $user_id = $_SESSION['user']['id'];
-                $stmt = $db->prepare("SELECT amount_privacy_enabled FROM user_preferences WHERE user_id = ?");
-                $stmt->execute([$user_id]);
-                $pref = $stmt->fetch(PDO::FETCH_ASSOC);
-                echo ($pref['amount_privacy_enabled'] ?? 0) ? 'true' : 'false';
-            ?>
-        };
-    </script>
     <script>
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('show');

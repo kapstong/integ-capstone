@@ -27,8 +27,7 @@ try {
         'dashboard_layout' => 'default',
         'items_per_page' => 10,
         'date_format' => 'M j, Y',
-        'currency' => 'PHP',
-        'amount_privacy_enabled' => 0
+        'currency' => 'PHP'
     ];
 
 } catch (Exception $e) {
@@ -105,7 +104,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_privacy'])) {
         $profile_visibility = $_POST['profile_visibility'] ?? 'private';
         $activity_visibility = $_POST['activity_visibility'] ?? 'private';
         $data_sharing = isset($_POST['data_sharing']) ? 1 : 0;
-        $amount_privacy_enabled = isset($_POST['amount_privacy_enabled']) ? 1 : 0;
 
         // Update privacy settings
         $stmt = $db->prepare("
@@ -118,22 +116,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_privacy'])) {
         ");
         $stmt->execute([$profile_visibility, $activity_visibility, $data_sharing, $user_id]);
 
-        // Update amount privacy setting in user_preferences
-        $stmt = $db->prepare("
-            INSERT INTO user_preferences
-            (user_id, amount_privacy_enabled, updated_at)
-            VALUES (?, ?, NOW())
-            ON DUPLICATE KEY UPDATE
-            amount_privacy_enabled = VALUES(amount_privacy_enabled),
-            updated_at = NOW()
-        ");
-        $stmt->execute([$user_id, $amount_privacy_enabled]);
-
         $message = 'Privacy settings updated successfully';
         $messageType = 'success';
-
-        // Update preferences array
-        $preferences['amount_privacy_enabled'] = $amount_privacy_enabled;
 
     } catch (Exception $e) {
         $message = 'Error updating privacy settings: ' . $e->getMessage();
@@ -808,17 +792,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_privacy'])) {
                                     </div>
 
                                     <div class="settings-section">
-                                        <h6>Amount Privacy Mode</h6>
-                                        <div class="form-check mb-3">
-                                            <input class="form-check-input" type="checkbox" name="amount_privacy_enabled" id="amount_privacy_enabled" <?php echo ($preferences['amount_privacy_enabled'] ?? 1) ? 'checked' : ''; ?>>
-                                            <label class="form-check-label" for="amount_privacy_enabled">
-                                                Enable privacy mode for financial amounts
-                                            </label>
-                                        </div>
-                                        <small class="text-muted">When enabled, amounts are hidden by default and require verification to view. When disabled, amounts are always visible.</small>
-                                    </div>
-
-                                    <div class="settings-section">
                                         <h6>Data Sharing</h6>
                                         <div class="form-check mb-3">
                                             <input class="form-check-input" type="checkbox" name="data_sharing" id="data_sharing">
@@ -1021,13 +994,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_privacy'])) {
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Pass PHP settings to JavaScript
-        window.userSettings = {
-            amountPrivacyEnabled: <?php echo ($preferences['amount_privacy_enabled'] ?? 1) ? 'true' : 'false'; ?>
-        };
-    </script>
-    <script src="../includes/privacy_mode.js?v=4"></script>
     <script>
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('show');

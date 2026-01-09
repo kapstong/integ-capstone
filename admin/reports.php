@@ -995,19 +995,6 @@ $db = Database::getInstance()->getConnection();
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Pass user settings to JavaScript
-        window.userSettings = {
-            amountPrivacyEnabled: <?php
-                // Get user preferences
-                $user_id = $_SESSION['user']['id'];
-                $stmt = $db->prepare("SELECT amount_privacy_enabled FROM user_preferences WHERE user_id = ?");
-                $stmt->execute([$user_id]);
-                $pref = $stmt->fetch(PDO::FETCH_ASSOC);
-                echo ($pref['amount_privacy_enabled'] ?? 0) ? 'true' : 'false';
-            ?>
-        };
-    </script>
-    <script>
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('show');
             updateFooterPosition();
