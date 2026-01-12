@@ -111,14 +111,15 @@
                 const textNodes = Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
                 textNodes.forEach(node => {
                     // Replace any asterisk patterns with the original text
-                    // This is a fallback since we don't have the exact original for dynamically loaded content
-                    if (node.nodeValue && node.nodeValue.includes('*********')) {
-                        // Try to restore from data-privacy-original if available
-                        const originalNodeText = el.getAttribute('data-privacy-original');
-                        if (originalNodeText && node.nodeValue.includes('*********')) {
-                            node.nodeValue = originalNodeText;
+                        // This is a fallback since we don't have the exact original for dynamically loaded content
+                        // Detect any run of 3 or more asterisks (covers variants like 8 or 9 stars)
+                        if (node.nodeValue && /\*{3,}/.test(node.nodeValue)) {
+                            // Try to restore from data-privacy-original if available
+                            const originalNodeText = el.getAttribute('data-privacy-original');
+                            if (originalNodeText && /\*{3,}/.test(node.nodeValue)) {
+                                node.nodeValue = originalNodeText;
+                            }
                         }
-                    }
                 });
                 el.removeAttribute('data-privacy-hidden');
                 el.removeAttribute('data-privacy-original');
@@ -564,7 +565,8 @@
                             if (originalText) {
                                 const textNodes = Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
                                 textNodes.forEach(node => {
-                                    if (node.nodeValue && node.nodeValue.includes('*********')) {
+                                    // Restore any masked text nodes that contain 3+ asterisks
+                                    if (node.nodeValue && /\*{3,}/.test(node.nodeValue)) {
                                         node.nodeValue = originalText;
                                     }
                                 });
