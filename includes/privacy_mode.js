@@ -595,3 +595,41 @@
     init();
 
 })();
+
+// Ensure the sidebar toggle sits vertically centered relative to the sidebar
+(function() {
+    function positionSidebarToggle() {
+        try {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.querySelector('.sidebar-toggle');
+            if (!sidebar || !toggle) return;
+
+            // Get sidebar box and compute center
+            const rect = sidebar.getBoundingClientRect();
+            const toggleHeight = toggle.offsetHeight || 40;
+            const top = rect.top + (rect.height / 2) - (toggleHeight / 2);
+
+            // Apply computed top as pixels (position: fixed in CSS), clamp to viewport
+            const clampedTop = Math.max(8, Math.min(top, window.innerHeight - toggleHeight - 8));
+            toggle.style.top = clampedTop + 'px';
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    // Run on load
+    window.addEventListener('load', positionSidebarToggle);
+    // Run on resize and scroll
+    window.addEventListener('resize', positionSidebarToggle);
+    window.addEventListener('scroll', positionSidebarToggle, { passive: true });
+
+    // Also observe sidebar attribute changes (collapse/expand) and reposition
+    const sidebarEl = document.getElementById('sidebar');
+    if (sidebarEl) {
+        const mo = new MutationObserver(positionSidebarToggle);
+        mo.observe(sidebarEl, { attributes: true, attributeFilter: ['class', 'style'] });
+    }
+
+    // Initial align attempt
+    setTimeout(positionSidebarToggle, 120);
+})();
