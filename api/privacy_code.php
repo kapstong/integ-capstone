@@ -76,15 +76,13 @@ try {
         $mailSent = $mailer->sendVerificationCode($user['email'], $code, $user['first_name']);
 
         if ($mailSent) {
-            // Log the code for development (remove in production)
-            error_log("Privacy Mode Verification Code sent to {$user['email']}: {$code}");
+            error_log("Privacy Mode Verification Code sent to {$user['email']}");
 
             ob_end_clean();
             echo json_encode([
                 'success' => true,
                 'message' => 'Verification code sent to your email',
-                'email' => $user['email'],
-                'dev_code' => $code // Remove this in production!
+                'masked_email' => maskEmail($user['email'])
             ]);
         } else {
             ob_end_clean();
@@ -175,4 +173,25 @@ try {
     ]);
 }
 exit;
+
+function maskEmail($email) {
+    $parts = explode('@', $email, 2);
+    if (count($parts) !== 2) {
+        return $email;
+    }
+
+    $local = $parts[0];
+    $domain = $parts[1];
+
+    $localLen = strlen($local);
+    if ($localLen <= 2) {
+        $maskedLocal = str_repeat('*', $localLen);
+    } elseif ($localLen <= 4) {
+        $maskedLocal = substr($local, 0, 1) . str_repeat('*', max(0, $localLen - 2)) . substr($local, -1);
+    } else {
+        $maskedLocal = substr($local, 0, 2) . str_repeat('*', $localLen - 4) . substr($local, -2);
+    }
+
+    return $maskedLocal . '@' . $domain;
+}
 ?>

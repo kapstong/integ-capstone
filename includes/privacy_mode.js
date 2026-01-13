@@ -215,8 +215,9 @@
                 document.getElementById('codeVerifySection').style.display = 'block';
                 document.getElementById('privacyVerifyBtn').style.display = 'block';
 
-                // Show email address
-                document.getElementById('userEmail').textContent = data.email;
+                // Show masked email address
+                const maskedEmail = data.masked_email || maskEmail(data.email || '');
+                document.getElementById('userEmail').textContent = maskedEmail;
 
                 // Start countdown timer
                 startCodeTimer();
@@ -481,6 +482,31 @@
             icon.className = 'fas fa-eye';
             eyeButton.title = 'Amounts Visible - Click to Hide';
         }
+    }
+
+    /**
+     * Mask email address for display
+     */
+    function maskEmail(email) {
+        if (!email || email.indexOf('@') === -1) {
+            return email;
+        }
+
+        const parts = email.split('@');
+        const local = parts[0];
+        const domain = parts[1];
+        const localLen = local.length;
+
+        let maskedLocal = '';
+        if (localLen <= 2) {
+            maskedLocal = '*'.repeat(localLen);
+        } else if (localLen <= 4) {
+            maskedLocal = local.slice(0, 1) + '*'.repeat(Math.max(0, localLen - 2)) + local.slice(-1);
+        } else {
+            maskedLocal = local.slice(0, 2) + '*'.repeat(localLen - 4) + local.slice(-2);
+        }
+
+        return maskedLocal + '@' + domain;
     }
 
     /**
