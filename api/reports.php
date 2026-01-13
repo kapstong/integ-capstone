@@ -62,6 +62,44 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
         exit(0);
     }
+
+    // Handle email report request
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $payload = json_decode(file_get_contents('php://input'), true);
+        $action = $payload['action'] ?? '';
+
+        if ($action === 'email') {
+            require_once '../includes/mailer.php';
+
+            $reportType = $payload['report_type'] ?? '';
+            $reportName = $payload['report_name'] ?? 'Financial Report';
+            $email = $payload['email'] ?? '';
+            $dateFrom = $payload['date_from'] ?? '';
+            $dateTo = $payload['date_to'] ?? '';
+
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                ob_clean();
+                echo json_encode(['success' => false, 'error' => 'Invalid email address']);
+                exit;
+            }
+
+            $dateFromFinal = $dateFrom ?: date('Y-m-01');
+            $dateToFinal = $dateTo ?: date('Y-m-d');
+
+            $summary = buildReportSummary($db, $reportType, $dateFromFinal, $dateToFinal);
+            $message = buildReportEmailBody($reportName, $dateFromFinal, $dateToFinal, $summary);
+
+            $mailer = Mailer::getInstance();
+            $sent = $mailer->send($email, $reportName . ' - ATIERA Finance', $message, ['html' => true]);
+
+            ob_clean();
+            echo json_encode([
+                'success' => $sent,
+                'error' => $sent ? null : 'Failed to send email'
+            ]);
+            exit;
+        }
+    }
     $reportType = $_GET['type'] ?? '';
     $dateFrom = $_GET['date_from'] ?? '';
     $dateTo = $_GET['date_to'] ?? '';
@@ -139,22 +177,20 @@ try {
             ob_start();
         }
 
-        // Get revenue data (from journal entries - placeholder for now)
-        // Build query based on whether dates are provided
+        // Get revenue data from daily revenue summary by department
         if (!empty($dateFrom) || !empty($dateTo)) {
+            $whereConditions = [];
+            if (!empty($dateFrom)) $whereConditions[] = "drs.business_date >= :date_from";
+            if (!empty($dateTo)) $whereConditions[] = "drs.business_date <= :date_to";
+
             $revenueQuery = $db->prepare("
                 SELECT
-                    coa.account_name,
-                    SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as amount
-                FROM chart_of_accounts coa
-                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-                    AND je.status = 'posted'
-                    " . (!empty($dateFrom) ? "AND je.entry_date >= :date_from" : "") . "
-                    " . (!empty($dateTo) ? "AND je.entry_date <= :date_to" : "") . "
-                WHERE coa.account_type = 'revenue'
-                    AND coa.is_active = 1
-                GROUP BY coa.id, coa.account_name
+                    COALESCE(d.dept_name, 'General Revenue') as account_name,
+                    SUM(drs.net_revenue) as amount
+                FROM daily_revenue_summary drs
+                LEFT JOIN departments d ON drs.department_id = d.id
+                " . (!empty($whereConditions) ? "WHERE " . implode(" AND ", $whereConditions) : "") . "
+                GROUP BY d.dept_name
                 HAVING amount > 0
             ");
             $params = [];
@@ -164,15 +200,11 @@ try {
         } else {
             $revenueQuery = $db->prepare("
                 SELECT
-                    coa.account_name,
-                    SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as amount
-                FROM chart_of_accounts coa
-                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-                    AND je.status = 'posted'
-                WHERE coa.account_type = 'revenue'
-                    AND coa.is_active = 1
-                GROUP BY coa.id, coa.account_name
+                    COALESCE(d.dept_name, 'General Revenue') as account_name,
+                    SUM(drs.net_revenue) as amount
+                FROM daily_revenue_summary drs
+                LEFT JOIN departments d ON drs.department_id = d.id
+                GROUP BY d.dept_name
                 HAVING amount > 0
             ");
             $revenueQuery->execute();
@@ -634,9 +666,8 @@ try {
                     WHEN 'expense' THEN 'jan_amount'
                 END as jan_budget,
                 db.jan_amount as jan_actual,
-                -- Placeholder for actual calculations - would pull from real data
                 COALESCE(db.jan_amount, 0) as jan_budget_amount,
-                0 as jan_actual_amount, -- Would calculate from actual transactions
+                0 as jan_actual_amount,
                 db.feb_amount as feb_budget_amount, 0 as feb_actual_amount,
                 db.mar_amount as mar_budget_amount, 0 as mar_actual_amount,
                 db.apr_amount as apr_budget_amount, 0 as apr_actual_amount,
@@ -664,21 +695,47 @@ try {
         $budgetQuery->execute($params);
         $budgetData = $budgetQuery->fetchAll(PDO::FETCH_ASSOC);
 
-        // Calculate actuals from real data (simplified - in real implementation would be more complex)
+        // Load actuals from daily revenue and expense summaries
+        $revenueActuals = [];
+        $expenseActuals = [];
+
+        $revenueStmt = $db->prepare("
+            SELECT department_id, MONTH(business_date) as month_num, SUM(net_revenue) as amount
+            FROM daily_revenue_summary
+            WHERE YEAR(business_date) = ?
+            GROUP BY department_id, MONTH(business_date)
+        ");
+        $revenueStmt->execute([$budgetYear]);
+        foreach ($revenueStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $revenueActuals[$row['department_id']][intval($row['month_num'])] = floatval($row['amount']);
+        }
+
+        $expenseStmt = $db->prepare("
+            SELECT department_id, MONTH(business_date) as month_num, SUM(total_amount) as amount
+            FROM daily_expense_summary
+            WHERE YEAR(business_date) = ?
+            GROUP BY department_id, MONTH(business_date)
+        ");
+        $expenseStmt->execute([$budgetYear]);
+        foreach ($expenseStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $expenseActuals[$row['department_id']][intval($row['month_num'])] = floatval($row['amount']);
+        }
+
+        $monthKeys = [
+            1 => 'jan', 2 => 'feb', 3 => 'mar', 4 => 'apr', 5 => 'may', 6 => 'jun',
+            7 => 'jul', 8 => 'aug', 9 => 'sep', 10 => 'oct', 11 => 'nov', 12 => 'dec'
+        ];
+
+        // Calculate actuals using summary tables
         foreach ($budgetData as &$dept) {
-            // Calculate actual revenue per month from revenue centers/transaction data
-            $dept['jan_actual_amount'] = 0; // Would query from daily_revenue_summary, etc.
-            $dept['feb_actual_amount'] = 0;
-            $dept['mar_actual_amount'] = 0;
-            $dept['apr_actual_amount'] = 0;
-            $dept['may_actual_amount'] = 0;
-            $dept['jun_actual_amount'] = 0;
-            $dept['jul_actual_amount'] = 0;
-            $dept['aug_actual_amount'] = 0;
-            $dept['sep_actual_amount'] = 0;
-            $dept['oct_actual_amount'] = 0;
-            $dept['nov_actual_amount'] = 0;
-            $dept['dec_actual_amount'] = 0;
+            $deptId = $dept['department_id'];
+            $actualMap = $dept['budget_type'] === 'revenue'
+                ? ($revenueActuals[$deptId] ?? [])
+                : ($expenseActuals[$deptId] ?? []);
+
+            foreach ($monthKeys as $monthNum => $prefix) {
+                $dept[$prefix . '_actual_amount'] = $actualMap[$monthNum] ?? 0;
+            }
 
             // Calculate variances
             $dept['jan_variance'] = $dept['jan_actual_amount'] - $dept['jan_budget_amount'];
@@ -738,8 +795,7 @@ try {
             'budget_month' => $budgetMonth,
             'department_data' => $budgetData,
             'totals' => $totals,
-            'report_date' => date('Y-m-d'),
-            'note' => 'This report shows budgeted vs actual figures. Actual figures are currently placeholders - requires implementation of actual calculation logic.'
+            'report_date' => date('Y-m-d')
         ]);
         exit;
     }
@@ -766,6 +822,87 @@ try {
                 'operating_expenses' => intval($summaryData['operating_expenses'] ?? 0),
                 'total_expenses' => intval(($summaryData['payroll_expenses'] ?? 0) + ($summaryData['operating_expenses'] ?? 0)),
                 'days_counted' => intval($summaryData['days_counted'] ?? 0)
+            ]
+        ]);
+        exit;
+    }
+
+    // Handle analytics summary (trend + MTD)
+    if ($reportType === 'analytics_summary') {
+        $endDate = date('Y-m-d');
+        $startDate = date('Y-m-01', strtotime('-5 months'));
+
+        $trendRevenueStmt = $db->prepare("
+            SELECT DATE_FORMAT(business_date, '%Y-%m') as month_key,
+                   SUM(net_revenue) as total
+            FROM daily_revenue_summary
+            WHERE business_date BETWEEN ? AND ?
+            GROUP BY DATE_FORMAT(business_date, '%Y-%m')
+            ORDER BY month_key
+        ");
+        $trendRevenueStmt->execute([$startDate, $endDate]);
+        $revenueRows = $trendRevenueStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $trendExpenseStmt = $db->prepare("
+            SELECT DATE_FORMAT(business_date, '%Y-%m') as month_key,
+                   SUM(total_amount) as total
+            FROM daily_expense_summary
+            WHERE business_date BETWEEN ? AND ?
+            GROUP BY DATE_FORMAT(business_date, '%Y-%m')
+            ORDER BY month_key
+        ");
+        $trendExpenseStmt->execute([$startDate, $endDate]);
+        $expenseRows = $trendExpenseStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $revenueMap = [];
+        foreach ($revenueRows as $row) {
+            $revenueMap[$row['month_key']] = floatval($row['total']);
+        }
+        $expenseMap = [];
+        foreach ($expenseRows as $row) {
+            $expenseMap[$row['month_key']] = floatval($row['total']);
+        }
+
+        $months = [];
+        $revenueSeries = [];
+        $expenseSeries = [];
+
+        for ($i = 5; $i >= 0; $i--) {
+            $monthKey = date('Y-m', strtotime("-{$i} months"));
+            $months[] = date('M Y', strtotime($monthKey . '-01'));
+            $revenueSeries[] = $revenueMap[$monthKey] ?? 0;
+            $expenseSeries[] = $expenseMap[$monthKey] ?? 0;
+        }
+
+        $mtdStart = date('Y-m-01');
+        $mtdRevenueStmt = $db->prepare("
+            SELECT COALESCE(SUM(net_revenue), 0) as total
+            FROM daily_revenue_summary
+            WHERE business_date BETWEEN ? AND ?
+        ");
+        $mtdRevenueStmt->execute([$mtdStart, $endDate]);
+        $mtdRevenue = floatval($mtdRevenueStmt->fetch(PDO::FETCH_ASSOC)['total']);
+
+        $mtdExpenseStmt = $db->prepare("
+            SELECT COALESCE(SUM(total_amount), 0) as total
+            FROM daily_expense_summary
+            WHERE business_date BETWEEN ? AND ?
+        ");
+        $mtdExpenseStmt->execute([$mtdStart, $endDate]);
+        $mtdExpense = floatval($mtdExpenseStmt->fetch(PDO::FETCH_ASSOC)['total']);
+
+        ob_clean();
+        echo json_encode([
+            'success' => true,
+            'trend' => [
+                'labels' => $months,
+                'revenue' => $revenueSeries,
+                'expenses' => $expenseSeries
+            ],
+            'mtd' => [
+                'revenue' => $mtdRevenue,
+                'expenses' => $mtdExpense,
+                'net' => $mtdRevenue - $mtdExpense
             ]
         ]);
         exit;
@@ -949,5 +1086,130 @@ try {
         'file' => $e->getFile(),
         'line' => $e->getLine()
     ]);
+}
+
+function buildReportSummary($db, $reportType, $dateFrom, $dateTo) {
+    switch ($reportType) {
+        case 'income':
+        case 'income_statement':
+            $revStmt = $db->prepare("
+                SELECT COALESCE(SUM(net_revenue), 0) as total
+                FROM daily_revenue_summary
+                WHERE business_date BETWEEN ? AND ?
+            ");
+            $revStmt->execute([$dateFrom, $dateTo]);
+            $totalRevenue = floatval($revStmt->fetch(PDO::FETCH_ASSOC)['total']);
+
+            $expStmt = $db->prepare("
+                SELECT COALESCE(SUM(total_amount), 0) as total
+                FROM daily_expense_summary
+                WHERE business_date BETWEEN ? AND ?
+            ");
+            $expStmt->execute([$dateFrom, $dateTo]);
+            $totalExpenses = floatval($expStmt->fetch(PDO::FETCH_ASSOC)['total']);
+
+            return [
+                'Total Revenue' => $totalRevenue,
+                'Total Expenses' => $totalExpenses,
+                'Net Profit' => $totalRevenue - $totalExpenses
+            ];
+
+        case 'balance':
+        case 'balance_sheet':
+            $asOf = $dateTo;
+            $assetsStmt = $db->prepare("
+                SELECT COALESCE(SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)), 0) as total
+                FROM chart_of_accounts coa
+                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+                    AND je.status = 'posted'
+                    AND je.entry_date <= ?
+                WHERE coa.account_type = 'asset' AND coa.is_active = 1
+            ");
+            $assetsStmt->execute([$asOf]);
+            $assets = floatval($assetsStmt->fetch(PDO::FETCH_ASSOC)['total']);
+
+            $liabStmt = $db->prepare("
+                SELECT COALESCE(SUM(COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)), 0) as total
+                FROM chart_of_accounts coa
+                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+                    AND je.status = 'posted'
+                    AND je.entry_date <= ?
+                WHERE coa.account_type = 'liability' AND coa.is_active = 1
+            ");
+            $liabStmt->execute([$asOf]);
+            $liabilities = floatval($liabStmt->fetch(PDO::FETCH_ASSOC)['total']);
+
+            $equityStmt = $db->prepare("
+                SELECT COALESCE(SUM(COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)), 0) as total
+                FROM chart_of_accounts coa
+                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+                    AND je.status = 'posted'
+                    AND je.entry_date <= ?
+                WHERE coa.account_type = 'equity' AND coa.is_active = 1
+            ");
+            $equityStmt->execute([$asOf]);
+            $equity = floatval($equityStmt->fetch(PDO::FETCH_ASSOC)['total']);
+
+            return [
+                'Total Assets' => $assets,
+                'Total Liabilities' => $liabilities,
+                'Total Equity' => $equity
+            ];
+
+        case 'cashflow':
+        case 'cash_flow':
+            $revStmt = $db->prepare("
+                SELECT COALESCE(SUM(net_revenue), 0) as total
+                FROM daily_revenue_summary
+                WHERE business_date BETWEEN ? AND ?
+            ");
+            $revStmt->execute([$dateFrom, $dateTo]);
+            $totalRevenue = floatval($revStmt->fetch(PDO::FETCH_ASSOC)['total']);
+
+            $expStmt = $db->prepare("
+                SELECT COALESCE(SUM(total_amount), 0) as total
+                FROM daily_expense_summary
+                WHERE business_date BETWEEN ? AND ?
+            ");
+            $expStmt->execute([$dateFrom, $dateTo]);
+            $totalExpenses = floatval($expStmt->fetch(PDO::FETCH_ASSOC)['total']);
+
+            return [
+                'Operating Cash Inflow' => $totalRevenue,
+                'Operating Cash Outflow' => $totalExpenses,
+                'Net Operating Cash' => $totalRevenue - $totalExpenses
+            ];
+
+        default:
+            return [
+                'Total Revenue' => 0,
+                'Total Expenses' => 0,
+                'Net Result' => 0
+            ];
+    }
+}
+
+function buildReportEmailBody($reportName, $dateFrom, $dateTo, $summary) {
+    $rows = '';
+    foreach ($summary as $label => $value) {
+        $rows .= '<tr><td style="padding:8px 0;">' . htmlspecialchars($label) . '</td><td style="padding:8px 0; text-align:right;">ƒ,ñ' . number_format($value, 2) . '</td></tr>';
+    }
+
+    return '
+        <div style="color:#333; line-height:1.6;">
+            <p style="font-size:16px; margin-bottom:10px;">Here is your requested report summary.</p>
+            <p style="font-size:14px; color:#666;">Report: <strong>' . htmlspecialchars($reportName) . '</strong></p>
+            <p style="font-size:14px; color:#666;">Period: ' . htmlspecialchars($dateFrom) . ' to ' . htmlspecialchars($dateTo) . '</p>
+            <table style="width:100%; border-collapse:collapse; margin-top:15px;">
+                ' . $rows . '
+            </table>
+            <p style="font-size:13px; color:#666; margin-top:20px;">
+                For detailed line items, please open the report inside ATIERA Finance.
+            </p>
+        </div>
+    ';
 }
 ?>

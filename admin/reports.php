@@ -19,6 +19,7 @@ $db = Database::getInstance()->getConnection();
     <link rel="icon" type="image/png" href="../logo2.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             background-color: #F1F7EE;
@@ -902,17 +903,34 @@ $db = Database::getInstance()->getConnection();
                         <button class="btn btn-primary" onclick="exportAllReports()"><i class="fas fa-download me-2"></i>Export All</button>
                     </div>
                 </div>
-                <div class="row mb-4">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-body text-center py-5">
-                                <i class="fas fa-chart-bar fa-3x mb-4 text-muted"></i>
-                                <h4>No Analytics Data Available</h4>
-                                <p class="text-muted">Reports and analytics will be populated once the system has been in use.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                  <div class="row mb-4">
+                      <div class="col-md-12">
+                          <div class="card">
+                              <div class="card-body">
+                                  <div class="row text-center g-3">
+                                      <div class="col-md-4">
+                                          <div class="p-3 border rounded">
+                                              <div class="text-muted">Month-to-Date Revenue</div>
+                                              <div class="fw-bold fs-4" id="analyticsMtdRevenue">ƒ,ñ0</div>
+                                          </div>
+                                      </div>
+                                      <div class="col-md-4">
+                                          <div class="p-3 border rounded">
+                                              <div class="text-muted">Month-to-Date Expenses</div>
+                                              <div class="fw-bold fs-4 text-danger" id="analyticsMtdExpenses">ƒ,ñ0</div>
+                                          </div>
+                                      </div>
+                                      <div class="col-md-4">
+                                          <div class="p-3 border rounded">
+                                              <div class="text-muted">Net Operating Result</div>
+                                              <div class="fw-bold fs-4" id="analyticsNetResult">ƒ,ñ0</div>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
                 <div class="row">
                     <div class="col-md-8">
                         <div class="card">
@@ -2394,10 +2412,94 @@ $db = Database::getInstance()->getConnection();
             }, 5000);
         }
 
+        let reportTrendsChart = null;
+
         // View charts functionality
         function viewCharts() {
-            showAlert('Chart visualization coming soon! This will display financial trends and analytics.', 'info');
+            const analyticsTab = document.getElementById('analytics-tab');
+            if (analyticsTab) {
+                analyticsTab.click();
+            }
+            loadAnalyticsSummary();
         }
+
+        function loadAnalyticsSummary() {
+            fetch('api/reports.php?type=analytics_summary')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        showAlert(data.error || 'Failed to load analytics', 'danger');
+                        return;
+                    }
+
+                    const mtdRevenue = data.mtd.revenue || 0;
+                    const mtdExpenses = data.mtd.expenses || 0;
+                    const mtdNet = data.mtd.net || 0;
+
+                    document.getElementById('analyticsMtdRevenue').textContent = 'ƒ,ñ' + mtdRevenue.toLocaleString();
+                    document.getElementById('analyticsMtdExpenses').textContent = 'ƒ,ñ' + mtdExpenses.toLocaleString();
+                    document.getElementById('analyticsNetResult').textContent = 'ƒ,ñ' + mtdNet.toLocaleString();
+                    document.getElementById('analyticsNetResult').className = 'fw-bold fs-4 ' + (mtdNet >= 0 ? 'text-success' : 'text-danger');
+
+                    const ctx = document.getElementById('reportTrendsChart');
+                    if (!ctx) return;
+
+                    if (reportTrendsChart) {
+                        reportTrendsChart.destroy();
+                    }
+
+                    reportTrendsChart = new Chart(ctx.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels: data.trend.labels,
+                            datasets: [
+                                {
+                                    label: 'Revenue',
+                                    data: data.trend.revenue,
+                                    borderColor: 'rgba(40, 167, 69, 1)',
+                                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                                    tension: 0.3,
+                                    fill: true
+                                },
+                                {
+                                    label: 'Expenses',
+                                    data: data.trend.expenses,
+                                    borderColor: 'rgba(220, 53, 69, 1)',
+                                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                                    tension: 0.3,
+                                    fill: true
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'top'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return 'ƒ,ñ' + value.toLocaleString();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                })
+                .catch(error => showAlert('Error: ' + error.message, 'danger'));
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const analyticsTab = document.getElementById('analytics-tab');
+            if (analyticsTab) {
+                analyticsTab.addEventListener('shown.bs.tab', loadAnalyticsSummary);
+            }
+        });
     </script>
 
     <script src="../includes/privacy_mode.js?v=4"></script>

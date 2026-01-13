@@ -337,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Load all departments
 function loadDepartments() {
-    fetch('api/financials/departments.php?action=list')
+    fetch('../api/financials/departments.php?action=list')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -396,7 +396,7 @@ function renderDepartmentsTable() {
 
 // Load departments for dropdown
 function loadDepartmentsForDropdown() {
-    fetch('api/financials/departments.php?action=list')
+    fetch('../api/financials/departments.php?action=list')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -418,7 +418,7 @@ document.getElementById('addDepartmentForm').addEventListener('submit', function
     const data = Object.fromEntries(formData);
     data.action = 'create';
 
-    fetch('api/financials/departments.php', {
+    fetch('../api/financials/departments.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
@@ -445,7 +445,7 @@ document.getElementById('addRevenueCenterForm').addEventListener('submit', funct
     const data = Object.fromEntries(formData);
     data.action = 'create_revenue_center';
 
-    fetch('api/financials/departments.php', {
+    fetch('../api/financials/departments.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
@@ -488,7 +488,7 @@ document.getElementById('editDepartmentForm').addEventListener('submit', functio
     const data = Object.fromEntries(formData);
     data.is_active = document.getElementById('edit_is_active').checked ? 1 : 0;
 
-    fetch('api/financials/departments.php', {
+    fetch('../api/financials/departments.php', {
         method: 'PUT',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
@@ -510,7 +510,7 @@ document.getElementById('editDepartmentForm').addEventListener('submit', functio
 function viewRevenueCenters(deptId, deptName) {
     document.getElementById('rc_dept_name').textContent = deptName;
 
-    fetch(`api/financials/departments.php?action=revenue_centers&dept_id=${deptId}`)
+    fetch(`../api/financials/departments.php?action=revenue_centers&dept_id=${deptId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {

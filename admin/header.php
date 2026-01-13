@@ -303,6 +303,16 @@
                     <i class="fas fa-building me-2"></i>Departments
                 </a>
                 <?php endif; ?>
+                <?php if ($auth->hasPermission('departments.view')): ?>
+                <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'outlets.php') ? 'active' : ''; ?>" href="financials/outlets.php">
+                    <i class="fas fa-store me-2"></i>Outlets
+                </a>
+                <?php endif; ?>
+                <?php if ($auth->hasPermission('departments.view')): ?>
+                <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'daily_revenue.php') ? 'active' : ''; ?>" href="financials/daily_revenue.php">
+                    <i class="fas fa-receipt me-2"></i>Daily Revenue
+                </a>
+                <?php endif; ?>
                 <?php if ($auth->hasPermission('cashier.operate') || $auth->hasPermission('cashier.view_all')): ?>
                 <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'cashier.php') ? 'active' : ''; ?>" href="financials/cashier.php">
                     <i class="fas fa-cash-register me-2"></i>Cashier/Collection
@@ -316,6 +326,11 @@
                 <?php if ($auth->hasPermission('reports.usali')): ?>
                 <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'financial_reports.php') ? 'active' : ''; ?>" href="financials/financial_reports.php">
                     <i class="fas fa-file-invoice-dollar me-2"></i>Financial Reports
+                </a>
+                <?php endif; ?>
+                <?php if ($auth->hasPermission('settings.edit')): ?>
+                <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'financial_setup.php') ? 'active' : ''; ?>" href="financials/financial_setup.php">
+                    <i class="fas fa-cogs me-2"></i>Financial Setup
                 </a>
                 <?php endif; ?>
 

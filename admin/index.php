@@ -188,24 +188,22 @@ try {
         ];
     }
 
-    // Income source breakdown data
+    // Income source breakdown data (hotel/restaurant outlets)
     $incomeSourceData = $db->query("
         SELECT
-            CASE
-                WHEN LOWER(ii.description) LIKE '%room%' THEN 'Room Service'
-                WHEN LOWER(ii.description) LIKE '%restaurant%' OR LOWER(ii.description) LIKE '%food%' THEN 'Restaurant'
+            CASE o.outlet_type
+                WHEN 'rooms' THEN 'Rooms'
+                WHEN 'restaurant' THEN 'Restaurant'
+                WHEN 'bar' THEN 'Bar'
+                WHEN 'banquet' THEN 'Banquet & Events'
+                WHEN 'spa' THEN 'Spa & Wellness'
                 ELSE 'Other Services'
             END as source,
-            SUM(ii.line_total) as amount
-        FROM invoice_items ii
-        JOIN invoices i ON ii.invoice_id = i.id
-        WHERE i.status = 'paid'
-        GROUP BY
-            CASE
-                WHEN LOWER(ii.description) LIKE '%room%' THEN 'Room Service'
-                WHEN LOWER(ii.description) LIKE '%restaurant%' OR LOWER(ii.description) LIKE '%food%' THEN 'Restaurant'
-                ELSE 'Other Services'
-            END
+            SUM(ods.net_sales) as amount
+        FROM outlet_daily_sales ods
+        JOIN outlets o ON ods.outlet_id = o.id
+        WHERE YEAR(ods.business_date) = YEAR(CURDATE())
+        GROUP BY o.outlet_type
     ")->fetchAll();
 
     // Format for chart
@@ -218,8 +216,8 @@ try {
 
     // If no data, provide default empty values
     if (empty($incomeLabels)) {
-        $incomeLabels = ['Room Service', 'Restaurant', 'Other Services'];
-        $incomeAmounts = [0, 0, 0];
+        $incomeLabels = ['Rooms', 'Restaurant', 'Bar', 'Banquet & Events', 'Spa & Wellness', 'Other Services'];
+        $incomeAmounts = [0, 0, 0, 0, 0, 0];
     }
 
 } catch (Exception $e) {
@@ -952,7 +950,7 @@ body {
                                         <i class="fas fa-chart-bar me-2"></i>View Reports
                                     </button>
                                     <button class="btn btn-outline-success btn-lg px-4" onclick="showQuickActionsModal()">
-                                        <i class="fas fa-cog me-2"></i>Quick Setup
+                                        <i class="fas fa-cog me-2"></i>Financial Setup
                                     </button>
                                 </div>
                             </div>
@@ -1510,12 +1508,18 @@ body {
                         backgroundColor: [
                             'rgba(54, 162, 235, 0.8)',
                             'rgba(255, 99, 132, 0.8)',
-                            'rgba(255, 205, 86, 0.8)'
+                            'rgba(255, 205, 86, 0.8)',
+                            'rgba(40, 167, 69, 0.8)',
+                            'rgba(153, 102, 255, 0.8)',
+                            'rgba(255, 159, 64, 0.8)'
                         ],
                         borderColor: [
                             'rgba(54, 162, 235, 1)',
                             'rgba(255, 99, 132, 1)',
-                            'rgba(255, 205, 86, 1)'
+                            'rgba(255, 205, 86, 1)',
+                            'rgba(40, 167, 69, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)'
                         ],
                         borderWidth: 1
                     }]
@@ -1538,7 +1542,7 @@ body {
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title" id="quickActionsModalLabel">
-                                <i class="fas fa-cog me-2"></i>Quick Setup Actions
+                                <i class="fas fa-cog me-2"></i>Financial Setup Actions
                             </h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
@@ -1547,10 +1551,10 @@ body {
                                 <div class="col-md-6">
                                     <div class="card border-success h-100">
                                         <div class="card-body text-center">
-                                            <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
-                                            <h6>Configure Budgets</h6>
-                                            <p class="text-muted small">Set up annual budgets for departments</p>
-                                            <button class="btn btn-success btn-sm" onclick="configureBudgets()">Setup Budgets</button>
+                                            <i class="fas fa-building fa-3x text-success mb-3"></i>
+                                            <h6>Financial Setup</h6>
+                                            <p class="text-muted small">Create default departments and outlets</p>
+                                            <button class="btn btn-success btn-sm" onclick="openFinancialSetup()">Open Setup</button>
                                         </div>
                                     </div>
                                 </div>
@@ -1567,10 +1571,20 @@ body {
                                 <div class="col-md-6">
                                     <div class="card border-warning h-100">
                                         <div class="card-body text-center">
-                                            <i class="fas fa-envelope fa-3x text-warning mb-3"></i>
-                                            <h6>Email Configuration</h6>
-                                            <p class="text-muted small">Configure email settings for notifications</p>
-                                            <button class="btn btn-warning btn-sm" onclick="configureEmail()">Configure Email</button>
+                                            <i class="fas fa-receipt fa-3x text-warning mb-3"></i>
+                                            <h6>Daily Revenue Entry</h6>
+                                            <p class="text-muted small">Post daily outlet sales and room revenue</p>
+                                            <button class="btn btn-warning btn-sm" onclick="openDailyRevenue()">Open Daily Revenue</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-primary h-100">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-cash-register fa-3x text-primary mb-3"></i>
+                                            <h6>Cashier Shifts</h6>
+                                            <p class="text-muted small">Open and close cashier shifts by outlet</p>
+                                            <button class="btn btn-primary btn-sm" onclick="openCashier()">Open Cashier</button>
                                         </div>
                                     </div>
                                 </div>
@@ -1578,7 +1592,7 @@ body {
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="button" class="btn btn-primary" onclick="runAllQuickSetup()">Run All Setup</button>
+                            <button type="button" class="btn btn-primary" onclick="runAllQuickSetup()">Open Setup Checklist</button>
                         </div>
                     </div>
                 </div>
@@ -1599,22 +1613,24 @@ body {
         }
 
 
-        function configureBudgets() {
-            window.location.href = 'budget_management.php';
+        function openFinancialSetup() {
+            window.location.href = 'financials/financial_setup.php';
         }
 
         function generateAPIKeys() {
             window.location.href = 'api_clients.php';
         }
 
-        function configureEmail() {
-            window.location.href = 'settings.php';
+        function openDailyRevenue() {
+            window.location.href = 'financials/daily_revenue.php';
+        }
+
+        function openCashier() {
+            window.location.href = 'financials/cashier.php';
         }
 
         function runAllQuickSetup() {
-            alert('Complete quick setup will be implemented in a future update.');
-            const modal = bootstrap.Modal.getInstance(document.getElementById('quickActionsModal'));
-            modal.hide();
+            window.location.href = 'financials/financial_setup.php';
         }
     </script>
 
