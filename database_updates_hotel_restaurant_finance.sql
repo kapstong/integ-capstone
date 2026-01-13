@@ -187,3 +187,56 @@ CREATE INDEX idx_expense_summary_date ON daily_expense_summary(business_date);
 CREATE INDEX idx_cashier_shifts_date ON cashier_shifts(shift_date);
 CREATE INDEX idx_pos_batches_date ON pos_batches(batch_date);
 
+-- =============================================================================
+-- PERMISSIONS FOR HOSPITALITY FINANCE MODULES
+-- =============================================================================
+
+INSERT INTO permissions (name, description, created_at)
+SELECT 'departments.view', 'View departments and revenue centers', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'departments.view');
+
+INSERT INTO permissions (name, description, created_at)
+SELECT 'departments.manage', 'Manage departments and revenue centers', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'departments.manage');
+
+INSERT INTO permissions (name, description, created_at)
+SELECT 'cashier.operate', 'Open and close cashier shifts', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'cashier.operate');
+
+INSERT INTO permissions (name, description, created_at)
+SELECT 'cashier.view_all', 'View cashier shifts', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'cashier.view_all');
+
+INSERT INTO permissions (name, description, created_at)
+SELECT 'integrations.view', 'View integration status', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'integrations.view');
+
+INSERT INTO permissions (name, description, created_at)
+SELECT 'reports.usali', 'View hospitality financial reports', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'reports.usali');
+
+-- Assign new permissions to admin role
+INSERT IGNORE INTO role_permissions (role_id, permission_id, assigned_at)
+SELECT r.id, p.id, NOW()
+FROM roles r
+JOIN permissions p ON p.name IN (
+    'departments.view',
+    'departments.manage',
+    'cashier.operate',
+    'cashier.view_all',
+    'integrations.view',
+    'reports.usali'
+)
+WHERE r.name = 'admin';
+
+-- Assign view permissions to manager/accountant roles
+INSERT IGNORE INTO role_permissions (role_id, permission_id, assigned_at)
+SELECT r.id, p.id, NOW()
+FROM roles r
+JOIN permissions p ON p.name IN (
+    'departments.view',
+    'cashier.view_all',
+    'integrations.view',
+    'reports.usali'
+)
+WHERE r.name IN ('manager', 'accountant');

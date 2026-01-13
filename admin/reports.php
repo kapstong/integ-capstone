@@ -2350,7 +2350,7 @@ $db = Database::getInstance()->getConnection();
                 const dateTo = document.getElementById('reportDateTo')?.value || '';
 
                 // Send email via API
-                fetch('api/reports.php', {
+                fetch('../api/reports.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -2424,7 +2424,7 @@ $db = Database::getInstance()->getConnection();
         }
 
         function loadAnalyticsSummary() {
-            fetch('api/reports.php?type=analytics_summary')
+            fetch('../api/reports.php?type=analytics_summary')
                 .then(response => response.json())
                 .then(data => {
                     if (!data.success) {
