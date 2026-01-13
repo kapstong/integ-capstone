@@ -38,9 +38,9 @@
                 // - PHP prefix
                 // - Negative amounts with minus sign
                 // - Amounts in parentheses (accounting format for negatives)
-                // - Plain numeric amounts (for edge cases)
                 // - With or without decimal points and commas
-                const hasAmount = /(?:[₱$€£¥]\s*-?[\d,]+\.?\d*)|(?:P\s*-?[\d,]+\.?\d*)|(?:PHP\s*-?[\d,]+\.?\d*)|(?:\(\s*[₱$€£¥P]?\s*[\d,]+\.?\d*\s*\))|(?:\b\d{1,3}(?:,\d{3})*(?:\.\d{2})?\b)/.test(text);
+                // Removed plain numeric amounts to prevent masking non-monetary numbers like "6 digit PIN"
+                const hasAmount = /(?:[₱$€£¥]\s*-?[\d,]+\.?\d*)|(?:P\s*-?[\d,]+\.?\d*)|(?:PHP\s*-?[\d,]+\.?\d*)|(?:\(\s*[₱$€£¥P]?\s*[\d,]+\.?\d*\s*\))/.test(text);
 
                 if (hasAmount) {
                     const originalText = text;
@@ -61,9 +61,7 @@
                         // Match P (without peso symbol) with optional minus and numbers - CRITICAL FIX
                         .replace(/P\s*-?[\d,]+\.?\d*/g, 'P*********')
                         // Match amounts in parentheses (accounting format)
-                        .replace(/\(\s*([₱$€£¥P]?)\s*[\d,]+\.?\d*\s*\)/g, '($1********)')
-                        // Match plain numeric amounts (fallback for edge cases)
-                        .replace(/\b\d{1,3}(?:,\d{3})*(?:\.\d{2})?\b/g, '*********');
+                        .replace(/\(\s*([₱$€£¥P]?)\s*[\d,]+\.?\d*\s*\)/g, '($1********)');
 
                     if (hiddenText !== originalText) {
                         hiddenElements.push({
