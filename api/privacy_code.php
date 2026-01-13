@@ -73,28 +73,24 @@ try {
 
         // Send email using Mailer class
         $mailer = Mailer::getInstance();
-
-        error_log("About to send verification code to {$user['email']} for user {$user['first_name']}");
         $mailSent = $mailer->sendVerificationCode($user['email'], $code, $user['first_name']);
 
         if ($mailSent) {
-            // Log the code for security monitoring
+            // Log the code for development (remove in production)
             error_log("Privacy Mode Verification Code sent to {$user['email']}: {$code}");
 
             ob_end_clean();
             echo json_encode([
                 'success' => true,
                 'message' => 'Verification code sent to your email',
-                'email' => $user['email']
+                'email' => $user['email'],
+                'dev_code' => $code // Remove this in production!
             ]);
         } else {
-            error_log("Failed to send verification code to {$user['email']}");
-
             ob_end_clean();
             echo json_encode([
                 'success' => false,
-                'error' => 'Failed to send email. Please contact system administrator.',
-                'debug_info' => 'Email sending failed - check server mail configuration'
+                'error' => 'Failed to send email. Please check your email configuration.'
             ]);
         }
         exit;

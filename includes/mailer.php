@@ -16,11 +16,7 @@ class Mailer {
 
         // Check if SMTP is configured
         $mailHost = Config::get('mail.host');
-        $mailUsername = Config::get('mail.username');
-        $mailPassword = Config::get('mail.password');
-
-        // Enable SMTP if credentials are provided or host is configured
-        if (!empty($mailHost) && (!empty($mailUsername) || $mailHost !== 'smtp.gmail.com')) {
+        if (!empty($mailHost) && $mailHost !== 'smtp.gmail.com') {
             $this->smtpEnabled = true;
         }
     }
@@ -49,10 +45,16 @@ class Mailer {
                 return false;
             }
 
+            // Build headers
+            $headers = $this->buildHeaders($options);
+
             // Check if HTML email
             $isHtml = isset($options['html']) && $options['html'] === true;
             if ($isHtml) {
+                $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
                 $message = $this->wrapHtmlMessage($message, $subject);
+            } else {
+                $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
             }
 
             // Log email attempt
@@ -60,250 +62,30 @@ class Mailer {
             error_log("To: $to");
             error_log("From: {$this->fromEmail}");
             error_log("Subject: $subject");
-            error_log("SMTP Enabled: " . ($this->smtpEnabled ? 'Yes' : 'No'));
             error_log("Environment: " . (Config::isDevelopment() ? 'Development' : 'Production'));
             error_log("====================");
 
-            if ($this->smtpEnabled) {
-                $smtpResult = $this->sendViaSMTP($to, $subject, $message, $options);
-                if ($smtpResult) {
-                    return true;
+            // Send email using PHP mail() function
+            // CyberPanel/Production servers typically have Postfix configured
+            $sent = @mail($to, $subject, $message, $headers);
+
+            if (!$sent) {
+                $lastError = error_get_last();
+                error_log("Mailer Error: Failed to send email to $to");
+                if ($lastError) {
+                    error_log("PHP Error: " . $lastError['message']);
                 }
-                // Fall back to PHP mail() if SMTP fails
-                error_log("SMTP failed, falling back to PHP mail() function");
+                return false;
             }
-            return $this->sendViaMail($to, $subject, $message, $options);
+
+            error_log("✓ Email sent successfully to $to");
+            return true;
 
         } catch (Exception $e) {
             error_log("Mailer Exception: " . $e->getMessage());
             error_log("Stack trace: " . $e->getTraceAsString());
             return false;
         }
-    }
-
-    /**
-     * Send email via SMTP
-     */
-    private function sendViaSMTP($to, $subject, $message, $options = []) {
-        $mailHost = Config::get('mail.host');
-        $mailPort = Config::get('mail.port') ?: 587;
-        $mailUsername = Config::get('mail.username');
-        $mailPassword = Config::get('mail.password');
-        $mailEncryption = Config::get('mail.encryption') ?: 'tls';
-
-        // Create socket connection
-        $socket = @fsockopen(
-            ($mailEncryption === 'ssl' ? 'ssl://' : '') . $mailHost,
-            $mailPort,
-            $errno,
-            $errstr,
-            10 // Reduced timeout from 30 to 10 seconds
-        );
-
-        if (!$socket) {
-            error_log("SMTP Connection failed: $errstr ($errno)");
-            return false;
-        }
-
-        // Set socket timeout
-        stream_set_timeout($socket, 10);
-
-        // Read server greeting
-        $response = $this->readSMTPResponse($socket);
-        if (!$this->checkSMTPResponse($response, '220')) {
-            fclose($socket);
-            return false;
-        }
-
-        // Send EHLO
-        $serverName = $_SERVER['SERVER_NAME'] ?? $_SERVER['HTTP_HOST'] ?? 'localhost';
-        fputs($socket, "EHLO " . $serverName . "\r\n");
-        $response = $this->readSMTPResponse($socket);
-        if (!$this->checkSMTPResponse($response, '250')) {
-            fclose($socket);
-            return false;
-        }
-
-        // Start TLS if required (STARTTLS on port 587)
-        if ($mailEncryption === 'tls') {
-            fputs($socket, "STARTTLS\r\n");
-            $response = $this->readSMTPResponse($socket);
-            if (!$this->checkSMTPResponse($response, '220')) {
-                fclose($socket);
-                return false;
-            }
-
-            // Upgrade to TLS
-            if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
-                error_log("SMTP TLS upgrade failed");
-                fclose($socket);
-                return false;
-            }
-
-            // Send EHLO again after TLS upgrade
-            fputs($socket, "EHLO " . $serverName . "\r\n");
-            $response = $this->readSMTPResponse($socket);
-            if (!$this->checkSMTPResponse($response, '250')) {
-                fclose($socket);
-                return false;
-            }
-        }
-
-        // Authenticate
-        if (!empty($mailUsername) && !empty($mailPassword)) {
-            fputs($socket, "AUTH LOGIN\r\n");
-            $response = $this->readSMTPResponse($socket);
-            if (!$this->checkSMTPResponse($response, '334')) {
-                fclose($socket);
-                return false;
-            }
-
-            fputs($socket, base64_encode($mailUsername) . "\r\n");
-            $response = $this->readSMTPResponse($socket);
-            if (!$this->checkSMTPResponse($response, '334')) {
-                fclose($socket);
-                return false;
-            }
-
-            fputs($socket, base64_encode($mailPassword) . "\r\n");
-            $response = $this->readSMTPResponse($socket);
-            if (!$this->checkSMTPResponse($response, '235')) {
-                fclose($socket);
-                return false;
-            }
-        }
-
-        // Send MAIL FROM
-        fputs($socket, "MAIL FROM:<{$this->fromEmail}>\r\n");
-        $response = $this->readSMTPResponse($socket);
-        if (!$this->checkSMTPResponse($response, '250')) {
-            fclose($socket);
-            return false;
-        }
-
-        // Send RCPT TO
-        fputs($socket, "RCPT TO:<$to>\r\n");
-        $response = $this->readSMTPResponse($socket);
-        if (!$this->checkSMTPResponse($response, '250')) {
-            fclose($socket);
-            return false;
-        }
-
-        // Send DATA
-        fputs($socket, "DATA\r\n");
-        $response = $this->readSMTPResponse($socket);
-        if (!$this->checkSMTPResponse($response, '354')) {
-            fclose($socket);
-            return false;
-        }
-
-        // Build email content
-        $isHtml = isset($options['html']) && $options['html'] === true;
-        $contentType = $isHtml ? 'text/html' : 'text/plain';
-
-        $emailBody = "From: {$this->fromName} <{$this->fromEmail}>\r\n";
-        $emailBody .= "To: $to\r\n";
-        $emailBody .= "Subject: $subject\r\n";
-        $emailBody .= "MIME-Version: 1.0\r\n";
-        $emailBody .= "Content-Type: $contentType; charset=UTF-8\r\n";
-        $emailBody .= "X-Mailer: PHP/" . phpversion() . "\r\n";
-        if (isset($options['priority'])) {
-            $emailBody .= "X-Priority: {$options['priority']}\r\n";
-        }
-        $emailBody .= "\r\n";
-        $emailBody .= $message;
-        $emailBody .= "\r\n.\r\n";
-
-        fputs($socket, $emailBody);
-
-        // Check response
-        $response = $this->readSMTPResponse($socket);
-        if (!$this->checkSMTPResponse($response, '250')) {
-            fclose($socket);
-            return false;
-        }
-
-        // Send QUIT
-        fputs($socket, "QUIT\r\n");
-        $this->readSMTPResponse($socket); // Read QUIT response but don't check
-        fclose($socket);
-
-        error_log("✓ Email sent successfully via SMTP to $to");
-        return true;
-    }
-
-    /**
-     * Read complete SMTP response (handles multi-line responses)
-     */
-    private function readSMTPResponse($socket) {
-        $response = '';
-        $timeout = 0;
-
-        while (!feof($socket)) {
-            $line = fgets($socket, 515);
-            if ($line === false) {
-                $timeout++;
-                if ($timeout > 5) break; // Prevent infinite loop
-                continue;
-            }
-
-            $response .= $line;
-
-            // Check if this is the last line of a multi-line response
-            // Last line has space in 4th position, continuation lines have dash
-            if (strlen($line) >= 4 && substr($line, 3, 1) === ' ') {
-                break;
-            }
-        }
-
-        return trim($response);
-    }
-
-    /**
-     * Send email via PHP mail() function
-     */
-    private function sendViaMail($to, $subject, $message, $options = []) {
-        // Build headers
-        $headers = $this->buildHeaders($options);
-
-        // Check if HTML email
-        $isHtml = isset($options['html']) && $options['html'] === true;
-        if ($isHtml) {
-            $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-        } else {
-            $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-        }
-
-        // Send email using PHP mail() function
-        $sent = @mail($to, $subject, $message, $headers);
-
-        if (!$sent) {
-            $lastError = error_get_last();
-            error_log("Mailer Error: Failed to send email to $to");
-            if ($lastError) {
-                error_log("PHP Error: " . $lastError['message']);
-            }
-            return false;
-        }
-
-        error_log("✓ Email sent successfully via mail() to $to");
-        return true;
-    }
-
-    /**
-     * Check SMTP response code
-     */
-    private function checkSMTPResponse($response, $expectedCode) {
-        // Get the first line of the response
-        $lines = explode("\r\n", trim($response));
-        $firstLine = $lines[0];
-        $code = substr($firstLine, 0, 3);
-
-        if ($code !== $expectedCode) {
-            error_log("SMTP Error: Expected $expectedCode, got $code - $firstLine");
-            return false;
-        }
-        return true;
     }
 
     /**

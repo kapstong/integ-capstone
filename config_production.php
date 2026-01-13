@@ -73,8 +73,8 @@ class Config {
                 'mailer' => 'smtp',
                 'host' => 'smtp.gmail.com',
                 'port' => 587,
-                'username' => 'atierafinance@gmail.com', // Add your email
-                'password' => 'mdjo hnoq hnfz pfye', // Add your email password
+                'username' => '', // Add your email
+                'password' => '', // Add your email password
                 'encryption' => 'tls',
                 'from_address' => 'noreply@atierahotelandrestaurant.com',
                 'from_name' => 'ATIERA Finance',

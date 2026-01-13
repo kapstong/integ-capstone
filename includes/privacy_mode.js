@@ -38,9 +38,8 @@
                 // - PHP prefix
                 // - Negative amounts with minus sign
                 // - Amounts in parentheses (accounting format for negatives)
-                // - With or without decimal points and commas
-                // Removed plain numeric amounts to prevent masking non-monetary numbers like "6 digit PIN"
-                const hasAmount = /(?:[₱$€£¥]\s*-?[\d,]+\.?\d*)|(?:P\s*-?[\d,]+\.?\d*)|(?:PHP\s*-?[\d,]+\.?\d*)|(?:\(\s*[₱$€£¥P]?\s*[\d,]+\.?\d*\s*\))/.test(text);
+                // - With or without decimal points
+                const hasAmount = /(?:[₱$€£¥P]\s*-?[\d,]+\.?\d*)|(?:PHP\s*-?[\d,]+\.?\d*)|(?:\(\s*[₱$€£¥P]?\s*[\d,]+\.?\d*\s*\))/.test(text);
 
                 if (hasAmount) {
                     const originalText = text;
@@ -89,38 +88,10 @@
     function showAmounts() {
         let restoredCount = 0;
 
-        // First, restore elements from the hiddenElements array
         hiddenElements.forEach(item => {
             if (item.node && item.node.nodeValue) {
                 item.node.nodeValue = item.original;
                 item.element.removeAttribute('data-privacy-hidden');
-                item.element.removeAttribute('data-privacy-original');
-                restoredCount++;
-            }
-        });
-
-        // Then, scan the entire DOM for any remaining elements with data-privacy-hidden
-        // This handles dynamically loaded content that wasn't in the original hiddenElements array
-        const remainingHiddenElements = document.querySelectorAll('[data-privacy-hidden]');
-        remainingHiddenElements.forEach(el => {
-            const originalText = el.getAttribute('data-privacy-original');
-            if (originalText) {
-                // Find text nodes within this element and restore them
-                const textNodes = Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
-                textNodes.forEach(node => {
-                    // Replace any asterisk patterns with the original text
-                        // This is a fallback since we don't have the exact original for dynamically loaded content
-                        // Detect any run of 3 or more asterisks (covers variants like 8 or 9 stars)
-                        if (node.nodeValue && /\*{3,}/.test(node.nodeValue)) {
-                            // Try to restore from data-privacy-original if available
-                            const originalNodeText = el.getAttribute('data-privacy-original');
-                            if (originalNodeText && /\*{3,}/.test(node.nodeValue)) {
-                                node.nodeValue = originalNodeText;
-                            }
-                        }
-                });
-                el.removeAttribute('data-privacy-hidden');
-                el.removeAttribute('data-privacy-original');
                 restoredCount++;
             }
         });
@@ -375,16 +346,14 @@
                 // Code was already verified, show amounts immediately
                 isHidden = false;
                 updateEyeButton();
-                // Since amounts were hidden by default, we need to show them now
-                showAmounts();
             } else {
-                // Not unlocked, keep amounts hidden (already hidden by default)
-                // hideAmounts() was already called during init
+                // Not unlocked, hide amounts
+                hideAmounts();
             }
         })
         .catch(error => {
-            // On error, keep amounts hidden (already hidden by default)
-            // hideAmounts() was already called during init
+            // On error, default to hiding amounts
+            hideAmounts();
         });
     }
 
@@ -521,59 +490,20 @@
         createPasswordModal();
         createEyeButton();
 
-        // Hide amounts by default immediately
+        // Check if password was already entered in this session
         setTimeout(function() {
-            hideAmounts();
-
-            // Then check if password was already entered in this session
-            setTimeout(function() {
-                checkSessionStatus();
-            }, 100);
-        }, 100);
+            checkSessionStatus();
+        }, 200);
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function() {
-                setTimeout(function() {
-                    hideAmounts();
-                    setTimeout(checkSessionStatus, 100);
-                }, 100);
+                setTimeout(checkSessionStatus, 500);
             });
         }
 
-        const observer = new MutationObserver(function(mutations) {
-            // Check if any new nodes were added
-            let hasNewNodes = false;
-            mutations.forEach(mutation => {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    hasNewNodes = true;
-                }
-            });
-
-            if (hasNewNodes) {
-                if (isHidden) {
-                    // Hide any new amounts that were added
-                    setTimeout(hideAmounts, 100);
-                } else {
-                    // If privacy mode is disabled, ensure any newly loaded content is visible
-                    // This handles cases where content is loaded via AJAX after privacy mode was disabled
-                    setTimeout(function() {
-                        const hiddenElements = document.querySelectorAll('[data-privacy-hidden]');
-                        hiddenElements.forEach(el => {
-                            const originalText = el.getAttribute('data-privacy-original');
-                            if (originalText) {
-                                const textNodes = Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
-                                textNodes.forEach(node => {
-                                    // Restore any masked text nodes that contain 3+ asterisks
-                                    if (node.nodeValue && /\*{3,}/.test(node.nodeValue)) {
-                                        node.nodeValue = originalText;
-                                    }
-                                });
-                                el.removeAttribute('data-privacy-hidden');
-                                el.removeAttribute('data-privacy-original');
-                            }
-                        });
-                    }, 100);
-                }
+        const observer = new MutationObserver(function() {
+            if (isHidden) {
+                setTimeout(hideAmounts, 100);
             }
         });
 
@@ -592,42 +522,4 @@
 
     init();
 
-})();
-
-// Ensure the sidebar toggle sits vertically centered relative to the sidebar
-(function() {
-    function positionSidebarToggle() {
-        try {
-            const sidebar = document.getElementById('sidebar');
-            const toggle = document.querySelector('.sidebar-toggle');
-            if (!sidebar || !toggle) return;
-
-            // Get sidebar box and compute center
-            const rect = sidebar.getBoundingClientRect();
-            const toggleHeight = toggle.offsetHeight || 40;
-            const top = rect.top + (rect.height / 2) - (toggleHeight / 2);
-
-            // Apply computed top as pixels (position: fixed in CSS), clamp to viewport
-            const clampedTop = Math.max(8, Math.min(top, window.innerHeight - toggleHeight - 8));
-            toggle.style.top = clampedTop + 'px';
-        } catch (e) {
-            // ignore
-        }
-    }
-
-    // Run on load
-    window.addEventListener('load', positionSidebarToggle);
-    // Run on resize and scroll
-    window.addEventListener('resize', positionSidebarToggle);
-    window.addEventListener('scroll', positionSidebarToggle, { passive: true });
-
-    // Also observe sidebar attribute changes (collapse/expand) and reposition
-    const sidebarEl = document.getElementById('sidebar');
-    if (sidebarEl) {
-        const mo = new MutationObserver(positionSidebarToggle);
-        mo.observe(sidebarEl, { attributes: true, attributeFilter: ['class', 'style'] });
-    }
-
-    // Initial align attempt
-    setTimeout(positionSidebarToggle, 120);
 })();
