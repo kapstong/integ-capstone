@@ -36,7 +36,7 @@ $pageTitle = 'Department Management';
 include '../legacy_header.php';
 ?>
 
-<link rel="stylesheet" href="/responsive.css">
+<link rel="stylesheet" href="../../responsive.css">
 
 <div class="container-fluid">
     <div class="row">
