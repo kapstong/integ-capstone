@@ -1713,6 +1713,9 @@ $db = Database::getInstance()->getConnection();
         function updateFooterPosition() {
             const content = document.querySelector('.content');
             const footer = document.getElementById('footer');
+            if (!footer) {
+                return;
+            }
             const marginLeft = content.style.marginLeft || '120px';
             footer.style.left = marginLeft;
             footer.style.width = `calc(100% - ${marginLeft})`;
