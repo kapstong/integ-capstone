@@ -165,7 +165,7 @@ $db = Database::getInstance()->getConnection();
             box-shadow: 0 2px 4px rgba(0,0,0,0.04);
             backdrop-filter: blur(10px);
             position: relative;
-            z-index: 10000;
+            z-index: 1030;
         }
         .navbar-brand {
             font-weight: 700;
