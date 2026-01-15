@@ -562,10 +562,32 @@ try {
             <a class="nav-link" href="budget_management.php">
                 <i class="fas fa-chart-line me-2"></i><span>Budget Management</span>
             </a>
-            <a class="nav-link" href="reports.php">
-                <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
-            </a>
-        </nav>
+              <a class="nav-link" href="reports.php">
+                  <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
+              </a>
+              <hr class="my-3">
+              <a class="nav-link" href="financials/departments.php">
+                  <i class="fas fa-building me-2"></i><span>Departments</span>
+              </a>
+              <a class="nav-link" href="financials/outlets.php">
+                  <i class="fas fa-store me-2"></i><span>Outlets</span>
+              </a>
+              <a class="nav-link" href="financials/daily_revenue.php">
+                  <i class="fas fa-receipt me-2"></i><span>Daily Revenue</span>
+              </a>
+              <a class="nav-link" href="financials/cashier.php">
+                  <i class="fas fa-cash-register me-2"></i><span>Cashier/Collection</span>
+              </a>
+              <a class="nav-link" href="financials/financial_reports.php">
+                  <i class="fas fa-file-invoice-dollar me-2"></i><span>Financial Reports</span>
+              </a>
+              <a class="nav-link" href="financials/integration_management.php">
+                  <i class="fas fa-exchange-alt me-2"></i><span>Integrations</span>
+              </a>
+              <a class="nav-link" href="financials/financial_setup.php">
+                  <i class="fas fa-cogs me-2"></i><span>Financial Setup</span>
+              </a>
+          </nav>
     </div>
     <div class="sidebar-toggle" onclick="toggleSidebarDesktop()">
         <i class="fas fa-chevron-right" id="sidebarArrow"></i>
