@@ -909,7 +909,7 @@ $db = Database::getInstance()->getConnection();
                     <h6 class="mb-0">Budget Allocation & Distribution</h6>
                     <div>
                         <button class="btn btn-outline-secondary me-2"><i class="fas fa-lock me-2"></i>Lock Allocations</button>
-                        <button class="btn btn-primary"><i class="fas fa-plus me-2"></i>Allocate Funds</button>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#allocateFundsModal"><i class="fas fa-plus me-2"></i>Allocate Funds</button>
                     </div>
                 </div>
                 <div class="row">
@@ -1435,6 +1435,11 @@ $db = Database::getInstance()->getConnection();
         let currentBudgets = [];
         let currentAllocations = [];
         let currentTrackingData = [];
+        let currentAdjustments = [];
+        let currentDepartments = [];
+        let currentCategories = [];
+        let currentAccounts = [];
+        let vendors = [];
         let currentAlerts = [];
         let currentHr3ClaimsBreakdown = null;
 
@@ -1467,6 +1472,13 @@ $db = Database::getInstance()->getConnection();
             loadBudgets();
             loadAllocations();
             loadTrackingData();
+            loadAlerts();
+            loadAdjustments();
+            loadDepartments();
+            loadCategories();
+            loadAccounts();
+            loadVendors();
+            loadClaimsData();
         });
 
         // Load budgets
@@ -1481,6 +1493,7 @@ $db = Database::getInstance()->getConnection();
 
                 currentBudgets = data.budgets || [];
                 renderBudgetsTable();
+                populateBudgetDropdowns(currentBudgets);
 
             } catch (error) {
                 console.error('Error loading budgets:', error);
@@ -1582,6 +1595,39 @@ $db = Database::getInstance()->getConnection();
                         <td>${statusBadge}</td>
                         <td>
                             <button class="btn btn-sm btn-outline-primary" onclick="adjustAllocation(${allocation.id})">Adjust</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function renderAdjustmentsTable() {
+            const tbody = document.getElementById('adjustmentsTableBody');
+            if (!tbody) {
+                return;
+            }
+            tbody.innerHTML = '';
+
+            if (currentAdjustments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No adjustment requests available.</td></tr>';
+                return;
+            }
+
+            currentAdjustments.forEach(adjustment => {
+                const statusBadge = getStatusBadge(adjustment.status || 'pending');
+                const row = `
+                    <tr>
+                        <td>${adjustment.id}</td>
+                        <td>${adjustment.department_name || 'Unassigned'}</td>
+                        <td>${adjustment.requested_by_name || 'N/A'}</td>
+                        <td>${adjustment.adjustment_type}</td>
+                        <td>PHP ${parseFloat(adjustment.amount || 0).toLocaleString()}</td>
+                        <td>${adjustment.reason || ''}</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-success me-1" onclick="approveAdjustment(${adjustment.id})">Approve</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="rejectAdjustment(${adjustment.id})">Reject</button>
                         </td>
                     </tr>
                 `;
@@ -1851,6 +1897,69 @@ $db = Database::getInstance()->getConnection();
             }
         }
 
+        async function createBudgetItem(formData) {
+            try {
+                const response = await fetch('api/budgets.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                showAlert('Allocation saved', 'success');
+                loadBudgets();
+                loadAllocations();
+                loadTrackingData();
+                loadAlerts();
+
+                const modalEl = document.getElementById('allocateFundsModal');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+            } catch (error) {
+                console.error('Error saving allocation:', error);
+                showAlert('Error saving allocation: ' + error.message, 'danger');
+            }
+        }
+
+        async function requestAdjustment(formData) {
+            try {
+                const response = await fetch('api/budgets.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                showAlert('Adjustment request submitted', 'success');
+                loadAdjustments();
+                loadAllocations();
+                loadBudgets();
+
+                const modalEl = document.getElementById('adjustmentRequestModal');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+            } catch (error) {
+                console.error('Error requesting adjustment:', error);
+                showAlert('Error requesting adjustment: ' + error.message, 'danger');
+            }
+        }
+
         // View budget details
         function viewBudget(budgetId) {
             // Find the budget
@@ -1890,6 +1999,45 @@ $db = Database::getInstance()->getConnection();
             showAlert(`Adjusting allocation for: ${allocation.department}`, 'info');
         }
 
+        async function approveAdjustment(adjustmentId) {
+            await updateAdjustmentStatus(adjustmentId, 'approved');
+        }
+
+        async function rejectAdjustment(adjustmentId) {
+            await updateAdjustmentStatus(adjustmentId, 'rejected');
+        }
+
+        async function updateAdjustmentStatus(adjustmentId, status) {
+            try {
+                const response = await fetch(`api/budgets.php?id=${adjustmentId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'adjustment',
+                        status
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                showAlert(`Adjustment ${status}`, 'success');
+                loadAdjustments();
+                loadAllocations();
+                loadBudgets();
+                loadTrackingData();
+                loadAlerts();
+
+            } catch (error) {
+                console.error('Error updating adjustment:', error);
+                showAlert('Error updating adjustment: ' + error.message, 'danger');
+            }
+        }
+
         // Utility functions
         function getStatusBadge(status) {
             const statusMap = {
@@ -1897,7 +2045,8 @@ $db = Database::getInstance()->getConnection();
                 'pending': 'bg-warning',
                 'approved': 'bg-success',
                 'active': 'bg-primary',
-                'completed': 'bg-secondary'
+                'completed': 'bg-secondary',
+                'rejected': 'bg-danger'
             };
 
             const badgeClass = statusMap[status] || 'bg-secondary';
@@ -1975,14 +2124,57 @@ $db = Database::getInstance()->getConnection();
                     const formData = new FormData(this);
                     const budgetData = {
                         name: formData.get('budgetName'),
-                        department: formData.get('department'),
+                        department_id: formData.get('department_id') || null,
+                        vendor_id: formData.get('vendor_id') || null,
                         start_date: formData.get('startDate'),
                         end_date: formData.get('endDate'),
                         total_amount: parseFloat(formData.get('totalAmount')),
-                        description: formData.get('description')
+                        description: formData.get('budgetDescription')
                     };
 
                     createBudget(budgetData);
+                });
+            }
+
+            const allocateFundsForm = document.getElementById('allocateFundsForm');
+            if (allocateFundsForm) {
+                allocateFundsForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    const formData = new FormData(this);
+                    const itemData = {
+                        action: 'item',
+                        budget_id: formData.get('budget_id'),
+                        category_id: formData.get('category_id'),
+                        department_id: formData.get('department_id') || null,
+                        account_id: formData.get('account_id') || null,
+                        vendor_id: formData.get('vendor_id') || null,
+                        budgeted_amount: parseFloat(formData.get('budgeted_amount')),
+                        notes: formData.get('notes')
+                    };
+
+                    createBudgetItem(itemData);
+                });
+            }
+
+            const adjustmentRequestForm = document.getElementById('adjustmentRequestForm');
+            if (adjustmentRequestForm) {
+                adjustmentRequestForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    const formData = new FormData(this);
+                    const adjustmentData = {
+                        action: 'adjustment',
+                        budget_id: formData.get('budget_id'),
+                        adjustment_type: formData.get('adjustmentType'),
+                        amount: parseFloat(formData.get('adjustmentAmount')),
+                        department_id: formData.get('department_id'),
+                        vendor_id: formData.get('vendor_id') || null,
+                        reason: formData.get('adjustmentReason'),
+                        effective_date: formData.get('expectedDate') || null
+                    };
+
+                    requestAdjustment(adjustmentData);
                 });
             }
 
@@ -2021,6 +2213,78 @@ $db = Database::getInstance()->getConnection();
             }
         }
 
+        async function loadDepartments() {
+            try {
+                const response = await fetch('api/financials/departments.php');
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to load departments');
+                }
+
+                currentDepartments = data.departments || [];
+                populateDepartmentDropdowns(currentDepartments);
+
+            } catch (error) {
+                console.error('Error loading departments:', error);
+                showAlert('Error loading departments: ' + error.message, 'danger');
+            }
+        }
+
+        async function loadCategories() {
+            try {
+                const response = await fetch('api/budgets.php?action=categories');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                currentCategories = data.categories || [];
+                populateCategoryDropdowns(currentCategories);
+
+            } catch (error) {
+                console.error('Error loading categories:', error);
+                showAlert('Error loading categories: ' + error.message, 'danger');
+            }
+        }
+
+        async function loadAccounts() {
+            try {
+                const response = await fetch('api/chart_of_accounts.php?active=true');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                currentAccounts = Array.isArray(data) ? data : [];
+                populateAccountDropdowns(currentAccounts);
+
+            } catch (error) {
+                console.error('Error loading accounts:', error);
+                showAlert('Error loading accounts: ' + error.message, 'danger');
+            }
+        }
+
+        async function loadAdjustments() {
+            try {
+                const response = await fetch('api/budgets.php?action=adjustments');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                currentAdjustments = data.adjustments || [];
+                renderAdjustmentsTable();
+
+            } catch (error) {
+                console.error('Error loading adjustments:', error);
+                showAlert('Error loading adjustments: ' + error.message, 'danger');
+            }
+        }
+
         // Populate vendor dropdowns in modals
         function populateVendorDropdowns(vendors) {
             const vendorSelects = [
@@ -2037,6 +2301,65 @@ $db = Database::getInstance()->getConnection();
                         }
                     });
                 }
+            });
+        }
+
+        function populateDepartmentDropdowns(departments) {
+            const departmentSelects = [
+                'budgetDepartment', 'allocationDepartment', 'adjustmentDepartment'
+            ];
+
+            departmentSelects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (select) {
+                    select.innerHTML = '<option value="">Select Department</option>';
+                    departments.forEach(dept => {
+                        if (dept.is_active == 1 || dept.is_active === undefined) {
+                            select.innerHTML += `<option value="${dept.id}">${dept.dept_name}</option>`;
+                        }
+                    });
+                }
+            });
+        }
+
+        function populateCategoryDropdowns(categories) {
+            const select = document.getElementById('allocationCategory');
+            if (!select) {
+                return;
+            }
+            select.innerHTML = '<option value="">Select Category</option>';
+            categories.forEach(category => {
+                select.innerHTML += `<option value="${category.id}">${category.category_name} (${category.category_type})</option>`;
+            });
+        }
+
+        function populateAccountDropdowns(accounts) {
+            const select = document.getElementById('allocationAccount');
+            if (!select) {
+                return;
+            }
+            select.innerHTML = '<option value="">Select Account</option>';
+            accounts.forEach(account => {
+                if (account.is_active == 1 || account.is_active === undefined) {
+                    select.innerHTML += `<option value="${account.id}">${account.account_code} - ${account.account_name}</option>`;
+                }
+            });
+        }
+
+        function populateBudgetDropdowns(budgets) {
+            const budgetSelects = [
+                'allocationBudget', 'adjustmentBudget'
+            ];
+
+            budgetSelects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (!select) {
+                    return;
+                }
+                select.innerHTML = '<option value="">Select Budget</option>';
+                budgets.forEach(budget => {
+                    select.innerHTML += `<option value="${budget.id}">${budget.name}</option>`;
+                });
             });
         }
 
@@ -2127,18 +2450,8 @@ $db = Database::getInstance()->getConnection();
             showAlert(`Alert Details: ${alert.department} is ${alert.over_percent.toFixed(1)}% over budget`, 'warning');
         }
 
-        // Update initialize section to load vendors and start polling
+        // Update initialize section to start polling
         document.addEventListener('DOMContentLoaded', function() {
-            // ... existing code ...
-
-            // Load initial data including vendors
-            loadBudgets();
-            loadAllocations();
-            loadTrackingData();
-            loadAlerts(); // Add alerts loading
-            loadVendors(); // Add vendor loading
-            loadClaimsData(); // Add claims loading
-
             // Start polling for vendor updates (check every 10 seconds)
             startVendorPolling();
         });
@@ -2154,11 +2467,12 @@ $db = Database::getInstance()->getConnection();
                     const formData = new FormData(this);
                     const budgetData = {
                         name: formData.get('budgetName'),
-                        department: formData.get('department'),
+                        department_id: formData.get('department_id') || null,
+                        vendor_id: formData.get('vendor_id') || null,
                         start_date: formData.get('startDate'),
                         end_date: formData.get('endDate'),
                         total_amount: parseFloat(formData.get('totalAmount')),
-                        description: formData.get('description')
+                        description: formData.get('budgetDescription')
                     };
 
                     createBudget(budgetData);
@@ -2204,7 +2518,7 @@ $db = Database::getInstance()->getConnection();
 
     
 
-<!-- Create Budget Modal -->
+    <!-- Create Budget Modal -->
     <div class="modal fade" id="createBudgetModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -2224,12 +2538,8 @@ $db = Database::getInstance()->getConnection();
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="budgetDepartment" class="form-label">Department</label>
-                                    <select class="form-select" id="budgetDepartment" name="budgetDepartment">
-                                        <option value="">Select Department</option>
-                                        <option value="Hotel Operations">Hotel Operations</option>
-                                        <option value="Restaurant">Restaurant</option>
-                                        <option value="Events">Events</option>
-                                        <option value="Finance & Admin">Finance & Admin</option>
+                                    <select class="form-select" id="budgetDepartment" name="department_id">
+                                        <option value="">Loading departments...</option>
                                     </select>
                                 </div>
                             </div>
@@ -2258,7 +2568,7 @@ $db = Database::getInstance()->getConnection();
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="budgetVendor" class="form-label">Primary Vendor (Optional)</label>
-                                    <select class="form-select" id="budgetVendor" name="budgetVendor">
+                                    <select class="form-select" id="budgetVendor" name="vendor_id">
                                         <option value="">Loading vendors...</option>
                                     </select>
                                 </div>
@@ -2278,6 +2588,82 @@ $db = Database::getInstance()->getConnection();
         </div>
     </div>
 
+    <!-- Allocate Funds Modal -->
+    <div class="modal fade" id="allocateFundsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Allocate Budget Funds</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="allocateFundsForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="allocationBudget" class="form-label">Budget *</label>
+                                    <select class="form-select" id="allocationBudget" name="budget_id" required>
+                                        <option value="">Loading budgets...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="allocationCategory" class="form-label">Category *</label>
+                                    <select class="form-select" id="allocationCategory" name="category_id" required>
+                                        <option value="">Loading categories...</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="allocationDepartment" class="form-label">Department</label>
+                                    <select class="form-select" id="allocationDepartment" name="department_id">
+                                        <option value="">Loading departments...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="allocationAccount" class="form-label">Account</label>
+                                    <select class="form-select" id="allocationAccount" name="account_id">
+                                        <option value="">Loading accounts...</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="allocationVendor" class="form-label">Vendor (Optional)</label>
+                                    <select class="form-select" id="allocationVendor" name="vendor_id">
+                                        <option value="">Loading vendors...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="allocationAmount" class="form-label">Allocated Amount *</label>
+                                    <input type="number" class="form-control" id="allocationAmount" name="budgeted_amount" step="0.01" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="allocationNotes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="allocationNotes" name="notes" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" form="allocateFundsForm">Save Allocation</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Adjustment Request Modal -->
     <div class="modal fade" id="adjustmentRequestModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
@@ -2289,6 +2675,14 @@ $db = Database::getInstance()->getConnection();
                 <div class="modal-body">
                     <form id="adjustmentRequestForm">
                         <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="adjustmentBudget" class="form-label">Budget *</label>
+                                    <select class="form-select" id="adjustmentBudget" name="budget_id" required>
+                                        <option value="">Loading budgets...</option>
+                                    </select>
+                                </div>
+                            </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="adjustmentType" class="form-label">Adjustment Type *</label>
@@ -2311,19 +2705,15 @@ $db = Database::getInstance()->getConnection();
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="adjustmentDepartment" class="form-label">Department *</label>
-                                    <select class="form-select" id="adjustmentDepartment" name="adjustmentDepartment" required>
-                                        <option value="">Select Department</option>
-                                        <option value="Hotel Operations">Hotel Operations</option>
-                                        <option value="Restaurant">Restaurant</option>
-                                        <option value="Events">Events</option>
-                                        <option value="Finance & Admin">Finance & Admin</option>
+                                    <select class="form-select" id="adjustmentDepartment" name="department_id" required>
+                                        <option value="">Loading departments...</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="adjustmentVendor" class="form-label">Related Vendor</label>
-                                    <select class="form-select" id="adjustmentVendor" name="adjustmentVendor">
+                                    <select class="form-select" id="adjustmentVendor" name="vendor_id">
                                         <option value="">Loading vendors...</option>
                                     </select>
                                 </div>
