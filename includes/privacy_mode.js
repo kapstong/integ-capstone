@@ -11,7 +11,7 @@
     let isHidden = true;
     let eyeButton = null;
 
-    const AMOUNT_REGEX = /(?:[₱$€£¥]\s*-?[\d,]+\.?\d*)|(?:PHP\s*-?[\d,]+\.?\d*)|(?:P\s*-?[\d,]+\.?\d*)|(?:\(\s*[₱$€£¥P]?\s*-?[\d,]+\.?\d*\s*\))/g;
+    const AMOUNT_REGEX = /(?:[₱$€£¥]\s*-?[\d,]+\.?\d*)|(?:ƒ,ñ\s*-?[\d,]+\.?\d*)|(?:PHP\s*-?[\d,]+\.?\d*)|(?:P\s*-?[\d,]+\.?\d*)|(?:\(\s*(?:[₱$€£¥P]|ƒ,ñ)?\s*-?[\d,]+\.?\d*\s*\))/g;
     const MASKED_CLASS = 'privacy-mask';
 
     /**
@@ -580,8 +580,10 @@
         let masked = '*********';
         if (/^PHP/i.test(core)) {
             masked = 'PHP *********';
-        } else if (/^P\b/.test(core)) {
+        } else if (/^P\\b/.test(core)) {
             masked = 'P*********';
+        } else if (core.startsWith('ƒ,ñ')) {
+            masked = 'ƒ,ñ*********';
         } else {
             const symbol = core.charAt(0);
             if ('₱$€£¥'.includes(symbol)) {
