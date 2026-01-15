@@ -454,6 +454,11 @@ $db = Database::getInstance()->getConnection();
             border-radius: 12px;
             padding: 2rem;
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
             transition: all 0.3s ease;
             border: 1px solid #e9ecef;
             position: relative;
@@ -480,6 +485,10 @@ $db = Database::getInstance()->getConnection();
             font-weight: 800;
             font-size: 2rem;
             margin: 0.5rem 0;
+            width: 100%;
+            text-align: center;
+            line-height: 1.1;
+            font-variant-numeric: tabular-nums;
         }
 
         .reports-card h6 {
