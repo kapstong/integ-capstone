@@ -237,6 +237,9 @@ class Auth {
         if (!$this->isLoggedIn()) {
             return false;
         }
+        if ($this->isAdminUser()) {
+            return true;
+        }
         return $this->permManager->hasPermission($permission);
     }
 
@@ -244,12 +247,18 @@ class Auth {
         if (!$this->isLoggedIn()) {
             return false;
         }
+        if ($this->isAdminUser()) {
+            return true;
+        }
         return $this->permManager->hasAnyPermission($permissions);
     }
 
     public function hasAllPermissions($permissions) {
         if (!$this->isLoggedIn()) {
             return false;
+        }
+        if ($this->isAdminUser()) {
+            return true;
         }
         return $this->permManager->hasAllPermissions($permissions);
     }
@@ -310,6 +319,14 @@ class Auth {
 
     public function requirePermission($permission, $redirect = true) {
         return $this->checkAccess($permission, $redirect);
+    }
+
+    private function isAdminUser() {
+        $roleName = $_SESSION['user']['role_name'] ?? '';
+        if ($roleName === 'admin') {
+            return true;
+        }
+        return $this->permManager->hasRole('admin');
     }
 }
 ?>
