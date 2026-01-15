@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
 
@@ -1794,7 +1794,7 @@ $db = Database::getInstance()->getConnection();
                         <td>${budget.name}</td>
                         <td>${formatBudgetPeriod(budget.start_date, budget.end_date)}</td>
                         <td>${budget.department || 'All Departments'}</td>
-                        <td>Gé¦${parseFloat(budget.total_amount || 0).toLocaleString()}</td>
+                        <td>G�${parseFloat(budget.total_amount || 0).toLocaleString()}</td>
                         <td>${statusBadge}</td>
                         <td>
                             <button class="btn btn-sm btn-outline-primary" onclick="viewBudget(${budget.id})">View</button>
@@ -1843,9 +1843,9 @@ $db = Database::getInstance()->getConnection();
                 const row = `
                     <tr>
                         <td><strong>${allocation.department}</strong></td>
-                        <td>Gé¦${parseFloat(allocation.total_amount || 0).toLocaleString()}</td>
-                        <td>Gé¦${parseFloat(allocation.utilized_amount || 0).toLocaleString()}</td>
-                        <td>Gé¦${parseFloat((allocation.total_amount || 0) - (allocation.utilized_amount || 0)).toLocaleString()}</td>
+                        <td>G�${parseFloat(allocation.total_amount || 0).toLocaleString()}</td>
+                        <td>G�${parseFloat(allocation.utilized_amount || 0).toLocaleString()}</td>
+                        <td>G�${parseFloat((allocation.total_amount || 0) - (allocation.utilized_amount || 0)).toLocaleString()}</td>
                         <td>
                             <div class="budget-progress ${progressClass}">
                                 <div class="budget-progress-bar" style="width: ${Math.min(progressPercent, 100)}%"></div>
@@ -1900,9 +1900,9 @@ $db = Database::getInstance()->getConnection();
                 const row = `
                     <tr>
                         <td>${item.category}</td>
-                        <td>Gé¦${parseFloat(item.budget_amount || 0).toLocaleString()}</td>
-                        <td>Gé¦${parseFloat(item.actual_amount || 0).toLocaleString()}</td>
-                        <td class="${varianceClass}">Gé¦${Math.abs(variance).toLocaleString()}</td>
+                        <td>G�${parseFloat(item.budget_amount || 0).toLocaleString()}</td>
+                        <td>G�${parseFloat(item.actual_amount || 0).toLocaleString()}</td>
+                        <td class="${varianceClass}">G�${Math.abs(variance).toLocaleString()}</td>
                         <td class="${varianceClass}">${variancePercent >= 0 ? '+' : ''}${variancePercent.toFixed(1)}%</td>
                         <td>${statusBadge}</td>
                     </tr>
@@ -1918,10 +1918,10 @@ $db = Database::getInstance()->getConnection();
             // Update the cards with real data
             const cards = document.querySelectorAll('#tracking .reports-card h3');
             if (cards.length >= 4) {
-                cards[0].textContent = `Gé¦${parseFloat(summary.total_budget || 0).toLocaleString()}`;
-                cards[1].textContent = `Gé¦${parseFloat(summary.actual_spent || 0).toLocaleString()}`;
+                cards[0].textContent = `G�${parseFloat(summary.total_budget || 0).toLocaleString()}`;
+                cards[1].textContent = `G�${parseFloat(summary.actual_spent || 0).toLocaleString()}`;
                 cards[2].textContent = `${parseFloat(summary.variance_percent || 0).toFixed(1)}%`;
-                cards[3].textContent = `Gé¦${parseFloat(summary.remaining || 0).toLocaleString()}`;
+                cards[3].textContent = `G�${parseFloat(summary.remaining || 0).toLocaleString()}`;
 
                 // Update variance color
                 const varianceCard = cards[2].closest('.reports-card');
@@ -2198,9 +2198,9 @@ $db = Database::getInstance()->getConnection();
                     <tr>
                         <td><strong>${alert.department}</strong></td>
                         <td>${alert.budget_year}</td>
-                        <td>Gé¦${parseFloat(alert.budgeted_amount).toLocaleString()}</td>
-                        <td>Gé¦${parseFloat(alert.actual_amount).toLocaleString()}</td>
-                        <td class="variance-positive">Gé¦${parseFloat(alert.over_amount).toLocaleString()}</td>
+                        <td>G�${parseFloat(alert.budgeted_amount).toLocaleString()}</td>
+                        <td>G�${parseFloat(alert.actual_amount).toLocaleString()}</td>
+                        <td class="variance-positive">G�${parseFloat(alert.over_amount).toLocaleString()}</td>
                         <td class="variance-positive">${parseFloat(alert.over_percent).toFixed(1)}%</td>
                         <td><span class="badge ${severityClass}">${alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)}</span></td>
                         <td>${alert.alert_date}</td>
@@ -2465,7 +2465,7 @@ $db = Database::getInstance()->getConnection();
         </div>
 
     <!-- Privacy Mode - Hide amounts with asterisks + Eye button -->
-    <script src="../includes/privacy_mode.js?v=6"></script>
+    <script src="../includes/privacy_mode.js?v=7"></script>
 
     <!-- Inactivity Timeout - Blur screen + Auto logout -->
     <script src="../includes/inactivity_timeout.js?v=3"></script>

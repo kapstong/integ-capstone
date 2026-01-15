@@ -96,7 +96,7 @@
         });
     </script>
 
-    <script src="/includes/privacy_mode.js?v=6"></script>
+    <script src="/includes/privacy_mode.js?v=7"></script>
     <script src="/includes/inactivity_timeout.js?v=3"></script>
 </body>
 </html>

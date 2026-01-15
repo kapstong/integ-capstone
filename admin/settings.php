@@ -787,7 +787,7 @@ session_start();
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../includes/privacy_mode.js?v=6"></script>
+    <script src="../includes/privacy_mode.js?v=7"></script>
     <script>
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('show');

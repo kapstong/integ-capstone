@@ -26,6 +26,7 @@
         }
 
         ensureMaskStyles();
+        scrubLegacyMaskedSpans();
 
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
         while (walker.nextNode()) {
@@ -617,6 +618,25 @@
 
         node.parentNode.replaceChild(fragment, node);
         ensureMaskStyles();
+    }
+
+    function scrubLegacyMaskedSpans() {
+        const legacyNodes = document.querySelectorAll('.' + MASKED_CLASS);
+        legacyNodes.forEach(span => {
+            if (originalTextMap.has(span)) {
+                return;
+            }
+            const original = span.getAttribute('data-privacy-original') || span.textContent || '';
+            originalTextMap.set(span, original);
+            span.removeAttribute('data-privacy-original');
+            span.removeAttribute('data-privacy-mask');
+            span.textContent = formatMaskedAmount(original);
+            const parent = span.parentElement;
+            if (parent) {
+                const color = window.getComputedStyle(parent).color;
+                span.style.setProperty('--privacy-mask-color', color);
+            }
+        });
     }
 
     function formatMaskedAmount(amount) {
