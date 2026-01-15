@@ -107,7 +107,6 @@ $db = Database::getInstance()->getConnection();
             padding: 20px;
             transition: margin-left 0.3s ease;
             position: relative;
-            z-index: 1;
         }
         .sidebar .navbar-brand {
             color: white !important;
