@@ -166,7 +166,7 @@ function getAllocations($db) {
         LEFT JOIN budget_adjustments ba ON ba.budget_id = b.id
             AND ba.department_id = bi.department_id
             AND ba.status = 'pending'
-        WHERE b.status IN ('approved', 'active')
+        WHERE b.status IN ('draft', 'pending', 'approved', 'active')
         GROUP BY bi.department_id, d.dept_name
         ORDER BY d.dept_name
     ");
