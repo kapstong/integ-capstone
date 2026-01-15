@@ -993,7 +993,7 @@ $db = Database::getInstance()->getConnection();
                     <div class="col-md-12">
                         <div class="card">
                             <div class="card-header">
-                                <h6>HR3 Claims vs Budget</h6>
+                                <h6>Claims vs Budget</h6>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -1008,11 +1008,11 @@ $db = Database::getInstance()->getConnection();
                                                 <th>Status</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="trackingClaimsBody">
-                                              <tr>
-                                                  <td colspan="6" class="text-center text-muted">Loading HR3 claims...</td>
-                                              </tr>
-                                          </tbody>
+                                        <tbody id="claimsBudgetBody">
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted">Loading claims...</td>
+                                            </tr>
+                                        </tbody>
                                     </table>
                                 </div>
                                 <div class="d-flex justify-content-end">
@@ -1117,11 +1117,11 @@ $db = Database::getInstance()->getConnection();
                                                 <th>Action Needed</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="alertsClaimsBody">
-                                              <tr>
-                                                  <td colspan="6" class="text-center text-muted">Loading HR3 claims...</td>
-                                              </tr>
-                                          </tbody>
+                                        <tbody id="claimsOverBudgetBody">
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted">Loading claims...</td>
+                                            </tr>
+                                        </tbody>
                                     </table>
                                 </div>
                                 <div class="d-flex justify-content-end">
@@ -1525,25 +1525,6 @@ $db = Database::getInstance()->getConnection();
             });
         }
 
-            currentBudgets.forEach(budget => {
-                const statusBadge = getStatusBadge(budget.status);
-                const row = `
-                    <tr>
-                        <td>${budget.name}</td>
-                        <td>${formatBudgetPeriod(budget.start_date, budget.end_date)}</td>
-                        <td>${budget.department || 'All Departments'}</td>
-                        <td>PHP ${parseFloat(budget.total_amount || 0).toLocaleString()}</td>
-                        <td>${statusBadge}</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick="viewBudget(${budget.id})">View</button>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="editBudget(${budget.id})">Edit</button>
-                        </td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
-        }
-
         // Load allocations
         async function loadAllocations() {
             try {
@@ -1556,8 +1537,8 @@ $db = Database::getInstance()->getConnection();
 
                 currentAllocations = data.allocations || [];
                 renderAllocationsTable();
-                renderHr3ClaimsSummary();
-                renderHr3ClaimsOverBudget();
+                renderClaimsSummary();
+                renderClaimsOverBudget();
 
             } catch (error) {
                 console.error('Error loading allocations:', error);
@@ -1691,14 +1672,14 @@ $db = Database::getInstance()->getConnection();
         }
 
         
-        async function loadHr3ClaimsData() {
-            const trackingBody = document.getElementById('trackingClaimsBody');
-            const alertsBody = document.getElementById('alertsClaimsBody');
+          async function loadClaimsData() {
+            const trackingBody = document.getElementById('claimsBudgetBody');
+            const alertsBody = document.getElementById('claimsOverBudgetBody');
             if (trackingBody) {
-                trackingBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading HR3 claims...</td></tr>';
+                trackingBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading claims...</td></tr>';
             }
             if (alertsBody) {
-                alertsBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading HR3 claims...</td></tr>';
+                alertsBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading claims...</td></tr>';
             }
 
             try {
@@ -1720,16 +1701,16 @@ $db = Database::getInstance()->getConnection();
                 }
 
                 currentHr3ClaimsBreakdown = breakdown;
-                renderHr3ClaimsSummary();
-                renderHr3ClaimsOverBudget();
+                renderClaimsSummary();
+                renderClaimsOverBudget();
 
             } catch (error) {
                 console.error('Error loading HR3 claims:', error);
                 if (trackingBody) {
-                    trackingBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No HR3 claims data available.</td></tr>';
+                    trackingBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No claims data available.</td></tr>';
                 }
                 if (alertsBody) {
-                    alertsBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No HR3 claims data available.</td></tr>';
+                    alertsBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No claims data available.</td></tr>';
                 }
             }
         }
@@ -1755,14 +1736,14 @@ $db = Database::getInstance()->getConnection();
             return { label: 'Within Limit', className: 'bg-success' };
         }
 
-        function renderHr3ClaimsSummary() {
-            const tbody = document.getElementById('trackingClaimsBody');
+        function renderClaimsSummary() {
+            const tbody = document.getElementById('claimsBudgetBody');
             if (!tbody) {
                 return;
             }
 
             if (!currentHr3ClaimsBreakdown || !currentHr3ClaimsBreakdown.summary) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No HR3 claims data available.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No claims data available.</td></tr>';
                 return;
             }
 
@@ -1770,7 +1751,7 @@ $db = Database::getInstance()->getConnection();
             const departments = Object.keys(departmentBreakdown);
 
             if (departments.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No HR3 claims data available.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No claims data available.</td></tr>';
                 return;
             }
 
@@ -1797,14 +1778,14 @@ $db = Database::getInstance()->getConnection();
             });
         }
 
-        function renderHr3ClaimsOverBudget() {
-            const tbody = document.getElementById('alertsClaimsBody');
+        function renderClaimsOverBudget() {
+            const tbody = document.getElementById('claimsOverBudgetBody');
             if (!tbody) {
                 return;
             }
 
             if (!currentHr3ClaimsBreakdown || !Array.isArray(currentHr3ClaimsBreakdown.claims)) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No HR3 claims data available.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No claims data available.</td></tr>';
                 return;
             }
 
@@ -1818,7 +1799,7 @@ $db = Database::getInstance()->getConnection();
             });
 
             if (overBudgetClaims.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No HR3 claims over budget.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No claims over budget.</td></tr>';
                 return;
             }
 
@@ -2162,7 +2143,7 @@ $db = Database::getInstance()->getConnection();
             loadTrackingData();
             loadAlerts(); // Add alerts loading
             loadVendors(); // Add vendor loading
-            loadHr3ClaimsData(); // Add HR3 claims loading
+            loadClaimsData(); // Add claims loading
 
             // Start polling for vendor updates (check every 10 seconds)
             startVendorPolling();
