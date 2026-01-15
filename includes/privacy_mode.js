@@ -10,7 +10,8 @@
 
     let isHidden = true;
     let eyeButton = null;
-    const hiddenElements = new Map(); // Track masked nodes and their originals
+
+    const AMOUNT_REGEX = /(?:[₱$€£¥]\s*-?[\d,]+\.?\d*)|(?:PHP\s*-?[\d,]+\.?\d*)|(?:P\s*-?[\d,]+\.?\d*)|(?:\(\s*[₱$€£¥P]?\s*-?[\d,]+\.?\d*\s*\))/g;
 
     /**
      * Hide all amounts with asterisks
@@ -21,69 +22,15 @@
             return;
         }
 
-        // When transitioning from visible to hidden, clear previous tracking
-        if (!isHidden) {
-            hiddenElements.clear();
-        }
-        let hiddenCount = 0;
-
-        const allElements = document.querySelectorAll('*');
-
-        allElements.forEach(el => {
-            if (el.hasAttribute('data-privacy-hidden')) {
-                return;
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+            const node = walker.currentNode;
+            if (!node || !node.nodeValue || shouldSkipNode(node)) {
+                continue;
             }
 
-            const textNodes = Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
-
-            textNodes.forEach(node => {
-                const text = node.nodeValue;
-                if (!text) return;
-
-                // Enhanced regex to catch all amount patterns including:
-                // - Currency symbols: ₱, $, €, £, ¥
-                // - P prefix (without peso symbol)
-                // - PHP prefix
-                // - Negative amounts with minus sign
-                // - Amounts in parentheses (accounting format for negatives)
-                // - With or without decimal points
-                const hasAmount = /(?:[₱$€£¥P]\s*-?[\d,]+\.?\d*)|(?:PHP\s*-?[\d,]+\.?\d*)|(?:\(\s*[₱$€£¥P]?\s*[\d,]+\.?\d*\s*\))/.test(text);
-
-                if (hasAmount) {
-                    const originalText = text;
-
-                    const hiddenText = text
-                        // Match ₱ with optional minus and numbers
-                        .replace(/₱\s*-?[\d,]+\.?\d*/g, '₱*********')
-                        // Match $ with optional minus and numbers
-                        .replace(/\$\s*-?[\d,]+\.?\d*/g, '$*********')
-                        // Match € with optional minus and numbers
-                        .replace(/€\s*-?[\d,]+\.?\d*/g, '€*********')
-                        // Match £ with optional minus and numbers
-                        .replace(/£\s*-?[\d,]+\.?\d*/g, '£*********')
-                        // Match ¥ with optional minus and numbers
-                        .replace(/¥\s*-?[\d,]+\.?\d*/g, '¥*********')
-                        // Match PHP with optional minus and numbers
-                        .replace(/PHP\s*-?[\d,]+\.?\d*/g, 'PHP *********')
-                        // Match P (without peso symbol) with optional minus and numbers - CRITICAL FIX
-                        .replace(/P\s*-?[\d,]+\.?\d*/g, 'P*********')
-                        // Match amounts in parentheses (accounting format)
-                        .replace(/\(\s*([₱$€£¥P]?)\s*[\d,]+\.?\d*\s*\)/g, '($1********)');
-
-                    if (hiddenText !== originalText) {
-                        hiddenElements.set(node, {
-                            element: el,
-                            original: originalText
-                        });
-
-                        el.setAttribute('data-privacy-hidden', 'true');
-                        el.setAttribute('data-privacy-original', originalText);
-                        node.nodeValue = hiddenText;
-                        hiddenCount++;
-                    }
-                }
-            });
-        });
+            maskTextNode(node);
+        }
 
         isHidden = true;
         updateEyeButton();
@@ -95,34 +42,12 @@
     function showAmounts() {
         let restoredCount = 0;
 
-        hiddenElements.forEach((item, node) => {
-            if (node && node.nodeValue != null) {
-                node.nodeValue = item.original;
-                restoredCount++;
-            } else if (item.element) {
-                // Fallback: attempt to restore using stored text when node reference is gone
-                item.element.textContent = item.original;
-                restoredCount++;
-            }
-
-            if (item.element) {
-                item.element.removeAttribute('data-privacy-hidden');
-                item.element.removeAttribute('data-privacy-original');
-            }
-        });
-
-        hiddenElements.clear();
-
-        // Fallback: any leftover elements with data-privacy attributes
-        const stillMasked = document.querySelectorAll('[data-privacy-hidden]');
-        stillMasked.forEach(el => {
-            const original = el.getAttribute('data-privacy-original');
-            if (original) {
-                el.textContent = original;
-                restoredCount++;
-            }
-            el.removeAttribute('data-privacy-hidden');
-            el.removeAttribute('data-privacy-original');
+        const maskedNodes = document.querySelectorAll('.privacy-masked-value');
+        maskedNodes.forEach(span => {
+            const original = span.getAttribute('data-privacy-original') || '';
+            const textNode = document.createTextNode(original);
+            span.replaceWith(textNode);
+            restoredCount++;
         });
 
         isHidden = false;
@@ -573,6 +498,82 @@
         toggle: toggleAmounts,
         isHidden: function() { return isHidden; }
     };
+
+    function shouldSkipNode(node) {
+        const parent = node.parentElement;
+        if (!parent) return true;
+        const tag = parent.tagName;
+        if (!tag) return true;
+        if (parent.classList.contains('privacy-masked-value')) return true;
+        const blockedTags = ['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT'];
+        if (blockedTags.includes(tag)) return true;
+        return false;
+    }
+
+    function maskTextNode(node) {
+        const text = node.nodeValue;
+        if (!text) return;
+        AMOUNT_REGEX.lastIndex = 0;
+
+        let match;
+        let lastIndex = 0;
+        let masked = false;
+        const fragment = document.createDocumentFragment();
+
+        while ((match = AMOUNT_REGEX.exec(text)) !== null) {
+            masked = true;
+            const preceding = text.slice(lastIndex, match.index);
+            if (preceding) {
+                fragment.appendChild(document.createTextNode(preceding));
+            }
+
+            const span = document.createElement('span');
+            span.className = 'privacy-masked-value';
+            span.setAttribute('data-privacy-original', match[0]);
+            span.textContent = formatMaskedAmount(match[0]);
+            fragment.appendChild(span);
+
+            lastIndex = match.index + match[0].length;
+        }
+
+        if (!masked) return;
+
+        const trailing = text.slice(lastIndex);
+        if (trailing) {
+            fragment.appendChild(document.createTextNode(trailing));
+        }
+
+        node.parentNode.replaceChild(fragment, node);
+    }
+
+    function formatMaskedAmount(amount) {
+        const leading = amount.match(/^\s*/)[0];
+        const trailing = amount.match(/\s*$/)[0];
+        let core = amount.trim();
+
+        let prefix = '';
+        let suffix = '';
+
+        if (core.startsWith('(') && core.endsWith(')')) {
+            prefix = '(';
+            suffix = ')';
+            core = core.slice(1, -1).trim();
+        }
+
+        let masked = '*********';
+        if (/^PHP/i.test(core)) {
+            masked = 'PHP *********';
+        } else if (/^P\b/.test(core)) {
+            masked = 'P*********';
+        } else {
+            const symbol = core.charAt(0);
+            if ('₱$€£¥'.includes(symbol)) {
+                masked = symbol + '*********';
+            }
+        }
+
+        return leading + prefix + masked + suffix + trailing;
+    }
 
     init();
 
