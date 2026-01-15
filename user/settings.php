@@ -143,6 +143,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_privacy'])) {
             min-height: 100vh;
         }
         .sidebar {
+            height: 100vh;
+            max-height: 100vh;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 2rem;
             background: linear-gradient(180deg, #0f1c49 0%, #1b2f73 50%, #15265e 100%);
             color: white;
             min-height: 100vh;

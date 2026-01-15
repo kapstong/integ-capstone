@@ -68,6 +68,12 @@ try {
             padding: 0;
         }
         .sidebar {
+            height: 100vh;
+            max-height: 100vh;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 2rem;
             background-color: #1e2936;
             color: white;
             min-height: 100vh;
