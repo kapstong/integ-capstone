@@ -499,6 +499,11 @@
         createPasswordModal();
         createEyeButton();
 
+        const storedVisibility = getStoredVisibility();
+        if (storedVisibility === '0') {
+            hideAmounts(true);
+        }
+
         // Check if password was already entered in this session
         setTimeout(function() {
             checkSessionStatus();
