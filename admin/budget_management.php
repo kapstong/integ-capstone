@@ -1588,12 +1588,6 @@ $db = Database::getInstance()->getConnection();
                 tbody.innerHTML += row;
             });
         }
-            tbody.innerHTML = '';
-
-            if (currentAllocations.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No allocations found.</td></tr>';
-                return;
-            }
 
         // Load tracking data
         async function loadTrackingData() {
