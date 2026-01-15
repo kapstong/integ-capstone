@@ -1058,6 +1058,7 @@ class HR3Integration extends BaseIntegration {
             $db = Database::getInstance()->getConnection();
             $importedCount = 0;
             $errors = [];
+            $claimsExpenseAccount = $this->getAccountId('5300'); // Employee Claims/Reimbursements Expense
 
             foreach ($approvedClaims as $claim) {
                 try {
@@ -1073,6 +1074,10 @@ class HR3Integration extends BaseIntegration {
                     // Map department if available
                     $departmentId = $this->mapDepartment($claim['department'] ?? '');
 
+                    $budgetCheck = $this->checkBudgetAvailability($claimsExpenseAccount, $amount);
+                    $budgetExceeded = $budgetCheck['exceeded'];
+                    $status = $budgetExceeded ? 'pending' : 'approved';
+
                     // Check if claim already exists
                     $checkStmt = $db->prepare("SELECT id FROM disbursements WHERE external_reference = ?");
                     $checkStmt->execute([$claimId]);
@@ -1085,7 +1090,7 @@ class HR3Integration extends BaseIntegration {
                         INSERT INTO disbursements
                         (disbursement_type, payee_name, amount, description, status,
                          department_id, external_reference, external_system, created_at)
-                        VALUES (?, ?, ?, ?, 'approved', ?, ?, 'HR3', NOW())
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 'HR3', NOW())
                     ");
 
                     $stmt->execute([
@@ -1093,33 +1098,55 @@ class HR3Integration extends BaseIntegration {
                         $employeeName,
                         $amount,
                         $description,
+                        $status,
                         $departmentId,
                         $claimId
                     ]);
 
-                    // CREATE JOURNAL ENTRY for proper double-entry bookkeeping
-                    // Debit: Employee Claims Expense, Credit: Accounts Payable
-                    $claimsExpenseAccount = $this->getAccountId('5300'); // Employee Claims/Reimbursements Expense
-                    $accountsPayableAccount = $this->getAccountId('2100'); // Accounts Payable
-
-                    if ($claimsExpenseAccount && $accountsPayableAccount) {
-                        $this->createJournalEntry([
-                            'date' => $claimDate,
-                            'description' => $description,
-                            'debit_account_id' => $claimsExpenseAccount,
-                            'credit_account_id' => $accountsPayableAccount,
+                    if ($budgetExceeded) {
+                        $this->triggerBudgetAlertWorkflow([
+                            'source' => 'HR3_CLAIMS',
+                            'claim_id' => $claimId,
+                            'employee_name' => $employeeName,
+                            'department_id' => $departmentId,
+                            'department' => $claim['department'] ?? '',
                             'amount' => $amount,
-                            'reference_number' => $claimId,
-                            'source_system' => 'HR3_CLAIMS'
+                            'budget_remaining' => $budgetCheck['remaining'],
+                            'budgeted_amount' => $budgetCheck['budgeted_amount'],
+                            'actual_amount' => $budgetCheck['actual_amount'],
+                            'budget_exceeded' => true
                         ]);
+
+                        Logger::getInstance()->warning('HR3 claim pending due to budget limit', [
+                            'claim_id' => $claimId,
+                            'amount' => $amount,
+                            'budget_remaining' => $budgetCheck['remaining']
+                        ]);
+                    } else {
+                        // CREATE JOURNAL ENTRY for proper double-entry bookkeeping
+                        // Debit: Employee Claims Expense, Credit: Accounts Payable
+                        $accountsPayableAccount = $this->getAccountId('2100'); // Accounts Payable
+
+                        if ($claimsExpenseAccount && $accountsPayableAccount) {
+                            $this->createJournalEntry([
+                                'date' => $claimDate,
+                                'description' => $description,
+                                'debit_account_id' => $claimsExpenseAccount,
+                                'credit_account_id' => $accountsPayableAccount,
+                                'amount' => $amount,
+                                'reference_number' => $claimId,
+                                'source_system' => 'HR3_CLAIMS'
+                            ]);
+                        }
                     }
 
                     $importedCount++;
 
-                    Logger::getInstance()->info('HR3 claim imported with journal entry', [
+                    Logger::getInstance()->info('HR3 claim imported', [
                         'claim_id' => $claimId,
                         'employee' => $employeeName,
-                        'amount' => $amount
+                        'amount' => $amount,
+                        'status' => $status
                     ]);
 
                 } catch (Exception $e) {
@@ -1269,6 +1296,73 @@ class HR3Integration extends BaseIntegration {
                 'error' => $e->getMessage(),
                 'data' => null
             ];
+        }
+    }
+
+    /**
+     * Check if a claim amount fits within the active budget for an account
+     */
+    private function checkBudgetAvailability($accountId, $amount) {
+        $default = [
+            'exceeded' => false,
+            'remaining' => null,
+            'budgeted_amount' => null,
+            'actual_amount' => null
+        ];
+
+        if (!$accountId || $amount <= 0) {
+            return $default;
+        }
+
+        try {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("
+                SELECT bi.budgeted_amount, bi.actual_amount
+                FROM budget_items bi
+                INNER JOIN budgets b ON bi.budget_id = b.id
+                WHERE bi.account_id = ? AND b.status = 'active' AND YEAR(b.budget_year) = YEAR(CURDATE())
+                LIMIT 1
+            ");
+            $stmt->execute([$accountId]);
+            $budget = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$budget) {
+                return $default;
+            }
+
+            $remaining = floatval($budget['budgeted_amount']) - floatval($budget['actual_amount']);
+
+            return [
+                'exceeded' => $amount > $remaining,
+                'remaining' => $remaining,
+                'budgeted_amount' => floatval($budget['budgeted_amount']),
+                'actual_amount' => floatval($budget['actual_amount'])
+            ];
+        } catch (Exception $e) {
+            Logger::getInstance()->error('Budget availability check failed', [
+                'account_id' => $accountId,
+                'error' => $e->getMessage()
+            ]);
+            return $default;
+        }
+    }
+
+    /**
+     * Trigger workflow alert when budget is exceeded
+     */
+    private function triggerBudgetAlertWorkflow($data) {
+        try {
+            if (!class_exists('WorkflowEngine')) {
+                require_once __DIR__ . '/workflow.php';
+            }
+
+            $workflowEngine = WorkflowEngine::getInstance();
+            $workflowEngine->triggerWorkflow('transaction.posted', $data);
+        } catch (Exception $e) {
+            Logger::getInstance()->error('Failed to trigger budget alert workflow', [
+                'error' => $e->getMessage(),
+                'data' => $data
+            ]);
         }
     }
 
