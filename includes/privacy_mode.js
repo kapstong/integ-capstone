@@ -12,6 +12,7 @@
     let eyeButton = null;
 
     const AMOUNT_REGEX = /(?:[₱$€£¥]\s*-?[\d,]+\.?\d*)|(?:PHP\s*-?[\d,]+\.?\d*)|(?:P\s*-?[\d,]+\.?\d*)|(?:\(\s*[₱$€£¥P]?\s*-?[\d,]+\.?\d*\s*\))/g;
+    const MASKED_CLASS = 'privacy-mask';
 
     /**
      * Hide all amounts with asterisks
@@ -21,6 +22,8 @@
         if (!force && isHidden === false) {
             return;
         }
+
+        ensureMaskStyles();
 
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
         while (walker.nextNode()) {
@@ -42,10 +45,17 @@
     function showAmounts() {
         let restoredCount = 0;
 
-        const maskedNodes = document.querySelectorAll('.privacy-masked-value');
+        const maskedNodes = document.querySelectorAll('.' + MASKED_CLASS);
         maskedNodes.forEach(span => {
-            const original = span.getAttribute('data-privacy-original') || '';
-            const textNode = document.createTextNode(original);
+            span.classList.remove(MASKED_CLASS);
+            span.removeAttribute('data-privacy-mask');
+            span.removeAttribute('data-privacy-original');
+            span.style.removeProperty('--privacy-mask-color');
+            span.style.removeProperty('position');
+            span.style.removeProperty('display');
+            span.style.removeProperty('color');
+            span.style.removeProperty('white-space');
+            const textNode = document.createTextNode(span.textContent || '');
             span.replaceWith(textNode);
             restoredCount++;
         });
@@ -504,7 +514,7 @@
         if (!parent) return true;
         const tag = parent.tagName;
         if (!tag) return true;
-        if (parent.classList.contains('privacy-masked-value')) return true;
+        if (parent.classList.contains(MASKED_CLASS)) return true;
         const blockedTags = ['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT'];
         if (blockedTags.includes(tag)) return true;
         return false;
@@ -528,9 +538,15 @@
             }
 
             const span = document.createElement('span');
-            span.className = 'privacy-masked-value';
+            span.className = MASKED_CLASS;
             span.setAttribute('data-privacy-original', match[0]);
-            span.textContent = formatMaskedAmount(match[0]);
+            span.setAttribute('data-privacy-mask', formatMaskedAmount(match[0]));
+            span.textContent = match[0];
+            const parent = node.parentElement;
+            if (parent) {
+                const color = window.getComputedStyle(parent).color;
+                span.style.setProperty('--privacy-mask-color', color);
+            }
             fragment.appendChild(span);
 
             lastIndex = match.index + match[0].length;
@@ -544,6 +560,7 @@
         }
 
         node.parentNode.replaceChild(fragment, node);
+        ensureMaskStyles();
     }
 
     function formatMaskedAmount(amount) {
@@ -573,6 +590,33 @@
         }
 
         return leading + prefix + masked + suffix + trailing;
+    }
+
+    function ensureMaskStyles() {
+        if (document.getElementById('privacy-mask-styles')) {
+            return;
+        }
+
+        const style = document.createElement('style');
+        style.id = 'privacy-mask-styles';
+        style.textContent = `
+            .${MASKED_CLASS} {
+                position: relative;
+                display: inline-block;
+                color: transparent !important;
+                white-space: pre;
+            }
+            .${MASKED_CLASS}::after {
+                content: attr(data-privacy-mask);
+                position: absolute;
+                left: 0;
+                top: 0;
+                color: var(--privacy-mask-color, #1f2937);
+                white-space: pre;
+                pointer-events: none;
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     init();
