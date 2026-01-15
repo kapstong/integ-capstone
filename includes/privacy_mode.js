@@ -10,7 +10,7 @@
 
     let isHidden = true;
     let eyeButton = null;
-    let hiddenElements = []; // Store elements we've hidden
+    const hiddenElements = new Map(); // Track masked nodes and their originals
 
     /**
      * Hide all amounts with asterisks
@@ -21,7 +21,10 @@
             return;
         }
 
-        hiddenElements = [];
+        // When transitioning from visible to hidden, clear previous tracking
+        if (!isHidden) {
+            hiddenElements.clear();
+        }
         let hiddenCount = 0;
 
         const allElements = document.querySelectorAll('*');
@@ -68,8 +71,7 @@
                         .replace(/\(\s*([₱$€£¥P]?)\s*[\d,]+\.?\d*\s*\)/g, '($1********)');
 
                     if (hiddenText !== originalText) {
-                        hiddenElements.push({
-                            node: node,
+                        hiddenElements.set(node, {
                             element: el,
                             original: originalText
                         });
@@ -93,13 +95,23 @@
     function showAmounts() {
         let restoredCount = 0;
 
-        hiddenElements.forEach(item => {
-            if (item.node && item.node.nodeValue) {
-                item.node.nodeValue = item.original;
-                item.element.removeAttribute('data-privacy-hidden');
+        hiddenElements.forEach((item, node) => {
+            if (node && node.nodeValue != null) {
+                node.nodeValue = item.original;
+                restoredCount++;
+            } else if (item.element) {
+                // Fallback: attempt to restore using stored text when node reference is gone
+                item.element.textContent = item.original;
                 restoredCount++;
             }
+
+            if (item.element) {
+                item.element.removeAttribute('data-privacy-hidden');
+                item.element.removeAttribute('data-privacy-original');
+            }
         });
+
+        hiddenElements.clear();
 
         isHidden = false;
         updateEyeButton();
