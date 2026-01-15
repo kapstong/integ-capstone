@@ -113,6 +113,18 @@
 
         hiddenElements.clear();
 
+        // Fallback: any leftover elements with data-privacy attributes
+        const stillMasked = document.querySelectorAll('[data-privacy-hidden]');
+        stillMasked.forEach(el => {
+            const original = el.getAttribute('data-privacy-original');
+            if (original) {
+                el.textContent = original;
+                restoredCount++;
+            }
+            el.removeAttribute('data-privacy-hidden');
+            el.removeAttribute('data-privacy-original');
+        });
+
         isHidden = false;
         updateEyeButton();
     }
