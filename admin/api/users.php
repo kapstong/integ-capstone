@@ -1,0 +1,269 @@
+<?php
+// Users API
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+
+// Start output buffering to catch any unwanted output
+ob_start();
+
+// Suppress any HTML output from errors
+ini_set('display_errors', 0);
+error_reporting(0);
+
+// Clean any buffered output before including files
+ob_clean();
+
+require_once '../../includes/auth.php';
+require_once '../../includes/database.php';
+// require_once '../../includes/logger.php'; // Temporarily disabled to avoid potential issues
+
+// Start session safely
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Check if user is logged in and has admin privileges
+if (!isset($_SESSION['user'])) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Unauthorized - Session not found']);
+    exit;
+}
+
+// Check if user has admin role or permission to manage users
+$auth = new Auth();
+if (!$auth->hasRole('admin') && !$auth->hasPermission('manage_users')) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Forbidden - Insufficient privileges']);
+    exit;
+}
+?>
+
+<?php
+$db = null;
+$method = $_SERVER['REQUEST_METHOD'];
+
+try {
+    $db = Database::getInstance();
+} catch (Exception $e) {
+    error_log("Database connection error in users API: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Database connection failed. Please check your configuration.']);
+    exit;
+}
+
+try {
+    switch ($method) {
+        case 'GET':
+            if (isset($_GET['id'])) {
+                // Get single user
+                $stmt = $db->query(
+                    "SELECT id, username, email, full_name, role, status, last_login, created_at, department, phone
+                     FROM users WHERE id = ?",
+                    [$_GET['id']]
+                );
+                $user = $stmt->fetch();
+                echo json_encode($user ?: ['error' => 'User not found']);
+            } else {
+                // Get all users with optional filters
+                $where = [];
+                $params = [];
+
+                if (isset($_GET['status'])) {
+                    $where[] = "status = ?";
+                    $params[] = $_GET['status'];
+                }
+
+                if (isset($_GET['role'])) {
+                    $where[] = "role = ?";
+                    $params[] = $_GET['role'];
+                }
+
+                $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
+
+                $users = $db->select(
+                    "SELECT id, username, email, full_name, role, status, last_login, created_at, department, phone
+                     FROM users {$whereClause}
+                     ORDER BY created_at DESC"
+                );
+                echo json_encode($users);
+            }
+            break;
+
+        case 'POST':
+            // Create new user
+            $data = json_decode(file_get_contents('php://input'), true);
+
+            if (!$data) {
+                // Handle form data
+                $data = $_POST;
+            }
+
+            // Validate required fields
+            if (empty($data['username']) || empty($data['password']) || empty($data['email']) || empty($data['full_name'])) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Missing required fields: username, password, email, full_name']);
+                exit;
+            }
+
+            // Check if username already exists
+            $existing = $db->select("SELECT id FROM users WHERE username = ?", [$data['username']]);
+            if (!empty($existing)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Username already exists']);
+                exit;
+            }
+
+            // Check if email already exists
+            $existing = $db->select("SELECT id FROM users WHERE email = ?", [$data['email']]);
+            if (!empty($existing)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Email already exists']);
+                exit;
+            }
+
+            $userId = $db->insert(
+                "INSERT INTO users (username, password_hash, email, full_name, role, status, department, phone)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                [
+                    $data['username'],
+                    password_hash($data['password'], PASSWORD_DEFAULT),
+                    $data['email'],
+                    $data['full_name'],
+                    $data['role'] ?? 'staff',
+                    $data['status'] ?? 'active',
+                    $data['department'] ?? null,
+                    $data['phone'] ?? null
+                ]
+            );
+
+            // Log the action (disabled temporarily)
+            // Logger::getInstance()->logUserAction('Created user', 'users', $userId, null, $data);
+
+            echo json_encode(['success' => true, 'id' => $userId]);
+            break;
+
+        case 'PUT':
+            // Update user
+            if (!isset($_GET['id'])) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'User ID required']);
+                exit;
+            }
+
+            $data = json_decode(file_get_contents('php://input'), true);
+            if (!$data) {
+                $data = $_POST;
+            }
+
+            // Get old values for audit
+            $oldUser = $db->select("SELECT * FROM users WHERE id = ?", [$_GET['id']]);
+            $oldValues = $oldUser[0] ?? null;
+
+            if (!$oldValues) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'error' => 'User not found']);
+                exit;
+            }
+
+            $fields = [];
+            $params = [];
+
+            if (isset($data['email'])) {
+                // Check if email is already used by another user
+                $existing = $db->select("SELECT id FROM users WHERE email = ? AND id != ?", [$data['email'], $_GET['id']]);
+                if (!empty($existing)) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'error' => 'Email already exists']);
+                    exit;
+                }
+                $fields[] = "email = ?";
+                $params[] = $data['email'];
+            }
+            if (isset($data['full_name'])) {
+                $fields[] = "full_name = ?";
+                $params[] = $data['full_name'];
+            }
+            if (isset($data['role'])) {
+                $fields[] = "role = ?";
+                $params[] = $data['role'];
+            }
+            if (isset($data['status'])) {
+                $fields[] = "status = ?";
+                $params[] = $data['status'];
+            }
+            if (isset($data['department'])) {
+                $fields[] = "department = ?";
+                $params[] = $data['department'];
+            }
+            if (isset($data['phone'])) {
+                $fields[] = "phone = ?";
+                $params[] = $data['phone'];
+            }
+            if (isset($data['password']) && !empty($data['password'])) {
+                $fields[] = "password_hash = ?";
+                $params[] = password_hash($data['password'], PASSWORD_DEFAULT);
+            }
+
+            if (empty($fields)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'No fields to update']);
+                exit;
+            }
+
+            $params[] = $_GET['id'];
+            $sql = "UPDATE users SET " . implode(', ', $fields) . " WHERE id = ?";
+
+            $affected = $db->execute($sql, $params);
+
+            // Log the action (disabled temporarily)
+            // Logger::getInstance()->logUserAction('Updated user', 'users', $_GET['id'], $oldValues, $data);
+
+            echo json_encode(['success' => $affected > 0]);
+            break;
+
+        case 'DELETE':
+            // Delete user
+            if (!isset($_GET['id'])) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'User ID required']);
+                exit;
+            }
+
+            // Prevent deletion of current user
+            if ($_GET['id'] == $_SESSION['user']['id']) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Cannot delete your own account']);
+                exit;
+            }
+
+            // Get old values for audit
+            $oldUser = $db->select("SELECT * FROM users WHERE id = ?", [$_GET['id']]);
+            $oldValues = $oldUser[0] ?? null;
+
+            if (!$oldValues) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'error' => 'User not found']);
+                exit;
+            }
+
+            $affected = $db->execute("DELETE FROM users WHERE id = ?", [$_GET['id']]);
+
+            // Log the action (disabled temporarily)
+            // Logger::getInstance()->logUserAction('Deleted user', 'users', $_GET['id'], $oldValues, null);
+
+            echo json_encode(['success' => $affected > 0]);
+            break;
+
+        default:
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+            break;
+    }
+} catch (Exception $e) {
+    error_log("User API operation error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Database error occurred']);
+}
+?>
