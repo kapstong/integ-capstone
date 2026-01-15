@@ -454,15 +454,34 @@ $db = Database::getInstance()->getConnection();
             border-radius: 12px;
             padding: 2rem;
             text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 0.4rem;
             transition: all 0.3s ease;
             border: 1px solid #e9ecef;
             position: relative;
             overflow: hidden;
+        }
+
+        .tracking-card {
+            display: grid;
+            grid-template-rows: auto auto auto;
+            place-items: center;
+            min-height: 190px;
+            gap: 0.35rem;
+        }
+
+        .tracking-card i {
+            line-height: 1;
+        }
+
+        .tracking-card h6 {
+            margin: 0;
+        }
+
+        .tracking-card h3 {
+            margin: 0;
+            width: 100%;
+            text-align: center;
+            line-height: 1.05;
+            font-variant-numeric: tabular-nums;
         }
 
         .reports-card::before {
@@ -485,10 +504,6 @@ $db = Database::getInstance()->getConnection();
             font-weight: 800;
             font-size: 2rem;
             margin: 0.5rem 0;
-            width: 100%;
-            text-align: center;
-            line-height: 1.1;
-            font-variant-numeric: tabular-nums;
         }
 
         .reports-card h6 {
@@ -998,28 +1013,28 @@ $db = Database::getInstance()->getConnection();
                 </div>
                 <div class="row mb-4">
                     <div class="col-md-3">
-                        <div class="reports-card">
+                        <div class="reports-card tracking-card">
                             <i class="fas fa-chart-pie fa-2x mb-3 text-primary"></i>
                             <h6>Total Budget</h6>
                             <h3>₱3,500,000</h3>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="reports-card">
+                        <div class="reports-card tracking-card">
                             <i class="fas fa-coins fa-2x mb-3 text-success"></i>
                             <h6>Actual Spent</h6>
                             <h3>₱2,870,000</h3>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="reports-card">
+                        <div class="reports-card tracking-card">
                             <i class="fas fa-percentage fa-2x mb-3 text-warning"></i>
                             <h6>Variance</h6>
                             <h3 class="variance-negative">-18.0%</h3>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="reports-card">
+                        <div class="reports-card tracking-card">
                             <i class="fas fa-clock fa-2x mb-3 text-info"></i>
                             <h6>Remaining</h6>
                             <h3>₱630,000</h3>
