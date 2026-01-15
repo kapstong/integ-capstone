@@ -15,7 +15,7 @@ if (!$auth->hasAnyPermission(['cashier.operate', 'cashier.view_all'])) {
 }
 
 $pageTitle = 'Cashier / Collection';
-include '../header.php';
+include '../legacy_header.php';
 ?>
 
 <div class="container-fluid">
@@ -318,4 +318,4 @@ function escapeHtml(text) {
 }
 </script>
 
-<?php include '../footer.php'; ?>
+<?php include '../legacy_footer.php'; ?>

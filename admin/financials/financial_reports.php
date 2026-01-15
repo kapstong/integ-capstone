@@ -10,7 +10,7 @@ $auth->requireLogin();
 $auth->requirePermission('reports.view');
 
 $pageTitle = 'Financial Reports';
-include '../header.php';
+include '../legacy_header.php';
 ?>
 
 <div class="container-fluid">
@@ -109,4 +109,4 @@ include '../header.php';
     </div>
 </div>
 
-<?php include '../footer.php'; ?>
+<?php include '../legacy_footer.php'; ?>

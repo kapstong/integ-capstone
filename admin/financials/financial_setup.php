@@ -10,7 +10,7 @@ $auth->requireLogin();
 $auth->requirePermission('settings.edit');
 
 $pageTitle = 'Financial Setup';
-include '../header.php';
+include '../legacy_header.php';
 ?>
 
 <div class="container-fluid">
@@ -109,4 +109,4 @@ function showAlert(message, type) {
 }
 </script>
 
-<?php include '../footer.php'; ?>
+<?php include '../legacy_footer.php'; ?>

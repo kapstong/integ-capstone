@@ -33,7 +33,7 @@ $expenseAccounts = array_filter($accounts, function($acc) {
 });
 
 $pageTitle = 'Department Management';
-include '../header.php';
+include '../legacy_header.php';
 ?>
 
 <link rel="stylesheet" href="/responsive.css">
@@ -582,4 +582,4 @@ function viewDepartment(id) {
 }
 </script>
 
-<?php include '../footer.php'; ?>
+<?php include '../legacy_footer.php'; ?>

@@ -12,7 +12,7 @@ $auth->requireLogin();
 $auth->requirePermission('departments.view');
 
 $pageTitle = 'Daily Revenue';
-include '../header.php';
+include '../legacy_header.php';
 ?>
 
 <div class="container-fluid">
@@ -339,4 +339,4 @@ function escapeHtml(text) {
 }
 </script>
 
-<?php include '../footer.php'; ?>
+<?php include '../legacy_footer.php'; ?>

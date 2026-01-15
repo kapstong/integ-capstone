@@ -23,7 +23,7 @@ $stmt = $db->query("
 $revenueAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $pageTitle = 'Outlet Management';
-include '../header.php';
+include '../legacy_header.php';
 ?>
 
 <div class="container-fluid">
@@ -416,4 +416,4 @@ function escapeHtml(text) {
 }
 </script>
 
-<?php include '../footer.php'; ?>
+<?php include '../legacy_footer.php'; ?>
