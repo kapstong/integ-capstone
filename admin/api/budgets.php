@@ -141,8 +141,8 @@ function getAllocations($db) {
 }
 
 function getTrackingData($db) {
-    // Get budget vs actual by category
-    $stmt = $db->prepare("
+    $period = isset($_GET['period']) ? $_GET['period'] : 'year_to_date';
+    $query = "
         SELECT
             bc.category_name as category,
             SUM(bi.budgeted_amount) as budget_amount,
@@ -152,10 +152,20 @@ function getTrackingData($db) {
         JOIN budget_categories bc ON bi.category_id = bc.id
         JOIN budgets b ON bi.budget_id = b.id
         WHERE b.status = 'active'
+    ";
+    $params = [];
+
+    if ($period === 'year_to_date') {
+        $query .= " AND b.budget_year = YEAR(CURDATE())";
+    }
+
+    $query .= "
         GROUP BY bc.id, bc.category_name, bc.category_type
         ORDER BY bc.category_name
-    ");
-    $stmt->execute();
+    ";
+
+    $stmt = $db->prepare($query);
+    $stmt->execute($params);
     $trackingData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Calculate summary

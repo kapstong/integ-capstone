@@ -1074,11 +1074,11 @@ $db = Database::getInstance()->getConnection();
                     <h6 class="mb-0">Actual vs Budget Tracking</h6>
                     <div>
                         <select class="form-select form-select-sm me-2" style="width: auto;">
-                            <option>Last 30 Days</option>
-                            <option>Last Quarter</option>
-                            <option>Year to Date</option>
+                            <option value="last_30_days">Last 30 Days</option>
+                              <option value="last_quarter">Last Quarter</option>
+                              <option value="year_to_date">Year to Date</option>
                         </select>
-                        <button class="btn btn-outline-secondary"><i class="fas fa-sync me-2"></i>Refresh</button>
+                        <button class="btn btn-outline-secondary" id="trackingRefreshButton"><i class="fas fa-sync me-2"></i>Refresh</button>
                     </div>
                 </div>
                 <div class="row mb-4">
@@ -1181,60 +1181,23 @@ $db = Database::getInstance()->getConnection();
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
-                                    <table class="table table-striped">
-                                        <thead>
-                                            <tr>
-                                                <th>Category</th>
-                                                <th>Budget Amount</th>
-                                                <th>Actual Amount</th>
-                                                <th>Variance</th>
-                                                <th>Variance %</th>
-                                                <th>Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>Staff Salaries</td>
-                                                <td>PHP 1,980,000.00</td>
-                                                <td>PHP 1,720,000.00</td>
-                                                <td class="variance-negative">PHP 260,000.00</td>
-                                                <td class="variance-negative">-13.1%</td>
-                                                <td><span class="badge bg-success">Under Budget</span></td>
-                                            </tr>
-                                            <tr>
-                                                <td>Supplies & Inventory</td>
-                                                <td>PHP 720,000.00</td>
-                                                <td>PHP 810,000.00</td>
-                                                <td class="variance-positive">PHP 90,000.00</td>
-                                                <td class="variance-positive">+12.5%</td>
-                                                <td><span class="badge bg-warning">Over Budget</span></td>
-                                            </tr>
-                                            <tr>
-                                                <td>Utilities</td>
-                                                <td>PHP 320,000.00</td>
-                                                <td>PHP 290,000.00</td>
-                                                <td class="variance-negative">PHP 30,000.00</td>
-                                                <td class="variance-negative">-9.4%</td>
-                                                <td><span class="badge bg-success">Under Budget</span></td>
-                                            </tr>
-                                            <tr>
-                                                <td>Marketing</td>
-                                                <td>PHP 280,000.00</td>
-                                                <td>PHP 310,000.00</td>
-                                                <td class="variance-positive">PHP 30,000.00</td>
-                                                <td class="variance-positive">+10.7%</td>
-                                                <td><span class="badge bg-warning">Over Budget</span></td>
-                                            </tr>
-                                            <tr>
-                                                <td>Employee Claims (HR3)</td>
-                                                <td>PHP 180,000.00</td>
-                                                <td>PHP 98,000.00</td>
-                                                <td class="variance-negative">PHP 82,000.00</td>
-                                                <td class="variance-negative">-45.6%</td>
-                                                <td><span class="badge bg-success">Under Budget</span></td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                    <table class="table table-striped" id="trackingBudgetTable">
+                                          <thead>
+                                              <tr>
+                                                  <th>Category</th>
+                                                  <th>Budget Amount</th>
+                                                  <th>Actual Amount</th>
+                                                  <th>Variance</th>
+                                                  <th>Variance %</th>
+                                                  <th>Status</th>
+                                              </tr>
+                                          </thead>
+                                          <tbody id="trackingBudgetBody">
+                                              <tr>
+                                                  <td colspan="6" class="text-center text-muted">Loading tracking data...</td>
+                                              </tr>
+                                          </tbody>
+                                      </table>
                                 </div>
                             </div>
                         </div>
@@ -1794,7 +1757,7 @@ $db = Database::getInstance()->getConnection();
                         <td>${budget.name}</td>
                         <td>${formatBudgetPeriod(budget.start_date, budget.end_date)}</td>
                         <td>${budget.department || 'All Departments'}</td>
-                        <td>Gé¦${parseFloat(budget.total_amount || 0).toLocaleString()}</td>
+                        <td>PHP ${parseFloat(budget.total_amount || 0).toLocaleString()}</td>
                         <td>${statusBadge}</td>
                         <td>
                             <button class="btn btn-sm btn-outline-primary" onclick="viewBudget(${budget.id})">View</button>
@@ -1843,9 +1806,9 @@ $db = Database::getInstance()->getConnection();
                 const row = `
                     <tr>
                         <td><strong>${allocation.department}</strong></td>
-                        <td>Gé¦${parseFloat(allocation.total_amount || 0).toLocaleString()}</td>
-                        <td>Gé¦${parseFloat(allocation.utilized_amount || 0).toLocaleString()}</td>
-                        <td>Gé¦${parseFloat((allocation.total_amount || 0) - (allocation.utilized_amount || 0)).toLocaleString()}</td>
+                        <td>PHP ${parseFloat(allocation.total_amount || 0).toLocaleString()}</td>
+                        <td>PHP ${parseFloat(allocation.utilized_amount || 0).toLocaleString()}</td>
+                        <td>PHP ${parseFloat((allocation.total_amount || 0) - (allocation.utilized_amount || 0)).toLocaleString()}</td>
                         <td>
                             <div class="budget-progress ${progressClass}">
                                 <div class="budget-progress-bar" style="width: ${Math.min(progressPercent, 100)}%"></div>
@@ -1864,7 +1827,10 @@ $db = Database::getInstance()->getConnection();
         // Load tracking data
         async function loadTrackingData() {
             try {
-                const response = await fetch('api/budgets.php?action=tracking');
+                const trackingPeriodSelect = document.querySelector('#tracking select');
+                const period = trackingPeriodSelect ? trackingPeriodSelect.value : 'year_to_date';
+                const trackingParams = new URLSearchParams({ action: 'tracking', period });
+                const response = await fetch(`api/budgets.php?${trackingParams.toString()}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -1883,7 +1849,7 @@ $db = Database::getInstance()->getConnection();
 
         // Render tracking table
         function renderTrackingTable() {
-            const tbody = document.getElementById('trackingCategoryBody');
+            const tbody = document.getElementById('trackingBudgetBody');
             tbody.innerHTML = '';
 
             if (currentTrackingData.length === 0) {
@@ -1900,9 +1866,9 @@ $db = Database::getInstance()->getConnection();
                 const row = `
                     <tr>
                         <td>${item.category}</td>
-                        <td>Gé¦${parseFloat(item.budget_amount || 0).toLocaleString()}</td>
-                        <td>Gé¦${parseFloat(item.actual_amount || 0).toLocaleString()}</td>
-                        <td class="${varianceClass}">Gé¦${Math.abs(variance).toLocaleString()}</td>
+                        <td>PHP ${parseFloat(item.budget_amount || 0).toLocaleString()}</td>
+                        <td>PHP ${parseFloat(item.actual_amount || 0).toLocaleString()}</td>
+                        <td class="${varianceClass}">PHP ${Math.abs(variance).toLocaleString()}</td>
                         <td class="${varianceClass}">${variancePercent >= 0 ? '+' : ''}${variancePercent.toFixed(1)}%</td>
                         <td>${statusBadge}</td>
                     </tr>
@@ -1918,10 +1884,10 @@ $db = Database::getInstance()->getConnection();
             // Update the cards with real data
             const cards = document.querySelectorAll('#tracking .reports-card h3');
             if (cards.length >= 4) {
-                cards[0].textContent = `Gé¦${parseFloat(summary.total_budget || 0).toLocaleString()}`;
-                cards[1].textContent = `Gé¦${parseFloat(summary.actual_spent || 0).toLocaleString()}`;
+                cards[0].textContent = `PHP ${parseFloat(summary.total_budget || 0).toLocaleString()}`;
+                cards[1].textContent = `PHP ${parseFloat(summary.actual_spent || 0).toLocaleString()}`;
                 cards[2].textContent = `${parseFloat(summary.variance_percent || 0).toFixed(1)}%`;
-                cards[3].textContent = `Gé¦${parseFloat(summary.remaining || 0).toLocaleString()}`;
+                cards[3].textContent = `PHP ${parseFloat(summary.remaining || 0).toLocaleString()}`;
 
                 // Update variance color
                 const varianceCard = cards[2].closest('.reports-card');
@@ -2109,6 +2075,13 @@ $db = Database::getInstance()->getConnection();
                     loadTrackingData();
                 });
             }
+
+            const trackingRefreshButton = document.getElementById('trackingRefreshButton');
+            if (trackingRefreshButton) {
+                trackingRefreshButton.addEventListener('click', function() {
+                    loadTrackingData();
+                });
+            }
         });
 
         // Load vendors for dropdowns
@@ -2198,9 +2171,9 @@ $db = Database::getInstance()->getConnection();
                     <tr>
                         <td><strong>${alert.department}</strong></td>
                         <td>${alert.budget_year}</td>
-                        <td>Gé¦${parseFloat(alert.budgeted_amount).toLocaleString()}</td>
-                        <td>Gé¦${parseFloat(alert.actual_amount).toLocaleString()}</td>
-                        <td class="variance-positive">Gé¦${parseFloat(alert.over_amount).toLocaleString()}</td>
+                        <td>PHP ${parseFloat(alert.budgeted_amount).toLocaleString()}</td>
+                        <td>PHP ${parseFloat(alert.actual_amount).toLocaleString()}</td>
+                        <td class="variance-positive">PHP ${parseFloat(alert.over_amount).toLocaleString()}</td>
                         <td class="variance-positive">${parseFloat(alert.over_percent).toFixed(1)}%</td>
                         <td><span class="badge ${severityClass}">${alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)}</span></td>
                         <td>${alert.alert_date}</td>
