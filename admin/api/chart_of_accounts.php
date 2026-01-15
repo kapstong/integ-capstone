@@ -27,9 +27,8 @@ try {
             if (isset($_GET['id'])) {
                 // Get single account
                 $account = $db->select(
-                    "SELECT coa.*, u.full_name as created_by_name
+                    "SELECT coa.*
                      FROM chart_of_accounts coa
-                     LEFT JOIN users u ON coa.created_by = u.id
                      WHERE coa.id = ?",
                     [$_GET['id']]
                 );
@@ -51,7 +50,7 @@ try {
                 }
 
                 if (isset($_GET['category'])) {
-                    $where[] = "account_category = ?";
+                    $where[] = "category = ?";
                     $params[] = $_GET['category'];
                 }
 
@@ -63,9 +62,8 @@ try {
                 $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
                 $accounts = $db->select(
-                    "SELECT coa.*, u.full_name as created_by_name
+                    "SELECT coa.*
                      FROM chart_of_accounts coa
-                     LEFT JOIN users u ON coa.created_by = u.id
                      {$whereClause}
                      ORDER BY account_code ASC",
                     $params
@@ -113,17 +111,16 @@ try {
             }
 
             $accountId = $db->insert(
-                "INSERT INTO chart_of_accounts (account_code, account_name, account_type, account_category,
-                                               description, is_active, created_by)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO chart_of_accounts (account_code, account_name, account_type, category,
+                                               description, is_active)
+                 VALUES (?, ?, ?, ?, ?, ?)",
                 [
                     $data['account_code'],
                     $data['account_name'],
                     $data['account_type'],
-                    $data['account_category'] ?? null,
+                    $data['category'] ?? null,
                     $data['description'] ?? null,
-                    $data['is_active'] ?? true ? 1 : 0,
-                    $userId
+                    $data['is_active'] ?? true ? 1 : 0
                 ]
             );
 
@@ -197,9 +194,9 @@ try {
                 $fields[] = "account_type = ?";
                 $params[] = $data['account_type'];
             }
-            if (isset($data['account_category'])) {
-                $fields[] = "account_category = ?";
-                $params[] = $data['account_category'];
+            if (isset($data['category'])) {
+                $fields[] = "category = ?";
+                $params[] = $data['category'];
             }
             if (isset($data['description'])) {
                 $fields[] = "description = ?";

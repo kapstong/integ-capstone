@@ -268,15 +268,8 @@
 
         // Redirect to logout after 2 seconds
         setTimeout(function() {
-            // Check if we're in admin folder or root
-            const currentPath = window.location.pathname;
-            if (currentPath.includes('/admin/')) {
-                // We're in admin folder, go up one level
-                window.location.href = '../logout.php?reason=timeout';
-            } else {
-                // We're in root, use direct path
-                window.location.href = 'logout.php?reason=timeout';
-            }
+            const baseURL = getBaseURL().replace(/\/$/, '');
+            window.location.href = baseURL + '/logout.php?reason=timeout';
         }, 2000);
     }
 
