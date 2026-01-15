@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
 
@@ -805,62 +805,78 @@ $db = Database::getInstance()->getConnection();
 
         <!-- Tab Content -->
         <div class="tab-content" id="budgetTabContent">
-            <!-- Budget Planning Tab -->
+                        <!-- Budget Planning Tab -->
             <div class="tab-pane fade show active" id="planning" role="tabpanel" aria-labelledby="planning-tab">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">Budget Planning & Setup</h6>
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBudgetModal"><i class="fas fa-plus me-2"></i>Create Budget</button>
                 </div>
-                <div class="row">
-                    <div class="col-md-8">
+                <div class="row mb-4">
+                    <div class="col-md-12">
                         <div class="card">
                             <div class="card-header">
-                                <h6>Active Budgets</h6>
+                                <h6>Active Budgets & Cycles</h6>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
-                                    <table class="table table-striped">
+                                    <table class="table table-striped" id="trackingCategoryTable">
                                         <thead>
                                             <tr>
-                                                <th>Budget Name</th>
-                                                <th>Period</th>
-                                                <th>Department</th>
-                                                <th>Total Amount</th>
+                                                <th>Budget</th>
+                                                <th>Cycle</th>
+                                                <th>Owner</th>
+                                                <th>Total</th>
+                                                <th>Utilized</th>
                                                 <th>Status</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody id="trackingCategoryBody">
                                             <tr>
-                                                <td>2025 Annual Budget</td>
+                                                <td>FY 2025 Master Budget</td>
                                                 <td>Jan-Dec 2025</td>
-                                                <td>Hotel Operations</td>
-                                                <td>₱2,500,000.00</td>
+                                                <td>Finance & Admin</td>
+                                                <td>PHP 4,200,000.00</td>
+                                                <td>PHP 1,980,000.00</td>
                                                 <td><span class="badge bg-success">Approved</span></td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-outline-primary">View</button>
+                                                    <button class="btn btn-sm btn-outline-primary">Open</button>
                                                     <button class="btn btn-sm btn-outline-secondary">Edit</button>
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <td>Q1 2025 Budget</td>
-                                                <td>Jan-Mar 2025</td>
-                                                <td>Restaurant</td>
-                                                <td>₱850,000.00</td>
-                                                <td><span class="badge bg-warning">Pending</span></td>
+                                                <td>Q2 2025 Ops Budget</td>
+                                                <td>Apr-Jun 2025</td>
+                                                <td>Hotel Operations</td>
+                                                <td>PHP 1,150,000.00</td>
+                                                <td>PHP 520,000.00</td>
+                                                <td><span class="badge bg-warning">In Review</span></td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-outline-primary">View</button>
+                                                    <button class="btn btn-sm btn-outline-primary">Open</button>
                                                     <button class="btn btn-sm btn-outline-secondary">Edit</button>
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <td>Events Budget 2025</td>
+                                                <td>Events Program 2025</td>
                                                 <td>Jan-Dec 2025</td>
                                                 <td>Events</td>
-                                                <td>₱450,000.00</td>
+                                                <td>PHP 680,000.00</td>
+                                                <td>PHP 210,000.00</td>
                                                 <td><span class="badge bg-info">Draft</span></td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-outline-primary">View</button>
+                                                    <button class="btn btn-sm btn-outline-primary">Open</button>
+                                                    <button class="btn btn-sm btn-outline-secondary">Edit</button>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Restaurant Growth Plan</td>
+                                                <td>May-Dec 2025</td>
+                                                <td>Restaurant</td>
+                                                <td>PHP 920,000.00</td>
+                                                <td>PHP 310,000.00</td>
+                                                <td><span class="badge bg-success">Approved</span></td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-primary">Open</button>
                                                     <button class="btn btn-sm btn-outline-secondary">Edit</button>
                                                 </td>
                                             </tr>
@@ -870,35 +886,68 @@ $db = Database::getInstance()->getConnection();
                             </div>
                         </div>
                     </div>
+                </div>
+                <div class="row">
                     <div class="col-md-4">
                         <div class="card">
                             <div class="card-header">
-                                <h6>Budget Categories</h6>
+                                <h6>Planning Checklist</h6>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Confirm revenue assumptions</li>
+                                    <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Lock baseline payroll costs</li>
+                                    <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Review vendor pricing updates</li>
+                                    <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Align department targets</li>
+                                    <li><i class="fas fa-check-circle text-success me-2"></i>Finalize approval workflow</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>Category Mix</h6>
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
-                                    <h6 class="text-muted">Revenue Categories</h6>
+                                    <h6 class="text-muted">Revenue Focus</h6>
                                     <ul class="list-unstyled">
-                                        <li><i class="fas fa-circle text-success me-2"></i>Room Revenue</li>
-                                        <li><i class="fas fa-circle text-success me-2"></i>Dining Revenue</li>
-                                        <li><i class="fas fa-circle text-success me-2"></i>Events Revenue</li>
+                                        <li><i class="fas fa-circle text-success me-2"></i>Rooms & Suites</li>
+                                        <li><i class="fas fa-circle text-success me-2"></i>Dining & Beverage</li>
+                                        <li><i class="fas fa-circle text-success me-2"></i>Events & Catering</li>
                                     </ul>
                                 </div>
-                                <div class="mb-3">
-                                    <h6 class="text-muted">Expense Categories</h6>
+                                <div>
+                                    <h6 class="text-muted">Expense Focus</h6>
                                     <ul class="list-unstyled">
-                                        <li><i class="fas fa-circle text-danger me-2"></i>Staff Salaries</li>
-                                        <li><i class="fas fa-circle text-danger me-2"></i>Supplies</li>
-                                        <li><i class="fas fa-circle text-danger me-2"></i>Utilities</li>
-                                        <li><i class="fas fa-circle text-danger me-2"></i>Marketing</li>
+                                        <li><i class="fas fa-circle text-danger me-2"></i>Payroll & Benefits</li>
+                                        <li><i class="fas fa-circle text-danger me-2"></i>Supplies & Inventory</li>
+                                        <li><i class="fas fa-circle text-danger me-2"></i>Utilities & Maintenance</li>
+                                        <li><i class="fas fa-circle text-danger me-2"></i>Marketing & Promotions</li>
                                     </ul>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>Budget Calendar</h6>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2"><strong>Week 1:</strong> Collect department drafts</li>
+                                    <li class="mb-2"><strong>Week 2:</strong> Finance review and revisions</li>
+                                    <li class="mb-2"><strong>Week 3:</strong> Leadership alignment</li>
+                                    <li class="mb-2"><strong>Week 4:</strong> Final approval and lock</li>
+                                    <li><strong>Monthly:</strong> Variance checkpoint</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
             <!-- Budget Allocation Tab -->
             <div class="tab-pane fade" id="allocation" role="tabpanel" aria-labelledby="allocation-tab">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -912,7 +961,7 @@ $db = Database::getInstance()->getConnection();
                     <div class="col-md-12">
                         <div class="card">
                             <div class="card-header">
-                                <h6>Departmental Allocations - 2025 Annual Budget</h6>
+                                <h6>Department Allocations - FY 2025</h6>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -920,7 +969,8 @@ $db = Database::getInstance()->getConnection();
                                         <thead>
                                             <tr>
                                                 <th>Department</th>
-                                                <th>Allocated Amount</th>
+                                                <th>Allocated</th>
+                                                <th>Reserved</th>
                                                 <th>Utilized</th>
                                                 <th>Remaining</th>
                                                 <th>Progress</th>
@@ -931,12 +981,13 @@ $db = Database::getInstance()->getConnection();
                                         <tbody>
                                             <tr>
                                                 <td><strong>Hotel Operations</strong></td>
-                                                <td>₱1,200,000.00</td>
-                                                <td>₱850,000.00</td>
-                                                <td>₱350,000.00</td>
+                                                <td>PHP 1,500,000.00</td>
+                                                <td>PHP 120,000.00</td>
+                                                <td>PHP 980,000.00</td>
+                                                <td>PHP 400,000.00</td>
                                                 <td>
                                                     <div class="budget-progress budget-on-track">
-                                                        <div class="budget-progress-bar" style="width: 71%"></div>
+                                                        <div class="budget-progress-bar" style="width: 65%"></div>
                                                     </div>
                                                 </td>
                                                 <td><span class="badge bg-success">On Track</span></td>
@@ -946,27 +997,29 @@ $db = Database::getInstance()->getConnection();
                                             </tr>
                                             <tr>
                                                 <td><strong>Restaurant</strong></td>
-                                                <td>₱800,000.00</td>
-                                                <td>₱720,000.00</td>
-                                                <td>₱80,000.00</td>
+                                                <td>PHP 900,000.00</td>
+                                                <td>PHP 90,000.00</td>
+                                                <td>PHP 760,000.00</td>
+                                                <td>PHP 50,000.00</td>
                                                 <td>
                                                     <div class="budget-progress budget-over">
-                                                        <div class="budget-progress-bar" style="width: 90%"></div>
+                                                        <div class="budget-progress-bar" style="width: 92%"></div>
                                                     </div>
                                                 </td>
-                                                <td><span class="badge bg-warning">Over Budget</span></td>
+                                                <td><span class="badge bg-warning">Tight</span></td>
                                                 <td>
                                                     <button class="btn btn-sm btn-outline-primary">Adjust</button>
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td><strong>Events</strong></td>
-                                                <td>₱300,000.00</td>
-                                                <td>₱120,000.00</td>
-                                                <td>₱180,000.00</td>
+                                                <td>PHP 420,000.00</td>
+                                                <td>PHP 45,000.00</td>
+                                                <td>PHP 210,000.00</td>
+                                                <td>PHP 165,000.00</td>
                                                 <td>
                                                     <div class="budget-progress budget-under">
-                                                        <div class="budget-progress-bar" style="width: 40%"></div>
+                                                        <div class="budget-progress-bar" style="width: 50%"></div>
                                                     </div>
                                                 </td>
                                                 <td><span class="badge bg-info">Under Budget</span></td>
@@ -976,12 +1029,29 @@ $db = Database::getInstance()->getConnection();
                                             </tr>
                                             <tr>
                                                 <td><strong>Finance & Admin</strong></td>
-                                                <td>₱200,000.00</td>
-                                                <td>₱180,000.00</td>
-                                                <td>₱20,000.00</td>
+                                                <td>PHP 260,000.00</td>
+                                                <td>PHP 25,000.00</td>
+                                                <td>PHP 180,000.00</td>
+                                                <td>PHP 55,000.00</td>
                                                 <td>
                                                     <div class="budget-progress budget-on-track">
-                                                        <div class="budget-progress-bar" style="width: 90%"></div>
+                                                        <div class="budget-progress-bar" style="width: 70%"></div>
+                                                    </div>
+                                                </td>
+                                                <td><span class="badge bg-success">On Track</span></td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-primary">Adjust</button>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>HR3 Claims Reserve</strong></td>
+                                                <td>PHP 180,000.00</td>
+                                                <td>PHP 40,000.00</td>
+                                                <td>PHP 98,000.00</td>
+                                                <td>PHP 42,000.00</td>
+                                                <td>
+                                                    <div class="budget-progress budget-on-track">
+                                                        <div class="budget-progress-bar" style="width: 55%"></div>
                                                     </div>
                                                 </td>
                                                 <td><span class="badge bg-success">On Track</span></td>
@@ -1016,28 +1086,90 @@ $db = Database::getInstance()->getConnection();
                         <div class="reports-card tracking-card">
                             <i class="fas fa-chart-pie fa-2x mb-3 text-primary"></i>
                             <h6>Total Budget</h6>
-                            <h3>₱3,500,000</h3>
+                            <h3>PHP 3,950,000</h3>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="reports-card tracking-card">
                             <i class="fas fa-coins fa-2x mb-3 text-success"></i>
                             <h6>Actual Spent</h6>
-                            <h3>₱2,870,000</h3>
+                            <h3>PHP 2,440,000</h3>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="reports-card tracking-card">
                             <i class="fas fa-percentage fa-2x mb-3 text-warning"></i>
                             <h6>Variance</h6>
-                            <h3 class="variance-negative">-18.0%</h3>
+                            <h3 class="variance-negative">-38.2%</h3>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="reports-card tracking-card">
                             <i class="fas fa-clock fa-2x mb-3 text-info"></i>
                             <h6>Remaining</h6>
-                            <h3>₱630,000</h3>
+                            <h3>PHP 1,510,000</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>HR3 Claims vs Budget</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Department</th>
+                                                <th>Claims Approved</th>
+                                                <th>Claims Pending</th>
+                                                <th>Claims Amount</th>
+                                                <th>Budget Remaining</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Hotel Operations</td>
+                                                <td>18</td>
+                                                <td>3</td>
+                                                <td>PHP 64,500.00</td>
+                                                <td>PHP 35,500.00</td>
+                                                <td><span class="badge bg-success">Within Limit</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Restaurant</td>
+                                                <td>22</td>
+                                                <td>6</td>
+                                                <td>PHP 92,000.00</td>
+                                                <td>PHP 8,000.00</td>
+                                                <td><span class="badge bg-warning">Near Limit</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Events</td>
+                                                <td>7</td>
+                                                <td>1</td>
+                                                <td>PHP 21,300.00</td>
+                                                <td>PHP 28,700.00</td>
+                                                <td><span class="badge bg-success">Within Limit</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Finance & Admin</td>
+                                                <td>4</td>
+                                                <td>0</td>
+                                                <td>PHP 12,800.00</td>
+                                                <td>PHP 42,200.00</td>
+                                                <td><span class="badge bg-success">Within Limit</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="d-flex justify-content-end">
+                                    <button class="btn btn-outline-primary btn-sm"><i class="fas fa-link me-2"></i>View HR3 Claims Feed</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1063,42 +1195,42 @@ $db = Database::getInstance()->getConnection();
                                         <tbody>
                                             <tr>
                                                 <td>Staff Salaries</td>
-                                                <td>₱1,800,000.00</td>
-                                                <td>₱1,750,000.00</td>
-                                                <td class="variance-negative">₱50,000.00</td>
-                                                <td class="variance-negative">-2.8%</td>
+                                                <td>PHP 1,980,000.00</td>
+                                                <td>PHP 1,720,000.00</td>
+                                                <td class="variance-negative">PHP 260,000.00</td>
+                                                <td class="variance-negative">-13.1%</td>
                                                 <td><span class="badge bg-success">Under Budget</span></td>
                                             </tr>
                                             <tr>
                                                 <td>Supplies & Inventory</td>
-                                                <td>₱600,000.00</td>
-                                                <td>₱720,000.00</td>
-                                                <td class="variance-positive">₱120,000.00</td>
-                                                <td class="variance-positive">+20.0%</td>
-                                                <td><span class="badge bg-danger">Over Budget</span></td>
+                                                <td>PHP 720,000.00</td>
+                                                <td>PHP 810,000.00</td>
+                                                <td class="variance-positive">PHP 90,000.00</td>
+                                                <td class="variance-positive">+12.5%</td>
+                                                <td><span class="badge bg-warning">Over Budget</span></td>
                                             </tr>
                                             <tr>
                                                 <td>Utilities</td>
-                                                <td>₱300,000.00</td>
-                                                <td>₱285,000.00</td>
-                                                <td class="variance-negative">₱15,000.00</td>
-                                                <td class="variance-negative">-5.0%</td>
+                                                <td>PHP 320,000.00</td>
+                                                <td>PHP 290,000.00</td>
+                                                <td class="variance-negative">PHP 30,000.00</td>
+                                                <td class="variance-negative">-9.4%</td>
                                                 <td><span class="badge bg-success">Under Budget</span></td>
                                             </tr>
                                             <tr>
                                                 <td>Marketing</td>
-                                                <td>₱250,000.00</td>
-                                                <td>₱265,000.00</td>
-                                                <td class="variance-positive">₱15,000.00</td>
-                                                <td class="variance-positive">+6.0%</td>
-                                                <td><span class="badge bg-warning">Slightly Over</span></td>
+                                                <td>PHP 280,000.00</td>
+                                                <td>PHP 310,000.00</td>
+                                                <td class="variance-positive">PHP 30,000.00</td>
+                                                <td class="variance-positive">+10.7%</td>
+                                                <td><span class="badge bg-warning">Over Budget</span></td>
                                             </tr>
                                             <tr>
-                                                <td>Maintenance</td>
-                                                <td>₱200,000.00</td>
-                                                <td>₱180,000.00</td>
-                                                <td class="variance-negative">₱20,000.00</td>
-                                                <td class="variance-negative">-10.0%</td>
+                                                <td>Employee Claims (HR3)</td>
+                                                <td>PHP 180,000.00</td>
+                                                <td>PHP 98,000.00</td>
+                                                <td class="variance-negative">PHP 82,000.00</td>
+                                                <td class="variance-negative">-45.6%</td>
                                                 <td><span class="badge bg-success">Under Budget</span></td>
                                             </tr>
                                         </tbody>
@@ -1154,6 +1286,52 @@ $db = Database::getInstance()->getConnection();
                         </div>
                     </div>
                 </div>
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>HR3 Claims Over Budget Queue</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Claim ID</th>
+                                                <th>Employee</th>
+                                                <th>Department</th>
+                                                <th>Amount</th>
+                                                <th>Budget Remaining</th>
+                                                <th>Action Needed</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>HR3-CLM-1024</td>
+                                                <td>Maria Santos</td>
+                                                <td>Restaurant</td>
+                                                <td>PHP 12,500.00</td>
+                                                <td>PHP 8,000.00</td>
+                                                <td><span class="badge bg-warning">Finance Review</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td>HR3-CLM-1029</td>
+                                                <td>Jon Reyes</td>
+                                                <td>Restaurant</td>
+                                                <td>PHP 9,200.00</td>
+                                                <td>PHP 8,000.00</td>
+                                                <td><span class="badge bg-danger">Hold Approval</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="d-flex justify-content-end">
+                                    <button class="btn btn-outline-primary btn-sm"><i class="fas fa-link me-2"></i>Open HR3 Claims Review</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="row">
                     <div class="col-md-12">
                         <div class="card">
@@ -1173,11 +1351,13 @@ $db = Database::getInstance()->getConnection();
                                                 <th>Over %</th>
                                                 <th>Severity</th>
                                                 <th>Alert Date</th>
-                                                <th>Actions</th>
+                                                <th>Action</th>
                                             </tr>
                                         </thead>
                                         <tbody id="alertsTableBody">
-                                            <!-- Alerts will be loaded here -->
+                                            <tr>
+                                                <td colspan="9" class="text-center text-muted">Loading alerts...</td>
+                                            </tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -1190,76 +1370,83 @@ $db = Database::getInstance()->getConnection();
             <!-- Forecasting Tab -->
             <div class="tab-pane fade" id="forecasting" role="tabpanel" aria-labelledby="forecasting-tab">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">Forecasting & Scenario Analysis</h6>
-                    <button class="btn btn-primary"><i class="fas fa-robot me-2"></i>Run AI Forecast</button>
+                    <h6 class="mb-0">Budget Forecasting</h6>
+                    <button class="btn btn-outline-secondary"><i class="fas fa-rotate me-2"></i>Refresh Forecast</button>
                 </div>
-                <div class="row">
-                    <div class="col-md-8">
-                        <div class="forecast-card">
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card forecast-card">
                             <div class="card-body">
-                                <h5 class="card-title text-white mb-4">
-                                    <i class="fas fa-brain me-2"></i>AI-Powered Forecasting
-                                </h5>
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="text-center">
-                                            <h3 class="text-white">+12.5%</h3>
-                                            <p class="mb-0">Revenue Growth</p>
-                                            <small>Next Quarter</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="text-center">
-                                            <h3 class="text-white">8.3%</h3>
-                                            <p class="mb-0">Expense Increase</p>
-                                            <small>Projected</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="text-center">
-                                            <h3 class="text-white">+4.2%</h3>
-                                            <p class="mb-0">Net Profit Margin</p>
-                                            <small>Expected</small>
-                                        </div>
-                                    </div>
-                                </div>
+                                <h6>Projected Year-End Spend</h6>
+                                <h3 class="mb-2">PHP 3,620,000</h3>
+                                <p class="mb-0">Based on current run rate and seasonality.</p>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Scenario Analysis</h6>
-                            </div>
+                        <div class="card forecast-card">
                             <div class="card-body">
-                                <div class="mb-3">
-                                    <label class="form-label">What-if Scenario</label>
-                                    <select class="form-select">
-                                        <option>Occupancy drops 20%</option>
-                                        <option>Food costs increase 15%</option>
-                                        <option>Staff turnover 25%</option>
-                                        <option>Custom scenario</option>
-                                    </select>
-                                </div>
-                                <button class="btn btn-warning w-100">Run Simulation</button>
-                                <div class="mt-3 p-2 bg-light rounded">
-                                    <small class="text-muted">
-                                        <strong>Impact:</strong> -₱180,000 quarterly revenue<br>
-                                        <strong>Recommendation:</strong> Cost reduction measures needed
-                                    </small>
-                                </div>
+                                <h6>Expected Variance</h6>
+                                <h3 class="mb-2">-8.4%</h3>
+                                <p class="mb-0">Favorable due to staffing optimization.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card forecast-card">
+                            <div class="card-body">
+                                <h6>Claims Pressure (HR3)</h6>
+                                <h3 class="mb-2">+6.2%</h3>
+                                <p class="mb-0">Higher claim volume in Restaurant unit.</p>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="row mt-4">
+                <div class="row">
                     <div class="col-md-12">
                         <div class="card">
                             <div class="card-header">
-                                <h6>Forecast Trends</h6>
+                                <h6>Forecast Drivers</h6>
                             </div>
                             <div class="card-body">
-                                <canvas id="forecastChart" height="300"></canvas>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Driver</th>
+                                                <th>Trend</th>
+                                                <th>Impact</th>
+                                                <th>Notes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Occupancy Levels</td>
+                                                <td>Upward</td>
+                                                <td>+PHP 120,000</td>
+                                                <td>Peak season demand driving labor and supply usage.</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Supplier Pricing</td>
+                                                <td>Stable</td>
+                                                <td>+PHP 35,000</td>
+                                                <td>Minor increases in beverage costs.</td>
+                                            </tr>
+                                            <tr>
+                                                <td>HR3 Claims</td>
+                                                <td>Rising</td>
+                                                <td>+PHP 60,000</td>
+                                                <td>Pending claims may require supplemental budget.</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Utilities</td>
+                                                <td>Downward</td>
+                                                <td>-PHP 25,000</td>
+                                                <td>Energy efficiency initiative impacts Q3.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1269,14 +1456,14 @@ $db = Database::getInstance()->getConnection();
             <!-- Budget Adjustments Tab -->
             <div class="tab-pane fade" id="adjustments" role="tabpanel" aria-labelledby="adjustments-tab">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">Budget Adjustment Requests</h6>
+                    <h6 class="mb-0">Budget Adjustments</h6>
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#adjustmentRequestModal"><i class="fas fa-plus me-2"></i>Request Adjustment</button>
                 </div>
-                <div class="row">
+                <div class="row mb-4">
                     <div class="col-md-12">
                         <div class="card">
                             <div class="card-header">
-                                <h6>Pending Adjustment Requests</h6>
+                                <h6>Active Adjustment Requests</h6>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -1286,7 +1473,7 @@ $db = Database::getInstance()->getConnection();
                                                 <th>Request ID</th>
                                                 <th>Department</th>
                                                 <th>Requested By</th>
-                                                <th>Adjustment Type</th>
+                                                <th>Type</th>
                                                 <th>Amount</th>
                                                 <th>Reason</th>
                                                 <th>Status</th>
@@ -1295,46 +1482,75 @@ $db = Database::getInstance()->getConnection();
                                         </thead>
                                         <tbody>
                                             <tr>
-                                                <td>ADJ-001</td>
+                                                <td>ADJ-011</td>
                                                 <td>Restaurant</td>
-                                                <td>Chef Manager</td>
+                                                <td>F&B Manager</td>
                                                 <td>Increase</td>
-                                                <td>₱50,000.00</td>
-                                                <td>Higher food costs</td>
-                                                <td><span class="badge bg-warning">Pending Approval</span></td>
+                                                <td>PHP 60,000.00</td>
+                                                <td>HR3 claims spike during peak season</td>
+                                                <td><span class="badge bg-warning">Pending</span></td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-outline-success">Approve</button>
-                                                    <button class="btn btn-sm btn-outline-danger">Reject</button>
+                                                    <button class="btn btn-sm btn-outline-primary">Review</button>
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <td>ADJ-002</td>
-                                                <td>Events</td>
-                                                <td>Events Coordinator</td>
-                                                <td>Increase</td>
-                                                <td>₱25,000.00</td>
-                                                <td>Additional marketing</td>
-                                                <td><span class="badge bg-info">Under Review</span></td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-success">Approve</button>
-                                                    <button class="btn btn-sm btn-outline-danger">Reject</button>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>ADJ-003</td>
+                                                <td>ADJ-012</td>
                                                 <td>Hotel Operations</td>
-                                                <td>Front Desk Manager</td>
+                                                <td>Ops Director</td>
+                                                <td>Transfer</td>
+                                                <td>PHP 35,000.00</td>
+                                                <td>Shift to maintenance initiatives</td>
+                                                <td><span class="badge bg-info">In Review</span></td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-primary">Review</button>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>ADJ-013</td>
+                                                <td>Events</td>
+                                                <td>Events Lead</td>
                                                 <td>Decrease</td>
-                                                <td>₱15,000.00</td>
-                                                <td>Cost savings achieved</td>
+                                                <td>PHP 20,000.00</td>
+                                                <td>Vendor discounts applied</td>
                                                 <td><span class="badge bg-success">Approved</span></td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-outline-primary">View Details</button>
+                                                    <button class="btn btn-sm btn-outline-primary">View</button>
                                                 </td>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>Adjustment Guidelines</h6>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Provide clear financial justification.</li>
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Attach supporting HR3 claim data if applicable.</li>
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Allow 3-5 business days for review.</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Approved adjustments update allocations automatically.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>Recent Approvals</h6>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2"><strong>ADJ-009:</strong> +PHP 40,000 (Restaurant claims)</li>
+                                    <li class="mb-2"><strong>ADJ-010:</strong> -PHP 15,000 (Utilities savings)</li>
+                                    <li><strong>ADJ-008:</strong> +PHP 25,000 (Events staffing)</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -1354,7 +1570,7 @@ $db = Database::getInstance()->getConnection();
                                 <h6>Budget vs Actual Report</h6>
                             </div>
                             <div class="card-body">
-                                <p>Detailed comparison of planned vs actual spending across all categories.</p>
+                                <p>Detailed variance breakdown by department and category with month-over-month trends.</p>
                                 <button class="btn btn-primary">Generate Report</button>
                             </div>
                         </div>
@@ -1362,10 +1578,10 @@ $db = Database::getInstance()->getConnection();
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header">
-                                <h6>Variance Analysis Report</h6>
+                                <h6>HR3 Claims Impact Report</h6>
                             </div>
                             <div class="card-body">
-                                <p>Analysis of budget variances with explanations and recommendations.</p>
+                                <p>Summarizes HR3 claim volumes, approvals, and budget impact across departments.</p>
                                 <button class="btn btn-primary">Generate Report</button>
                             </div>
                         </div>
@@ -1375,10 +1591,10 @@ $db = Database::getInstance()->getConnection();
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header">
-                                <h6>Departmental Budget Report</h6>
+                                <h6>Department Performance</h6>
                             </div>
                             <div class="card-body">
-                                <p>Breakdown of budgets and spending by department.</p>
+                                <p>Highlights departments trending over budget with recommended actions.</p>
                                 <button class="btn btn-primary">Generate Report</button>
                             </div>
                         </div>
@@ -1386,18 +1602,16 @@ $db = Database::getInstance()->getConnection();
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header">
-                                <h6>Forecast Report</h6>
+                                <h6>Forecast Snapshot</h6>
                             </div>
                             <div class="card-body">
-                                <p>Projected revenues and expenses based on current trends.</p>
+                                <p>Rolling 90-day forecast with risk flags for claims-heavy departments.</p>
                                 <button class="btn btn-primary">Generate Report</button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
-
 
             <!-- Audit Trail Tab -->
             <div class="tab-pane fade" id="audit" role="tabpanel" aria-labelledby="audit-tab">
@@ -1416,49 +1630,46 @@ $db = Database::getInstance()->getConnection();
                                         <th>Action</th>
                                         <th>Budget/Item</th>
                                         <th>Details</th>
+                                        <th>Source</th>
                                         <th>IP Address</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td>2025-09-25 14:30:22</td>
+                                        <td>2025-09-25 08:15:22</td>
                                         <td>Admin</td>
                                         <td>Created</td>
-                                        <td>2025 Annual Budget</td>
-                                        <td>New budget created for Hotel Operations</td>
+                                        <td>FY 2025 Master Budget</td>
+                                        <td>Initial baseline approved</td>
+                                        <td>Finance Module</td>
                                         <td>192.168.1.100</td>
                                     </tr>
                                     <tr>
-                                        <td>2025-09-25 15:45:10</td>
-                                        <td>Accountant</td>
-                                        <td>Modified</td>
-                                        <td>Restaurant Budget</td>
-                                        <td>Adjusted food supplies allocation +₱25,000</td>
-                                        <td>192.168.1.101</td>
+                                        <td>2025-09-25 11:42:10</td>
+                                        <td>Finance Lead</td>
+                                        <td>Adjusted</td>
+                                        <td>Restaurant Growth Plan</td>
+                                        <td>+PHP 40,000 for HR3 claims</td>
+                                        <td>Budget Adjustments</td>
+                                        <td>192.168.1.121</td>
                                     </tr>
                                     <tr>
-                                        <td>2025-09-25 16:20:05</td>
-                                        <td>Manager</td>
-                                        <td>Approved</td>
-                                        <td>ADJ-001</td>
-                                        <td>Approved budget increase request</td>
-                                        <td>192.168.1.102</td>
+                                        <td>2025-09-25 14:06:44</td>
+                                        <td>System</td>
+                                        <td>Alert Triggered</td>
+                                        <td>HR3 Claims Reserve</td>
+                                        <td>Claims exceeded threshold</td>
+                                        <td>HR3 Integration</td>
+                                        <td>192.168.1.200</td>
                                     </tr>
                                     <tr>
-                                        <td>2025-09-24 11:15:33</td>
-                                        <td>Admin</td>
-                                        <td>Locked</td>
-                                        <td>Q1 Allocations</td>
-                                        <td>Locked budget allocations for Q1</td>
-                                        <td>192.168.1.100</td>
-                                    </tr>
-                                    <tr>
-                                        <td>2025-09-24 09:50:18</td>
-                                        <td>Chef Manager</td>
-                                        <td>Requested</td>
-                                        <td>ADJ-002</td>
-                                        <td>Submitted adjustment request for higher food costs</td>
-                                        <td>192.168.1.103</td>
+                                        <td>2025-09-25 15:31:19</td>
+                                        <td>Accounting</td>
+                                        <td>Reviewed</td>
+                                        <td>Department Allocations</td>
+                                        <td>Monthly variance review completed</td>
+                                        <td>Finance Module</td>
+                                        <td>192.168.1.132</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -1466,34 +1677,8 @@ $db = Database::getInstance()->getConnection();
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Footer -->
-    <footer id="footer" class="py-3" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-top: 2px solid #1e2936; position: fixed; bottom: 0; left: 120px; width: calc(100% - 120px); z-index: 998; font-weight: 500;">
-        <div class="container-fluid">
-            <div class="row align-items-center text-center text-md-start">
-                <div class="col-md-4">
-                    <span class="text-muted"><i class="fas fa-shield-alt me-1 text-primary"></i>© 2025 ATIERA Finance — Confidential</span>
-                </div>
-                <div class="col-md-4">
-                    <span class="text-muted">
-                        <span class="badge bg-success me-2">PROD</span> v1.0.0 • Updated: Sep 25, 2025
-                        <span class="ms-3 text-success fw-bold"><i class="fas fa-sync-alt me-1"></i>Sync OK</span>
-                    </span>
-                </div>
-                <div class="col-md-4 text-md-end">
-                    <span class="text-muted">
-                        <a href="#" class="text-decoration-none text-muted me-3 hover-link">Terms</a>
-                        <a href="#" class="text-decoration-none text-muted me-3 hover-link">Privacy</a>
-                        <a href="mailto:support@atiera.com" class="text-decoration-none text-muted hover-link"><i class="fas fa-envelope me-1"></i>Support</a>
-                    </span>
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('show');
@@ -1606,7 +1791,7 @@ $db = Database::getInstance()->getConnection();
                         <td>${budget.name}</td>
                         <td>${formatBudgetPeriod(budget.start_date, budget.end_date)}</td>
                         <td>${budget.department || 'All Departments'}</td>
-                        <td>₱${parseFloat(budget.total_amount || 0).toLocaleString()}</td>
+                        <td>Gé¦${parseFloat(budget.total_amount || 0).toLocaleString()}</td>
                         <td>${statusBadge}</td>
                         <td>
                             <button class="btn btn-sm btn-outline-primary" onclick="viewBudget(${budget.id})">View</button>
@@ -1655,9 +1840,9 @@ $db = Database::getInstance()->getConnection();
                 const row = `
                     <tr>
                         <td><strong>${allocation.department}</strong></td>
-                        <td>₱${parseFloat(allocation.total_amount || 0).toLocaleString()}</td>
-                        <td>₱${parseFloat(allocation.utilized_amount || 0).toLocaleString()}</td>
-                        <td>₱${parseFloat((allocation.total_amount || 0) - (allocation.utilized_amount || 0)).toLocaleString()}</td>
+                        <td>Gé¦${parseFloat(allocation.total_amount || 0).toLocaleString()}</td>
+                        <td>Gé¦${parseFloat(allocation.utilized_amount || 0).toLocaleString()}</td>
+                        <td>Gé¦${parseFloat((allocation.total_amount || 0) - (allocation.utilized_amount || 0)).toLocaleString()}</td>
                         <td>
                             <div class="budget-progress ${progressClass}">
                                 <div class="budget-progress-bar" style="width: ${Math.min(progressPercent, 100)}%"></div>
@@ -1695,7 +1880,7 @@ $db = Database::getInstance()->getConnection();
 
         // Render tracking table
         function renderTrackingTable() {
-            const tbody = document.querySelector('#tracking .table tbody');
+            const tbody = document.getElementById('trackingCategoryBody');
             tbody.innerHTML = '';
 
             if (currentTrackingData.length === 0) {
@@ -1712,9 +1897,9 @@ $db = Database::getInstance()->getConnection();
                 const row = `
                     <tr>
                         <td>${item.category}</td>
-                        <td>₱${parseFloat(item.budget_amount || 0).toLocaleString()}</td>
-                        <td>₱${parseFloat(item.actual_amount || 0).toLocaleString()}</td>
-                        <td class="${varianceClass}">₱${Math.abs(variance).toLocaleString()}</td>
+                        <td>Gé¦${parseFloat(item.budget_amount || 0).toLocaleString()}</td>
+                        <td>Gé¦${parseFloat(item.actual_amount || 0).toLocaleString()}</td>
+                        <td class="${varianceClass}">Gé¦${Math.abs(variance).toLocaleString()}</td>
                         <td class="${varianceClass}">${variancePercent >= 0 ? '+' : ''}${variancePercent.toFixed(1)}%</td>
                         <td>${statusBadge}</td>
                     </tr>
@@ -1730,10 +1915,10 @@ $db = Database::getInstance()->getConnection();
             // Update the cards with real data
             const cards = document.querySelectorAll('#tracking .reports-card h3');
             if (cards.length >= 4) {
-                cards[0].textContent = `₱${parseFloat(summary.total_budget || 0).toLocaleString()}`;
-                cards[1].textContent = `₱${parseFloat(summary.actual_spent || 0).toLocaleString()}`;
+                cards[0].textContent = `Gé¦${parseFloat(summary.total_budget || 0).toLocaleString()}`;
+                cards[1].textContent = `Gé¦${parseFloat(summary.actual_spent || 0).toLocaleString()}`;
                 cards[2].textContent = `${parseFloat(summary.variance_percent || 0).toFixed(1)}%`;
-                cards[3].textContent = `₱${parseFloat(summary.remaining || 0).toLocaleString()}`;
+                cards[3].textContent = `Gé¦${parseFloat(summary.remaining || 0).toLocaleString()}`;
 
                 // Update variance color
                 const varianceCard = cards[2].closest('.reports-card');
@@ -2010,9 +2195,9 @@ $db = Database::getInstance()->getConnection();
                     <tr>
                         <td><strong>${alert.department}</strong></td>
                         <td>${alert.budget_year}</td>
-                        <td>₱${parseFloat(alert.budgeted_amount).toLocaleString()}</td>
-                        <td>₱${parseFloat(alert.actual_amount).toLocaleString()}</td>
-                        <td class="variance-positive">₱${parseFloat(alert.over_amount).toLocaleString()}</td>
+                        <td>Gé¦${parseFloat(alert.budgeted_amount).toLocaleString()}</td>
+                        <td>Gé¦${parseFloat(alert.actual_amount).toLocaleString()}</td>
+                        <td class="variance-positive">Gé¦${parseFloat(alert.over_amount).toLocaleString()}</td>
                         <td class="variance-positive">${parseFloat(alert.over_percent).toFixed(1)}%</td>
                         <td><span class="badge ${severityClass}">${alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)}</span></td>
                         <td>${alert.alert_date}</td>
@@ -2122,7 +2307,9 @@ $db = Database::getInstance()->getConnection();
         }
     </script>
 
-    <!-- Create Budget Modal -->
+    
+
+<!-- Create Budget Modal -->
     <div class="modal fade" id="createBudgetModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -2287,5 +2474,16 @@ $db = Database::getInstance()->getConnection();
 </body>
                             </div>
                             </div>
+
+
+
+
+
+
+
+
+
+
+
 
 
