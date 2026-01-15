@@ -831,56 +831,11 @@ $db = Database::getInstance()->getConnection();
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="trackingCategoryBody">
-                                            <tr>
-                                                <td>FY 2025 Master Budget</td>
-                                                <td>Jan-Dec 2025</td>
-                                                <td>Finance & Admin</td>
-                                                <td>PHP 4,200,000.00</td>
-                                                <td>PHP 1,980,000.00</td>
-                                                <td><span class="badge bg-success">Approved</span></td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary">Open</button>
-                                                    <button class="btn btn-sm btn-outline-secondary">Edit</button>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>Q2 2025 Ops Budget</td>
-                                                <td>Apr-Jun 2025</td>
-                                                <td>Hotel Operations</td>
-                                                <td>PHP 1,150,000.00</td>
-                                                <td>PHP 520,000.00</td>
-                                                <td><span class="badge bg-warning">In Review</span></td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary">Open</button>
-                                                    <button class="btn btn-sm btn-outline-secondary">Edit</button>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>Events Program 2025</td>
-                                                <td>Jan-Dec 2025</td>
-                                                <td>Events</td>
-                                                <td>PHP 680,000.00</td>
-                                                <td>PHP 210,000.00</td>
-                                                <td><span class="badge bg-info">Draft</span></td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary">Open</button>
-                                                    <button class="btn btn-sm btn-outline-secondary">Edit</button>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>Restaurant Growth Plan</td>
-                                                <td>May-Dec 2025</td>
-                                                <td>Restaurant</td>
-                                                <td>PHP 920,000.00</td>
-                                                <td>PHP 310,000.00</td>
-                                                <td><span class="badge bg-success">Approved</span></td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary">Open</button>
-                                                    <button class="btn btn-sm btn-outline-secondary">Edit</button>
-                                                </td>
-                                            </tr>
-                                        </tbody>
+                                        <tbody id="trackingCyclesBody">
+                                              <tr>
+                                                  <td colspan="7" class="text-center text-muted">Loading budgets...</td>
+                                              </tr>
+                                          </tbody>
                                     </table>
                                 </div>
                             </div>
@@ -978,88 +933,11 @@ $db = Database::getInstance()->getConnection();
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td><strong>Hotel Operations</strong></td>
-                                                <td>PHP 1,500,000.00</td>
-                                                <td>PHP 120,000.00</td>
-                                                <td>PHP 980,000.00</td>
-                                                <td>PHP 400,000.00</td>
-                                                <td>
-                                                    <div class="budget-progress budget-on-track">
-                                                        <div class="budget-progress-bar" style="width: 65%"></div>
-                                                    </div>
-                                                </td>
-                                                <td><span class="badge bg-success">On Track</span></td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary">Adjust</button>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Restaurant</strong></td>
-                                                <td>PHP 900,000.00</td>
-                                                <td>PHP 90,000.00</td>
-                                                <td>PHP 760,000.00</td>
-                                                <td>PHP 50,000.00</td>
-                                                <td>
-                                                    <div class="budget-progress budget-over">
-                                                        <div class="budget-progress-bar" style="width: 92%"></div>
-                                                    </div>
-                                                </td>
-                                                <td><span class="badge bg-warning">Tight</span></td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary">Adjust</button>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Events</strong></td>
-                                                <td>PHP 420,000.00</td>
-                                                <td>PHP 45,000.00</td>
-                                                <td>PHP 210,000.00</td>
-                                                <td>PHP 165,000.00</td>
-                                                <td>
-                                                    <div class="budget-progress budget-under">
-                                                        <div class="budget-progress-bar" style="width: 50%"></div>
-                                                    </div>
-                                                </td>
-                                                <td><span class="badge bg-info">Under Budget</span></td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary">Adjust</button>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Finance & Admin</strong></td>
-                                                <td>PHP 260,000.00</td>
-                                                <td>PHP 25,000.00</td>
-                                                <td>PHP 180,000.00</td>
-                                                <td>PHP 55,000.00</td>
-                                                <td>
-                                                    <div class="budget-progress budget-on-track">
-                                                        <div class="budget-progress-bar" style="width: 70%"></div>
-                                                    </div>
-                                                </td>
-                                                <td><span class="badge bg-success">On Track</span></td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary">Adjust</button>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>HR3 Claims Reserve</strong></td>
-                                                <td>PHP 180,000.00</td>
-                                                <td>PHP 40,000.00</td>
-                                                <td>PHP 98,000.00</td>
-                                                <td>PHP 42,000.00</td>
-                                                <td>
-                                                    <div class="budget-progress budget-on-track">
-                                                        <div class="budget-progress-bar" style="width: 55%"></div>
-                                                    </div>
-                                                </td>
-                                                <td><span class="badge bg-success">On Track</span></td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary">Adjust</button>
-                                                </td>
-                                            </tr>
-                                        </tbody>
+                                        <tbody id="allocationTableBody">
+                                              <tr>
+                                                  <td colspan="8" class="text-center text-muted">Loading allocations...</td>
+                                              </tr>
+                                          </tbody>
                                     </table>
                                 </div>
                             </div>
@@ -1086,28 +964,28 @@ $db = Database::getInstance()->getConnection();
                         <div class="reports-card tracking-card">
                             <i class="fas fa-chart-pie fa-2x mb-3 text-primary"></i>
                             <h6>Total Budget</h6>
-                            <h3>PHP 3,950,000</h3>
+                            <h3>Loading...</h3>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="reports-card tracking-card">
                             <i class="fas fa-coins fa-2x mb-3 text-success"></i>
                             <h6>Actual Spent</h6>
-                            <h3>PHP 2,440,000</h3>
+                            <h3>Loading...</h3>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="reports-card tracking-card">
                             <i class="fas fa-percentage fa-2x mb-3 text-warning"></i>
                             <h6>Variance</h6>
-                            <h3 class="variance-negative">-38.2%</h3>
+                            <h3 class="variance-negative">Loading...</h3>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="reports-card tracking-card">
                             <i class="fas fa-clock fa-2x mb-3 text-info"></i>
                             <h6>Remaining</h6>
-                            <h3>PHP 1,510,000</h3>
+                            <h3>Loading...</h3>
                         </div>
                     </div>
                 </div>
@@ -1130,40 +1008,11 @@ $db = Database::getInstance()->getConnection();
                                                 <th>Status</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>Hotel Operations</td>
-                                                <td>18</td>
-                                                <td>3</td>
-                                                <td>PHP 64,500.00</td>
-                                                <td>PHP 35,500.00</td>
-                                                <td><span class="badge bg-success">Within Limit</span></td>
-                                            </tr>
-                                            <tr>
-                                                <td>Restaurant</td>
-                                                <td>22</td>
-                                                <td>6</td>
-                                                <td>PHP 92,000.00</td>
-                                                <td>PHP 8,000.00</td>
-                                                <td><span class="badge bg-warning">Near Limit</span></td>
-                                            </tr>
-                                            <tr>
-                                                <td>Events</td>
-                                                <td>7</td>
-                                                <td>1</td>
-                                                <td>PHP 21,300.00</td>
-                                                <td>PHP 28,700.00</td>
-                                                <td><span class="badge bg-success">Within Limit</span></td>
-                                            </tr>
-                                            <tr>
-                                                <td>Finance & Admin</td>
-                                                <td>4</td>
-                                                <td>0</td>
-                                                <td>PHP 12,800.00</td>
-                                                <td>PHP 42,200.00</td>
-                                                <td><span class="badge bg-success">Within Limit</span></td>
-                                            </tr>
-                                        </tbody>
+                                        <tbody id="trackingClaimsBody">
+                                              <tr>
+                                                  <td colspan="6" class="text-center text-muted">Loading HR3 claims...</td>
+                                              </tr>
+                                          </tbody>
                                     </table>
                                 </div>
                                 <div class="d-flex justify-content-end">
@@ -1268,24 +1117,11 @@ $db = Database::getInstance()->getConnection();
                                                 <th>Action Needed</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>HR3-CLM-1024</td>
-                                                <td>Maria Santos</td>
-                                                <td>Restaurant</td>
-                                                <td>PHP 12,500.00</td>
-                                                <td>PHP 8,000.00</td>
-                                                <td><span class="badge bg-warning">Finance Review</span></td>
-                                            </tr>
-                                            <tr>
-                                                <td>HR3-CLM-1029</td>
-                                                <td>Jon Reyes</td>
-                                                <td>Restaurant</td>
-                                                <td>PHP 9,200.00</td>
-                                                <td>PHP 8,000.00</td>
-                                                <td><span class="badge bg-danger">Hold Approval</span></td>
-                                            </tr>
-                                        </tbody>
+                                        <tbody id="alertsClaimsBody">
+                                              <tr>
+                                                  <td colspan="6" class="text-center text-muted">Loading HR3 claims...</td>
+                                              </tr>
+                                          </tbody>
                                     </table>
                                 </div>
                                 <div class="d-flex justify-content-end">
@@ -1341,7 +1177,7 @@ $db = Database::getInstance()->getConnection();
                         <div class="card forecast-card">
                             <div class="card-body">
                                 <h6>Projected Year-End Spend</h6>
-                                <h3 class="mb-2">PHP 3,620,000</h3>
+                                <h3 class="mb-2">Not available</h3>
                                 <p class="mb-0">Based on current run rate and seasonality.</p>
                             </div>
                         </div>
@@ -1350,7 +1186,7 @@ $db = Database::getInstance()->getConnection();
                         <div class="card forecast-card">
                             <div class="card-body">
                                 <h6>Expected Variance</h6>
-                                <h3 class="mb-2">-8.4%</h3>
+                                <h3 class="mb-2">Not available</h3>
                                 <p class="mb-0">Favorable due to staffing optimization.</p>
                             </div>
                         </div>
@@ -1359,7 +1195,7 @@ $db = Database::getInstance()->getConnection();
                         <div class="card forecast-card">
                             <div class="card-body">
                                 <h6>Claims Pressure (HR3)</h6>
-                                <h3 class="mb-2">+6.2%</h3>
+                                <h3 class="mb-2">Not available</h3>
                                 <p class="mb-0">Higher claim volume in Restaurant unit.</p>
                             </div>
                         </div>
@@ -1382,32 +1218,11 @@ $db = Database::getInstance()->getConnection();
                                                 <th>Notes</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>Occupancy Levels</td>
-                                                <td>Upward</td>
-                                                <td>+PHP 120,000</td>
-                                                <td>Peak season demand driving labor and supply usage.</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Supplier Pricing</td>
-                                                <td>Stable</td>
-                                                <td>+PHP 35,000</td>
-                                                <td>Minor increases in beverage costs.</td>
-                                            </tr>
-                                            <tr>
-                                                <td>HR3 Claims</td>
-                                                <td>Rising</td>
-                                                <td>+PHP 60,000</td>
-                                                <td>Pending claims may require supplemental budget.</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Utilities</td>
-                                                <td>Downward</td>
-                                                <td>-PHP 25,000</td>
-                                                <td>Energy efficiency initiative impacts Q3.</td>
-                                            </tr>
-                                        </tbody>
+                                        <tbody id="forecastDriversBody">
+                                              <tr>
+                                                  <td colspan="4" class="text-center text-muted">No forecast driver data available.</td>
+                                              </tr>
+                                          </tbody>
                                     </table>
                                 </div>
                             </div>
@@ -1443,44 +1258,11 @@ $db = Database::getInstance()->getConnection();
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>ADJ-011</td>
-                                                <td>Restaurant</td>
-                                                <td>F&B Manager</td>
-                                                <td>Increase</td>
-                                                <td>PHP 60,000.00</td>
-                                                <td>HR3 claims spike during peak season</td>
-                                                <td><span class="badge bg-warning">Pending</span></td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary">Review</button>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>ADJ-012</td>
-                                                <td>Hotel Operations</td>
-                                                <td>Ops Director</td>
-                                                <td>Transfer</td>
-                                                <td>PHP 35,000.00</td>
-                                                <td>Shift to maintenance initiatives</td>
-                                                <td><span class="badge bg-info">In Review</span></td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary">Review</button>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>ADJ-013</td>
-                                                <td>Events</td>
-                                                <td>Events Lead</td>
-                                                <td>Decrease</td>
-                                                <td>PHP 20,000.00</td>
-                                                <td>Vendor discounts applied</td>
-                                                <td><span class="badge bg-success">Approved</span></td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary">View</button>
-                                                </td>
-                                            </tr>
-                                        </tbody>
+                                        <tbody id="adjustmentsTableBody">
+                                              <tr>
+                                                  <td colspan="8" class="text-center text-muted">No adjustment requests available.</td>
+                                              </tr>
+                                          </tbody>
                                     </table>
                                 </div>
                             </div>
@@ -1510,10 +1292,8 @@ $db = Database::getInstance()->getConnection();
                             </div>
                             <div class="card-body">
                                 <ul class="list-unstyled mb-0">
-                                    <li class="mb-2"><strong>ADJ-009:</strong> +PHP 40,000 (Restaurant claims)</li>
-                                    <li class="mb-2"><strong>ADJ-010:</strong> -PHP 15,000 (Utilities savings)</li>
-                                    <li><strong>ADJ-008:</strong> +PHP 25,000 (Events staffing)</li>
-                                </ul>
+                                      <li class=\"text-muted\">No recent approvals available.</li>
+                                  </ul>
                             </div>
                         </div>
                     </div>
@@ -1597,44 +1377,11 @@ $db = Database::getInstance()->getConnection();
                                         <th>IP Address</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>2025-09-25 08:15:22</td>
-                                        <td>Admin</td>
-                                        <td>Created</td>
-                                        <td>FY 2025 Master Budget</td>
-                                        <td>Initial baseline approved</td>
-                                        <td>Finance Module</td>
-                                        <td>192.168.1.100</td>
-                                    </tr>
-                                    <tr>
-                                        <td>2025-09-25 11:42:10</td>
-                                        <td>Finance Lead</td>
-                                        <td>Adjusted</td>
-                                        <td>Restaurant Growth Plan</td>
-                                        <td>+PHP 40,000 for HR3 claims</td>
-                                        <td>Budget Adjustments</td>
-                                        <td>192.168.1.121</td>
-                                    </tr>
-                                    <tr>
-                                        <td>2025-09-25 14:06:44</td>
-                                        <td>System</td>
-                                        <td>Alert Triggered</td>
-                                        <td>HR3 Claims Reserve</td>
-                                        <td>Claims exceeded threshold</td>
-                                        <td>HR3 Integration</td>
-                                        <td>192.168.1.200</td>
-                                    </tr>
-                                    <tr>
-                                        <td>2025-09-25 15:31:19</td>
-                                        <td>Accounting</td>
-                                        <td>Reviewed</td>
-                                        <td>Department Allocations</td>
-                                        <td>Monthly variance review completed</td>
-                                        <td>Finance Module</td>
-                                        <td>192.168.1.132</td>
-                                    </tr>
-                                </tbody>
+                                <tbody id="auditTrailBody">
+                                      <tr>
+                                          <td colspan="7" class="text-center text-muted">No audit records available.</td>
+                                      </tr>
+                                  </tbody>
                             </table>
                         </div>
                     </div>
@@ -1689,6 +1436,7 @@ $db = Database::getInstance()->getConnection();
         let currentAllocations = [];
         let currentTrackingData = [];
         let currentAlerts = [];
+        let currentHr3ClaimsBreakdown = null;
 
         // Initialize sidebar state on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -1743,12 +1491,39 @@ $db = Database::getInstance()->getConnection();
         // Render budgets table
         function renderBudgetsTable() {
             const tbody = document.querySelector('#planning .table tbody');
+            if (!tbody) {
+                return;
+            }
             tbody.innerHTML = '';
 
             if (currentBudgets.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No budgets found. Create your first budget.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No budgets found. Create your first budget.</td></tr>';
                 return;
             }
+
+            currentBudgets.forEach(budget => {
+                const statusBadge = getStatusBadge(budget.status || 'draft');
+                const ownerName = budget.approved_by_name || budget.created_by_name || 'N/A';
+                const utilizedLabel = budget.utilized_amount != null
+                    ? `PHP ${parseFloat(budget.utilized_amount || 0).toLocaleString()}`
+                    : 'N/A';
+                const row = `
+                    <tr>
+                        <td>${budget.name}</td>
+                        <td>${formatBudgetPeriod(budget.start_date, budget.end_date)}</td>
+                        <td>${ownerName}</td>
+                        <td>PHP ${parseFloat(budget.total_amount || 0).toLocaleString()}</td>
+                        <td>${utilizedLabel}</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewBudget(${budget.id})">View</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="editBudget(${budget.id})">Edit</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
 
             currentBudgets.forEach(budget => {
                 const statusBadge = getStatusBadge(budget.status);
@@ -1781,6 +1556,8 @@ $db = Database::getInstance()->getConnection();
 
                 currentAllocations = data.allocations || [];
                 renderAllocationsTable();
+                renderHr3ClaimsSummary();
+                renderHr3ClaimsOverBudget();
 
             } catch (error) {
                 console.error('Error loading allocations:', error);
@@ -1790,11 +1567,14 @@ $db = Database::getInstance()->getConnection();
 
         // Render allocations table
         function renderAllocationsTable() {
-            const tbody = document.querySelector('#allocation .table tbody');
+            const tbody = document.getElementById('allocationTableBody');
+            if (!tbody) {
+                return;
+            }
             tbody.innerHTML = '';
 
             if (currentAllocations.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No allocations found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No allocations found.</td></tr>';
                 return;
             }
 
@@ -1802,13 +1582,17 @@ $db = Database::getInstance()->getConnection();
                 const progressPercent = allocation.total_amount > 0 ? (allocation.utilized_amount / allocation.total_amount) * 100 : 0;
                 const progressClass = progressPercent > 90 ? 'budget-over' : progressPercent > 75 ? 'budget-on-track' : 'budget-under';
                 const statusBadge = getAllocationStatusBadge(progressPercent);
+                const reservedLabel = allocation.reserved_amount != null
+                    ? `PHP ${parseFloat(allocation.reserved_amount || 0).toLocaleString()}`
+                    : 'N/A';
 
                 const row = `
                     <tr>
                         <td><strong>${allocation.department}</strong></td>
                         <td>PHP ${parseFloat(allocation.total_amount || 0).toLocaleString()}</td>
+                        <td>${reservedLabel}</td>
                         <td>PHP ${parseFloat(allocation.utilized_amount || 0).toLocaleString()}</td>
-                        <td>PHP ${parseFloat((allocation.total_amount || 0) - (allocation.utilized_amount || 0)).toLocaleString()}</td>
+                        <td>PHP ${parseFloat(allocation.remaining || 0).toLocaleString()}</td>
                         <td>
                             <div class="budget-progress ${progressClass}">
                                 <div class="budget-progress-bar" style="width: ${Math.min(progressPercent, 100)}%"></div>
@@ -1823,6 +1607,12 @@ $db = Database::getInstance()->getConnection();
                 tbody.innerHTML += row;
             });
         }
+            tbody.innerHTML = '';
+
+            if (currentAllocations.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No allocations found.</td></tr>';
+                return;
+            }
 
         // Load tracking data
         async function loadTrackingData() {
@@ -1900,7 +1690,160 @@ $db = Database::getInstance()->getConnection();
             }
         }
 
-        // Create budget
+        
+        async function loadHr3ClaimsData() {
+            const trackingBody = document.getElementById('trackingClaimsBody');
+            const alertsBody = document.getElementById('alertsClaimsBody');
+            if (trackingBody) {
+                trackingBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading HR3 claims...</td></tr>';
+            }
+            if (alertsBody) {
+                alertsBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading HR3 claims...</td></tr>';
+            }
+
+            try {
+                const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=getClaimsBreakdown');
+                const payload = await response.json();
+
+                if (!payload.success) {
+                    throw new Error(payload.error || 'Failed to load HR3 claims');
+                }
+
+                const result = payload.result || {};
+                if (result.success === false) {
+                    throw new Error(result.error || 'Failed to load HR3 claims');
+                }
+
+                const breakdown = result.data || result;
+                if (!breakdown || !breakdown.summary) {
+                    throw new Error('No HR3 claims data available');
+                }
+
+                currentHr3ClaimsBreakdown = breakdown;
+                renderHr3ClaimsSummary();
+                renderHr3ClaimsOverBudget();
+
+            } catch (error) {
+                console.error('Error loading HR3 claims:', error);
+                if (trackingBody) {
+                    trackingBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No HR3 claims data available.</td></tr>';
+                }
+                if (alertsBody) {
+                    alertsBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No HR3 claims data available.</td></tr>';
+                }
+            }
+        }
+
+        function getAllocationRemaining(department) {
+            const allocation = currentAllocations.find(item => item.department === department);
+            return allocation ? allocation.remaining : null;
+        }
+
+        function getClaimsBudgetStatus(remaining, totalAmount) {
+            if (remaining == null) {
+                return { label: 'Unknown', className: 'bg-secondary' };
+            }
+
+            if (remaining <= 0) {
+                return { label: 'Over Budget', className: 'bg-danger' };
+            }
+
+            if (remaining < totalAmount) {
+                return { label: 'Near Limit', className: 'bg-warning text-dark' };
+            }
+
+            return { label: 'Within Limit', className: 'bg-success' };
+        }
+
+        function renderHr3ClaimsSummary() {
+            const tbody = document.getElementById('trackingClaimsBody');
+            if (!tbody) {
+                return;
+            }
+
+            if (!currentHr3ClaimsBreakdown || !currentHr3ClaimsBreakdown.summary) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No HR3 claims data available.</td></tr>';
+                return;
+            }
+
+            const departmentBreakdown = currentHr3ClaimsBreakdown.summary.department_breakdown || {};
+            const departments = Object.keys(departmentBreakdown);
+
+            if (departments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No HR3 claims data available.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            departments.forEach(department => {
+                const data = departmentBreakdown[department] || {};
+                const claimCount = data.claim_count || 0;
+                const totalAmount = data.total_amount || 0;
+                const remaining = getAllocationRemaining(department);
+                const remainingLabel = remaining == null ? 'N/A' : `PHP ${parseFloat(remaining || 0).toLocaleString()}`;
+                const status = getClaimsBudgetStatus(remaining, totalAmount);
+
+                const row = `
+                    <tr>
+                        <td>${department}</td>
+                        <td>${claimCount}</td>
+                        <td>0</td>
+                        <td>PHP ${parseFloat(totalAmount || 0).toLocaleString()}</td>
+                        <td>${remainingLabel}</td>
+                        <td><span class="badge ${status.className}">${status.label}</span></td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function renderHr3ClaimsOverBudget() {
+            const tbody = document.getElementById('alertsClaimsBody');
+            if (!tbody) {
+                return;
+            }
+
+            if (!currentHr3ClaimsBreakdown || !Array.isArray(currentHr3ClaimsBreakdown.claims)) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No HR3 claims data available.</td></tr>';
+                return;
+            }
+
+            const overBudgetClaims = currentHr3ClaimsBreakdown.claims.filter(claim => {
+                const remaining = getAllocationRemaining(claim.department);
+                if (remaining == null) {
+                    return false;
+                }
+                const amount = claim.amount || 0;
+                return remaining <= 0 || amount > remaining;
+            });
+
+            if (overBudgetClaims.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No HR3 claims over budget.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            overBudgetClaims.forEach(claim => {
+                const remaining = getAllocationRemaining(claim.department);
+                const remainingLabel = remaining == null ? 'N/A' : `PHP ${parseFloat(remaining || 0).toLocaleString()}`;
+                const actionLabel = remaining != null && remaining <= 0 ? 'Supplemental Budget' : 'Finance Review';
+                const actionClass = remaining != null && remaining <= 0 ? 'bg-danger' : 'bg-warning text-dark';
+
+                const row = `
+                    <tr>
+                        <td>${claim.id}</td>
+                        <td>${claim.employee_name}</td>
+                        <td>${claim.department}</td>
+                        <td>PHP ${parseFloat(claim.amount || 0).toLocaleString()}</td>
+                        <td>${remainingLabel}</td>
+                        <td><span class="badge ${actionClass}">${actionLabel}</span></td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+// Create budget
         async function createBudget(formData) {
             try {
                 const response = await fetch('api/budgets.php', {
@@ -2219,6 +2162,7 @@ $db = Database::getInstance()->getConnection();
             loadTrackingData();
             loadAlerts(); // Add alerts loading
             loadVendors(); // Add vendor loading
+            loadHr3ClaimsData(); // Add HR3 claims loading
 
             // Start polling for vendor updates (check every 10 seconds)
             startVendorPolling();
