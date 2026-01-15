@@ -998,11 +998,16 @@ class HR3Integration extends BaseIntegration {
             }
 
             $data = json_decode($response, true);
-            if (!$data || !isset($data['claims'])) {
+            if (!$data) {
                 return ['success' => false, 'message' => 'Invalid HR3 API response format'];
             }
 
-            $claimCount = count($data['claims'] ?? []);
+            $claims = isset($data['claims']) ? $data['claims'] : (is_array($data) ? $data : []);
+            if (!is_array($claims)) {
+                return ['success' => false, 'message' => 'Invalid HR3 API response format'];
+            }
+
+            $claimCount = count($claims);
             return [
                 'success' => true,
                 'message' => "HR3 connection successful. Found {$claimCount} employee claims"
@@ -1032,12 +1037,17 @@ class HR3Integration extends BaseIntegration {
             }
 
             $data = json_decode($response, true);
-            if (!$data || !isset($data['claims'])) {
+            if (!$data) {
+                throw new Exception('Invalid HR3 API response');
+            }
+
+            $claims = isset($data['claims']) ? $data['claims'] : (is_array($data) ? $data : []);
+            if (!is_array($claims)) {
                 throw new Exception('Invalid HR3 API response');
             }
 
             // Filter only approved claims
-            $approvedClaims = array_filter($data['claims'], function($claim) {
+            $approvedClaims = array_filter($claims, function($claim) {
                 return isset($claim['status']) && strtolower($claim['status']) === 'approved';
             });
 
