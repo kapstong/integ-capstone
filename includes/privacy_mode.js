@@ -15,7 +15,12 @@
     /**
      * Hide all amounts with asterisks
      */
-    function hideAmounts() {
+    function hideAmounts(force = false) {
+        // If user unlocked and no force flag, skip re-hiding newly loaded data
+        if (!force && isHidden === false) {
+            return;
+        }
+
         hiddenElements = [];
         let hiddenCount = 0;
 
@@ -345,8 +350,7 @@
         .then(data => {
             if (data.success && data.unlocked) {
                 // Code was already verified, show amounts immediately
-                isHidden = false;
-                updateEyeButton();
+                showAmounts();
             } else {
                 // Not unlocked, hide amounts
                 hideAmounts();
@@ -390,7 +394,7 @@
             // Check if already verified in this session
             checkIfUnlockedThenToggle();
         } else {
-            hideAmounts();
+            hideAmounts(true);
         }
     }
 
