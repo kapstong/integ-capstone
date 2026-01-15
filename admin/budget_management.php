@@ -1961,41 +1961,139 @@ $db = Database::getInstance()->getConnection();
 
         // View budget details
         function viewBudget(budgetId) {
-            // Find the budget
             const budget = currentBudgets.find(b => b.id == budgetId);
             if (!budget) {
                 showAlert('Budget not found', 'warning');
                 return;
             }
 
-            // Show budget details modal or redirect to detail page
-            showAlert(`Viewing budget: ${budget.name}`, 'info');
+            const modalEl = document.getElementById('viewBudgetModal');
+            if (!modalEl) {
+                showAlert(`Viewing budget: ${budget.name}`, 'info');
+                return;
+            }
+
+            modalEl.querySelector('#viewBudgetName').textContent = budget.name || 'N/A';
+            modalEl.querySelector('#viewBudgetPeriod').textContent = formatBudgetPeriod(budget.start_date, budget.end_date);
+            modalEl.querySelector('#viewBudgetDepartment').textContent = budget.department || 'Unassigned';
+            modalEl.querySelector('#viewBudgetVendor').textContent = budget.vendor_name || 'N/A';
+            modalEl.querySelector('#viewBudgetStatus').innerHTML = getStatusBadge(budget.status || 'draft');
+            modalEl.querySelector('#viewBudgetAmount').textContent = `PHP ${parseFloat(budget.total_amount || 0).toLocaleString()}`;
+            modalEl.querySelector('#viewBudgetOwner').textContent = budget.approved_by_name || budget.created_by_name || 'N/A';
+            modalEl.querySelector('#viewBudgetDescription').textContent = budget.description || 'N/A';
+
+            new bootstrap.Modal(modalEl).show();
         }
 
         // Edit budget
         function editBudget(budgetId) {
-            // Find the budget
             const budget = currentBudgets.find(b => b.id == budgetId);
             if (!budget) {
                 showAlert('Budget not found', 'warning');
                 return;
             }
 
-            // Populate edit modal with budget data
-            showAlert(`Editing budget: ${budget.name}`, 'info');
+            const modalEl = document.getElementById('editBudgetModal');
+            if (!modalEl) {
+                showAlert(`Editing budget: ${budget.name}`, 'info');
+                return;
+            }
+
+            modalEl.querySelector('#editBudgetId').value = budget.id;
+            modalEl.querySelector('#editBudgetName').value = budget.name || '';
+            modalEl.querySelector('#editStartDate').value = budget.start_date || '';
+            modalEl.querySelector('#editEndDate').value = budget.end_date || '';
+            modalEl.querySelector('#editTotalAmount').value = budget.total_amount || '';
+            modalEl.querySelector('#editBudgetDescription').value = budget.description || '';
+
+            setSelectValue(
+                modalEl.querySelector('#editBudgetDepartment'),
+                budget.department_id,
+                budget.department || 'Unassigned'
+            );
+            setSelectValue(
+                modalEl.querySelector('#editBudgetVendor'),
+                budget.vendor_id,
+                budget.vendor_name || 'N/A'
+            );
+
+            new bootstrap.Modal(modalEl).show();
         }
 
         // Adjust allocation
         function adjustAllocation(allocationId) {
-            // Find the allocation
             const allocation = currentAllocations.find(a => a.id == allocationId);
             if (!allocation) {
                 showAlert('Allocation not found', 'warning');
                 return;
             }
 
-            // Show adjustment modal
-            showAlert(`Adjusting allocation for: ${allocation.department}`, 'info');
+            const modalEl = document.getElementById('allocationDetailModal');
+            if (!modalEl) {
+                showAlert(`Adjusting allocation for: ${allocation.department}`, 'info');
+                return;
+            }
+
+            modalEl.querySelector('#allocationDepartment').textContent = allocation.department || 'Unassigned';
+            modalEl.querySelector('#allocationTotal').textContent = `PHP ${parseFloat(allocation.total_amount || 0).toLocaleString()}`;
+            modalEl.querySelector('#allocationReserved').textContent = `PHP ${parseFloat(allocation.reserved_amount || 0).toLocaleString()}`;
+            modalEl.querySelector('#allocationUtilized').textContent = `PHP ${parseFloat(allocation.utilized_amount || 0).toLocaleString()}`;
+            modalEl.querySelector('#allocationRemaining').textContent = `PHP ${parseFloat(allocation.remaining || 0).toLocaleString()}`;
+
+            const requestBtn = modalEl.querySelector('#allocationRequestAdjustment');
+            if (requestBtn) {
+                requestBtn.setAttribute('data-department-id', allocation.department_id || '');
+                requestBtn.setAttribute('data-department-name', allocation.department || '');
+            }
+
+            new bootstrap.Modal(modalEl).show();
+        }
+
+        function setSelectValue(select, value, label) {
+            if (!select) {
+                return;
+            }
+
+            const stringValue = value != null ? String(value) : '';
+            if (stringValue && !select.querySelector(`option[value="${stringValue}"]`)) {
+                const option = document.createElement('option');
+                option.value = stringValue;
+                option.textContent = label || stringValue;
+                select.appendChild(option);
+            }
+            select.value = stringValue;
+        }
+
+        async function updateBudget(budgetId, formData) {
+            try {
+                const response = await fetch(`api/budgets.php?id=${budgetId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                showAlert('Budget updated successfully', 'success');
+                loadBudgets();
+                loadAllocations();
+                loadTrackingData();
+                loadAlerts();
+
+                const modalEl = document.getElementById('editBudgetModal');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+            } catch (error) {
+                console.error('Error updating budget:', error);
+                showAlert('Error updating budget: ' + error.message, 'danger');
+            }
         }
 
         async function approveAdjustment(adjustmentId) {
@@ -2133,6 +2231,52 @@ $db = Database::getInstance()->getConnection();
                     };
 
                     createBudget(budgetData);
+                });
+            }
+
+            const editBudgetForm = document.getElementById('editBudgetForm');
+            if (editBudgetForm) {
+                editBudgetForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    const formData = new FormData(this);
+                    const budgetId = formData.get('budget_id');
+                    if (!budgetId) {
+                        showAlert('Budget ID is missing', 'warning');
+                        return;
+                    }
+
+                    const budgetData = {
+                        name: formData.get('budgetName'),
+                        department_id: formData.get('department_id') || null,
+                        vendor_id: formData.get('vendor_id') || null,
+                        start_date: formData.get('startDate'),
+                        end_date: formData.get('endDate'),
+                        total_amount: parseFloat(formData.get('totalAmount')),
+                        description: formData.get('budgetDescription')
+                    };
+
+                    updateBudget(budgetId, budgetData);
+                });
+            }
+
+            const allocationRequestBtn = document.getElementById('allocationRequestAdjustment');
+            if (allocationRequestBtn) {
+                allocationRequestBtn.addEventListener('click', function() {
+                    const departmentId = this.getAttribute('data-department-id') || '';
+                    const departmentName = this.getAttribute('data-department-name') || '';
+                    const select = document.getElementById('adjustmentDepartment');
+                    setSelectValue(select, departmentId, departmentName);
+
+                    const allocationModal = bootstrap.Modal.getInstance(document.getElementById('allocationDetailModal'));
+                    if (allocationModal) {
+                        allocationModal.hide();
+                    }
+
+                    const adjustmentModal = document.getElementById('adjustmentRequestModal');
+                    if (adjustmentModal) {
+                        new bootstrap.Modal(adjustmentModal).show();
+                    }
                 });
             }
 
@@ -2288,7 +2432,7 @@ $db = Database::getInstance()->getConnection();
         // Populate vendor dropdowns in modals
         function populateVendorDropdowns(vendors) {
             const vendorSelects = [
-                'budgetVendor', 'allocationVendor', 'adjustmentVendor', 'trackingVendor'
+                'budgetVendor', 'allocationVendor', 'adjustmentVendor', 'trackingVendor', 'editBudgetVendor'
             ];
 
             vendorSelects.forEach(selectId => {
@@ -2306,7 +2450,7 @@ $db = Database::getInstance()->getConnection();
 
         function populateDepartmentDropdowns(departments) {
             const departmentSelects = [
-                'budgetDepartment', 'allocationDepartment', 'adjustmentDepartment'
+                'budgetDepartment', 'allocationDepartment', 'adjustmentDepartment', 'editBudgetDepartment'
             ];
 
             departmentSelects.forEach(selectId => {
@@ -2447,7 +2591,22 @@ $db = Database::getInstance()->getConnection();
                 return;
             }
 
-            showAlert(`Alert Details: ${alert.department} is ${alert.over_percent.toFixed(1)}% over budget`, 'warning');
+            const modalEl = document.getElementById('alertDetailsModal');
+            if (!modalEl) {
+                showAlert(`Alert Details: ${alert.department} is ${alert.over_percent.toFixed(1)}% over budget`, 'warning');
+                return;
+            }
+
+            modalEl.querySelector('#alertDepartment').textContent = alert.department;
+            modalEl.querySelector('#alertYear').textContent = alert.budget_year;
+            modalEl.querySelector('#alertBudgeted').textContent = `PHP ${parseFloat(alert.budgeted_amount || 0).toLocaleString()}`;
+            modalEl.querySelector('#alertActual').textContent = `PHP ${parseFloat(alert.actual_amount || 0).toLocaleString()}`;
+            modalEl.querySelector('#alertOverAmount').textContent = `PHP ${parseFloat(alert.over_amount || 0).toLocaleString()}`;
+            modalEl.querySelector('#alertOverPercent').textContent = `${parseFloat(alert.over_percent || 0).toFixed(1)}%`;
+            modalEl.querySelector('#alertSeverity').textContent = alert.severity || 'N/A';
+            modalEl.querySelector('#alertDate').textContent = alert.alert_date || 'N/A';
+
+            new bootstrap.Modal(modalEl).show();
         }
 
         // Update initialize section to start polling
@@ -2745,6 +2904,220 @@ $db = Database::getInstance()->getConnection();
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- View Budget Modal -->
+    <div class="modal fade" id="viewBudgetModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Budget Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Budget Name</label>
+                            <div id="viewBudgetName" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Period</label>
+                            <div id="viewBudgetPeriod" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Department</label>
+                            <div id="viewBudgetDepartment" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Vendor</label>
+                            <div id="viewBudgetVendor" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status</label>
+                            <div id="viewBudgetStatus"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Total Amount</label>
+                            <div id="viewBudgetAmount" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Owner</label>
+                            <div id="viewBudgetOwner" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Description</label>
+                            <div id="viewBudgetDescription" class="fw-semibold"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Budget Modal -->
+    <div class="modal fade" id="editBudgetModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Budget</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editBudgetForm">
+                        <input type="hidden" id="editBudgetId" name="budget_id">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editBudgetName" class="form-label">Budget Name *</label>
+                                    <input type="text" class="form-control" id="editBudgetName" name="budgetName" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editBudgetDepartment" class="form-label">Department</label>
+                                    <select class="form-select" id="editBudgetDepartment" name="department_id">
+                                        <option value="">Select Department</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editStartDate" class="form-label">Start Date *</label>
+                                    <input type="date" class="form-control" id="editStartDate" name="startDate" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editEndDate" class="form-label">End Date *</label>
+                                    <input type="date" class="form-control" id="editEndDate" name="endDate" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editTotalAmount" class="form-label">Total Budget Amount *</label>
+                                    <input type="number" class="form-control" id="editTotalAmount" name="totalAmount" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editBudgetVendor" class="form-label">Primary Vendor (Optional)</label>
+                                    <select class="form-select" id="editBudgetVendor" name="vendor_id">
+                                        <option value="">Select Vendor</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editBudgetDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="editBudgetDescription" name="budgetDescription" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" form="editBudgetForm">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Allocation Details Modal -->
+    <div class="modal fade" id="allocationDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Allocation Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Department</label>
+                            <div id="allocationDepartment" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Total Allocated</label>
+                            <div id="allocationTotal" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Reserved Amount</label>
+                            <div id="allocationReserved" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Utilized Amount</label>
+                            <div id="allocationUtilized" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Remaining</label>
+                            <div id="allocationRemaining" class="fw-semibold"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="allocationRequestAdjustment">Request Adjustment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Details Modal -->
+    <div class="modal fade" id="alertDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Budget Alert Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Department</label>
+                            <div id="alertDepartment" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Budget Year</label>
+                            <div id="alertYear" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Budgeted Amount</label>
+                            <div id="alertBudgeted" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Actual Amount</label>
+                            <div id="alertActual" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Over Amount</label>
+                            <div id="alertOverAmount" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Over Percent</label>
+                            <div id="alertOverPercent" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Severity</label>
+                            <div id="alertSeverity" class="fw-semibold"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Alert Date</label>
+                            <div id="alertDate" class="fw-semibold"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Privacy Mode - Hide amounts with asterisks + Eye button -->
     <script src="../includes/privacy_mode.js?v=7"></script>
