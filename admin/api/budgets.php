@@ -304,6 +304,17 @@ function handlePost($db, $logger) {
             return;
         }
 
+        if ($action === 'adjustment_status') {
+            $id = isset($data['adjustment_id']) ? (int)$data['adjustment_id'] : null;
+            if (!$id) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Adjustment ID is required']);
+                return;
+            }
+            updateAdjustmentStatus($db, $logger, $id, $data);
+            return;
+        }
+
         if ($action === 'category') {
             createCategory($db, $logger, $data);
             return;

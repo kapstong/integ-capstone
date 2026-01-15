@@ -2106,13 +2106,14 @@ $db = Database::getInstance()->getConnection();
 
         async function updateAdjustmentStatus(adjustmentId, status) {
             try {
-                const response = await fetch(`api/budgets.php?id=${adjustmentId}`, {
-                    method: 'PUT',
+                const response = await fetch('api/budgets.php', {
+                    method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        action: 'adjustment',
+                        action: 'adjustment_status',
+                        adjustment_id: adjustmentId,
                         status
                     })
                 });
