@@ -14,6 +14,7 @@
 
     const AMOUNT_REGEX = /(?:[₱$€£¥]\s*-?[\d,]+\.?\d*)|(?:ƒ,ñ\s*-?[\d,]+\.?\d*)|(?:PHP\s*-?[\d,]+\.?\d*)|(?:P\s*-?[\d,]+\.?\d*)|(?:\(\s*(?:[₱$€£¥P]|ƒ,ñ)?\s*-?[\d,]+\.?\d*\s*\))/g;
     const MASKED_CLASS = 'privacy-mask';
+    const originalTextMap = new WeakMap();
 
     /**
      * Hide all amounts with asterisks
@@ -49,16 +50,16 @@
 
         const maskedNodes = document.querySelectorAll('.' + MASKED_CLASS);
         maskedNodes.forEach(span => {
+            const original = originalTextMap.get(span);
             span.classList.remove(MASKED_CLASS);
-            span.removeAttribute('data-privacy-mask');
-            span.removeAttribute('data-privacy-original');
             span.style.removeProperty('--privacy-mask-color');
             span.style.removeProperty('position');
             span.style.removeProperty('display');
             span.style.removeProperty('color');
             span.style.removeProperty('white-space');
-            const textNode = document.createTextNode(span.textContent || '');
+            const textNode = document.createTextNode(original || span.textContent || '');
             span.replaceWith(textNode);
+            originalTextMap.delete(span);
             restoredCount++;
         });
 
@@ -595,9 +596,8 @@
 
             const span = document.createElement('span');
             span.className = MASKED_CLASS;
-            span.setAttribute('data-privacy-original', match[0]);
-            span.setAttribute('data-privacy-mask', formatMaskedAmount(match[0]));
-            span.textContent = match[0];
+            originalTextMap.set(span, match[0]);
+            span.textContent = formatMaskedAmount(match[0]);
             const parent = node.parentElement;
             if (parent) {
                 const color = window.getComputedStyle(parent).color;
@@ -659,19 +659,8 @@
         style.id = 'privacy-mask-styles';
         style.textContent = `
             .${MASKED_CLASS} {
-                position: relative;
-                display: inline-block;
-                color: transparent !important;
                 white-space: pre;
-            }
-            .${MASKED_CLASS}::after {
-                content: attr(data-privacy-mask);
-                position: absolute;
-                left: 0;
-                top: 0;
                 color: var(--privacy-mask-color, #1f2937);
-                white-space: pre;
-                pointer-events: none;
             }
         `;
         document.head.appendChild(style);
