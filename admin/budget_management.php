@@ -2045,6 +2045,7 @@ $db = Database::getInstance()->getConnection();
                 'pending': 'bg-warning',
                 'approved': 'bg-success',
                 'active': 'bg-primary',
+                'closed': 'bg-secondary',
                 'completed': 'bg-secondary',
                 'rejected': 'bg-danger'
             };

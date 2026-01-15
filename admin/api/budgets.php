@@ -166,7 +166,7 @@ function getAllocations($db) {
         LEFT JOIN budget_adjustments ba ON ba.budget_id = b.id
             AND ba.department_id = bi.department_id
             AND ba.status = 'pending'
-        WHERE b.status <> 'archived'
+        WHERE b.status IN ('approved', 'active')
         GROUP BY bi.department_id, d.dept_name
         ORDER BY d.dept_name
     ");
@@ -202,7 +202,7 @@ function getTrackingData($db) {
         FROM budget_items bi
         JOIN budget_categories bc ON bi.category_id = bc.id
         JOIN budgets b ON bi.budget_id = b.id
-        WHERE b.status <> 'archived'
+        WHERE b.status IN ('approved', 'active')
     ";
     $params = [];
 
@@ -254,7 +254,7 @@ function getAlerts($db) {
         FROM budget_items bi
         JOIN budgets b ON bi.budget_id = b.id
         LEFT JOIN departments d ON bi.department_id = d.id
-        WHERE b.status <> 'archived'
+        WHERE b.status IN ('approved', 'active')
         GROUP BY bi.department_id, d.dept_name, b.budget_year
         HAVING SUM(bi.actual_amount) > SUM(bi.budgeted_amount)
         ORDER BY (SUM(bi.actual_amount) - SUM(bi.budgeted_amount)) DESC
@@ -633,12 +633,21 @@ function createCategory($db, $logger, $data) {
         }
     }
 
+    $rawCode = $data['category_code'] ?? $data['category_name'];
+    $categoryCode = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '_', $rawCode));
+    $categoryCode = trim($categoryCode, '_');
+    if ($categoryCode === '') {
+        $categoryCode = 'CAT_' . time();
+    }
+    $categoryCode = substr($categoryCode, 0, 30);
+
     $stmt = $db->prepare("
         INSERT INTO budget_categories
-        (category_name, category_type, department_id, is_active)
-        VALUES (?, ?, ?, 1)
+        (category_code, category_name, category_type, department_id, is_active)
+        VALUES (?, ?, ?, ?, 1)
     ");
     $stmt->execute([
+        $categoryCode,
         $data['category_name'],
         $data['category_type'],
         $data['department_id'] ?? null
