@@ -10,6 +10,7 @@
 
     let isHidden = true;
     let eyeButton = null;
+    const STORAGE_KEY = 'privacyModeVisible';
 
     const AMOUNT_REGEX = /(?:[₱$€£¥]\s*-?[\d,]+\.?\d*)|(?:ƒ,ñ\s*-?[\d,]+\.?\d*)|(?:PHP\s*-?[\d,]+\.?\d*)|(?:P\s*-?[\d,]+\.?\d*)|(?:\(\s*(?:[₱$€£¥P]|ƒ,ñ)?\s*-?[\d,]+\.?\d*\s*\))/g;
     const MASKED_CLASS = 'privacy-mask';
@@ -37,6 +38,7 @@
 
         isHidden = true;
         updateEyeButton();
+        persistVisibility();
     }
 
     /**
@@ -62,6 +64,7 @@
 
         isHidden = false;
         updateEyeButton();
+        persistVisibility();
     }
 
     /**
@@ -301,6 +304,7 @@
      */
     function checkSessionStatus() {
         const apiPath = getApiPath('privacy_code.php');
+        const storedVisibility = getStoredVisibility();
 
         fetch(apiPath + '?action=check_status', {
             method: 'GET'
@@ -308,16 +312,23 @@
         .then(response => response.json())
         .then(data => {
             if (data.success && data.unlocked) {
-                // Code was already verified, show amounts immediately
-                showAmounts();
+                if (storedVisibility === '0') {
+                    hideAmounts(true);
+                } else {
+                    // Code was already verified, show amounts immediately
+                    showAmounts();
+                }
             } else {
-                // Not unlocked, hide amounts
-                hideAmounts();
+                // Not unlocked, hide amounts and clear stored preference
+                hideAmounts(true);
+                if (storedVisibility === '1') {
+                    setStoredVisibility('0');
+                }
             }
         })
         .catch(error => {
             // On error, default to hiding amounts
-            hideAmounts();
+            hideAmounts(true);
         });
     }
 
@@ -509,6 +520,17 @@
             childList: true,
             subtree: true
         });
+
+        window.addEventListener('storage', function(event) {
+            if (event.key !== STORAGE_KEY) {
+                return;
+            }
+            if (event.newValue === '1') {
+                showAmounts();
+            } else if (event.newValue === '0') {
+                hideAmounts(true);
+            }
+        });
     }
 
     window.PrivacyMode = {
@@ -517,6 +539,26 @@
         toggle: toggleAmounts,
         isHidden: function() { return isHidden; }
     };
+
+    function persistVisibility() {
+        setStoredVisibility(isHidden ? '0' : '1');
+    }
+
+    function setStoredVisibility(value) {
+        try {
+            localStorage.setItem(STORAGE_KEY, value);
+        } catch (error) {
+            // Ignore storage errors (private mode, disabled storage)
+        }
+    }
+
+    function getStoredVisibility() {
+        try {
+            return localStorage.getItem(STORAGE_KEY);
+        } catch (error) {
+            return null;
+        }
+    }
 
     function shouldSkipNode(node) {
         const parent = node.parentElement;
