@@ -27,7 +27,7 @@ if (isset($_GET['info'])) {
 if ($auth->isLoggedIn()) {
     $user = $auth->getCurrentUser();
     $role = strtolower($user['role_name'] ?? '');
-    if ($role === 'admin') {
+    if (in_array($role, ['admin', 'super_admin'], true)) {
         header('Location: admin/index.php');
     } elseif ($role === 'staff') {
         header('Location: user/index.php');
@@ -75,7 +75,7 @@ if ($_POST) {
             // No 2FA required, proceed with normal login
             // Route users based on their role
             $role = strtolower($result['user']['role_name'] ?? '');
-            if ($role === 'admin') {
+            if (in_array($role, ['admin', 'super_admin'], true)) {
                 $target = 'admin/index.php';
             } elseif ($role === 'staff') {
                 $target = 'user/index.php';

@@ -66,7 +66,7 @@ if ($_POST) {
 
                 // Redirect based on role
                 $role = strtolower($user['role_name'] ?? '');
-                if ($role === 'admin') {
+                if (in_array($role, ['admin', 'super_admin'], true)) {
                     $target = 'admin/index.php';
                 } else {
                     $target = 'user/index.php';

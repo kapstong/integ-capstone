@@ -37,9 +37,9 @@ class WorkflowEngine {
                 ],
                 'steps' => [
                     [
-                        'name' => 'Manager Approval',
+                        'name' => 'Admin Approval',
                         'type' => 'approval',
-                        'assignee_role' => 'manager',
+                        'assignee_role' => 'admin',
                         'timeout_hours' => 24,
                         'actions' => [
                             'approve' => ['status' => 'approved'],
@@ -47,9 +47,9 @@ class WorkflowEngine {
                         ]
                     ],
                     [
-                        'name' => 'Finance Review',
+                        'name' => 'Admin Review',
                         'type' => 'approval',
-                        'assignee_role' => 'finance',
+                        'assignee_role' => 'admin',
                         'timeout_hours' => 48,
                         'actions' => [
                             'approve' => ['status' => 'approved'],
@@ -88,7 +88,7 @@ class WorkflowEngine {
                         'type' => 'action',
                         'action' => 'create_task',
                         'delay_days' => 7,
-                        'assignee_role' => 'collections',
+                        'assignee_role' => 'admin',
                         'task_title' => 'Follow up on overdue invoice',
                         'task_priority' => 'high'
                     ]
@@ -123,7 +123,7 @@ class WorkflowEngine {
                         'name' => 'Create Credit Application',
                         'type' => 'action',
                         'action' => 'create_task',
-                        'assignee_role' => 'credit_manager',
+                        'assignee_role' => 'admin',
                         'task_title' => 'Review credit application',
                         'task_priority' => 'medium'
                     ],

@@ -417,9 +417,9 @@ include 'header.php';
   "conditions": [{"field": "total_amount", "operator": ">", "value": 50000}],
   "steps": [
     {
-      "name": "Manager Approval",
+      "name": "Admin Approval",
       "type": "approval",
-      "assignee_role": "manager",
+      "assignee_role": "admin",
       "timeout_hours": 24
     }
   ]

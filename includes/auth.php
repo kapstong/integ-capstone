@@ -323,10 +323,10 @@ class Auth {
 
     private function isAdminUser() {
         $roleName = $_SESSION['user']['role_name'] ?? '';
-        if ($roleName === 'admin') {
+        if (in_array($roleName, ['admin', 'super_admin'], true)) {
             return true;
         }
-        return $this->permManager->hasRole('admin');
+        return $this->permManager->hasRole('admin') || $this->permManager->hasRole('super_admin');
     }
 }
 ?>

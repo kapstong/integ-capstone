@@ -297,11 +297,9 @@ class PermissionManager {
 
             // Create default roles
             $roles = [
-                ['name' => 'admin', 'description' => 'System Administrator - Full access'],
-                ['name' => 'manager', 'description' => 'Manager - Can approve and manage'],
-                ['name' => 'accountant', 'description' => 'Accountant - Financial operations'],
-                ['name' => 'staff', 'description' => 'Staff - Basic operations'],
-                ['name' => 'user', 'description' => 'User - Limited access']
+                ['name' => 'super_admin', 'description' => 'Super Admin - Full access'],
+                ['name' => 'admin', 'description' => 'Admin - Full access'],
+                ['name' => 'staff', 'description' => 'User (Staff) - Basic operations']
             ];
 
             $roleIds = [];
@@ -392,30 +390,8 @@ class PermissionManager {
 
             // Assign permissions to roles
             $rolePermissions = [
+                'super_admin' => array_keys($permissionIds), // Super Admin gets all permissions
                 'admin' => array_keys($permissionIds), // Admin gets all permissions
-
-                'manager' => [
-                    'users.view', 'customers.view', 'customers.create', 'customers.edit',
-                    'vendors.view', 'vendors.create', 'vendors.edit',
-                    'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.approve',
-                    'bills.view', 'bills.create', 'bills.edit', 'bills.approve',
-                    'payments.view', 'payments.create', 'payments.edit', 'payments.approve',
-                    'journal.view', 'journal.create', 'journal.edit',
-                    'reports.view', 'reports.generate', 'reports.export',
-                    'files.view', 'files.upload', 'files.download'
-                ],
-
-                'accountant' => [
-                    'customers.view', 'customers.create', 'customers.edit',
-                    'vendors.view', 'vendors.create', 'vendors.edit',
-                    'invoices.view', 'invoices.create', 'invoices.edit',
-                    'bills.view', 'bills.create', 'bills.edit',
-                    'payments.view', 'payments.create', 'payments.edit',
-                    'journal.view', 'journal.create', 'journal.edit', 'journal.post',
-                    'reports.view', 'reports.generate', 'reports.export',
-                    'files.view', 'files.upload', 'files.download'
-                ],
-
                 'staff' => [
                     'customers.view', 'customers.create', 'customers.edit',
                     'vendors.view', 'vendors.create', 'vendors.edit',
@@ -424,15 +400,6 @@ class PermissionManager {
                     'payments.view', 'payments.create', 'payments.edit',
                     'reports.view', 'reports.generate',
                     'files.view', 'files.upload', 'files.download'
-                ],
-
-                'user' => [
-                    'customers.view',
-                    'invoices.view',
-                    'bills.view',
-                    'payments.view',
-                    'reports.view',
-                    'files.view', 'files.download'
                 ]
             ];
 
@@ -455,6 +422,17 @@ class PermissionManager {
 
                 if ($adminUser) {
                     $this->assignRole($adminUser['id'], $roleIds['admin']);
+                }
+            }
+
+            // Assign super admin role to default super admin user if present
+            if (isset($roleIds['super_admin'])) {
+                $stmt = $this->db->prepare("SELECT id FROM users WHERE username IN ('superadmin', 'super_admin')");
+                $stmt->execute();
+                $superAdminUser = $stmt->fetch();
+
+                if ($superAdminUser) {
+                    $this->assignRole($superAdminUser['id'], $roleIds['super_admin']);
                 }
             }
 

@@ -414,7 +414,7 @@ include 'header.php';
             <form method="POST">
                 <div class="modal-body">
                     <input type="hidden" name="action" value="initialize_defaults">
-                    <p>This will create default roles (admin, manager, accountant, staff, user) and assign appropriate permissions to each role.</p>
+                    <p>This will create default roles (super_admin, admin, staff) and assign appropriate permissions to each role.</p>
                     <p class="text-warning"><strong>Warning:</strong> This action cannot be undone. Existing roles and permissions may be affected.</p>
                 </div>
                 <div class="modal-footer">

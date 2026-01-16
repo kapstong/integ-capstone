@@ -42,9 +42,9 @@ try {
             } else {
                 // Get all tasks (for admin) or user tasks
                 $user_id = $_SESSION['user']['id'];
-                $role = $_SESSION['user']['role'] ?? 'user';
+                $role = $_SESSION['user']['role'] ?? 'staff';
 
-                if ($role === 'admin') {
+                if (in_array($role, ['admin', 'super_admin'], true)) {
                     $stmt = $db->prepare("
                         SELECT t.*, u.username as assigned_by_name, u2.username as assigned_to_name
                         FROM tasks t
@@ -122,7 +122,7 @@ try {
 
             $task_id = $data['id'];
             $user_id = $_SESSION['user']['id'];
-            $role = $_SESSION['user']['role'] ?? 'user';
+            $role = $_SESSION['user']['role'] ?? 'staff';
 
             // Check if user can update this task
             $stmt = $db->prepare("SELECT * FROM tasks WHERE id = ?");
@@ -136,7 +136,7 @@ try {
             }
 
             // Allow update if user is admin, task creator, or assigned to the task
-            if ($role !== 'admin' && $task['created_by'] != $user_id && $task['assigned_to'] != $user_id) {
+            if (!in_array($role, ['admin', 'super_admin'], true) && $task['created_by'] != $user_id && $task['assigned_to'] != $user_id) {
                 http_response_code(403);
                 echo json_encode(['error' => 'You do not have permission to update this task']);
                 exit;
@@ -201,7 +201,7 @@ try {
 
             $task_id = $_GET['id'];
             $user_id = $_SESSION['user']['id'];
-            $role = $_SESSION['user']['role'] ?? 'user';
+            $role = $_SESSION['user']['role'] ?? 'staff';
 
             // Check if user can delete this task
             $stmt = $db->prepare("SELECT * FROM tasks WHERE id = ?");
@@ -215,7 +215,7 @@ try {
             }
 
             // Allow delete if user is admin or task creator
-            if ($role !== 'admin' && $task['created_by'] != $user_id) {
+            if (!in_array($role, ['admin', 'super_admin'], true) && $task['created_by'] != $user_id) {
                 http_response_code(403);
                 echo json_encode(['error' => 'You do not have permission to delete this task']);
                 exit;

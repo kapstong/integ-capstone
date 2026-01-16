@@ -538,13 +538,14 @@ header('Content-Type: application/javascript');
                 'accounting': ['view', 'create', 'edit', 'delete'],
                 'hr': ['view', 'process_claims', 'upload_vouchers'],
                 'procurement': ['view', 'create', 'upload_vouchers'],
-                'admin': ['view', 'create', 'edit', 'delete', 'process_claims', 'configure']
+                'admin': ['view', 'create', 'edit', 'delete', 'process_claims', 'configure'],
+                'super_admin': ['view', 'create', 'edit', 'delete', 'process_claims', 'configure']
             };
 
             // Get user perms or fallback to admin role
             const userPerms = deptPermissions[userDepartment] || [];
             // TREAT EMPTY/MISSING SESSION AS ADMIN (Development mode)
-            const hasAdminRole = (userRole === 'admin') || (userRole === '');
+            const hasAdminRole = (userRole === 'admin') || (userRole === 'super_admin') || (userRole === '');
 
             // Define tab permissions
             const tabPermissions = {

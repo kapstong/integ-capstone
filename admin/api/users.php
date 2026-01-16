@@ -33,7 +33,7 @@ if (!isset($_SESSION['user'])) {
 
 // Check if user has admin role or permission to manage users
 $auth = new Auth();
-if (!$auth->hasRole('admin') && !$auth->hasPermission('manage_users')) {
+if (!$auth->hasRole('admin') && !$auth->hasRole('super_admin') && !$auth->hasPermission('manage_users')) {
     http_response_code(403);
     echo json_encode(['error' => 'Forbidden - Insufficient privileges']);
     exit;

@@ -1344,8 +1344,9 @@ try {
                                     <label for="filterUser" class="form-label">User</label>
                                     <select class="form-select" id="filterUser">
                                         <option value="">All Users</option>
+                                        <option value="Super Admin">Super Admin</option>
                                         <option value="Admin">Admin</option>
-                                        <option value="Accountant">Accountant</option>
+                                        <option value="Staff">Staff</option>
                                     </select>
                                 </div>
                                 <div class="mb-3">

@@ -33,7 +33,11 @@ if (!isset($_SESSION['user'])) {
 
 // Check if user has permission to access financial records
 $auth = new Auth();
-if (!$auth->hasPermission('view_financial_records') && !$auth->hasRole('admin') && !$auth->hasRole('accountant')) {
+if (
+    !$auth->hasPermission('view_financial_records')
+    && !$auth->hasRole('admin')
+    && !$auth->hasRole('super_admin')
+) {
     http_response_code(403);
     echo json_encode(['error' => 'Forbidden - Insufficient privileges']);
     exit;
@@ -220,7 +224,11 @@ try {
                 }
 
                 // Check permission to create journal entries
-                if (!$auth->hasPermission('create_journal_entries') && !$auth->hasRole('admin') && !$auth->hasRole('accountant')) {
+                if (
+                    !$auth->hasPermission('create_journal_entries')
+                    && !$auth->hasRole('admin')
+                    && !$auth->hasRole('super_admin')
+                ) {
                     http_response_code(403);
                     echo json_encode(['success' => false, 'error' => 'Insufficient privileges to create journal entries']);
                     exit;
@@ -301,7 +309,11 @@ try {
 
             if ($recordType === 'journal_entry') {
                 // Check permission to update journal entries
-                if (!$auth->hasPermission('edit_journal_entries') && !$auth->hasRole('admin') && !$auth->hasRole('accountant')) {
+                if (
+                    !$auth->hasPermission('edit_journal_entries')
+                    && !$auth->hasRole('admin')
+                    && !$auth->hasRole('super_admin')
+                ) {
                     http_response_code(403);
                     echo json_encode(['success' => false, 'error' => 'Insufficient privileges to update journal entries']);
                     exit;
@@ -427,7 +439,11 @@ try {
 
             if ($recordType === 'journal_entry') {
                 // Check permission to delete journal entries
-                if (!$auth->hasPermission('delete_journal_entries') && !$auth->hasRole('admin') && !$auth->hasRole('accountant')) {
+                if (
+                    !$auth->hasPermission('delete_journal_entries')
+                    && !$auth->hasRole('admin')
+                    && !$auth->hasRole('super_admin')
+                ) {
                     http_response_code(403);
                     echo json_encode(['success' => false, 'error' => 'Insufficient privileges to delete journal entries']);
                     exit;

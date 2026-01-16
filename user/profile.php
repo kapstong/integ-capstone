@@ -622,7 +622,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
                         <p class="text-muted mb-2"><?php echo htmlspecialchars($user['username']); ?></p>
                         <p class="text-muted mb-3"><?php echo htmlspecialchars($user['email']); ?></p>
                         <div class="d-flex justify-content-center gap-2">
-                            <span class="badge bg-primary"><?php echo ucfirst($user['role'] ?? 'user'); ?></span>
+                            <span class="badge bg-primary"><?php echo ucwords(str_replace('_', ' ', $user['role'] ?? 'staff')); ?></span>
                             <?php if ($user['department']): ?>
                                 <span class="badge bg-info"><?php echo htmlspecialchars($user['department']); ?></span>
                             <?php endif; ?>
@@ -785,7 +785,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
                         </div>
                         <div class="mb-3">
                             <strong>Role:</strong>
-                            <span class="text-muted ms-2"><?php echo ucfirst($user['role'] ?? 'user'); ?></span>
+                            <span class="text-muted ms-2"><?php echo ucwords(str_replace('_', ' ', $user['role'] ?? 'staff')); ?></span>
                         </div>
                         <div class="mb-3">
                             <strong>Member Since:</strong>

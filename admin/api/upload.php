@@ -142,7 +142,7 @@ try {
                 echo json_encode(['success' => true, 'stats' => $stats]);
             } else {
                 // Get all files (admin only)
-                if ($_SESSION['user']['role'] !== 'admin') {
+                if (!in_array($_SESSION['user']['role'] ?? 'staff', ['admin', 'super_admin'], true)) {
                     http_response_code(403);
                     echo json_encode(['error' => 'Access denied']);
                     exit;
@@ -181,7 +181,7 @@ try {
             }
 
             // Check permissions (user can only delete their own files, admin can delete any)
-            if ($_SESSION['user']['role'] !== 'admin' && $file['uploaded_by'] != $userId) {
+            if (!in_array($_SESSION['user']['role'] ?? 'staff', ['admin', 'super_admin'], true) && $file['uploaded_by'] != $userId) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'error' => 'Access denied']);
                 exit;
