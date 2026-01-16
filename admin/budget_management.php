@@ -1391,7 +1391,6 @@ $db = Database::getInstance()->getConnection();
     <script>
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('show');
-            updateFooterPosition();
         }
 
         function toggleSidebarDesktop() {
@@ -1416,15 +1415,8 @@ $db = Database::getInstance()->getConnection();
                 arrow.classList.add('fa-chevron-left');
                 toggle.style.left = '290px';
             }
-            updateFooterPosition();
         }
 
-        function updateFooterPosition() {
-            const content = document.querySelector('.content');
-            const footer = document.getElementById('footer');
-            if (!footer) {
-                return;
-            }
             const marginLeft = content.style.marginLeft || '120px';
             footer.style.left = marginLeft;
             footer.style.width = `calc(100% - ${marginLeft})`;
@@ -1465,7 +1457,6 @@ $db = Database::getInstance()->getConnection();
                 arrow.classList.add('fa-chevron-left');
                 toggle.style.left = '290px';
             }
-            updateFooterPosition();
 
             // Load initial data
             loadBudgets();
@@ -3403,15 +3394,16 @@ $db = Database::getInstance()->getConnection();
 
     <!-- Inactivity Timeout - Blur screen + Auto logout -->
     <script src="../includes/inactivity_timeout.js?v=3"></script>
+<script src="../includes/navbar_datetime.js"></script>
 
     </div>
 </body>
 </html>
     <script src="../includes/inactivity_timeout.js?v=3"></script>
+<script src="../includes/navbar_datetime.js"></script>
 </body>
                             </div>
                             </div>
-
 
 
 

@@ -523,21 +523,6 @@ body {
     </div>
 
     <!-- Footer -->
-    <footer id="footer" class="bg-light py-3 mt-5" style="position: fixed; bottom: 0; left: 120px; width: calc(100% - 120px); z-index: 998;">
-        <div class="container-fluid">
-            <div class="row align-items-center text-center text-md-start">
-                <div class="col-md-6">
-                    <span class="text-muted"><i class="fas fa-shield-alt me-1"></i>© 2025 ATIERA Staff Portal — Confidential</span>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <span class="text-muted">
-                        <a href="#" class="text-decoration-none text-muted me-3">Help</a>
-                        <a href="#" class="text-decoration-none text-muted">Support</a>
-                    </span>
-                </div>
-            </div>
-        </div>
-    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -559,20 +544,13 @@ body {
                 arrow.classList.add('fa-chevron-left');
                 toggle.style.left = '290px';
             }
-            updateFooterPosition();
         }
 
-        function updateFooterPosition() {
-            const content = document.querySelector('.content');
-            const footer = document.getElementById('footer');
-            const marginLeft = content.style.marginLeft || '120px';
-            footer.style.left = marginLeft;
-            footer.style.width = `calc(100% - ${marginLeft})`;
-        }
     </script>
 
     <!-- Inactivity Timeout -->
     <script src="../includes/inactivity_timeout.js"></script>
+<script src="../includes/navbar_datetime.js"></script>
 </body>
 </html>
 </html>

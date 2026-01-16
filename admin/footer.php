@@ -9,6 +9,7 @@
 
 <!-- Inactivity Timeout - Blur screen after 10 sec, logout after 2 min -->
 <script src="../includes/inactivity_timeout.js"></script>
+<script src="../includes/navbar_datetime.js"></script>
 
 <script>
 function toggleSidebar() {

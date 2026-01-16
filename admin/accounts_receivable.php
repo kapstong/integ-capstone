@@ -1060,28 +1060,6 @@ try {
     </div>
 
     <!-- Footer -->
-    <footer id="footer" class="footer-enhanced py-3" style="position: fixed; bottom: 0; left: 120px; width: calc(100% - 120px); z-index: 998; font-weight: 500;">
-        <div class="container-fluid">
-            <div class="row align-items-center text-center text-md-start">
-                <div class="col-md-4">
-                    <span class="text-muted"><i class="fas fa-shield-alt me-1" style="color: #1e2936;"></i>© 2025 ATIERA Finance — Confidential</span>
-                </div>
-                <div class="col-md-4">
-                    <span class="text-muted">
-                        <span class="badge" style="background: linear-gradient(135deg, #1e2936 0%, #2c3e50 100%); color: white;">PROD</span> v1.0.0 • Updated: Sep 25, 2025
-                        <span class="ms-3 text-success fw-bold"><i class="fas fa-sync-alt me-1"></i>Sync OK</span>
-                    </span>
-                </div>
-                <div class="col-md-4 text-md-end">
-                    <span class="text-muted">
-                        <a href="#" class="text-decoration-none text-muted me-3 hover-link" style="color: #6c757d !important;">Terms</a>
-                        <a href="#" class="text-decoration-none text-muted me-3 hover-link" style="color: #6c757d !important;">Privacy</a>
-                        <a href="mailto:support@atiera.com" class="text-decoration-none text-muted hover-link" style="color: #6c757d !important;"><i class="fas fa-envelope me-1"></i>Support</a>
-                    </span>
-                </div>
-            </div>
-        </div>
-    </footer>
 
     <!-- Add Customer Modal -->
     <div class="modal fade" id="addCustomerModal" tabindex="-1">
@@ -1399,7 +1377,6 @@ try {
 
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('show');
-            updateFooterPosition();
         }
 
         function toggleSidebarDesktop() {
@@ -1424,16 +1401,8 @@ try {
                 arrow.classList.add('fa-chevron-left');
                 toggle.style.left = '290px';
             }
-            updateFooterPosition();
         }
 
-        function updateFooterPosition() {
-            const content = document.querySelector('.content');
-            const footer = document.getElementById('footer');
-            const marginLeft = content.style.marginLeft || '120px';
-            footer.style.left = marginLeft;
-            footer.style.width = `calc(100% - ${marginLeft})`;
-        }
 
         // Initialize sidebar state on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -1458,7 +1427,6 @@ try {
                 arrow.classList.add('fa-chevron-left');
                 toggle.style.left = '290px';
             }
-            updateFooterPosition();
 
             // Initialize AR system
             initializeARSystem();
@@ -2693,9 +2661,8 @@ try {
 
     <!-- Inactivity Timeout - Blur screen + Auto logout -->
     <script src="../includes/inactivity_timeout.js?v=3"></script>
+<script src="../includes/navbar_datetime.js"></script>
 
 </body>
 </html>
     <!-- Inactivity Timeout - Blur screen + Auto logout -->
-
-
