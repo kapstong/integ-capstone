@@ -1372,11 +1372,6 @@ $db = Database::getInstance()->getConnection();
             }
         }
 
-            const marginLeft = content.style.marginLeft || '120px';
-            footer.style.left = marginLeft;
-            footer.style.width = `calc(100% - ${marginLeft})`;
-        }
-
         // Global variables
         let currentBudgets = [];
         let currentAllocations = [];
