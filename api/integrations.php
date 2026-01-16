@@ -226,26 +226,9 @@ try {
                 }
             }
 
-            // Log HR3 claims access to audit trail
-            if (count($approvedClaims) > 0) {
-                Logger::getInstance()->logUserAction(
-                    'loaded_claims',
-                    'hr3_integrations',
-                    null,
-                    null,
-                    [
-                        'claims_count' => count($approvedClaims),
-                        'total_amount' => array_sum(array_column($approvedClaims, 'amount')),
-                        'source' => 'HR3 API',
-                        'status_filter' => 'Approved'
-                    ]
-                );
-            }
-
             echo json_encode([
                 'success' => true,
-                'result' => $approvedClaims,
-                'message' => 'HR3 approved claims loaded successfully (' . count($approvedClaims) . ' claims found)'
+                'result' => $approvedClaims
             ]);
         } else {
             echo json_encode([
