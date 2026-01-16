@@ -393,6 +393,11 @@ function handlePut($db, $logger) {
             return;
         }
 
+        if (isset($data['action']) && $data['action'] === 'adjustment_update') {
+            updateAdjustmentDetails($db, $logger, $id, $data);
+            return;
+        }
+
         if (isset($data['action']) && $data['action'] === 'adjustment') {
             updateAdjustmentStatus($db, $logger, $id, $data);
             return;
@@ -444,6 +449,18 @@ function handlePut($db, $logger) {
 
 function handleDelete($db, $logger) {
     try {
+        $action = isset($_GET['action']) ? $_GET['action'] : null;
+        if ($action === 'adjustment') {
+            $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
+            if (!$id) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Adjustment ID is required']);
+                return;
+            }
+            deleteAdjustment($db, $logger, $id);
+            return;
+        }
+
         $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 
         if (!$id) {
@@ -632,6 +649,156 @@ function updateAdjustmentStatus($db, $logger, $id, $data) {
         'success' => true,
         'message' => 'Adjustment updated'
     ]);
+}
+
+function updateAdjustmentDetails($db, $logger, $id, $data) {
+    $required = ['budget_id', 'adjustment_type', 'amount', 'department_id'];
+    foreach ($required as $field) {
+        if (!isset($data[$field]) || $data[$field] === '') {
+            http_response_code(400);
+            echo json_encode(['error' => "Missing required field: $field"]);
+            return;
+        }
+    }
+
+    $stmt = $db->prepare("SELECT * FROM budget_adjustments WHERE id = ?");
+    $stmt->execute([$id]);
+    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$existing) {
+        http_response_code(404);
+        echo json_encode(['error' => 'Adjustment not found']);
+        return;
+    }
+
+    $vendorId = $data['vendor_id'] ?? null;
+    if ($vendorId === '') {
+        $vendorId = null;
+    }
+
+    $db->beginTransaction();
+
+    $updateStmt = $db->prepare("
+        UPDATE budget_adjustments
+        SET budget_id = ?,
+            department_id = ?,
+            vendor_id = ?,
+            adjustment_type = ?,
+            amount = ?,
+            reason = ?,
+            effective_date = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    ");
+    $updateStmt->execute([
+        $data['budget_id'],
+        $data['department_id'],
+        $vendorId,
+        $data['adjustment_type'],
+        $data['amount'],
+        $data['reason'] ?? '',
+        $data['effective_date'] ?? null,
+        $id
+    ]);
+
+    if ($existing['status'] === 'approved') {
+        $oldDelta = $existing['adjustment_type'] === 'decrease'
+            ? -1 * (float)$existing['amount']
+            : (float)$existing['amount'];
+        $newDelta = $data['adjustment_type'] === 'decrease'
+            ? -1 * (float)$data['amount']
+            : (float)$data['amount'];
+
+        $updateItems = $db->prepare("
+            UPDATE budget_items
+            SET budgeted_amount = budgeted_amount + ?
+            WHERE budget_id = ? AND department_id = ?
+        ");
+
+        $updateItems->execute([
+            -1 * $oldDelta,
+            $existing['budget_id'],
+            $existing['department_id']
+        ]);
+
+        $updateItems->execute([
+            $newDelta,
+            $data['budget_id'],
+            $data['department_id']
+        ]);
+
+        recalcBudgetTotals($db, $existing['budget_id']);
+        if ((int)$data['budget_id'] !== (int)$existing['budget_id']) {
+            recalcBudgetTotals($db, $data['budget_id']);
+        }
+    }
+
+    $db->commit();
+
+    $logger->log("Budget adjustment details updated: {$id}", 'INFO');
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Adjustment details updated'
+    ]);
+}
+
+function deleteAdjustment($db, $logger, $id) {
+    $stmt = $db->prepare("SELECT * FROM budget_adjustments WHERE id = ?");
+    $stmt->execute([$id]);
+    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$existing) {
+        http_response_code(404);
+        echo json_encode(['error' => 'Adjustment not found']);
+        return;
+    }
+
+    $db->beginTransaction();
+
+    if ($existing['status'] === 'approved') {
+        $oldDelta = $existing['adjustment_type'] === 'decrease'
+            ? -1 * (float)$existing['amount']
+            : (float)$existing['amount'];
+
+        $updateItems = $db->prepare("
+            UPDATE budget_items
+            SET budgeted_amount = budgeted_amount + ?
+            WHERE budget_id = ? AND department_id = ?
+        ");
+        $updateItems->execute([
+            -1 * $oldDelta,
+            $existing['budget_id'],
+            $existing['department_id']
+        ]);
+
+        recalcBudgetTotals($db, $existing['budget_id']);
+    }
+
+    $deleteStmt = $db->prepare("DELETE FROM budget_adjustments WHERE id = ?");
+    $deleteStmt->execute([$id]);
+
+    $db->commit();
+
+    $logger->log("Budget adjustment deleted: {$id}", 'INFO');
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Adjustment deleted'
+    ]);
+}
+
+function recalcBudgetTotals($db, $budgetId) {
+    $recalcStmt = $db->prepare("
+        UPDATE budgets b
+        JOIN (
+            SELECT budget_id, COALESCE(SUM(budgeted_amount), 0) as total
+            FROM budget_items
+            WHERE budget_id = ?
+            GROUP BY budget_id
+        ) bi ON b.id = bi.budget_id
+        SET b.total_budgeted = bi.total
+        WHERE b.id = ?
+    ");
+    $recalcStmt->execute([$budgetId, $budgetId]);
 }
 
 function createCategory($db, $logger, $data) {

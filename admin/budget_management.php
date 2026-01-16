@@ -1615,6 +1615,16 @@ $db = Database::getInstance()->getConnection();
 
             currentAdjustments.forEach(adjustment => {
                 const statusBadge = getStatusBadge(adjustment.status || 'pending');
+                const statusValue = (adjustment.status || 'pending').toLowerCase();
+                const actionButtons = statusValue === 'pending'
+                    ? `
+                        <button class="btn btn-sm btn-outline-success me-1" onclick="approveAdjustment(${adjustment.id})">Approve</button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="rejectAdjustment(${adjustment.id})">Reject</button>
+                      `
+                    : `
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editAdjustment(${adjustment.id})">Edit</button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAdjustment(${adjustment.id})">Delete</button>
+                      `;
                 const row = `
                     <tr>
                         <td>${adjustment.id}</td>
@@ -1625,8 +1635,7 @@ $db = Database::getInstance()->getConnection();
                         <td>${adjustment.reason || ''}</td>
                         <td>${statusBadge}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-success me-1" onclick="approveAdjustment(${adjustment.id})">Approve</button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="rejectAdjustment(${adjustment.id})">Reject</button>
+                            ${actionButtons}
                         </td>
                     </tr>
                 `;
@@ -2136,6 +2145,147 @@ $db = Database::getInstance()->getConnection();
             }
         }
 
+        function editAdjustment(adjustmentId) {
+            const adjustment = currentAdjustments.find(item => item.id == adjustmentId);
+            if (!adjustment) {
+                showAlert('Adjustment not found', 'warning');
+                return;
+            }
+
+            const modalEl = document.getElementById('adjustmentRequestModal');
+            const form = document.getElementById('adjustmentRequestForm');
+            if (!modalEl || !form) {
+                showAlert('Adjustment form not available', 'warning');
+                return;
+            }
+
+            form.dataset.adjustmentId = adjustment.id;
+
+            const modalTitle = modalEl.querySelector('.modal-title');
+            if (modalTitle) {
+                modalTitle.textContent = 'Edit Budget Adjustment';
+            }
+            const submitButton = modalEl.querySelector('button[type="submit"][form="adjustmentRequestForm"]');
+            if (submitButton) {
+                submitButton.textContent = 'Update Adjustment';
+            }
+
+            const budget = currentBudgets.find(item => item.id == adjustment.budget_id);
+            const department = currentDepartments.find(item => item.id == adjustment.department_id);
+            const vendor = vendors.find(item => item.id == adjustment.vendor_id);
+
+            setSelectValue(
+                document.getElementById('adjustmentBudget'),
+                adjustment.budget_id,
+                budget ? budget.name : `Budget #${adjustment.budget_id}`
+            );
+            setSelectValue(
+                document.getElementById('adjustmentDepartment'),
+                adjustment.department_id,
+                department ? department.dept_name : 'Unassigned'
+            );
+            setSelectValue(
+                document.getElementById('adjustmentVendor'),
+                adjustment.vendor_id,
+                vendor ? vendor.company_name : 'N/A'
+            );
+
+            document.getElementById('adjustmentType').value = adjustment.adjustment_type || '';
+            document.getElementById('adjustmentAmount').value = adjustment.amount || '';
+            document.getElementById('adjustmentReason').value = adjustment.reason || '';
+            document.getElementById('expectedDate').value = adjustment.effective_date || '';
+
+            const requestedByInput = document.getElementById('requestedBy');
+            if (requestedByInput) {
+                requestedByInput.value = adjustment.requested_by_name || requestedByInput.value;
+            }
+
+            new bootstrap.Modal(modalEl).show();
+        }
+
+        function resetAdjustmentForm() {
+            const modalEl = document.getElementById('adjustmentRequestModal');
+            const form = document.getElementById('adjustmentRequestForm');
+            if (!modalEl || !form) {
+                return;
+            }
+
+            form.reset();
+            delete form.dataset.adjustmentId;
+
+            const modalTitle = modalEl.querySelector('.modal-title');
+            if (modalTitle) {
+                modalTitle.textContent = 'Request Budget Adjustment';
+            }
+            const submitButton = modalEl.querySelector('button[type="submit"][form="adjustmentRequestForm"]');
+            if (submitButton) {
+                submitButton.textContent = 'Submit Request';
+            }
+        }
+
+        async function updateAdjustment(adjustmentId, formData) {
+            try {
+                const response = await fetch(`api/budgets.php?id=${adjustmentId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'adjustment_update',
+                        ...formData
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                showAlert('Adjustment updated successfully', 'success');
+                loadAdjustments();
+                loadAllocations();
+                loadBudgets();
+                loadTrackingData();
+                loadAlerts();
+
+                const modalEl = document.getElementById('adjustmentRequestModal');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+            } catch (error) {
+                console.error('Error updating adjustment:', error);
+                showAlert('Error updating adjustment: ' + error.message, 'danger');
+            }
+        }
+
+        async function deleteAdjustment(adjustmentId) {
+            if (!confirm('Are you sure you want to delete this adjustment? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`api/budgets.php?action=adjustment&id=${adjustmentId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                showAlert('Adjustment deleted successfully', 'success');
+                loadAdjustments();
+                loadAllocations();
+                loadBudgets();
+                loadTrackingData();
+                loadAlerts();
+            } catch (error) {
+                console.error('Error deleting adjustment:', error);
+                showAlert('Error deleting adjustment: ' + error.message, 'danger');
+            }
+        }
+
         // Utility functions
         function getStatusBadge(status) {
             const statusMap = {
@@ -2309,7 +2459,6 @@ $db = Database::getInstance()->getConnection();
 
                     const formData = new FormData(this);
                     const adjustmentData = {
-                        action: 'adjustment',
                         budget_id: formData.get('budget_id'),
                         adjustment_type: formData.get('adjustmentType'),
                         amount: parseFloat(formData.get('adjustmentAmount')),
@@ -2319,7 +2468,12 @@ $db = Database::getInstance()->getConnection();
                         effective_date: formData.get('expectedDate') || null
                     };
 
-                    requestAdjustment(adjustmentData);
+                    const adjustmentId = this.dataset.adjustmentId;
+                    if (adjustmentId) {
+                        updateAdjustment(adjustmentId, adjustmentData);
+                    } else {
+                        requestAdjustment({ action: 'adjustment', ...adjustmentData });
+                    }
                 });
             }
 
@@ -2336,6 +2490,11 @@ $db = Database::getInstance()->getConnection();
                 trackingRefreshButton.addEventListener('click', function() {
                     loadTrackingData();
                 });
+            }
+
+            const adjustmentModal = document.getElementById('adjustmentRequestModal');
+            if (adjustmentModal) {
+                adjustmentModal.addEventListener('hidden.bs.modal', resetAdjustmentForm);
             }
         });
 
