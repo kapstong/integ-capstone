@@ -39,14 +39,28 @@ function getAuditTrail($db, $filters = []) {
 
         // Filter by table
         if (isset($filters['table_name'])) {
-            $where[] = "a.table_name = ?";
-            $params[] = $filters['table_name'];
+            $tables = array_filter(array_map('trim', explode(',', $filters['table_name'])));
+            if (!empty($tables)) {
+                if (count($tables) > 1) {
+                    $placeholders = implode(',', array_fill(0, count($tables), '?'));
+                    $where[] = "a.table_name IN ($placeholders)";
+                    $params = array_merge($params, $tables);
+                } else {
+                    $where[] = "a.table_name = ?";
+                    $params[] = $tables[0];
+                }
+            }
         }
 
         // Filter by user
         if (isset($filters['user_id'])) {
             $where[] = "a.user_id = ?";
             $params[] = $filters['user_id'];
+        }
+
+        if (isset($filters['action'])) {
+            $where[] = "a.action LIKE ?";
+            $params[] = '%' . $filters['action'] . '%';
         }
 
         // Filter by date range
@@ -132,11 +146,30 @@ function formatAction($log) {
     $action = strtolower($log['action']);
     $table = $log['table_name'];
     $record = '';
+    $oldValues = $log['old_values'] ? json_decode($log['old_values'], true) : [];
+    $newValues = $log['new_values'] ? json_decode($log['new_values'], true) : [];
 
     // Format record description based on table
     switch ($table) {
         case 'disbursements':
             $record = $log['disbursement_number'] ? "disbursement {$log['disbursement_number']}" : "disbursement ID {$log['record_id']}";
+            break;
+        case 'budgets':
+            $budgetName = $newValues['budget_name'] ?? $newValues['name'] ?? $oldValues['budget_name'] ?? $oldValues['name'] ?? null;
+            $record = $budgetName ? "budget {$budgetName}" : "budget ID {$log['record_id']}";
+            break;
+        case 'budget_items':
+            $record = "budget item ID {$log['record_id']}";
+            break;
+        case 'budget_adjustments':
+            $record = "budget adjustment ID {$log['record_id']}";
+            break;
+        case 'budget_categories':
+            $categoryName = $newValues['category_name'] ?? $oldValues['category_name'] ?? null;
+            $record = $categoryName ? "budget category {$categoryName}" : "budget category ID {$log['record_id']}";
+            break;
+        case 'hr3_integrations':
+            $record = "HR3 claims data";
             break;
         case 'journal_entries':
             $record = "journal entry ID {$log['record_id']}";
@@ -165,6 +198,10 @@ function formatAction($log) {
             return "Approved $record";
         case 'rejected':
             return "Rejected $record";
+        case 'requested':
+            return "Requested $record";
+        case 'integration_execute':
+            return "Loaded $record";
         case 'generated':
             return "Generated report";
         default:
@@ -182,7 +219,10 @@ try {
             if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
             if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
             if (isset($_GET['record_id'])) $filters['record_id'] = $_GET['record_id'];
-            if (isset($_GET['action'])) $filters['action'] = $_GET['action'];
+            if (isset($_GET['action']) && !in_array($_GET['action'], ['details', 'export', 'cleanup'])) {
+                $filters['action'] = $_GET['action'];
+            }
+            if (isset($_GET['table_name'])) $filters['table_name'] = $_GET['table_name'];
 
             $auditTrail = getAuditTrail($db, $filters);
             echo json_encode($auditTrail);

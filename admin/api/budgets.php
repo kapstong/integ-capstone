@@ -330,6 +330,14 @@ function handlePost($db, $logger) {
             }
         }
 
+        $oldBudgetStmt = $db->prepare("SELECT * FROM budgets WHERE id = ?");
+        $oldBudgetStmt->execute([$id]);
+        $oldBudget = $oldBudgetStmt->fetch(PDO::FETCH_ASSOC);
+
+        $oldBudgetStmt = $db->prepare("SELECT * FROM budgets WHERE id = ?");
+        $oldBudgetStmt->execute([$id]);
+        $oldBudget = $oldBudgetStmt->fetch(PDO::FETCH_ASSOC);
+
         $db->beginTransaction();
 
         // Extract year from start_date
@@ -360,6 +368,21 @@ function handlePost($db, $logger) {
         $db->commit();
 
         $logger->log("Budget created: {$data['name']}", 'INFO');
+        $logger->logUserAction(
+            'created',
+            'budgets',
+            $budgetId,
+            null,
+            mergeAuditMeta([
+                'budget_name' => $data['name'],
+                'description' => $data['description'] ?? '',
+                'total_budgeted' => $data['total_amount'],
+                'department_id' => $data['department_id'] ?? null,
+                'vendor_id' => $data['vendor_id'] ?? null,
+                'start_date' => $data['start_date'],
+                'end_date' => $data['end_date']
+            ], $data)
+        );
 
         echo json_encode([
             'success' => true,
@@ -433,6 +456,21 @@ function handlePut($db, $logger) {
         $db->commit();
 
         $logger->log("Budget updated: $id", 'INFO');
+        $logger->logUserAction(
+            'updated',
+            'budgets',
+            $id,
+            $oldBudget ?: null,
+            mergeAuditMeta([
+                'budget_name' => $data['name'],
+                'description' => $data['description'] ?? '',
+                'total_budgeted' => $data['total_amount'],
+                'department_id' => $data['department_id'] ?? null,
+                'vendor_id' => $data['vendor_id'] ?? null,
+                'start_date' => $data['start_date'] ?? null,
+                'end_date' => $data['end_date'] ?? null
+            ], $data)
+        );
 
         echo json_encode([
             'success' => true,
@@ -478,6 +516,13 @@ function handleDelete($db, $logger) {
         $db->commit();
 
         $logger->log("Budget deleted: $id", 'INFO');
+        $logger->logUserAction(
+            'deleted',
+            'budgets',
+            $id,
+            $oldBudget ?: null,
+            mergeAuditMeta(['deleted' => true])
+        );
 
         echo json_encode([
             'success' => true,
@@ -518,6 +563,7 @@ function createBudgetItem($db, $logger, $data) {
         $data['budgeted_amount'],
         $data['notes'] ?? ''
     ]);
+    $itemId = $db->lastInsertId();
 
     $recalcStmt = $db->prepare("
         UPDATE budgets b
@@ -535,6 +581,21 @@ function createBudgetItem($db, $logger, $data) {
     $db->commit();
 
     $logger->log("Budget item created for budget {$data['budget_id']}", 'INFO');
+    $logger->logUserAction(
+        'created',
+        'budget_items',
+        $itemId,
+        null,
+        mergeAuditMeta([
+            'budget_id' => $data['budget_id'],
+            'category_id' => $data['category_id'],
+            'department_id' => $data['department_id'] ?? null,
+            'account_id' => $data['account_id'] ?? null,
+            'vendor_id' => $data['vendor_id'] ?? null,
+            'budgeted_amount' => $data['budgeted_amount'],
+            'notes' => $data['notes'] ?? ''
+        ], $data)
+    );
 
     echo json_encode([
         'success' => true,
@@ -569,10 +630,27 @@ function createAdjustment($db, $logger, $data) {
         $_SESSION['user']['id'] ?? 1,
         $data['effective_date'] ?? null
     ]);
+    $adjustmentId = $db->lastInsertId();
 
     $db->commit();
 
     $logger->log("Budget adjustment requested for budget {$data['budget_id']}", 'INFO');
+    $logger->logUserAction(
+        'requested',
+        'budget_adjustments',
+        $adjustmentId,
+        null,
+        mergeAuditMeta([
+            'budget_id' => $data['budget_id'],
+            'department_id' => $data['department_id'],
+            'vendor_id' => $data['vendor_id'] ?? null,
+            'adjustment_type' => $data['adjustment_type'],
+            'amount' => $data['amount'],
+            'reason' => $data['reason'] ?? '',
+            'status' => 'pending',
+            'effective_date' => $data['effective_date'] ?? null
+        ], $data)
+    );
 
     echo json_encode([
         'success' => true,
@@ -587,6 +665,10 @@ function updateAdjustmentStatus($db, $logger, $id, $data) {
         echo json_encode(['error' => 'Invalid adjustment status']);
         return;
     }
+
+    $existingStmt = $db->prepare("SELECT * FROM budget_adjustments WHERE id = ?");
+    $existingStmt->execute([$id]);
+    $existing = $existingStmt->fetch(PDO::FETCH_ASSOC);
 
     $db->beginTransaction();
 
@@ -644,6 +726,15 @@ function updateAdjustmentStatus($db, $logger, $id, $data) {
     $db->commit();
 
     $logger->log("Budget adjustment updated: {$id}", 'INFO');
+    $logger->logUserAction(
+        $status,
+        'budget_adjustments',
+        $id,
+        $existing ?: null,
+        mergeAuditMeta([
+            'status' => $status
+        ], $data)
+    );
 
     echo json_encode([
         'success' => true,
@@ -735,6 +826,22 @@ function updateAdjustmentDetails($db, $logger, $id, $data) {
     $db->commit();
 
     $logger->log("Budget adjustment details updated: {$id}", 'INFO');
+    $logger->logUserAction(
+        'updated',
+        'budget_adjustments',
+        $id,
+        $existing ?: null,
+        mergeAuditMeta([
+            'budget_id' => $data['budget_id'],
+            'department_id' => $data['department_id'],
+            'vendor_id' => $vendorId,
+            'adjustment_type' => $data['adjustment_type'],
+            'amount' => $data['amount'],
+            'reason' => $data['reason'] ?? '',
+            'effective_date' => $data['effective_date'] ?? null,
+            'status' => $existing['status'] ?? null
+        ], $data)
+    );
 
     echo json_encode([
         'success' => true,
@@ -779,6 +886,13 @@ function deleteAdjustment($db, $logger, $id) {
     $db->commit();
 
     $logger->log("Budget adjustment deleted: {$id}", 'INFO');
+    $logger->logUserAction(
+        'deleted',
+        'budget_adjustments',
+        $id,
+        $existing ?: null,
+        mergeAuditMeta(['deleted' => true])
+    );
 
     echo json_encode([
         'success' => true,
@@ -799,6 +913,19 @@ function recalcBudgetTotals($db, $budgetId) {
         WHERE b.id = ?
     ");
     $recalcStmt->execute([$budgetId, $budgetId]);
+}
+
+function auditMeta($data = []) {
+    return [
+        'source' => $data['source'] ?? 'budget_management_ui',
+        'module' => 'budget_management',
+        'endpoint' => $_SERVER['REQUEST_URI'] ?? '',
+        'origin' => $_SERVER['HTTP_REFERER'] ?? ''
+    ];
+}
+
+function mergeAuditMeta($values, $data = []) {
+    return array_merge($values ?? [], auditMeta($data));
 }
 
 function createCategory($db, $logger, $data) {
@@ -830,8 +957,21 @@ function createCategory($db, $logger, $data) {
         $data['category_type'],
         $data['department_id'] ?? null
     ]);
+    $categoryId = $db->lastInsertId();
 
     $logger->log("Budget category created: {$data['category_name']}", 'INFO');
+    $logger->logUserAction(
+        'created',
+        'budget_categories',
+        $categoryId,
+        null,
+        mergeAuditMeta([
+            'category_code' => $categoryCode,
+            'category_name' => $data['category_name'],
+            'category_type' => $data['category_type'],
+            'department_id' => $data['department_id'] ?? null
+        ], $data)
+    );
 
     echo json_encode([
         'success' => true,

@@ -41,6 +41,22 @@ try {
         try {
             $result = $integrationManager->executeIntegrationAction($integrationName, $actionName, $params);
 
+            $tableName = $integrationName === 'hr3' ? 'hr3_integrations' : 'integrations';
+            Logger::getInstance()->logUserAction(
+                'integration_execute',
+                $tableName,
+                null,
+                null,
+                [
+                    'integration' => $integrationName,
+                    'action' => $actionName,
+                    'source' => $integrationName === 'hr3' ? 'HR3 API' : 'Integration API',
+                    'module' => 'integrations',
+                    'endpoint' => $_SERVER['REQUEST_URI'] ?? '',
+                    'origin' => $_SERVER['HTTP_REFERER'] ?? ''
+                ]
+            );
+
             echo json_encode([
                 'success' => true,
                 'result' => $result

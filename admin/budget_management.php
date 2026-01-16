@@ -1478,6 +1478,7 @@ $db = Database::getInstance()->getConnection();
             loadAccounts();
             loadVendors();
             loadClaimsData();
+            loadAuditTrail();
         });
 
         // Load budgets
@@ -1891,6 +1892,7 @@ $db = Database::getInstance()->getConnection();
 
                 showAlert('Budget created successfully', 'success');
                 loadBudgets(); // Refresh the list
+                loadAuditTrail();
 
                 // Close modal
                 const modalEl = document.getElementById('createBudgetModal');
@@ -1925,6 +1927,7 @@ $db = Database::getInstance()->getConnection();
                 loadAllocations();
                 loadTrackingData();
                 loadAlerts();
+                loadAuditTrail();
 
                 const modalEl = document.getElementById('allocateFundsModal');
                 if (modalEl) {
@@ -1956,6 +1959,7 @@ $db = Database::getInstance()->getConnection();
                 loadAdjustments();
                 loadAllocations();
                 loadBudgets();
+                loadAuditTrail();
 
                 const modalEl = document.getElementById('adjustmentRequestModal');
                 if (modalEl) {
@@ -2093,6 +2097,7 @@ $db = Database::getInstance()->getConnection();
                 loadAllocations();
                 loadTrackingData();
                 loadAlerts();
+                loadAuditTrail();
 
                 const modalEl = document.getElementById('editBudgetModal');
                 if (modalEl) {
@@ -2138,6 +2143,7 @@ $db = Database::getInstance()->getConnection();
                 loadBudgets();
                 loadTrackingData();
                 loadAlerts();
+                loadAuditTrail();
 
             } catch (error) {
                 console.error('Error updating adjustment:', error);
@@ -2247,6 +2253,7 @@ $db = Database::getInstance()->getConnection();
                 loadBudgets();
                 loadTrackingData();
                 loadAlerts();
+                loadAuditTrail();
 
                 const modalEl = document.getElementById('adjustmentRequestModal');
                 if (modalEl) {
@@ -2280,6 +2287,7 @@ $db = Database::getInstance()->getConnection();
                 loadBudgets();
                 loadTrackingData();
                 loadAlerts();
+                loadAuditTrail();
             } catch (error) {
                 console.error('Error deleting adjustment:', error);
                 showAlert('Error deleting adjustment: ' + error.message, 'danger');
@@ -2496,6 +2504,13 @@ $db = Database::getInstance()->getConnection();
             if (adjustmentModal) {
                 adjustmentModal.addEventListener('hidden.bs.modal', resetAdjustmentForm);
             }
+
+            const auditTab = document.getElementById('audit-tab');
+            if (auditTab) {
+                auditTab.addEventListener('shown.bs.tab', function() {
+                    loadAuditTrail();
+                });
+            }
         });
 
         // Load vendors for dropdowns
@@ -2586,6 +2601,110 @@ $db = Database::getInstance()->getConnection();
             } catch (error) {
                 console.error('Error loading adjustments:', error);
                 showAlert('Error loading adjustments: ' + error.message, 'danger');
+            }
+        }
+
+        function parseAuditValues(values) {
+            if (!values) {
+                return null;
+            }
+            try {
+                return JSON.parse(values);
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function formatAuditTarget(log, newValues, oldValues) {
+            const recordId = log.record_id || 'N/A';
+            switch (log.table_name) {
+                case 'budgets': {
+                    const name = (newValues && (newValues.budget_name || newValues.name)) ||
+                        (oldValues && (oldValues.budget_name || oldValues.name));
+                    return name ? `Budget: ${name}` : `Budget #${recordId}`;
+                }
+                case 'budget_items':
+                    return `Budget Item #${recordId}`;
+                case 'budget_adjustments':
+                    return `Adjustment #${recordId}`;
+                case 'budget_categories': {
+                    const name = (newValues && newValues.category_name) || (oldValues && oldValues.category_name);
+                    return name ? `Category: ${name}` : `Category #${recordId}`;
+                }
+                case 'hr3_integrations':
+                    return 'HR3 Claims';
+                default:
+                    return log.table_name ? `${log.table_name} #${recordId}` : `Record #${recordId}`;
+            }
+        }
+
+        function formatAuditDetails(log, targetLabel, newValues) {
+            const actionLabel = log.action ? log.action.charAt(0).toUpperCase() + log.action.slice(1) : 'Action';
+            let detail = log.action_description || `${actionLabel} ${targetLabel}`;
+            if (newValues && newValues.reason) {
+                detail += ` - ${newValues.reason}`;
+            }
+            return detail;
+        }
+
+        function formatAuditSource(log, newValues, oldValues) {
+            let source = (newValues && newValues.source) || (oldValues && oldValues.source);
+            if (!source) {
+                source = log.table_name === 'hr3_integrations' ? 'HR3 API' : 'Budget Management UI';
+            }
+            const origin = (newValues && newValues.origin) || (oldValues && oldValues.origin);
+            return origin ? `${source} (${origin})` : source;
+        }
+
+        async function loadAuditTrail() {
+            const tbody = document.getElementById('auditTrailBody');
+            if (!tbody) {
+                return;
+            }
+
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Loading audit trail...</td></tr>';
+
+            try {
+                const tables = [
+                    'budgets',
+                    'budget_items',
+                    'budget_adjustments',
+                    'budget_categories',
+                    'hr3_integrations'
+                ];
+                const response = await fetch(`api/audit.php?table_name=${encodeURIComponent(tables.join(','))}`);
+                const logs = await response.json();
+
+                if (!Array.isArray(logs) || logs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No audit records available.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = logs.map(log => {
+                    const newValues = parseAuditValues(log.new_values);
+                    const oldValues = parseAuditValues(log.old_values);
+                    const targetLabel = formatAuditTarget(log, newValues, oldValues);
+                    const details = formatAuditDetails(log, targetLabel, newValues);
+                    const source = formatAuditSource(log, newValues, oldValues);
+                    const timestamp = log.formatted_date || new Date(log.created_at).toLocaleString();
+                    const user = log.full_name || log.username || 'Unknown';
+
+                    return `
+                        <tr>
+                            <td>${timestamp}</td>
+                            <td>${user}</td>
+                            <td>${log.action || 'N/A'}</td>
+                            <td>${targetLabel}</td>
+                            <td>${details}</td>
+                            <td>${source}</td>
+                            <td>${log.ip_address || 'N/A'}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Error loading audit trail:', error);
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Error loading audit records.</td></tr>';
             }
         }
 
