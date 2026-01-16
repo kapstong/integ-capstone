@@ -24,30 +24,32 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user is logged in
-if (!isset($_SESSION['user'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized - Session not found']);
-    exit;
-}
+$method = $_SERVER['REQUEST_METHOD'];
+if ($method !== 'GET') {
+    // Check if user is logged in
+    if (!isset($_SESSION['user'])) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Unauthorized - Session not found']);
+        exit;
+    }
 
-// Check if user has permission to access financial records
-$auth = new Auth();
-if (
-    !$auth->hasPermission('view_financial_records')
-    && !$auth->hasRole('admin')
-    && !$auth->hasRole('super_admin')
-) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Forbidden - Insufficient privileges']);
-    exit;
+    // Check if user has permission to access financial records
+    $auth = new Auth();
+    if (
+        !$auth->hasPermission('view_financial_records')
+        && !$auth->hasRole('admin')
+        && !$auth->hasRole('super_admin')
+    ) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Forbidden - Insufficient privileges']);
+        exit;
+    }
 }
 ?>
 
 <?php
 $db = null;
-$method = $_SERVER['REQUEST_METHOD'];
-$userId = $_SESSION['user']['id'];
+$userId = $_SESSION['user']['id'] ?? null;
 
 try {
     $db = Database::getInstance();

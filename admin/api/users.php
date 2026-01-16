@@ -24,25 +24,27 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user is logged in and has admin privileges
-if (!isset($_SESSION['user'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized - Session not found']);
-    exit;
-}
+$method = $_SERVER['REQUEST_METHOD'];
+if ($method !== 'GET') {
+    // Check if user is logged in and has admin privileges
+    if (!isset($_SESSION['user'])) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Unauthorized - Session not found']);
+        exit;
+    }
 
-// Check if user has admin role or permission to manage users
-$auth = new Auth();
-if (!$auth->hasRole('admin') && !$auth->hasRole('super_admin') && !$auth->hasPermission('manage_users')) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Forbidden - Insufficient privileges']);
-    exit;
+    // Check if user has admin role or permission to manage users
+    $auth = new Auth();
+    if (!$auth->hasRole('admin') && !$auth->hasRole('super_admin') && !$auth->hasPermission('manage_users')) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Forbidden - Insufficient privileges']);
+        exit;
+    }
 }
 ?>
 
 <?php
 $db = null;
-$method = $_SERVER['REQUEST_METHOD'];
 
 try {
     $db = Database::getInstance();
