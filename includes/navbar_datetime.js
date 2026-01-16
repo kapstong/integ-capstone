@@ -38,7 +38,7 @@
                 || navbar;
 
             const wrapper = document.createElement('div');
-            wrapper.className = 'navbar-date-time d-flex align-items-center text-muted small';
+            wrapper.className = 'navbar-date-time d-flex align-items-center text-muted';
             wrapper.innerHTML = '<i class="fas fa-clock me-2"></i><span data-navbar-datetime></span>';
 
             if (target.classList && target.classList.contains('ms-auto')) {

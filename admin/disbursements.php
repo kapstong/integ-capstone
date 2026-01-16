@@ -359,53 +359,7 @@ body {
     </div>
 
     <div class="content">
-        <nav class="navbar navbar-expand-lg navbar-light bg-white mb-4 shadow-sm">
-            <div class="container-fluid">
-                <button class="btn btn-outline-secondary toggle-btn" type="button" onclick="toggleSidebar()">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <span class="navbar-brand mb-0 h1 me-4">Disbursements</span>
-                <div class="d-flex align-items-center me-4">
-
-                    <div class="dropdown">
-                        <button class="btn dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
-                                <i class="fas fa-user"></i>
-                            </div>
-                            <span><strong><?php
-                                // Display user name: first_name + last_name, or full_name, or username
-                                $firstName = $_SESSION['user']['first_name'] ?? '';
-                                $lastName = $_SESSION['user']['last_name'] ?? '';
-                                $fullName = $_SESSION['user']['full_name'] ?? '';
-                                $userName = $_SESSION['user']['username'] ?? '';
-
-                                if (!empty($firstName) || !empty($lastName)) {
-                                    echo htmlspecialchars(trim($firstName . ' ' . $lastName));
-                                } elseif (!empty($fullName)) {
-                                    echo htmlspecialchars($fullName);
-                                } else {
-                                    echo htmlspecialchars($userName);
-                                }
-                            ?></strong></span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="admin-profile-settings.php"><i class="fas fa-user me-2"></i>Profile</a></li>
-                            <li><a class="dropdown-item" href="settings.php"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="d-flex align-items-center flex-grow-1">
-                    <div class="input-group mx-auto" style="width: 500px;">
-                        <input type="text" class="form-control" placeholder="Search..." aria-label="Search">
-                        <button class="btn btn-outline-secondary" type="button">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </nav>
+        <?php include '../includes/global_navbar.php'; ?>
 
         <!-- Navigation Tabs -->
         <ul class="nav nav-tabs mb-4" id="disbursementsTabs" role="tablist">
@@ -1007,11 +961,15 @@ body {
             });
         }
         window.loadClaims = async function() {
-            const btn = event.target.closest('button');
-            const originalText = btn.innerHTML;
+            const btn = (typeof event !== 'undefined' && event.target)
+                ? event.target.closest('button')
+                : document.querySelector('button[onclick="loadClaims()"]');
+            const originalText = btn ? btn.innerHTML : '';
 
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading Claims...';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading Claims...';
+            }
 
             try {
                 const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=getApprovedClaims', {
@@ -1052,8 +1010,10 @@ body {
                 console.error('HR3 Claims loading error:', error);
                 window.showAlert('Error loading claims: ' + error.message, 'danger');
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
             }
         };
 
@@ -1062,10 +1022,27 @@ body {
             return window.loadClaims();
         };
 
+        function normalizeClaimsPayload(claims) {
+            if (Array.isArray(claims)) {
+                return claims;
+            }
+            if (claims && Array.isArray(claims.result)) {
+                return claims.result;
+            }
+            if (claims && Array.isArray(claims.data)) {
+                return claims.data;
+            }
+            if (claims && Array.isArray(claims.claims)) {
+                return claims.claims;
+            }
+            return [];
+        }
+
         window.displayHR3Claims = function(claims) {
             const tbody = document.getElementById('claimsTableBody');
+            const normalizedClaims = normalizeClaimsPayload(claims);
 
-            if (!claims || claims.length === 0) {
+            if (!normalizedClaims || normalizedClaims.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No approved claims found in HR3 system</td></tr>';
                 return;
             }
@@ -1073,7 +1050,7 @@ body {
             tbody.innerHTML = '';
 
             // Filter only approved claims and sort by created_at descending
-            const approvedClaims = claims.filter(claim => claim.status === 'Approved')
+            const approvedClaims = normalizedClaims.filter(claim => claim.status === 'Approved')
                                         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
             if (approvedClaims.length === 0) {

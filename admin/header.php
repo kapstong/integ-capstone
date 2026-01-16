@@ -375,29 +375,7 @@ $assetBase = rtrim($basePath, '/');
     </div>
 
     <!-- Top Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top" style="margin-left: 280px;">
-        <div class="container-fluid">
-            <button class="btn btn-outline-secondary d-lg-none me-2" type="button" onclick="toggleSidebar()">
-                <i class="fas fa-bars"></i>
-            </button>
-            <span class="navbar-brand mb-0 h1"><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle) : 'Admin Panel'; ?></span>
-            <div class="d-flex align-items-center ms-auto">
-                <div class="dropdown">
-                    <button class="btn btn-link text-dark dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <span><strong><?php echo htmlspecialchars($_SESSION['user']['name'] ?? $_SESSION['user']['username']); ?></strong></span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                        <li><a class="dropdown-item" href="admin-profile-settings.php"><i class="fas fa-user me-2"></i>Profile Settings</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <?php include '../includes/global_navbar.php'; ?>
 
     <!-- Main Content Area -->
     <div class="content" style="margin-top: 80px;">
