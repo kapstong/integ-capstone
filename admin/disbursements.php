@@ -1098,10 +1098,8 @@ body {
 
                 if (Array.isArray(result) && result.length > 0) {
                     window.displayHR3Claims(result);
-                    window.showAlert('Successfully loaded ' + result.length + ' claims from HR3 API!', 'success');
                 } else if (result.success || result.result) {
                     window.displayHR3Claims(result.result || result);
-                    window.showAlert('Successfully loaded claims from HR3 API!', 'success');
                 } else {
                     window.showAlert('Error loading claims: ' + (result.error || 'No claims found'), 'danger');
                 }
