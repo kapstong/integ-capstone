@@ -53,6 +53,26 @@ try {
     exit;
 }
 
+function sanitizeUser($user) {
+    if (!$user || !is_array($user)) {
+        return $user;
+    }
+    $blockedKeys = [
+        'password',
+        'password_hash',
+        'password_reset_token',
+        'reset_token',
+        'reset_token_expires',
+        'two_factor_secret'
+    ];
+    foreach ($blockedKeys as $key) {
+        if (array_key_exists($key, $user)) {
+            unset($user[$key]);
+        }
+    }
+    return $user;
+}
+
 try {
     switch ($method) {
         case 'GET':
@@ -64,7 +84,7 @@ try {
                     [$_GET['id']]
                 );
                 $user = $stmt->fetch();
-                echo json_encode($user ?: ['error' => 'User not found']);
+                echo json_encode($user ? sanitizeUser($user) : ['error' => 'User not found']);
             } else {
                 // Get all users with optional filters
                 $where = [];
@@ -87,6 +107,7 @@ try {
                      FROM users {$whereClause}
                      ORDER BY created_at DESC"
                 );
+                $users = array_map('sanitizeUser', $users);
                 echo json_encode($users);
             }
             break;
