@@ -502,7 +502,9 @@
         createEyeButton();
 
         const storedVisibility = getStoredVisibility();
-        if (storedVisibility === '0') {
+        if (storedVisibility === '1') {
+            showAmounts();
+        } else {
             hideAmounts(true);
         }
 
@@ -519,7 +521,7 @@
 
         const observer = new MutationObserver(function() {
             if (isHidden) {
-                setTimeout(hideAmounts, 100);
+                hideAmounts(true);
             }
         });
 
