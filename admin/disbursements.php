@@ -636,7 +636,7 @@ body {
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">HR4 Payroll Processing - From HR4 API</h6>
                     <div>
-                        <button class="btn btn-success" onclick="loadPayroll()">
+                        <button class="btn btn-success" onclick="loadPayroll(this)">
                             <i class="fas fa-sync me-2"></i>Load Payroll
                         </button>
                     </div>
@@ -1408,12 +1408,14 @@ body {
         // Wait for DOM to be fully loaded before defining functions
     window.addEventListener('DOMContentLoaded', function() {
 
-        window.loadPayroll = async function() {
-            const btn = event.target.closest('button');
-            const originalText = btn.innerHTML;
+        window.loadPayroll = async function(buttonEl) {
+            const btn = buttonEl && buttonEl.closest ? buttonEl.closest('button') : null;
+            const originalText = btn ? btn.innerHTML : '';
 
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading Payroll...';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading Payroll...';
+            }
 
             try {
                 // Use the integration API to fetch payroll data
@@ -1442,8 +1444,10 @@ body {
                 console.error('HR4 Payroll loading error:', error);
                 window.showAlert('Error loading payroll: ' + error.message, 'danger');
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
             }
         };
 
@@ -1473,10 +1477,10 @@ body {
                     <td><span class="badge ${canApprove ? 'bg-info' : 'bg-secondary'}">${statusText}</span></td>
                     <td>
                         ${canApprove ? `
-                            <button class="btn btn-success btn-sm me-2" onclick="updatePayrollApproval('${payroll.payroll_id}', 'approve')">
+                            <button class="btn btn-success btn-sm me-2" onclick="updatePayrollApproval(this, '${payroll.payroll_id}', 'approve')">
                                 <i class="fas fa-check me-1"></i>Approve
                             </button>
-                            <button class="btn btn-danger btn-sm" onclick="updatePayrollApproval('${payroll.payroll_id}', 'reject')">
+                            <button class="btn btn-danger btn-sm" onclick="updatePayrollApproval(this, '${payroll.payroll_id}', 'reject')">
                                 <i class="fas fa-times me-1"></i>Reject
                             </button>
                         ` : '<span class="text-muted">N/A</span>'}
@@ -1486,20 +1490,24 @@ body {
             });
         };
 
-        window.updatePayrollApproval = async function(payrollId, action) {
-            const btn = event.target.closest('button');
-            const originalText = btn.innerHTML;
+        window.updatePayrollApproval = async function(buttonEl, payrollId, action) {
+            const btn = buttonEl && buttonEl.closest ? buttonEl.closest('button') : null;
+            const originalText = btn ? btn.innerHTML : '';
 
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Updating...';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Updating...';
+            }
 
             try {
                 let rejectionReason = '';
                 if (action === 'reject') {
                     rejectionReason = prompt('Provide rejection reason (required for reject):', '');
                     if (rejectionReason === null || rejectionReason.trim() === '') {
-                        btn.disabled = false;
-                        btn.innerHTML = originalText;
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = originalText;
+                        }
                         return;
                     }
                 }
@@ -1532,8 +1540,10 @@ body {
             } catch (error) {
                 window.showAlert('Error: ' + error.message, 'danger');
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
             }
         };
 
