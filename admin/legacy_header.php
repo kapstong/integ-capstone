@@ -386,9 +386,6 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
                 <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
             </a>
             <hr class="my-3">
-            <a class="nav-link <?php echo ($currentPage === 'departments.php') ? 'active' : ''; ?>" href="/admin/financials/departments.php">
-                <i class="fas fa-building me-2"></i><span>Departments</span>
-            </a>
         </nav>
     </div>
 

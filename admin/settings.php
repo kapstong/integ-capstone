@@ -5,6 +5,72 @@ session_start();
 //     header('Location: login.php');
 //     exit;
 // }
+$departments = [
+    [
+        'name' => 'Human Resource 3',
+        'scope' => 'Workforce Operations & Time Management',
+        'modules' => [
+            'Claims and Reimbursement'
+        ],
+        'integration_key' => 'hr3',
+        'integrated' => true
+    ],
+    [
+        'name' => 'Human Resource 4',
+        'scope' => 'Compensation & HR Intelligence',
+        'modules' => [
+            'Payroll Management'
+        ],
+        'integration_key' => 'hr4',
+        'integrated' => true
+    ],
+    [
+        'name' => 'Logistics 1',
+        'scope' => 'Smart Supply Chain & Procurement Management',
+        'modules' => [
+            'Procurement & Sourcing Management (PSM)',
+            'Document Tracking & Logistics Records (DTRS)'
+        ],
+        'integration_key' => 'logistics1',
+        'integrated' => true
+    ],
+    [
+        'name' => 'Logistics 2',
+        'scope' => 'Fleet and Transportation Operations',
+        'modules' => [
+            'Driver and Trip Performance Monitoring',
+            'Transport Cost Analysis & Optimization (TCAO)'
+        ],
+        'integration_key' => 'logistics2',
+        'integrated' => true
+    ],
+    [
+        'name' => 'Core 1 - Hotel',
+        'scope' => 'Hotel Operations',
+        'modules' => [
+            'Billing and Payment Module',
+            'Point of Sale (POS) Module',
+            'Inventory and Stock Management Module',
+            'Reservation and Booking Module',
+            'Analytics and Reporting Module'
+        ],
+        'integration_key' => null,
+        'integrated' => false
+    ],
+    [
+        'name' => 'Core 2 - Restaurant',
+        'scope' => 'Restaurant Operations',
+        'modules' => [
+            'Billing and Payment Module',
+            'Order Taking and POS Module',
+            'Inventory and Stock Management Module',
+            'Analytics and Reporting Module',
+            'Integration with Payment Gateways Module'
+        ],
+        'integration_key' => null,
+        'integrated' => false
+    ]
+];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -624,9 +690,6 @@ session_start();
                   <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
               </a>
               <hr class="my-3">
-              <a class="nav-link" href="financials/departments.php">
-                  <i class="fas fa-building me-2"></i><span>Departments</span>
-              </a>
           </nav>
     </div>
     <div class="sidebar-toggle" onclick="toggleSidebarDesktop()">
@@ -650,6 +713,9 @@ session_start();
                             </li>
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" id="rbac-tab" data-bs-toggle="tab" data-bs-target="#rbac" type="button" role="tab" aria-controls="rbac" aria-selected="false">RBAC Settings</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="departments-tab" data-bs-toggle="tab" data-bs-target="#departments" type="button" role="tab" aria-controls="departments" aria-selected="false">Departments Integration</button>
                             </li>
                         </ul>
                         <div class="tab-content mt-3" id="settingsTabContent">
@@ -690,6 +756,58 @@ session_start();
                                     <button type="submit" class="btn btn-primary">Save Changes</button>
                                 </form>
                             </div>
+                            <div class="tab-pane fade" id="departments" role="tabpanel" aria-labelledby="departments-tab">
+                                <div id="departmentsAlertContainer"></div>
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5><i class="fas fa-sitemap me-2"></i>Integrated Departments</h5>
+                                        <small class="text-muted">Live health checks run on page load for connected department APIs.</small>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-hover table-mobile-stack">
+                                                <thead class="table-dark">
+                                                    <tr>
+                                                        <th>Department</th>
+                                                        <th>Scope</th>
+                                                        <th>Modules</th>
+                                                        <th>API Status</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($departments as $department): ?>
+                                                    <tr>
+                                                        <td data-label="Department"><strong><?php echo htmlspecialchars($department['name']); ?></strong></td>
+                                                        <td data-label="Scope"><?php echo htmlspecialchars($department['scope']); ?></td>
+                                                        <td data-label="Modules">
+                                                            <?php echo htmlspecialchars(implode(', ', $department['modules'])); ?>
+                                                        </td>
+                                                        <td data-label="API Status">
+                                                            <?php if ($department['integration_key']): ?>
+                                                                <span class="badge bg-secondary" id="status-<?php echo htmlspecialchars($department['integration_key']); ?>">Checking...</span>
+                                                                <div class="text-muted small mt-1" id="status-detail-<?php echo htmlspecialchars($department['integration_key']); ?>"></div>
+                                                            <?php else: ?>
+                                                                <span class="badge bg-secondary">Not Integrated</span>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                        <td data-label="Actions">
+                                                            <?php if ($department['integration_key']): ?>
+                                                                <button class="btn btn-outline-primary btn-sm" onclick="testDepartmentIntegration('<?php echo $department['integration_key']; ?>')">
+                                                                    <i class="fas fa-vial"></i> Test
+                                                                </button>
+                                                            <?php else: ?>
+                                                                <span class="text-muted">N/A</span>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                    </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                         </div>
                     </div>
@@ -704,6 +822,84 @@ session_start();
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../includes/privacy_mode.js?v=7"></script>
     <script>
+        function showDepartmentsAlert(message, type) {
+            const alert = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            document.getElementById('departmentsAlertContainer').innerHTML = alert;
+
+            setTimeout(() => {
+                document.querySelector('#departmentsAlertContainer .alert')?.remove();
+            }, 5000);
+        }
+
+        function checkDepartmentIntegrationStatus(name) {
+            const badge = document.getElementById(`status-${name}`);
+            const detail = document.getElementById(`status-detail-${name}`);
+            if (!badge) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('action', 'test');
+            formData.append('integration_name', name);
+
+            fetch('api/integrations.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    badge.className = 'badge bg-success';
+                    badge.textContent = 'Working';
+                    if (detail) {
+                        detail.textContent = '';
+                    }
+                } else {
+                    badge.className = 'badge bg-danger';
+                    badge.textContent = 'Failed';
+                    if (detail) {
+                        detail.textContent = result.error || result.message || 'No error details returned.';
+                    }
+                }
+            })
+            .catch(() => {
+                badge.className = 'badge bg-danger';
+                badge.textContent = 'Failed';
+                if (detail) {
+                    detail.textContent = 'Request failed. Check API URL, network, or server response.';
+                }
+            });
+        }
+
+        function syncDepartmentIntegrations() {
+            ['hr3', 'hr4', 'logistics1', 'logistics2'].forEach(checkDepartmentIntegrationStatus);
+        }
+
+        function testDepartmentIntegration(name) {
+            const formData = new FormData();
+            formData.append('action', 'test');
+            formData.append('integration_name', name);
+
+            fetch('api/integrations.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showDepartmentsAlert(result.message || 'Connection successful', 'success');
+                } else {
+                    showDepartmentsAlert(result.error || result.message || 'Connection failed', 'danger');
+                }
+            })
+            .catch(error => showDepartmentsAlert('Error: ' + error.message, 'danger'));
+        }
+
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('show');
         }
@@ -756,6 +952,7 @@ session_start();
                 arrow.classList.add('fa-chevron-left');
                 toggle.style.left = '290px';
             }
+            syncDepartmentIntegrations();
         });
     </script>
 </body>

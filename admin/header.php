@@ -308,11 +308,6 @@ $assetBase = rtrim($basePath, '/');
                 <div class="px-3 mb-2">
                     <small class="text-white-50 text-uppercase fw-bold">Financials</small>
                 </div>
-                <?php if ($auth->hasPermission('departments.view')): ?>
-                <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'departments.php') ? 'active' : ''; ?>" href="financials/departments.php">
-                    <i class="fas fa-building me-2"></i>Departments
-                </a>
-                <?php endif; ?>
                 <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'two_factor_auth.php') ? 'active' : ''; ?>" href="two_factor_auth.php">
                     <i class="fas fa-shield-alt me-2"></i>2FA Management
                 </a>

@@ -875,9 +875,6 @@ body {
                 <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
             </a>
             <hr style="border-top: 1px solid rgba(255,255,255,0.2); margin: 12px 16px;">
-            <a class="nav-link" href="financials/departments.php">
-                <i class="fas fa-building me-2"></i><span>Departments</span>
-            </a>
         </nav>
     </div>
     <div class="sidebar-toggle" onclick="toggleSidebarDesktop()">

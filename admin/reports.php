@@ -707,9 +707,6 @@ $db = Database::getInstance()->getConnection();
                 <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
             </a>
             <hr class="my-3">
-            <a class="nav-link" href="financials/departments.php">
-                <i class="fas fa-building me-2"></i><span>Departments</span>
-            </a>
         </nav>
     </div>
     <div class="sidebar-toggle" onclick="toggleSidebar()">
