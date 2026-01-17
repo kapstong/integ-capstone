@@ -62,7 +62,6 @@ include '../legacy_header.php';
 
 <script>
 const syncActions = {
-    hr3: { action: 'importTimekeeping', label: 'Sync HR3 Timekeeping' },
     hr4: { action: 'importPayroll', label: 'Sync HR4 Payroll' },
     logistics1: { action: 'importInvoices', label: 'Sync Logistics1 Invoices' },
     logistics2: { action: 'importTripCosts', label: 'Sync Logistics2 Trips' }
@@ -78,6 +77,7 @@ function loadIntegrations() {
         .then(data => {
             if (data.success) {
                 renderIntegrations(data.integrations);
+                autoSyncIntegrations(data.integrations);
             } else {
                 showAlert('Error loading integrations: ' + data.error, 'danger');
             }
@@ -107,10 +107,6 @@ function renderIntegrations(integrations) {
                     <button class="btn btn-outline-primary" onclick="testIntegration('${item.name}')">
                         <i class="fas fa-vial"></i> Test
                     </button>
-                    ${syncActions[item.name] ? `
-                    <button class="btn btn-outline-success" onclick="syncIntegration('${item.name}')">
-                        <i class="fas fa-sync-alt"></i> Sync
-                    </button>` : ''}
                 </div>
             </td>
         </tr>
@@ -159,6 +155,12 @@ function syncIntegration(name) {
         }
     })
     .catch(error => showAlert('Error: ' + error.message, 'danger'));
+}
+
+function autoSyncIntegrations(integrations) {
+    integrations
+        .filter(item => item.is_active && item.is_configured && syncActions[item.name])
+        .forEach(item => syncIntegration(item.name));
 }
 
 function showAlert(message, type) {
