@@ -119,6 +119,7 @@ $departments = [
                                     <td data-label="API Status">
                                         <?php if ($department['integration_key']): ?>
                                             <span class="badge bg-secondary" id="status-<?php echo htmlspecialchars($department['integration_key']); ?>">Checking...</span>
+                                            <div class="text-muted small mt-1" id="status-detail-<?php echo htmlspecialchars($department['integration_key']); ?>"></div>
                                         <?php else: ?>
                                             <span class="badge bg-secondary">Not Integrated</span>
                                         <?php endif; ?>
@@ -160,6 +161,7 @@ function showAlert(message, type) {
 
 function checkIntegrationStatus(name) {
     const badge = document.getElementById(`status-${name}`);
+    const detail = document.getElementById(`status-detail-${name}`);
     if (!badge) return;
 
     const formData = new FormData();
@@ -175,14 +177,23 @@ function checkIntegrationStatus(name) {
         if (result.success) {
             badge.className = 'badge bg-success';
             badge.textContent = 'Working';
+            if (detail) {
+                detail.textContent = '';
+            }
         } else {
             badge.className = 'badge bg-danger';
             badge.textContent = 'Failed';
+            if (detail) {
+                detail.textContent = result.error || result.message || 'No error details returned.';
+            }
         }
     })
     .catch(() => {
         badge.className = 'badge bg-danger';
         badge.textContent = 'Failed';
+        if (detail) {
+            detail.textContent = 'Request failed. Check API URL, network, or server response.';
+        }
     });
 }
 

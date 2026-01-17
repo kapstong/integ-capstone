@@ -646,20 +646,18 @@ body {
                     <table class="table table-striped" id="payrollTable">
                         <thead>
                             <tr>
-                                <th>Employee</th>
-                                <th>Department</th>
-                                <th>Position</th>
-                                <th>Basic Salary</th>
-                                <th>Allowances</th>
-                                <th>Deductions</th>
-                                <th>Net Pay</th>
                                 <th>Payroll Period</th>
+                                <th>Total Amount</th>
+                                <th>Employees</th>
+                                <th>Submitted By</th>
+                                <th>Submitted At</th>
+                                <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="payrollTableBody">
                             <tr>
-                                <td colspan="9" class="text-center">
+                                <td colspan="7" class="text-center">
                                     <div class="text-muted">Click "Load Payroll" to fetch payroll data from HR4 system</div>
                                 </td>
                             </tr>
@@ -1409,8 +1407,6 @@ body {
     <script>
         // Wait for DOM to be fully loaded before defining functions
     window.addEventListener('DOMContentLoaded', function() {
-        // Keep auto-load disabled to prevent authentication errors
-        // Manual loading ensures user is authenticated before API calls
 
         window.loadPayroll = async function() {
             const btn = event.target.closest('button');
@@ -1421,11 +1417,16 @@ body {
 
             try {
                 // Use the integration API to fetch payroll data
-                const response = await fetch('../api/integrations.php?action=execute&integration_name=hr4&action_name=getPayrollData', {
+                const response = await fetch('../api/integrations.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
+                    body: new URLSearchParams({
+                        action: 'execute',
+                        integration_name: 'hr4',
+                        action_name: 'getPayrollData'
+                    }),
                     credentials: 'include'
                 });
 
@@ -1450,67 +1451,91 @@ body {
             const tbody = document.getElementById('payrollTableBody');
 
             if (!payrollData || payrollData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No payroll data found in HR4 system</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No payroll data found in HR4 system</td></tr>';
                 return;
             }
 
             tbody.innerHTML = '';
 
             payrollData.forEach(payroll => {
-                // Format amounts
-                const basicSalary = parseFloat(payroll.basic_salary || 0);
-                const allowances = parseFloat(payroll.allowances || 0);
-                const deductions = parseFloat(payroll.deductions || 0);
-                const netPay = parseFloat(payroll.net_pay || 0);
+                const totalAmount = parseFloat(payroll.total_amount || payroll.net_pay || 0);
+                const submittedAt = payroll.submitted_at ? new Date(payroll.submitted_at).toLocaleString() : 'N/A';
+                const statusText = payroll.display_status || payroll.status || 'Unknown';
+                const canApprove = payroll.can_approve || ['processed', 'success'].includes(String(statusText).toLowerCase());
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
+                    <td><strong>${payroll.period_display || payroll.payroll_period || 'N/A'}</strong></td>
+                    <td><strong class="text-success">PHP ${totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+                    <td>${payroll.employee_count || 'N/A'}</td>
+                    <td>${payroll.submitted_by || 'N/A'}</td>
+                    <td>${submittedAt}</td>
+                    <td><span class="badge ${canApprove ? 'bg-info' : 'bg-secondary'}">${statusText}</span></td>
                     <td>
-                        <div class="d-flex align-items-center">
-                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-size: 0.8em;">
-                                ${payroll.employee_name ? payroll.employee_name.charAt(0).toUpperCase() : 'E'}
-                            </div>
-                            <div>
-                                <strong>${payroll.employee_name || 'Unknown Employee'}</strong>
-                                <br><small class="text-muted">${payroll.employee_id || ''}</small>
-                            </div>
-                        </div>
-                    </td>
-                    <td>${payroll.department || 'N/A'}</td>
-                    <td>${payroll.position || 'Staff'}</td>
-                    <td>₱${basicSalary.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    <td>₱${allowances.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    <td>₱${deductions.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    <td><strong class="text-success">₱${netPay.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
-                    <td>${payroll.payroll_period || 'Current Month'}</td>
-                    <td>
-                        <button class="btn btn-success btn-sm" onclick="processPayrollItem('${payroll.employee_id || payroll.id}', '${payroll.employee_name || 'Unknown'}', ${netPay}, '${payroll.payroll_period || ''}')">
-                            <i class="fas fa-money-bill-wave me-1"></i>Process Payment
-                        </button>
+                        ${canApprove ? `
+                            <button class="btn btn-success btn-sm me-2" onclick="updatePayrollApproval('${payroll.payroll_id}', 'approve')">
+                                <i class="fas fa-check me-1"></i>Approve
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="updatePayrollApproval('${payroll.payroll_id}', 'reject')">
+                                <i class="fas fa-times me-1"></i>Reject
+                            </button>
+                        ` : '<span class="text-muted">N/A</span>'}
                     </td>
                 `;
                 tbody.appendChild(row);
             });
         };
 
-        window.processPayrollItem = async function(employeeId, employeeName, netPay, payrollPeriod) {
+        window.updatePayrollApproval = async function(payrollId, action) {
             const btn = event.target.closest('button');
             const originalText = btn.innerHTML;
 
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Updating...';
 
             try {
-                // Create disbursement record for payroll payment
-                const disbursementData = {
-                    disbursement_date: new Date().toISOString().split('T')[0],
-                    amount: netPay,
-                    payment_method: 'bank_transfer', // Default payment method for payroll
-                    reference_number: `HR4-PAYROLL-${employeeId}`,
-                    payee: employeeName,
-                    purpose: `Payroll Payment for ${payrollPeriod}`,
-                    notes: `Processed from HR4 payroll system - Employee ID: ${employeeId}`
-                };
+                let rejectionReason = '';
+                if (action === 'reject') {
+                    rejectionReason = prompt('Provide rejection reason (required for reject):', '');
+                    if (rejectionReason === null || rejectionReason.trim() === '') {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                        return;
+                    }
+                }
+
+                const response = await fetch('../api/integrations.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'execute',
+                        integration_name: 'hr4',
+                        action_name: 'updatePayrollStatus',
+                        params: JSON.stringify({
+                            id: payrollId,
+                            action: action,
+                            rejection_reason: rejectionReason
+                        })
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    window.showAlert(`Payroll ${action}d successfully.`, 'success');
+                    window.loadPayroll();
+                } else {
+                    window.showAlert('Error updating payroll: ' + (result.error || 'Unknown error'), 'danger');
+                }
+            } catch (error) {
+                window.showAlert('Error: ' + error.message, 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        };
 
                 // Log payroll processing to audit trail
                 try {
@@ -1584,6 +1609,9 @@ body {
                 btn.innerHTML = originalText;
             }
         };
+
+        // Auto-load payroll data on page load
+        window.loadPayroll();
     });
     </script>
 

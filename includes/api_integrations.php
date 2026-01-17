@@ -939,35 +939,36 @@ class HR4Integration extends BaseIntegration {
 
     public function testConnection($config) {
         try {
-            // Test HR4 API connection by attempting to get payroll data
-            $url = $config['api_url'];
-            if (!str_ends_with($url, '?')) {
-                $url .= '?';
-            }
-            $url .= 'action=test&api_key=' . urlencode($config['api_key']);
-
-            $ch = curl_init($url);
+            $ch = curl_init($config['api_url']);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Authorization: Bearer ' . $this->generateAuthToken($config),
                 'Content-Type: application/json'
             ]);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            if ($httpCode === 200) {
-                $result = json_decode($response, true);
-                if (isset($result['success']) && $result['success']) {
-                    return ['success' => true, 'message' => 'HR4 API connection successful'];
-                } else {
-                    return ['success' => false, 'error' => 'HR4 API returned success=false'];
-                }
-            } else {
+            if ($httpCode !== 200) {
                 return ['success' => false, 'error' => 'HR4 API returned HTTP ' . $httpCode];
             }
+
+            $result = json_decode($response, true);
+            if ($result === null && json_last_error() !== JSON_ERROR_NONE) {
+                return ['success' => false, 'error' => 'HR4 API returned invalid JSON'];
+            }
+
+            if ((isset($result['status']) && strtolower($result['status']) === 'success') ||
+                (isset($result['success']) && $result['success'])) {
+                return ['success' => true, 'message' => 'HR4 API connection successful'];
+            }
+
+            $errorMessage = $result['error'] ?? $result['message'] ?? 'HR4 API returned unsuccessful response';
+            return ['success' => false, 'error' => $errorMessage];
         } catch (Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
@@ -1012,17 +1013,122 @@ class HR4Integration extends BaseIntegration {
                 }
 
                 // Parse the actual HR4 API response format and convert to our expected format
+                if (isset($result['status']) && strtolower($result['status']) === 'success' && isset($result['data'])) {
+                    return $this->parseHR4ApprovalData($result);
+                }
+
                 if (isset($result['success']) && $result['success'] && isset($result['payroll_data'])) {
                     return $this->parseHR4PayrollData($result);
-                } else {
-                    throw new Exception('HR4 API response is not in expected format');
                 }
+
+                throw new Exception('HR4 API response is not in expected format');
             } else {
                 throw new Exception('HR4 API returned HTTP status code: ' . $httpCode);
             }
         } catch (Exception $e) {
             Logger::getInstance()->error('HR4 getPayrollData failed: ' . $e->getMessage());
             throw $e; // Re-throw the exception instead of falling back to mock data
+        }
+    }
+
+    /**
+     * Parse HR4 payroll approval data format into our expected payroll data format
+     */
+    private function parseHR4ApprovalData($apiResponse) {
+        if (!isset($apiResponse['data']) || !is_array($apiResponse['data'])) {
+            throw new Exception('HR4 approval API response missing data array');
+        }
+
+        $parsedData = [];
+
+        foreach ($apiResponse['data'] as $entry) {
+            $totalAmount = floatval($entry['total_amount'] ?? 0);
+            $displayStatus = $entry['display_status'] ?? '';
+
+            $parsedData[] = [
+                'payroll_id' => $entry['id'] ?? null,
+                'payroll_period' => $entry['payroll_period'] ?? '',
+                'period_display' => $entry['period_display'] ?? '',
+                'total_amount' => $totalAmount,
+                'employee_count' => $entry['employee_count'] ?? null,
+                'submitted_by' => $entry['submitted_by'] ?? '',
+                'submitted_at' => $entry['submitted_at'] ?? '',
+                'finance_approver' => $entry['finance_approver'] ?? '',
+                'approved_at' => $entry['approved_at'] ?? '',
+                'status' => $entry['status'] ?? '',
+                'display_status' => $displayStatus,
+                'notes' => $entry['notes'] ?? '',
+                'rejection_reason' => $entry['rejection_reason'] ?? '',
+                'can_approve' => in_array(strtolower($displayStatus), ['processed', 'success'], true),
+                'employee_name' => 'Payroll Batch',
+                'department' => 'HR4 Payroll',
+                'position' => 'Batch',
+                'basic_salary' => 0,
+                'allowances' => 0,
+                'deductions' => 0,
+                'net_pay' => $totalAmount,
+                'amount' => $totalAmount
+            ];
+        }
+
+        return $parsedData;
+    }
+
+    /**
+     * Update payroll approval status in HR4
+     */
+    public function updatePayrollStatus($config, $params = []) {
+        $payrollId = $params['id'] ?? null;
+        $action = strtolower($params['action'] ?? '');
+
+        if (!$payrollId || !in_array($action, ['approve', 'reject'], true)) {
+            return ['success' => false, 'error' => 'Invalid payroll approval request'];
+        }
+
+        $payload = [
+            'action' => $action,
+            'id' => $payrollId,
+            'status' => $action,
+            'notes' => $params['notes'] ?? '',
+            'rejection_reason' => $params['rejection_reason'] ?? ''
+        ];
+
+        try {
+            $ch = curl_init($config['api_url']);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/x-www-form-urlencoded'
+            ]);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($payload));
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200) {
+                return ['success' => false, 'error' => 'HR4 API returned HTTP ' . $httpCode];
+            }
+
+            $result = json_decode($response, true);
+            if ($result === null && json_last_error() !== JSON_ERROR_NONE) {
+                return ['success' => false, 'error' => 'HR4 API returned invalid JSON'];
+            }
+
+            if ((isset($result['status']) && strtolower($result['status']) === 'success') ||
+                (isset($result['success']) && $result['success'])) {
+                return ['success' => true, 'message' => $result['message'] ?? 'Payroll updated'];
+            }
+
+            return [
+                'success' => false,
+                'error' => $result['error'] ?? $result['message'] ?? 'Payroll update failed'
+            ];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 
