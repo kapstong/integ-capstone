@@ -1220,16 +1220,9 @@ body {
                 const result = await response.json();
 
                 if (result.success) {
-                    // Success message with HR3 sync status
-                    let message = `Claim payment processed successfully! Reference: ${result.disbursement_number}`;
-
-                    if (hr3SyncResult && hr3SyncResult.success) {
-                        message += '\n✓ HR3 system updated with "Paid" status (2-way sync successful)';
-                    } else {
-                        message += '\n⚠️ HR3 system update failed (disbursement still created)';
+                    if (hr3SyncResult && !hr3SyncResult.success) {
+                        window.showAlert('HR3 system update failed (disbursement still created).', 'danger');
                     }
-
-                    window.showAlert(message, hr3SyncResult && hr3SyncResult.success ? 'success' : 'warning');
 
                     // Remove the processed claim row
                     btn.closest('tr').remove();
@@ -1250,7 +1243,7 @@ body {
 
                         // If user is on records tab, also update the tab badge
                         if (document.getElementById('records-tab').classList.contains('active')) {
-                            showAlert('💡 Disbursement records have been updated with the processed claim!', 'info');
+                            // No success notifications.
                         }
                     }, 500); // Small delay to ensure database commit
                 } else {
@@ -1300,7 +1293,7 @@ body {
                 const claimsData = await claimsResponse.json();
 
                 if (!claimsData.success || !claimsData.data || claimsData.data.length === 0) {
-                    window.showAlert('No approved claims available from HR3 API to test with', 'warning');
+                    window.showAlert('No approved claims available from HR3 API to test with', 'danger');
                     btn.innerHTML = '<i class="fas fa-sync me-2"></i>Test 2-Way Sync';
                     btn.className = 'btn btn-info';
                     return;
@@ -1324,7 +1317,7 @@ body {
                 const result = await response.json();
 
                 if (result.success) {
-                    window.showAlert('✅ HR3 Connection SUCCESSFUL! 2-way sync is working.\nHR3 response: ' + JSON.stringify(result), 'success');
+                    // No success notifications.
                 } else {
                     // Build comprehensive error message with solutions
                     let errorMessage = '❌ HR3 Connection FAILED: ' + result.error + '\n\n';
@@ -1358,7 +1351,7 @@ body {
                     errorMessage += '• Check PHP always_populate_raw_post_data setting\n';
                     errorMessage += '• Verify file permissions on HR3 server\n';
 
-                    window.showAlert(errorMessage, 'warning');
+                    window.showAlert(errorMessage, 'danger');
                 }
 
             } catch (error) {
@@ -1433,7 +1426,7 @@ body {
 
                 if (result.success && result.result) {
                     window.displayHR4Payroll(result.result);
-                    window.showAlert('Successfully loaded payroll data from HR4 system!', 'success');
+                    // No success notifications.
                 } else {
                     window.showAlert('Error loading payroll: ' + (result.error || 'No payroll data found'), 'danger');
                 }
@@ -1533,7 +1526,7 @@ body {
                 const result = await response.json();
 
                 if (result.success) {
-                    window.showAlert(`Payroll ${action}d successfully.`, 'success');
+                    // No success notifications.
                     window.loadPayroll();
                 } else {
                     window.showAlert('Error updating payroll: ' + (result.error || 'Unknown error'), 'danger');
