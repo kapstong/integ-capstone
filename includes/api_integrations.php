@@ -1361,6 +1361,7 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
             $errors = [];
             $database = Database::getInstance();
             $db = $database->getConnection();
+            $this->assertTablesExist($db, ['payments_received', 'imported_transactions']);
             $defaultCustomerId = $this->getOrCreateDefaultCustomerId($database);
             $outlet = $this->getHotelOutlet($db);
 
@@ -1447,6 +1448,9 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
                 'message' => "Imported {$importedCount} Core 1 hotel payments" . (count($errors) > 0 ? " with " . count($errors) . " errors" : "")
             ];
         } catch (Exception $e) {
+            Logger::getInstance()->error('Core 1 payment import failed', [
+                'error' => $e->getMessage()
+            ]);
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
@@ -1695,6 +1699,21 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
             $totals['taxes'],
             $totals['net_revenue']
         ]);
+    }
+
+    private function assertTablesExist($db, $tables) {
+        foreach ($tables as $table) {
+            $stmt = $db->prepare("
+                SELECT COUNT(*) as count
+                FROM information_schema.tables
+                WHERE table_schema = DATABASE() AND table_name = ?
+            ");
+            $stmt->execute([$table]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (empty($result['count'])) {
+                throw new Exception("Required table missing: {$table}");
+            }
+        }
     }
 }
 

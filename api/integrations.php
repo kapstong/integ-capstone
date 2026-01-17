@@ -40,6 +40,14 @@ try {
     if ($action === 'execute' && $integrationName && $actionName) {
         try {
             $result = $integrationManager->executeIntegrationAction($integrationName, $actionName, $params);
+            if (is_array($result) && isset($result['success']) && $result['success'] === false) {
+                echo json_encode([
+                    'success' => false,
+                    'error' => $result['error'] ?? $result['message'] ?? 'Integration action failed',
+                    'result' => $result
+                ]);
+                exit;
+            }
 
             $tableName = $integrationName === 'hr3' ? 'hr3_integrations' : 'integrations';
             Logger::getInstance()->logUserAction(
