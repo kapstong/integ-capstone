@@ -488,11 +488,17 @@ class HR3Integration extends BaseIntegration {
             }
 
             $data = json_decode($response, true);
-            if (!$data) {
+            if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
                 return ['success' => false, 'message' => 'Invalid HR3 API response format'];
             }
 
-            $claims = isset($data['claims']) ? $data['claims'] : (is_array($data) ? $data : []);
+            $claims = [];
+            if (is_array($data) && array_key_exists('claims', $data)) {
+                $claims = $data['claims'];
+            } elseif (is_array($data)) {
+                $claims = $data;
+            }
+
             if (!is_array($claims)) {
                 return ['success' => false, 'message' => 'Invalid HR3 API response format'];
             }
@@ -1282,6 +1288,18 @@ class Logistics1Integration extends BaseIntegration {
             }
 
             $data = json_decode($response, true);
+            if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+                return ['success' => false, 'message' => 'Invalid response format'];
+            }
+
+            if (is_array($data) && !array_key_exists('success', $data)) {
+                $poCount = count($data);
+                return [
+                    'success' => true,
+                    'message' => "Connected successfully. Found {$poCount} purchase orders"
+                ];
+            }
+
             if (!isset($data['success'])) {
                 return ['success' => false, 'message' => 'Invalid response format'];
             }
