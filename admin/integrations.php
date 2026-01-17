@@ -73,8 +73,16 @@ include 'header.php';
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2><i class="fas fa-plug"></i> API Integrations</h2>
+            <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <h2><i class="fas fa-plug"></i> API Integrations</h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="index.php">Dashboard</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Integrations</li>
+                        </ol>
+                    </nav>
+                </div>
                 <div class="btn-group" role="group">
                     <button type="button" class="btn btn-outline-info" onclick="showIntegrationStats()">
                         <i class="fas fa-chart-bar"></i> Statistics
@@ -303,8 +311,10 @@ include 'header.php';
 </div>
 
 <script>
-// Integration icons mapping
-function getIntegrationIcon(integrationName) {
+  // Integration icons mapping
+  const totalIntegrations = <?php echo count($integrations); ?>;
+
+  function getIntegrationIcon(integrationName) {
     const icons = {
         'hr3': 'users',
         'hr4': 'user-tie',
@@ -378,16 +388,20 @@ function showIntegrationStats() {
 
                 // Initialize chart
                 const ctx = document.getElementById('usageChart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Active', 'Inactive', 'Available'],
-                        datasets: [{
-                            data: [data.stats.active_integrations, data.stats.total_integrations - data.stats.active_integrations, <?php echo count($integrations); ?> - data.stats.total_integrations],
-                            backgroundColor: ['#28a745', '#6c757d', '#ffc107']
-                        }]
-                    }
-                });
+                  new Chart(ctx, {
+                      type: 'doughnut',
+                      data: {
+                          labels: ['Active', 'Inactive', 'Available'],
+                          datasets: [{
+                              data: [
+                                  data.stats.active_integrations,
+                                  data.stats.total_integrations - data.stats.active_integrations,
+                                  totalIntegrations - data.stats.total_integrations
+                              ],
+                              backgroundColor: ['#28a745', '#6c757d', '#ffc107']
+                          }]
+                      }
+                  });
 
                 const modalEl = document.getElementById('statsModal');
                 if (modalEl) {
@@ -438,12 +452,13 @@ function showIntegrationLogs() {
 }
 
 // Auto-refresh stats every 30 seconds
-setInterval(() => {
-    // Update stats if modal is open
-    if (document.getElementById('statsModal').classList.contains('show')) {
-        showIntegrationStats();
-    }
-}, 30000);
+  setInterval(() => {
+      // Update stats if modal is open
+      const statsModal = document.getElementById('statsModal');
+      if (statsModal && statsModal.classList.contains('show')) {
+          showIntegrationStats();
+      }
+  }, 30000);
 </script>
 
 <?php include 'footer.php'; ?>
