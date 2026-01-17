@@ -211,39 +211,21 @@ include 'header.php';
                 <div class="col-md-12">
                     <h4>Integration Categories</h4>
                     <div class="row">
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <div class="card">
                                 <div class="card-body text-center">
-                                    <i class="fas fa-credit-card fa-2x text-primary mb-2"></i>
-                                    <h6>Payment Processing</h6>
-                                    <small class="text-muted">Stripe, PayPal</small>
+                                    <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                                    <h6>HR Systems</h6>
+                                    <small class="text-muted">HR3, HR4</small>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <div class="card">
                                 <div class="card-body text-center">
-                                    <i class="fas fa-envelope fa-2x text-info mb-2"></i>
-                                    <h6>Communication</h6>
-                                    <small class="text-muted">SendGrid, Twilio, Slack</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card">
-                                <div class="card-body text-center">
-                                    <i class="fas fa-cloud fa-2x text-success mb-2"></i>
-                                    <h6>Cloud Storage</h6>
-                                    <small class="text-muted">Google Drive, Dropbox</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card">
-                                <div class="card-body text-center">
-                                    <i class="fas fa-calculator fa-2x text-warning mb-2"></i>
-                                    <h6>Accounting</h6>
-                                    <small class="text-muted">QuickBooks, Xero</small>
+                                    <i class="fas fa-truck fa-2x text-success mb-2"></i>
+                                    <h6>Logistics</h6>
+                                    <small class="text-muted">Logistics 1, Logistics 2</small>
                                 </div>
                             </div>
                         </div>
@@ -330,18 +312,10 @@ include 'header.php';
 // Integration icons mapping
 function getIntegrationIcon(integrationName) {
     const icons = {
-        'stripe': 'credit-card',
-        'paypal': 'paypal',
-        'sendgrid': 'envelope',
-        'twilio': 'sms',
-        'slack': 'slack',
-        'google_drive': 'google-drive',
-        'dropbox': 'dropbox',
-        'quickbooks': 'calculator',
-        'xero': 'file-invoice-dollar',
-        'mailchimp': 'bullhorn',
-        'zoom': 'video',
-        'microsoft_teams': 'users'
+        'hr3': 'users',
+        'hr4': 'user-tie',
+        'logistics1': 'box-open',
+        'logistics2': 'truck'
     };
     return icons[integrationName] || 'plug';
 }
@@ -528,18 +502,10 @@ setInterval(() => {
 <?php
 function getIntegrationIcon($name) {
     $icons = [
-        'stripe' => 'credit-card',
-        'paypal' => 'paypal',
-        'sendgrid' => 'envelope',
-        'twilio' => 'sms',
-        'slack' => 'slack',
-        'google_drive' => 'google-drive',
-        'dropbox' => 'dropbox',
-        'quickbooks' => 'calculator',
-        'xero' => 'file-invoice-dollar',
-        'mailchimp' => 'bullhorn',
-        'zoom' => 'video',
-        'microsoft_teams' => 'users'
+        'hr3' => 'users',
+        'hr4' => 'user-tie',
+        'logistics1' => 'box-open',
+        'logistics2' => 'truck'
     ];
     return $icons[$name] ?? 'plug';
 }

@@ -305,20 +305,7 @@ class TwoFactorAuth {
             ");
             $stmt->execute([$userId, $phoneNumber, $code, $code]);
 
-            // Send SMS via Twilio integration if available
-            $integrationManager = APIIntegrationManager::getInstance();
-            if ($integrationManager->getIntegrationConfig('twilio')) {
-                $result = $integrationManager->executeIntegrationAction('twilio', 'sendSMS', [
-                    'to' => $phoneNumber,
-                    'message' => "Your ATIERA verification code is: $code"
-                ]);
-
-                if ($result['success'] ?? false) {
-                    return ['success' => true, 'message' => 'SMS sent successfully'];
-                }
-            }
-
-            // Fallback: just return success for testing (in production, always use real SMS)
+            // Demo mode: SMS delivery is not integrated with an external provider.
             return ['success' => true, 'message' => 'SMS sent successfully (demo mode)'];
 
         } catch (Exception $e) {

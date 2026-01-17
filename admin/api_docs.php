@@ -178,6 +178,52 @@ X-API-Key: your_api_key_here</code></pre>
                                 </div>
                             </div>
                         </div>
+                        <!-- Department Data APIs -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Department Data APIs</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <strong>Base URL:</strong> <code><?php echo htmlspecialchars('https://' . $_SERVER['HTTP_HOST'] . '/api/'); ?></code>
+                                </div>
+
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Module</th>
+                                                <th>Endpoint</th>
+                                                <th>Purpose</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr><td>Hotel</td><td>GET /api/hotel/bookings</td><td>Revenue tracking and forecasting</td></tr>
+                                            <tr><td>Hotel</td><td>GET /api/hotel/payments</td><td>Revenue collection validation</td></tr>
+                                            <tr><td>Hotel</td><td>GET /api/hotel/pos-sales</td><td>Daily sales reporting</td></tr>
+                                            <tr><td>Hotel</td><td>GET /api/hotel/maintenance-costs</td><td>Operational expense tracking</td></tr>
+                                            <tr><td>Restaurant</td><td>GET /api/restaurant/pos-sales</td><td>Restaurant revenue monitoring</td></tr>
+                                            <tr><td>Restaurant</td><td>GET /api/restaurant/payments</td><td>Restaurant revenue collection</td></tr>
+                                            <tr><td>Restaurant</td><td>GET /api/restaurant/inventory-usage</td><td>COGS computation</td></tr>
+                                            <tr><td>HR</td><td>GET /api/hr/recruitment-costs</td><td>Hiring cost tracking</td></tr>
+                                            <tr><td>HR</td><td>GET /api/hr/training-expenses</td><td>Employee development expenses</td></tr>
+                                            <tr><td>HR</td><td>GET /api/hr/claims</td><td>Employee reimbursements and claims (HR3)</td></tr>
+                                            <tr><td>HR</td><td>GET /api/hr/payroll</td><td>Payroll expenses (HR4)</td></tr>
+                                            <tr><td>Logistics</td><td>GET /api/logistics/procurement</td><td>Procurement expenses (Logistics 1)</td></tr>
+                                            <tr><td>Logistics</td><td>GET /api/logistics/trip-costs</td><td>Transportation costs (Logistics 2)</td></tr>
+                                            <tr><td>Admin</td><td>GET /api/admin/facility-costs</td><td>Facilities reservation costs</td></tr>
+                                            <tr><td>Admin</td><td>GET /api/admin/legal-expenses</td><td>Legal and document expenses</td></tr>
+                                            <tr><td>Financial</td><td>GET /api/financial/revenue-summary</td><td>Consolidated revenue summary</td></tr>
+                                            <tr><td>Financial</td><td>GET /api/financial/expense-summary</td><td>Consolidated expense summary</td></tr>
+                                            <tr><td>Financial</td><td>GET /api/financial/profit-loss</td><td>Profit and loss summary</td></tr>
+                                            <tr><td>Financial</td><td>GET /api/financial/financial-forecast</td><td>Forecasted revenue, expenses, and profit</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <p class="text-muted mb-0">All endpoints support optional <code>date_from</code> and <code>date_to</code> query parameters where applicable.</p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Response Format -->

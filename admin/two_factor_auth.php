@@ -355,8 +355,7 @@ include 'header.php';
                     </div>
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle"></i>
-                        <strong>Note:</strong> This will send a test SMS if Twilio integration is configured.
-                        Otherwise, it will simulate the SMS sending process.
+                        <strong>Note:</strong> This will simulate the SMS sending process.
                     </div>
                 </div>
                 <div class="modal-footer">
