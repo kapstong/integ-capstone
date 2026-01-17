@@ -524,6 +524,10 @@ class HR3Integration extends BaseIntegration {
             curl_setopt($ch, CURLOPT_TIMEOUT, 30);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept: application/json,text/plain,*/*'
+            ]);
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -689,21 +693,22 @@ class HR3Integration extends BaseIntegration {
             $claimId = $params['claim_id'];
             $newStatus = $params['status'];
 
-            // Prepare update payload for HR3 API
-            $updateData = [
+            // HR3 API expects a PUT request with form-encoded data
+            $updateData = http_build_query([
                 'claim_id' => $claimId,
                 'status' => $newStatus,
-                'updated_at' => date('Y-m-d H:i:s'),
-                'updated_by' => 'ATIERA_FINANCE_SYSTEM'
-            ];
-
-            $ch = curl_init($config['api_url'] . '/update');
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($updateData));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . ($config['api_key'] ?? '')
+                'paid_by' => 'ATIERA_FINANCE_SYSTEM'
             ]);
+
+            $headers = ['Content-Type: application/x-www-form-urlencoded'];
+            if (!empty($config['api_key'])) {
+                $headers[] = 'Authorization: Bearer ' . $config['api_key'];
+            }
+
+            $ch = curl_init($config['api_url']);
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $updateData);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 30);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -713,9 +718,10 @@ class HR3Integration extends BaseIntegration {
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            if ($httpCode === 200) {
-                $result = json_decode($response, true);
-                if (isset($result['success']) && $result['success']) {
+            $result = json_decode($response, true);
+            if ($httpCode === 200 && is_array($result)) {
+                if ((isset($result['status']) && $result['status'] === 'success') ||
+                    (isset($result['success']) && $result['success'])) {
                     return [
                         'success' => true,
                         'message' => 'Claim status updated successfully in HR3',
@@ -727,7 +733,8 @@ class HR3Integration extends BaseIntegration {
 
             return [
                 'success' => false,
-                'error' => 'Failed to update claim status in HR3 API',
+                'error' => is_array($result) ? ($result['error'] ?? $result['message'] ?? 'Failed to update claim status in HR3 API')
+                    : 'Failed to update claim status in HR3 API',
                 'http_code' => $httpCode
             ];
 
@@ -1735,6 +1742,11 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
  * Logistics 1 Integration - Purchase Orders, Delivery Receipts, and Invoices
  */
 class Logistics1Integration extends BaseIntegration {
+    protected $name = 'logistics1';
+    protected $displayName = 'Logistics 1 - Procurement System';
+    protected $description = 'Import purchase orders, delivery receipts, and supplier invoices from Logistics 1 system';
+    protected $requiredConfig = ['api_url'];
+
     public function getName() {
         return 'Logistics 1 - Procurement System';
     }
@@ -1860,6 +1872,10 @@ class Logistics1Integration extends BaseIntegration {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept: application/json,text/plain,*/*'
+        ]);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

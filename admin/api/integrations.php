@@ -122,7 +122,18 @@ try {
                     // Execute integration action
                     $integrationName = $_POST['integration_name'] ?? '';
                     $actionName = $_POST['action_name'] ?? '';
-                    $params = isset($_POST['params']) ? json_decode($_POST['params'], true) : [];
+                    $params = [];
+                    $rawParams = $_POST;
+                    unset($rawParams['action'], $rawParams['integration_name'], $rawParams['action_name'], $rawParams['params']);
+                    if (!empty($rawParams)) {
+                        $params = $rawParams;
+                    }
+                    if (isset($_POST['params'])) {
+                        $decodedParams = json_decode($_POST['params'], true);
+                        if (is_array($decodedParams)) {
+                            $params = array_merge($params, $decodedParams);
+                        }
+                    }
 
                     $result = $integrationManager->executeIntegrationAction($integrationName, $actionName, $params);
                     if (is_array($result) && isset($result['success']) && $result['success'] === false) {
