@@ -58,6 +58,7 @@ include '../legacy_header.php';
 <script>
 const syncActions = {
     hr4: { action: 'importPayroll', label: 'Sync HR4 Payroll' },
+    core1: { action: 'importPayments', label: 'Sync Core 1 Hotel Payments' },
     logistics1: { action: 'importInvoices', label: 'Sync Logistics1 Invoices' },
     logistics2: { action: 'importTripCosts', label: 'Sync Logistics2 Trips' }
 };

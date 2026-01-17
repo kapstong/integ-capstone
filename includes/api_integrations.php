@@ -36,6 +36,7 @@ class APIIntegrationManager {
         $this->integrations = [
             'hr3' => new HR3Integration(),
             'hr4' => new HR4Integration(),
+            'core1' => new Core1HotelPaymentsIntegration(),
             'logistics1' => new Logistics1Integration(),
             'logistics2' => new Logistics2Integration()
         ];
@@ -1325,6 +1326,375 @@ class HR4Integration extends BaseIntegration {
         // Simple token generation - can be enhanced based on HR4 requirements
         $payload = $config['api_key'] . ':' . $config['api_secret'];
         return base64_encode(hash('sha256', $payload, true));
+    }
+}
+
+/**
+ * Core 1 Hotel Billing & Payments Integration
+ */
+class Core1HotelPaymentsIntegration extends BaseIntegration {
+    protected $name = 'core1';
+    protected $displayName = 'Core 1 Hotel Payments';
+    protected $description = 'Import billing payments from Core 1 Hotel system';
+    protected $requiredConfig = ['api_url'];
+
+    public function testConnection($config) {
+        try {
+            $data = $this->fetchPayments($config);
+            $count = count($data);
+            return [
+                'success' => true,
+                'message' => "Core 1 connection successful. Found {$count} payment records"
+            ];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Import completed hotel payments into imported_transactions
+     */
+    public function importPayments($config, $params = []) {
+        try {
+            $payments = $this->fetchPayments($config);
+            $importedCount = 0;
+            $errors = [];
+            $database = Database::getInstance();
+            $db = $database->getConnection();
+            $defaultCustomerId = $this->getOrCreateDefaultCustomerId($database);
+            $outlet = $this->getHotelOutlet($db);
+
+            foreach ($payments as $payment) {
+                try {
+                    $status = strtolower($payment['status'] ?? '');
+                    if ($status !== 'completed') {
+                        continue;
+                    }
+
+                    $amount = floatval($payment['amount'] ?? 0);
+                    if ($amount <= 0) {
+                        continue;
+                    }
+
+                    $externalId = 'CORE1_PAY_' . ($payment['id'] ?? time() . '_' . $importedCount);
+
+                    $existsStmt = $db->prepare("
+                        SELECT COUNT(*) as count
+                        FROM imported_transactions
+                        WHERE source_system = 'CORE1_HOTEL' AND external_id = ?
+                    ");
+                    $existsStmt->execute([$externalId]);
+                    $exists = $existsStmt->fetch(PDO::FETCH_ASSOC);
+                    if (!empty($exists['count'])) {
+                        continue;
+                    }
+
+                    $paymentDate = $payment['created_at'] ?? date('Y-m-d');
+                    $transactionDate = date('Y-m-d', strtotime($paymentDate));
+                    $paymentMethod = $payment['payment_method'] ?? 'unknown';
+                    $reference = $payment['payment_intent_id'] ?? '';
+                    $userId = $payment['user_id'] ?? '';
+                    $customerLabel = $userId ? "Core 1 Hotel Guest #{$userId}" : 'Core 1 Hotel Guest';
+                    $description = "Hotel payment {$reference} ({$paymentMethod})";
+                    $batchId = 'CORE1_PAY_' . date('Ymd_His');
+
+                    $stmt = $db->prepare("
+                        INSERT INTO imported_transactions
+                        (import_batch, source_system, transaction_date, transaction_type,
+                         external_id, external_reference, department_id, customer_name,
+                         description, amount, raw_data, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+                    ");
+
+                    $stmt->execute([
+                        $batchId,
+                        'CORE1_HOTEL',
+                        $transactionDate,
+                        'hotel_payment',
+                        $externalId,
+                        $reference,
+                        1,
+                        $customerLabel,
+                        $description,
+                        $amount,
+                        json_encode($payment)
+                    ]);
+
+                    $paymentNumber = $this->insertPaymentReceived($database, $db, [
+                        'customer_id' => $defaultCustomerId,
+                        'payment_date' => $transactionDate,
+                        'amount' => $amount,
+                        'payment_method' => $paymentMethod,
+                        'reference_number' => $reference,
+                        'notes' => $description
+                    ]);
+
+                    if ($outlet) {
+                        $this->upsertOutletDailySales($db, $outlet['id'], $transactionDate, $amount, $paymentNumber);
+                        $this->upsertDailyRevenueSummary($db, $transactionDate, $outlet['department_id'], $outlet['revenue_center_id']);
+                    }
+
+                    $importedCount++;
+                } catch (Exception $e) {
+                    $errors[] = 'Failed to import payment ' . ($payment['id'] ?? 'Unknown') . ': ' . $e->getMessage();
+                }
+            }
+
+            return [
+                'success' => count($errors) === 0,
+                'imported_count' => $importedCount,
+                'errors' => $errors,
+                'message' => "Imported {$importedCount} Core 1 hotel payments" . (count($errors) > 0 ? " with " . count($errors) . " errors" : "")
+            ];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Fetch payments from Core 1 API
+     */
+    private function fetchPayments($config) {
+        $ch = curl_init($config['api_url']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError) {
+            throw new Exception('Core 1 API connection error: ' . $curlError);
+        }
+
+        if ($httpCode !== 200) {
+            throw new Exception('Core 1 API returned HTTP ' . $httpCode);
+        }
+
+        $decoded = json_decode($response, true);
+        if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Core 1 API returned invalid JSON');
+        }
+
+        if (isset($decoded['data']) && is_array($decoded['data'])) {
+            return $decoded['data'];
+        }
+
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+
+        throw new Exception('Core 1 API response missing data array');
+    }
+
+    private function getOrCreateDefaultCustomerId($database) {
+        $db = $database->getConnection();
+        $stmt = $db->prepare("
+            SELECT id
+            FROM customers
+            WHERE company_name = ? OR email = ?
+            LIMIT 1
+        ");
+        $stmt->execute(['Core 1 Hotel Guest', 'core1-guest@atierahotelandrestaurant.com']);
+        $customer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($customer) {
+            return (int)$customer['id'];
+        }
+
+        $countStmt = $db->query("SELECT COUNT(*) as count FROM customers");
+        $count = $countStmt->fetch()['count'] + 1;
+        $customerCode = 'C' . str_pad($count, 3, '0', STR_PAD_LEFT);
+
+        return $database->insert(
+            "INSERT INTO customers (customer_code, company_name, contact_person, email, phone, address, credit_limit, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                $customerCode,
+                'Core 1 Hotel Guest',
+                'Core 1 Hotel Guest',
+                'core1-guest@atierahotelandrestaurant.com',
+                null,
+                null,
+                0,
+                'active'
+            ]
+        );
+    }
+
+    private function getHotelOutlet($db) {
+        $stmt = $db->query("
+            SELECT id, department_id, revenue_center_id
+            FROM outlets
+            WHERE is_active = 1
+              AND (outlet_type = 'rooms' OR outlet_name LIKE '%Room%' OR outlet_code = 'ROOMS')
+            ORDER BY id
+            LIMIT 1
+        ");
+        $outlet = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($outlet) {
+            return $outlet;
+        }
+
+        $fallback = $db->query("
+            SELECT id, department_id, revenue_center_id
+            FROM outlets
+            WHERE is_active = 1
+            ORDER BY id
+            LIMIT 1
+        ");
+        return $fallback->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    private function insertPaymentReceived($database, $db, $data) {
+        $stmt = $database->query("SELECT COUNT(*) as count FROM payments_received WHERE YEAR(created_at) = YEAR(CURDATE())");
+        $count = $stmt->fetch()['count'] + 1;
+        $paymentNumber = 'PAY-' . date('Y') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+
+        $columns = ['payment_number', 'customer_id', 'payment_date', 'amount', 'payment_method', 'reference_number', 'notes', 'recorded_by'];
+        $values = [
+            $paymentNumber,
+            $data['customer_id'],
+            $data['payment_date'],
+            $data['amount'],
+            $data['payment_method'],
+            $data['reference_number'],
+            $data['notes'],
+            1
+        ];
+        $placeholders = array_fill(0, count($columns), '?');
+
+        if ($database->columnExists('payments_received', 'vendor_id')) {
+            $columns[] = 'vendor_id';
+            $columns[] = 'bill_id';
+            $values[] = null;
+            $values[] = null;
+            $placeholders[] = '?';
+            $placeholders[] = '?';
+        }
+
+        if ($database->columnExists('payments_received', 'invoice_id')) {
+            $columns[] = 'invoice_id';
+            $values[] = null;
+            $placeholders[] = '?';
+        }
+
+        $database->insert(
+            "INSERT INTO payments_received (" . implode(', ', $columns) . ")
+             VALUES (" . implode(', ', $placeholders) . ")",
+            $values
+        );
+
+        $cashAccount = $this->getAccountId('1001');
+        $arAccount = $this->getAccountId('1002');
+        if ($cashAccount && $arAccount) {
+            $this->createJournalEntry([
+                'date' => $data['payment_date'],
+                'description' => 'Core 1 payment ' . $paymentNumber,
+                'debit_account_id' => $cashAccount,
+                'credit_account_id' => $arAccount,
+                'amount' => $data['amount'],
+                'reference_number' => $paymentNumber,
+                'source_system' => 'CORE1_HOTEL'
+            ]);
+        }
+
+        return $paymentNumber;
+    }
+
+    private function upsertOutletDailySales($db, $outletId, $businessDate, $amount, $paymentNumber) {
+        $stmt = $db->prepare("
+            SELECT id, notes
+            FROM outlet_daily_sales
+            WHERE business_date = ? AND outlet_id = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$businessDate, $outletId]);
+        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existing) {
+            $db->prepare("
+                UPDATE outlet_daily_sales
+                SET gross_sales = gross_sales + ?,
+                    net_sales = net_sales + ?,
+                    notes = CONCAT(IFNULL(notes, ''), ?)
+                WHERE id = ?
+            ")->execute([
+                $amount,
+                $amount,
+                ($existing['notes'] ? "\n" : '') . 'Core 1 payment ' . $paymentNumber,
+                $existing['id']
+            ]);
+            return;
+        }
+
+        $db->prepare("
+            INSERT INTO outlet_daily_sales
+            (business_date, outlet_id, gross_sales, discounts, service_charge, taxes, net_sales, covers, room_nights, notes, created_by)
+            VALUES (?, ?, ?, 0, 0, 0, ?, NULL, NULL, ?, ?)
+        ")->execute([
+            $businessDate,
+            $outletId,
+            $amount,
+            $amount,
+            'Core 1 payment ' . $paymentNumber,
+            1
+        ]);
+    }
+
+    private function upsertDailyRevenueSummary($db, $businessDate, $departmentId, $revenueCenterId) {
+        $sumStmt = $db->prepare("
+            SELECT
+                COUNT(*) as total_transactions,
+                COALESCE(SUM(gross_sales), 0) as gross_revenue,
+                COALESCE(SUM(discounts), 0) as discounts,
+                COALESCE(SUM(service_charge), 0) as service_charge,
+                COALESCE(SUM(taxes), 0) as taxes,
+                COALESCE(SUM(net_sales), 0) as net_revenue
+            FROM outlet_daily_sales
+            WHERE business_date = ?
+              AND outlet_id IN (
+                  SELECT id FROM outlets
+                  WHERE department_id <=> ?
+                    AND revenue_center_id <=> ?
+              )
+        ");
+        $sumStmt->execute([
+            $businessDate,
+            $departmentId,
+            $revenueCenterId
+        ]);
+        $totals = $sumStmt->fetch(PDO::FETCH_ASSOC);
+
+        $upsert = $db->prepare("
+            INSERT INTO daily_revenue_summary
+            (business_date, department_id, revenue_center_id, source_system, total_transactions,
+             gross_revenue, discounts, service_charge, taxes, net_revenue)
+            VALUES (?, ?, ?, 'CORE1_HOTEL', ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                total_transactions = VALUES(total_transactions),
+                gross_revenue = VALUES(gross_revenue),
+                discounts = VALUES(discounts),
+                service_charge = VALUES(service_charge),
+                taxes = VALUES(taxes),
+                net_revenue = VALUES(net_revenue),
+                updated_at = NOW()
+        ");
+
+        $upsert->execute([
+            $businessDate,
+            $departmentId,
+            $revenueCenterId,
+            $totals['total_transactions'],
+            $totals['gross_revenue'],
+            $totals['discounts'],
+            $totals['service_charge'],
+            $totals['taxes'],
+            $totals['net_revenue']
+        ]);
     }
 }
 
