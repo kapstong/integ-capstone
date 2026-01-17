@@ -1095,16 +1095,14 @@ class HR4Integration extends BaseIntegration {
         ];
 
         try {
-            $ch = curl_init($config['api_url']);
+            $url = $config['api_url'];
+            $query = http_build_query($payload);
+            $separator = strpos($url, '?') === false ? '?' : '&';
+            $ch = curl_init($url . $separator . $query);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 15);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Content-Type: application/x-www-form-urlencoded'
-            ]);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($payload));
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
