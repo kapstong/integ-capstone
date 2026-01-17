@@ -1024,7 +1024,15 @@ class HR4Integration extends BaseIntegration {
 
                 throw new Exception('HR4 API response is not in expected format');
             } else {
-                throw new Exception('HR4 API returned HTTP status code: ' . $httpCode);
+                $errorMessage = 'HR4 API returned HTTP status code: ' . $httpCode;
+                $decoded = json_decode($response, true);
+                if (is_array($decoded)) {
+                    $apiMessage = $decoded['message'] ?? $decoded['error'] ?? '';
+                    if ($apiMessage !== '') {
+                        $errorMessage = 'HR4 API error: ' . $apiMessage . ' (HTTP ' . $httpCode . ')';
+                    }
+                }
+                throw new Exception($errorMessage);
             }
         } catch (Exception $e) {
             Logger::getInstance()->error('HR4 getPayrollData failed: ' . $e->getMessage());
