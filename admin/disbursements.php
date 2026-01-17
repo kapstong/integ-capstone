@@ -1465,7 +1465,8 @@ body {
                 const totalAmount = parseFloat(payroll.total_amount || payroll.net_pay || 0);
                 const submittedAt = payroll.submitted_at ? new Date(payroll.submitted_at).toLocaleString() : 'N/A';
                 const statusText = payroll.display_status || payroll.status || 'Unknown';
-                const canApprove = payroll.can_approve || ['processed', 'success'].includes(String(statusText).toLowerCase());
+                const statusKey = String(statusText).toLowerCase();
+                const canApprove = Boolean(payroll.can_approve) || ['processed', 'success', 'pending', 'pending approval', 'for approval'].includes(statusKey);
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
