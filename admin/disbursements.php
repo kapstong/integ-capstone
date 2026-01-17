@@ -631,7 +631,7 @@ body {
             <!-- Payroll Processing Tab -->
             <div class="tab-pane fade" id="payroll" role="tabpanel" aria-labelledby="payroll-tab">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">HR4 Payroll Processing - From HR4 API</h6>
+                    <h6 class="mb-0">Payroll Processing</h6>
                     <div>
                         <button class="btn btn-success" onclick="loadPayroll(this)">
                             <i class="fas fa-sync me-2"></i>Load Payroll
@@ -1117,7 +1117,7 @@ body {
             const normalizedClaims = normalizeClaimsPayload(claims);
 
             if (!normalizedClaims || normalizedClaims.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No approved claims found in HR3 system</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No claims yet</td></tr>';
                 return;
             }
 
