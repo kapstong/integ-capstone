@@ -874,39 +874,9 @@ body {
             <a class="nav-link" href="reports.php">
                 <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
             </a>
-            <a class="nav-link" href="customer_handler.php">
-                <i class="fas fa-users me-2"></i><span>Customer Management</span>
-            </a>
-            <a class="nav-link" href="audit.php">
-                <i class="fas fa-history me-2"></i><span>Audit Trail</span>
-            </a>
-            <a class="nav-link" href="search.php">
-                <i class="fas fa-search me-2"></i><span>Search</span>
-            </a>
             <hr style="border-top: 1px solid rgba(255,255,255,0.2); margin: 12px 16px;">
             <a class="nav-link" href="financials/departments.php">
                 <i class="fas fa-building me-2"></i><span>Departments</span>
-            </a>
-            <a class="nav-link" href="financials/outlets.php">
-                <i class="fas fa-store me-2"></i><span>Outlets</span>
-            </a>
-            <a class="nav-link" href="financials/daily_revenue.php">
-                <i class="fas fa-receipt me-2"></i><span>Daily Revenue</span>
-            </a>
-            <a class="nav-link" href="financials/cashier.php">
-                <i class="fas fa-cash-register me-2"></i><span>Cashier/Collection</span>
-            </a>
-            <a class="nav-link" href="financials/financial_reports.php">
-                <i class="fas fa-file-invoice-dollar me-2"></i><span>Financial Reports</span>
-            </a>
-            <a class="nav-link" href="financials/integration_management.php">
-                <i class="fas fa-exchange-alt me-2"></i><span>Integrations</span>
-            </a>
-            <a class="nav-link" href="financials/financial_setup.php">
-                <i class="fas fa-cogs me-2"></i><span>Financial Setup</span>
-            </a>
-            <a class="nav-link" href="integrations.php">
-                <i class="fas fa-plug me-2"></i><span>API Integrations</span>
             </a>
         </nav>
     </div>
@@ -1517,7 +1487,7 @@ body {
                                             <i class="fas fa-building fa-3x text-success mb-3"></i>
                                             <h6>Financial Setup</h6>
                                             <p class="text-muted small">Create default departments and outlets</p>
-                                            <button class="btn btn-success btn-sm" onclick="openFinancialSetup()">Open Setup</button>
+                                            <span class="text-muted small">Not available</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1537,7 +1507,7 @@ body {
                                             <i class="fas fa-receipt fa-3x text-warning mb-3"></i>
                                             <h6>Daily Revenue Entry</h6>
                                             <p class="text-muted small">Post daily outlet sales and room revenue</p>
-                                            <button class="btn btn-warning btn-sm" onclick="openDailyRevenue()">Open Daily Revenue</button>
+                                            <span class="text-muted small">Not available</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1547,7 +1517,7 @@ body {
                                             <i class="fas fa-cash-register fa-3x text-primary mb-3"></i>
                                             <h6>Cashier Shifts</h6>
                                             <p class="text-muted small">Open and close cashier shifts by outlet</p>
-                                            <button class="btn btn-primary btn-sm" onclick="openCashier()">Open Cashier</button>
+                                            <span class="text-muted small">Not available</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1555,7 +1525,6 @@ body {
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="button" class="btn btn-primary" onclick="runAllQuickSetup()">Open Setup Checklist</button>
                         </div>
                     </div>
                 </div>
@@ -1576,25 +1545,10 @@ body {
         }
 
 
-        function openFinancialSetup() {
-            window.location.href = 'financials/financial_setup.php';
-        }
-
         function generateAPIKeys() {
             window.location.href = 'api_clients.php';
         }
 
-        function openDailyRevenue() {
-            window.location.href = 'financials/daily_revenue.php';
-        }
-
-        function openCashier() {
-            window.location.href = 'financials/cashier.php';
-        }
-
-        function runAllQuickSetup() {
-            window.location.href = 'financials/financial_setup.php';
-        }
     </script>
 
     <!-- Privacy Mode - Hide amounts with asterisks + Eye button -->

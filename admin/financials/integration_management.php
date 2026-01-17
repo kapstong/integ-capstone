@@ -18,11 +18,6 @@ include '../legacy_header.php';
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4 flex-mobile-column">
                 <h2><i class="fas fa-exchange-alt"></i> Financial Integrations</h2>
-                <div class="action-buttons">
-                    <a class="btn btn-primary" href="../integrations.php">
-                        <i class="fas fa-sliders-h"></i> <span class="btn-text-mobile-hide">Open Integration Settings</span>
-                    </a>
-                </div>
             </div>
 
             <div id="alertContainer"></div>
