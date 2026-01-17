@@ -1059,7 +1059,15 @@ class HR4Integration extends BaseIntegration {
 
         foreach ($apiResponse['data'] as $entry) {
             $totalAmount = floatval($entry['total_amount'] ?? 0);
+            $rawStatus = $entry['status'] ?? '';
+            $normalizedStatus = strtolower(trim((string)$rawStatus));
             $displayStatus = $entry['display_status'] ?? '';
+            if ($normalizedStatus !== '' && in_array($normalizedStatus, ['approved', 'rejected'], true)) {
+                $displayStatus = ucfirst($normalizedStatus);
+            } elseif ($displayStatus === '' && $normalizedStatus !== '') {
+                $displayStatus = ucfirst($normalizedStatus);
+            }
+            $canApproveStatuses = ['processed', 'success', 'pending', 'pending approval', 'for approval'];
 
             $parsedData[] = [
                 'payroll_id' => $entry['id'] ?? null,
@@ -1071,11 +1079,12 @@ class HR4Integration extends BaseIntegration {
                 'submitted_at' => $entry['submitted_at'] ?? '',
                 'finance_approver' => $entry['finance_approver'] ?? '',
                 'approved_at' => $entry['approved_at'] ?? '',
-                'status' => $entry['status'] ?? '',
+                'status' => $rawStatus,
                 'display_status' => $displayStatus,
                 'notes' => $entry['notes'] ?? '',
                 'rejection_reason' => $entry['rejection_reason'] ?? '',
-                'can_approve' => in_array(strtolower($displayStatus), ['processed', 'success'], true),
+                'can_approve' => in_array($normalizedStatus, $canApproveStatuses, true)
+                    || in_array(strtolower((string)$displayStatus), $canApproveStatuses, true),
                 'employee_name' => 'Payroll Batch',
                 'department' => 'HR4 Payroll',
                 'position' => 'Batch',
@@ -1101,10 +1110,13 @@ class HR4Integration extends BaseIntegration {
             return ['success' => false, 'error' => 'Invalid payroll approval request'];
         }
 
+        $statusValue = $action === 'approve' ? 'approved' : 'rejected';
         $payload = [
             'action' => $action,
+            'approval_action' => $action,
             'id' => $payrollId,
-            'status' => $action,
+            'payroll_id' => $payrollId,
+            'status' => $statusValue,
             'notes' => $params['notes'] ?? '',
             'rejection_reason' => $params['rejection_reason'] ?? ''
         ];
