@@ -64,7 +64,7 @@ $popularSearches = $searchEngine->getPopularSearches(10);
 $searchAnalytics = $searchEngine->getSearchAnalytics();
 
 $pageTitle = 'Advanced Search';
-include 'header.php';
+include 'legacy_header.php';
 ?>
 
 <div class="container-fluid">
@@ -537,4 +537,4 @@ document.addEventListener('DOMContentLoaded', function() {
 <?php endif; ?>
 </script>
 
-<?php include 'footer.php'; ?>
+<?php include 'legacy_footer.php'; ?>

@@ -12,7 +12,7 @@ $db = Database::getInstance();
 $user = $_SESSION['user'];
 
 $pageTitle = 'Currency Management';
-include 'header.php';
+include 'legacy_header.php';
 ?>
 
 <div class="container-fluid">
@@ -339,4 +339,4 @@ function showToast(message, type = 'info') {
 }
 </style>
 
-<?php include 'footer.php'; ?>
+<?php include 'legacy_footer.php'; ?>

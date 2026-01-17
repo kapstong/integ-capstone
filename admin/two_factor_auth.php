@@ -121,7 +121,7 @@ try {
 }
 
 $pageTitle = 'Two-Factor Authentication';
-include 'header.php';
+include 'legacy_header.php';
 ?>
 
 <div class="container-fluid">
@@ -484,4 +484,4 @@ setInterval(() => {
 }, 300000);
 </script>
 
-<?php include 'footer.php'; ?>
+<?php include 'legacy_footer.php'; ?>

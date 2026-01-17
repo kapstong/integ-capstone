@@ -385,6 +385,15 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
             <a class="nav-link <?php echo ($currentPage === 'reports.php') ? 'active' : ''; ?>" href="/admin/reports.php">
                 <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
             </a>
+            <a class="nav-link <?php echo ($currentPage === 'customer_handler.php') ? 'active' : ''; ?>" href="/admin/customer_handler.php">
+                <i class="fas fa-users me-2"></i><span>Customer Management</span>
+            </a>
+            <a class="nav-link <?php echo ($currentPage === 'audit.php') ? 'active' : ''; ?>" href="/admin/audit.php">
+                <i class="fas fa-history me-2"></i><span>Audit Trail</span>
+            </a>
+            <a class="nav-link <?php echo ($currentPage === 'search.php') ? 'active' : ''; ?>" href="/admin/search.php">
+                <i class="fas fa-search me-2"></i><span>Search</span>
+            </a>
             <hr class="my-3">
             <a class="nav-link <?php echo ($currentPage === 'departments.php') ? 'active' : ''; ?>" href="/admin/financials/departments.php">
                 <i class="fas fa-building me-2"></i><span>Departments</span>
@@ -406,6 +415,9 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
             </a>
             <a class="nav-link <?php echo ($currentPage === 'financial_setup.php') ? 'active' : ''; ?>" href="/admin/financials/financial_setup.php">
                 <i class="fas fa-cogs me-2"></i><span>Financial Setup</span>
+            </a>
+            <a class="nav-link <?php echo ($currentPage === 'integrations.php') ? 'active' : ''; ?>" href="/admin/integrations.php">
+                <i class="fas fa-plug me-2"></i><span>API Integrations</span>
             </a>
         </nav>
     </div>

@@ -167,7 +167,7 @@ $permissions = $permManager->getAllPermissions();
 $users = $auth->getAllUsers();
 
 $pageTitle = 'Roles & Permissions Management';
-include 'header.php';
+include 'legacy_header.php';
 ?>
 
 <div class="container-fluid">
@@ -491,4 +491,4 @@ function assignRoleToUser(userId) {
 }
 </script>
 
-<?php include 'footer.php'; ?>
+<?php include 'legacy_footer.php'; ?>

@@ -67,29 +67,29 @@ foreach ($integrations as $name => $integration) {
 $stats = $integrationManager->getIntegrationStats();
 
 $pageTitle = 'API Integrations';
-include 'header.php';
+include 'legacy_header.php';
 ?>
 
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
-            <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-3">
-                <div>
-                    <h2><i class="fas fa-plug"></i> API Integrations</h2>
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="index.php">Dashboard</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Integrations</li>
-                        </ol>
-                    </nav>
-                </div>
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-info" onclick="showIntegrationStats()">
-                        <i class="fas fa-chart-bar"></i> Statistics
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="showIntegrationLogs()">
-                        <i class="fas fa-history"></i> Activity Logs
-                    </button>
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="index.php">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">API Integrations</li>
+                </ol>
+            </nav>
+            <div class="card mb-4">
+                <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <h2 class="mb-0"><i class="fas fa-plug me-2"></i>API Integrations</h2>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-info" onclick="showIntegrationStats()">
+                            <i class="fas fa-chart-bar"></i> Statistics
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="showIntegrationLogs()">
+                            <i class="fas fa-history"></i> Activity Logs
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -461,7 +461,7 @@ function showIntegrationLogs() {
   }, 30000);
 </script>
 
-<?php include 'footer.php'; ?>
+<?php include 'legacy_footer.php'; ?>
 
 <?php
 function getIntegrationIcon($name) {

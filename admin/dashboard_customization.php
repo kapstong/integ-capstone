@@ -97,7 +97,7 @@ try {
 }
 
 $pageTitle = 'Dashboard Customization';
-include 'header.php';
+include 'legacy_header.php';
 ?>
 
 <div class="container-fluid">
@@ -533,4 +533,4 @@ function showWidgetLibrary() {
 }
 </style>
 
-<?php include 'footer.php'; ?>
+<?php include 'legacy_footer.php'; ?>

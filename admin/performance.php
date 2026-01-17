@@ -81,7 +81,7 @@ $lastQueryAnalysis = $_SESSION['last_query_analysis'] ?? null;
 unset($_SESSION['last_query_analysis']); // Clear after display
 
 $pageTitle = 'Performance Monitoring';
-include 'header.php';
+include 'legacy_header.php';
 ?>
 
 <div class="container-fluid">
@@ -502,4 +502,4 @@ setInterval(function() {
 }, 30000);
 </script>
 
-<?php include 'footer.php'; ?>
+<?php include 'legacy_footer.php'; ?>

@@ -874,6 +874,15 @@ body {
             <a class="nav-link" href="reports.php">
                 <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
             </a>
+            <a class="nav-link" href="customer_handler.php">
+                <i class="fas fa-users me-2"></i><span>Customer Management</span>
+            </a>
+            <a class="nav-link" href="audit.php">
+                <i class="fas fa-history me-2"></i><span>Audit Trail</span>
+            </a>
+            <a class="nav-link" href="search.php">
+                <i class="fas fa-search me-2"></i><span>Search</span>
+            </a>
             <hr style="border-top: 1px solid rgba(255,255,255,0.2); margin: 12px 16px;">
             <a class="nav-link" href="financials/departments.php">
                 <i class="fas fa-building me-2"></i><span>Departments</span>
@@ -895,6 +904,9 @@ body {
             </a>
             <a class="nav-link" href="financials/financial_setup.php">
                 <i class="fas fa-cogs me-2"></i><span>Financial Setup</span>
+            </a>
+            <a class="nav-link" href="integrations.php">
+                <i class="fas fa-plug me-2"></i><span>API Integrations</span>
             </a>
         </nav>
     </div>

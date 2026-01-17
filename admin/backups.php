@@ -183,7 +183,7 @@ try {
 }
 
 $pageTitle = 'Backup & Recovery';
-include 'header.php';
+include 'legacy_header.php';
 ?>
 
 <div class="container-fluid">
@@ -601,4 +601,4 @@ function formatFrequency(minutes) {
 }
 </script>
 
-<?php include 'footer.php'; ?>
+<?php include 'legacy_footer.php'; ?>

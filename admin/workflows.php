@@ -172,7 +172,7 @@ $triggerDescriptions = [
 ];
 
 $pageTitle = 'Workflow Automation';
-include 'header.php';
+include 'legacy_header.php';
 ?>
 
 <div class="container-fluid">
@@ -629,4 +629,4 @@ document.getElementById('workflowTrigger').addEventListener('change', function()
 });
 </script>
 
-<?php include 'footer.php'; ?>
+<?php include 'legacy_footer.php'; ?>

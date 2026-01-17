@@ -144,7 +144,7 @@ $translationStats = $i18n->getTranslationStats();
 $allTranslations = $i18n->getAllTranslations();
 
 $pageTitle = 'Translation Management';
-include 'header.php';
+include 'legacy_header.php';
 ?>
 
 <div class="container-fluid">
@@ -434,4 +434,4 @@ document.getElementById('addTranslationModal').addEventListener('hidden.bs.modal
 });
 </script>
 
-<?php include 'footer.php'; ?>
+<?php include 'legacy_footer.php'; ?>
