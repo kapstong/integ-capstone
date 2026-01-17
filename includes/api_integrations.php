@@ -1358,6 +1358,8 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
         try {
             $payments = $this->fetchPayments($config);
             $importedCount = 0;
+            $paymentsInserted = 0;
+            $transactionsInserted = 0;
             $errors = [];
             $database = Database::getInstance();
             $db = $database->getConnection();
@@ -1420,6 +1422,7 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
                         $amount,
                         json_encode($payment)
                     ]);
+                    $transactionsInserted++;
 
                     $paymentNumber = $this->insertPaymentReceived($database, $db, [
                         'customer_id' => $defaultCustomerId,
@@ -1429,6 +1432,7 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
                         'reference_number' => $reference,
                         'notes' => $description
                     ]);
+                    $paymentsInserted++;
 
                     if ($outlet) {
                         $this->upsertOutletDailySales($db, $outlet['id'], $transactionDate, $amount, $paymentNumber);
@@ -1444,6 +1448,10 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
             return [
                 'success' => count($errors) === 0,
                 'imported_count' => $importedCount,
+                'payments_inserted' => $paymentsInserted,
+                'transactions_inserted' => $transactionsInserted,
+                'db_name' => Config::get('database.name'),
+                'db_host' => Config::get('database.host'),
                 'errors' => $errors,
                 'message' => "Imported {$importedCount} Core 1 hotel payments" . (count($errors) > 0 ? " with " . count($errors) . " errors" : "")
             ];

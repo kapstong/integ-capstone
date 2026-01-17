@@ -125,6 +125,15 @@ try {
                     $params = isset($_POST['params']) ? json_decode($_POST['params'], true) : [];
 
                     $result = $integrationManager->executeIntegrationAction($integrationName, $actionName, $params);
+                    if (is_array($result) && isset($result['success']) && $result['success'] === false) {
+                        echo json_encode([
+                            'success' => false,
+                            'error' => $result['error'] ?? $result['message'] ?? 'Integration action failed',
+                            'result' => $result
+                        ]);
+                        exit;
+                    }
+
                     echo json_encode(['success' => true, 'result' => $result]);
                     break;
 
