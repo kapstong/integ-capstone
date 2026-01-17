@@ -1522,6 +1522,9 @@ body {
                         action: 'execute',
                         integration_name: 'hr4',
                         action_name: 'updatePayrollStatus',
+                        id: payrollId,
+                        action: action,
+                        rejection_reason: rejectionReason,
                         params: JSON.stringify({
                             id: payrollId,
                             action: action,
