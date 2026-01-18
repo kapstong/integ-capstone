@@ -65,26 +65,6 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
             <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
         </a>
 
-        <!-- Financials Section (if user has permissions) -->
-        <?php if ($showFinancialsNav): ?>
-        <hr class="my-3">
-        <?php if ($canFinancialSetup): ?>
-        <a class="nav-link <?php echo ($currentPage === 'financial_setup.php') ? 'active' : ''; ?>" href="financials/financial_setup.php">
-            <i class="fas fa-cogs me-2"></i><span>Financial Setup</span>
-        </a>
-        <?php endif; ?>
-        <?php if ($canDepartmentView): ?>
-        <a class="nav-link <?php echo ($currentPage === 'outlets.php') ? 'active' : ''; ?>" href="financials/outlets.php">
-            <i class="fas fa-store me-2"></i><span>Outlets</span>
-        </a>
-        <?php endif; ?>
-        <?php if ($canCashier): ?>
-        <a class="nav-link <?php echo ($currentPage === 'cashier.php') ? 'active' : ''; ?>" href="financials/cashier.php">
-            <i class="fas fa-cash-register me-2"></i><span>Cashier Shifts</span>
-        </a>
-        <?php endif; ?>
-        <?php endif; ?>
-
         <!-- Admin & Security -->
         <hr class="my-3">
 
