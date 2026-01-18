@@ -142,8 +142,6 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
     <i class="fas fa-chevron-right" id="sidebarArrow"></i>
 </div>
 
-<!-- Main Content Wrapper -->
-<div class="content">
     <script>
     function toggleSidebar() {
         document.getElementById('sidebar').classList.toggle('show');
@@ -160,13 +158,13 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
         localStorage.setItem('sidebarCollapsed', isCollapsed);
         if (isCollapsed) {
             logoImg.src = 'atieralogo2.png';
-            content.style.marginLeft = '120px';
+            if (content) content.style.marginLeft = '120px';
             arrow.classList.remove('fa-chevron-left');
             arrow.classList.add('fa-chevron-right');
             toggle.style.left = '110px';
         } else {
             logoImg.src = 'atieralogo.png';
-            content.style.marginLeft = '300px';
+            if (content) content.style.marginLeft = '300px';
             arrow.classList.remove('fa-chevron-right');
             arrow.classList.add('fa-chevron-left');
             toggle.style.left = '290px';
@@ -184,266 +182,17 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
         if (isCollapsed) {
             sidebar.classList.add('sidebar-collapsed');
             logoImg.src = 'atieralogo2.png';
-            content.style.marginLeft = '120px';
+            if (content) content.style.marginLeft = '120px';
             arrow.classList.remove('fa-chevron-left');
             arrow.classList.add('fa-chevron-right');
             toggle.style.left = '110px';
         } else {
             sidebar.classList.remove('sidebar-collapsed');
             logoImg.src = 'atieralogo.png';
-            content.style.marginLeft = '300px';
+            if (content) content.style.marginLeft = '300px';
             arrow.classList.remove('fa-chevron-right');
             arrow.classList.add('fa-chevron-left');
             toggle.style.left = '290px';
         }
     });
     </script>
-
-<style>
-body {
-    background-color: #F1F7EE;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
-    padding: 0;
-}
-.sidebar {
-    height: 100vh;
-    max-height: 100vh;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 2rem;
-    background-color: #1e2936;
-    color: white;
-    min-height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 300px;
-    z-index: 1000;
-    transition: transform 0.3s ease, width 0.3s ease;
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-}
-.sidebar.sidebar-collapsed {
-    width: 120px;
-}
-.sidebar.sidebar-collapsed span {
-    display: none;
-}
-.sidebar.sidebar-collapsed .nav-link {
-    padding: 10px;
-    text-align: center;
-}
-.sidebar.sidebar-collapsed .navbar-brand {
-    text-align: center;
-}
-.sidebar.sidebar-collapsed .nav-item i[data-bs-toggle="collapse"] {
-    display: none;
-}
-.sidebar.sidebar-collapsed .submenu {
-    display: none;
-}
-.sidebar .nav-link {
-    color: white;
-    padding: 10px 20px;
-    border-radius: 5px;
-    margin-bottom: 10px;
-    font-size: 1.1em;
-}
-.sidebar .nav-link i {
-    font-size: 1.4em;
-}
-.sidebar .nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: white;
-}
-.sidebar .nav-link.active {
-    background-color: rgba(255, 255, 255, 0.2);
-}
-.sidebar .submenu {
-    padding-left: 20px;
-}
-.sidebar .submenu .nav-link {
-    padding: 5px 20px;
-    font-size: 0.9em;
-}
-.sidebar .nav-item {
-    position: relative;
-}
-.sidebar .nav-item i[data-bs-toggle="collapse"] {
-    position: absolute;
-    right: 20px;
-    top: 10px;
-    transition: transform 0.3s ease;
-}
-.sidebar .nav-item i[aria-expanded="true"] {
-    transform: rotate(90deg);
-}
-.sidebar .nav-item i[aria-expanded="false"] {
-    transform: rotate(0deg);
-}
-.content {
-    margin-left: 120px;
-    padding: 20px;
-    transition: margin-left 0.3s ease;
-    position: relative;
-    z-index: 1;
-}
-.sidebar .navbar-brand {
-    color: white !important;
-    font-weight: bold;
-}
-.sidebar .navbar-brand img {
-    height: 50px;
-    width: auto;
-    max-width: 100%;
-    transition: height 0.3s ease;
-}
-.sidebar.sidebar-collapsed .navbar-brand img {
-    height: 80px;
-}
-.sidebar-toggle {
-    position: fixed;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    color: white;
-    font-size: 1.5em;
-    width: 40px;
-    height: 40px;
-    background-color: #1e2936;
-    border: 2px solid white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: left 0.3s ease, background-color 0.3s ease;
-    z-index: 1001;
-}
-.sidebar-toggle:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-.toggle-btn {
-    display: none;
-}
-.navbar .dropdown-toggle {
-    text-decoration: none !important;
-}
-.navbar .dropdown-toggle:focus {
-    box-shadow: none;
-}
-.navbar .btn-link {
-    text-decoration: none !important;
-}
-.navbar .btn-link:focus {
-    box-shadow: none;
-}
-.navbar {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e3e6ea;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-    backdrop-filter: blur(10px);
-    position: relative;
-    z-index: 10000;
-}
-.navbar-brand {
-    font-weight: 700;
-    color: #2c3e50 !important;
-    font-size: 1.4rem;
-    letter-spacing: -0.02em;
-}
-.navbar .dropdown-toggle {
-    border-radius: 8px;
-    padding: 0.5rem 0.75rem;
-    transition: all 0.2s ease;
-}
-.navbar .dropdown-toggle:hover {
-    background-color: rgba(0,0,0,0.05);
-}
-.navbar .dropdown-toggle span {
-    font-weight: 600;
-    font-size: 1.1rem;
-    color: #495057;
-}
-.navbar .btn-link {
-    font-size: 1.1rem;
-    border-radius: 8px;
-    padding: 0.5rem;
-    transition: all 0.2s ease;
-    color: #6c757d;
-}
-.navbar .btn-link:hover {
-    background-color: rgba(0,0,0,0.05);
-    color: #495057;
-}
-.navbar .input-group {
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    border: 1px solid #e9ecef;
-    transition: all 0.2s ease;
-}
-.navbar .input-group:focus-within {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-    border-color: #007bff;
-}
-.navbar .form-control {
-    border: none;
-    padding: 0.75rem 1rem;
-    font-size: 1rem;
-    background-color: #ffffff;
-}
-.navbar .form-control:focus {
-    box-shadow: none;
-    border-color: transparent;
-    background-color: #ffffff;
-}
-.navbar .btn-outline-secondary {
-    border: none;
-    background-color: #f8f9fa;
-    color: #6c757d;
-    border-left: 1px solid #e9ecef;
-    padding: 0.75rem 1rem;
-}
-.navbar .btn-outline-secondary:hover {
-    background-color: #e9ecef;
-    color: #495057;
-}
-.navbar .dropdown-menu {
-    z-index: 9999;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-    border: none;
-    border-radius: 8px;
-    margin-top: 0.5rem;
-}
-.navbar .dropdown-item {
-    padding: 0.75rem 1rem;
-    transition: all 0.2s ease;
-}
-.navbar .dropdown-item:hover {
-    background-color: #f8f9fa;
-    color: #495057;
-}
-.hover-link:hover {
-    color: #007bff !important;
-    transition: color 0.2s ease;
-}
-@media (max-width: 768px) {
-    .sidebar {
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-    }
-    .sidebar.show {
-        transform: translateX(0);
-    }
-    .content {
-        margin-left: 0;
-        padding: 20px;
-    }
-    .toggle-btn {
-        display: block;
-    }
-}
-</style>

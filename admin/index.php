@@ -842,6 +842,7 @@ body {
 <body>
     <?php include '../includes/admin_navigation.php'; ?>
 
+    <div class="content">
         <!-- Welcome Section -->
         <div class="row mb-4">
             <div class="col-12">
@@ -1197,6 +1198,8 @@ body {
                     </div>
                 </div>
             </div>
+        </div>
+
         </div>
 
     </div>

@@ -629,6 +629,7 @@ try {
 <body>
     <?php include '../includes/admin_navigation.php'; ?>
 
+    <div class="content">
         <!-- Overview Cards -->
         <div class="row mb-4">
             <div class="col-md-3">

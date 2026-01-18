@@ -1099,6 +1099,8 @@ try {
                 </div>
             </div>
         </div>
+        </div>
+
     </div>
 
     <!-- Footer -->
