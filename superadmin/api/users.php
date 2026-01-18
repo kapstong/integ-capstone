@@ -250,14 +250,25 @@ function handlePost($db, $auth, $currentUser) {
                 }
 
                 // Update user permissions if provided
-                if (!empty($permissions)) {
-                    // Remove existing role assignments
-                    $stmt = $db->prepare("DELETE FROM user_roles WHERE user_id = ?");
-                    $stmt->execute([$userId]);
+                if (isset($permissions)) {
+                    // Convert permission names to IDs
+                    $permissionIds = [];
+                    if (!empty($permissions)) {
+                        foreach ($permissions as $permName) {
+                            $stmt = $db->prepare("SELECT id FROM permissions WHERE name = ?");
+                            $stmt->execute([$permName]);
+                            $perm = $stmt->fetch();
+                            if ($perm) {
+                                $permissionIds[] = $perm['id'];
+                            }
+                        }
+                    }
 
-                    // Assign new roles based on permissions
-                    // For simplicity, we'll assign the role directly and let permissions be managed through roles
-                    // In a more complex system, you might want to create custom permission assignments
+                    $permManager = PermissionManager::getInstance();
+                    $result = $permManager->setUserPermissions($userId, $permissionIds);
+                    if (!$result['success']) {
+                        throw new Exception('Failed to update permissions: ' . $result['error']);
+                    }
                 }
 
                 $db->commit();

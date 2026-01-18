@@ -1121,128 +1121,60 @@ $departments = [
         </div>
     </div>
 
-    <!-- Create Role Modal -->
-    <div class="modal fade" id="createRoleModal" tabindex="-1">
-        <div class="modal-dialog">
+    <!-- Create User Modal -->
+    <div class="modal fade" id="createUserModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Create New Role</h5>
+                    <h5 class="modal-title">Create New User</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="POST">
+                <form id="createUserForm">
                     <div class="modal-body">
-                        <input type="hidden" name="action" value="create_role">
-                        <div class="mb-3">
-                            <label for="role_name" class="form-label">Role Name *</label>
-                            <input type="text" class="form-control" id="role_name" name="role_name" required>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="create_username" class="form-label">Username *</label>
+                                    <input type="text" class="form-control" id="create_username" name="username" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="create_full_name" class="form-label">Full Name *</label>
+                                    <input type="text" class="form-control" id="create_full_name" name="full_name" required>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Description</label>
-                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="create_email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="create_email" name="email">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="create_password" class="form-label">Password *</label>
+                                    <input type="password" class="form-control" id="create_password" name="password" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="create_role" class="form-label">Role *</label>
+                                    <select class="form-select" id="create_role" name="role" required>
+                                        <option value="staff">Staff</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="super_admin">Super Admin</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Create Role</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Assign Role Modal -->
-    <div class="modal fade" id="assignRoleModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Assign Role to User</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form method="POST">
-                    <div class="modal-body">
-                        <input type="hidden" name="action" value="assign_role">
-                        <div class="mb-3">
-                            <label for="assign_user_id" class="form-label">User *</label>
-                            <select class="form-control" id="assign_user_id" name="user_id" required>
-                                <option value="">Select User</option>
-                                <?php foreach ($users as $userData): ?>
-                                <option value="<?php echo $userData['id']; ?>">
-                                    <?php echo htmlspecialchars($userData['username'] . ' - ' . $userData['full_name']); ?>
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="assign_role_id" class="form-label">Role *</label>
-                            <select class="form-control" id="assign_role_id" name="role_id" required>
-                                <option value="">Select Role</option>
-                                <?php foreach ($roles as $role): ?>
-                                <option value="<?php echo $role['id']; ?>">
-                                    <?php echo htmlspecialchars($role['name']); ?>
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Assign Role</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Assign Permission Modal -->
-    <div class="modal fade" id="assignPermissionModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Assign Permission to Role</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form method="POST">
-                    <div class="modal-body">
-                        <input type="hidden" name="action" value="assign_permission">
-                        <input type="hidden" name="role_id" id="permission_role_id">
-                        <div class="mb-3">
-                            <label for="permission_id" class="form-label">Permission *</label>
-                            <select class="form-control" id="permission_id" name="permission_id" required>
-                                <option value="">Select Permission</option>
-                                <?php foreach ($permissions as $permission): ?>
-                                <option value="<?php echo $permission['id']; ?>">
-                                    <?php echo htmlspecialchars($permission['name'] . ' - ' . $permission['description']); ?>
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Assign Permission</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Initialize Defaults Modal -->
-    <div class="modal fade" id="initializeModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Initialize Default Roles & Permissions</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form method="POST">
-                    <div class="modal-body">
-                        <input type="hidden" name="action" value="initialize_defaults">
-                        <p>This will create default roles (super_admin, admin, staff) and assign appropriate permissions to each role.</p>
-                        <p class="text-warning"><strong>Warning:</strong> This action cannot be undone. Existing roles and permissions may be affected.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-warning">Initialize Defaults</button>
+                        <button type="submit" class="btn btn-primary">Create User</button>
                     </div>
                 </form>
             </div>
@@ -1531,6 +1463,44 @@ $departments = [
                     container.innerHTML = '<div class="text-danger">Error: ' + error.message + '</div>';
                 });
         }
+
+        // Handle create user form submission
+        document.getElementById('createUserForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const userData = {
+                action: 'create_user',
+                username: formData.get('username'),
+                full_name: formData.get('full_name'),
+                email: formData.get('email'),
+                password: formData.get('password'),
+                role: formData.get('role')
+            };
+
+            fetch('api/users.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showUsersAlert('User created successfully', 'success');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('createUserModal'));
+                    modal.hide();
+                    this.reset();
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showUsersAlert(data.error || 'Failed to create user', 'danger');
+                }
+            })
+            .catch(error => {
+                showUsersAlert('Error: ' + error.message, 'danger');
+            });
+        });
 
         // Handle edit user form submission
         document.getElementById('editUserForm').addEventListener('submit', function(e) {
