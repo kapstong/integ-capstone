@@ -90,12 +90,6 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
 
         <!-- Admin & Security -->
         <hr class="my-3">
-        <a class="nav-link <?php echo ($currentPage === 'audit.php') ? 'active' : ''; ?>" href="audit.php">
-            <i class="fas fa-history me-2"></i><span>Audit Trail</span>
-        </a>
-        <a class="nav-link <?php echo ($currentPage === 'two_factor_auth.php') ? 'active' : ''; ?>" href="two_factor_auth.php">
-            <i class="fas fa-shield-alt me-2"></i><span>2FA Management</span>
-        </a>
         <a class="nav-link <?php echo ($currentPage === 'roles.php') ? 'active' : ''; ?>" href="roles.php">
             <i class="fas fa-user-shield me-2"></i><span>Roles & Permissions</span>
         </a>
