@@ -1555,7 +1555,7 @@ try {
             };
 
             const method = isEditMode ? 'PUT' : 'POST';
-            const apiUrl = isEditMode ? `api/vendors.php?id=${vendorId}` : 'api/vendors.php';
+            const apiUrl = isEditMode ? `admin/api/vendors.php?id=${vendorId}` : 'admin/api/vendors.php';
 
             try {
                 const response = await fetch(apiUrl, {
@@ -1638,7 +1638,7 @@ try {
             }
 
             const method = isEditMode ? 'PUT' : 'POST';
-            const apiUrl = isEditMode ? `api/bills.php?id=${editBillId}` : 'api/bills.php';
+            const apiUrl = isEditMode ? `admin/api/bills.php?id=${editBillId}` : 'admin/api/bills.php';
 
             try {
                 const response = await fetch(apiUrl, {
@@ -1705,7 +1705,7 @@ try {
             paymentData.reference_number = referenceNumber;
 
             try {
-                const response = await fetch('api/payments.php', {
+                const response = await fetch('admin/api/payments.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1769,7 +1769,7 @@ try {
                     bill_id: null
                 };
 
-                const response = await fetch('api/payments.php', {
+                const response = await fetch('admin/api/payments.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1860,7 +1860,7 @@ try {
         // Load vendors
         async function loadVendors() {
             try {
-                const response = await fetch('admin/api/vendors.php');
+                const response = await fetch('api/vendors.php');
                 const data = await response.json();
 
                 if (data.error) {
@@ -2196,7 +2196,7 @@ try {
         // Edit vendor
         async function editVendor(vendorId) {
             try {
-                const response = await fetch(`api/vendors.php?id=${vendorId}`);
+                const response = await fetch(`admin/api/vendors.php?id=${vendorId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2252,7 +2252,7 @@ try {
             }
 
             try {
-                const response = await fetch(`api/vendors.php?id=${vendorId}`, {
+                const response = await fetch(`admin/api/vendors.php?id=${vendorId}`, {
                     method: 'DELETE'
                 });
 
@@ -2272,7 +2272,7 @@ try {
 
         // Filter bills
         function filterBills() {
-            let apiUrl = 'api/bills.php';
+            let apiUrl = 'admin/api/bills.php';
             const params = [];
 
             // Get status filter
