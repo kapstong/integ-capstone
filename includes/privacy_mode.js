@@ -338,21 +338,7 @@
      * Get API path based on current location
      */
     function getApiPath(filename) {
-        const currentPath = window.location.pathname;
-        const parts = currentPath.split('/').filter(function(part) { return part; });
-        const adminIndex = parts.indexOf('admin');
-        let baseParts = [];
-
-        if (adminIndex !== -1) {
-            baseParts = parts.slice(0, adminIndex);
-        } else if (parts.length > 0 && parts[parts.length - 1].indexOf('.') !== -1) {
-            baseParts = parts.slice(0, -1);
-        } else {
-            baseParts = parts;
-        }
-
-        const basePath = '/' + (baseParts.length ? baseParts.join('/') + '/' : '');
-        return basePath + 'api/' + filename;
+        return '/api/' + filename;
     }
 
     /**
