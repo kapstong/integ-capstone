@@ -4,7 +4,15 @@
  * This file contains production-ready database configuration
  */
 
-
+// Set session configuration BEFORE any session is started
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.gc_maxlifetime', 7200);
+    ini_set('session.cookie_lifetime', 7200);
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.use_only_cookies', 1);
+    ini_set('session.cookie_secure', 1); // HTTPS only
+    ini_set('session.cookie_samesite', 'Lax');
+}
 
 // Production Database Configuration
 define('DB_HOST', 'localhost');
@@ -18,14 +26,6 @@ define('APP_ENV', 'production');
 define('APP_NAME', 'ATIERA Finance');
 define('APP_URL', 'https://financial.atierahotelandrestaurant.com');
 define('APP_KEY', 'prod-key-' . md5('atiera-production-key')); // Generate a proper key
-
-// Session configuration
-ini_set('session.gc_maxlifetime', 7200);
-ini_set('session.cookie_lifetime', 7200);
-ini_set('session.cookie_httponly', 1);
-ini_set('session.use_only_cookies', 1);
-ini_set('session.cookie_secure', 1); // HTTPS only
-ini_set('session.cookie_samesite', 'Lax');
 
 // Configuration class for production
 if (!class_exists('Config')) {
