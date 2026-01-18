@@ -18,9 +18,9 @@ error_reporting(0);
 header('Content-Type: application/json');
 
 try {
-    require_once '../config.php';
-    require_once '../includes/database.php';
-    require_once '../includes/mailer.php';
+    require_once '../../config.php';
+    require_once '../../includes/database.php';
+    require_once '../../includes/mailer.php';
 
     // Check if user is logged in
     if (!isset($_SESSION['user'])) {
