@@ -1555,7 +1555,7 @@ try {
             };
 
             const method = isEditMode ? 'PUT' : 'POST';
-            const apiUrl = isEditMode ? `admin/api/vendors.php?id=${vendorId}` : 'admin/api/vendors.php';
+            const apiUrl = isEditMode ? `api/vendors.php?id=${vendorId}` : 'api/vendors.php';
 
             try {
                 const response = await fetch(apiUrl, {
@@ -1638,7 +1638,7 @@ try {
             }
 
             const method = isEditMode ? 'PUT' : 'POST';
-            const apiUrl = isEditMode ? `admin/api/bills.php?id=${editBillId}` : 'admin/api/bills.php';
+            const apiUrl = isEditMode ? `api/bills.php?id=${editBillId}` : 'api/bills.php';
 
             try {
                 const response = await fetch(apiUrl, {
@@ -1705,7 +1705,7 @@ try {
             paymentData.reference_number = referenceNumber;
 
             try {
-                const response = await fetch('admin/api/payments.php', {
+                const response = await fetch('api/payments.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1769,7 +1769,7 @@ try {
                     bill_id: null
                 };
 
-                const response = await fetch('admin/api/payments.php', {
+                const response = await fetch('api/payments.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1815,7 +1815,7 @@ try {
                 description: description
             };
 
-            const apiUrl = isEditMode ? `admin/api/adjustments.php?id=${this.dataset.adjustmentId}` : 'admin/api/adjustments.php';
+            const apiUrl = isEditMode ? `api/adjustments.php?id=${this.dataset.adjustmentId}` : 'api/adjustments.php';
             const method = isEditMode ? 'PUT' : 'POST';
 
             try {
@@ -1860,7 +1860,7 @@ try {
         // Load vendors
         async function loadVendors() {
             try {
-                const response = await fetch('superadmin/api/vendors.php');
+                const response = await fetch('../superadmin/api/vendors.php');
                 const data = await response.json();
 
                 if (data.error) {
@@ -1913,7 +1913,7 @@ try {
         // Load bills
         async function loadBills() {
             try {
-                const response = await fetch('superadmin/api/bills.php');
+                const response = await fetch('../superadmin/api/bills.php');
                 const data = await response.json();
 
                 if (data.error) {
@@ -1996,7 +1996,7 @@ try {
         // Load payments made to vendors
         async function loadPayments() {
             try {
-                const response = await fetch('admin/api/payments.php?type=made');
+                const response = await fetch('api/payments.php?type=made');
                 const data = await response.json();
 
                 // Filter out collection entries (those with COLL- reference)
@@ -2050,7 +2050,7 @@ try {
         // Load collections from payments_made table
         async function loadCollections() {
             try {
-                const response = await fetch('admin/api/payments.php?type=made');
+                const response = await fetch('api/payments.php?type=made');
                 const data = await response.json();
 
                 // Filter only collection entries (those with COLL- reference or Collection notes)
@@ -2121,7 +2121,7 @@ try {
         // Load adjustments from adjustments API (payable type only)
         async function loadAdjustments() {
             try {
-                const response = await fetch('admin/api/adjustments.php?type=payable');
+                const response = await fetch('api/adjustments.php?type=payable');
                 const data = await response.json();
 
                 renderAdjustmentsTable(data);
