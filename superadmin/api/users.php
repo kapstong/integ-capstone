@@ -23,22 +23,29 @@ $isAdmin = ($user['role'] === 'admin');
 $method = $_SERVER['REQUEST_METHOD'];
 $user = $auth->getCurrentUser();
 
-switch ($method) {
-    case 'GET':
-        handleGet($db, $auth);
-        break;
-    case 'POST':
-        handlePost($db, $auth, $user);
-        break;
-    case 'PUT':
-        handlePut($db, $auth, $user);
-        break;
-    case 'DELETE':
-        handleDelete($db, $auth, $user);
-        break;
-    default:
-        http_response_code(405);
-        echo json_encode(['success' => false, 'error' => 'Method not allowed']);
+try {
+    switch ($method) {
+        case 'GET':
+            handleGet($db, $auth);
+            break;
+        case 'POST':
+            handlePost($db, $auth, $user);
+            break;
+        case 'PUT':
+            handlePut($db, $auth, $user);
+            break;
+        case 'DELETE':
+            handleDelete($db, $auth, $user);
+            break;
+        default:
+            http_response_code(405);
+            echo json_encode(['success' => false, 'error' => 'Method not allowed']);
+    }
+} catch (Exception $e) {
+    error_log('API Error: ' . $e->getMessage());
+    Logger::getInstance()->logDatabaseError('API Global Error', $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Internal server error']);
 }
 
 function handleGet($db, $auth) {
