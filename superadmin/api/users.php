@@ -15,6 +15,10 @@ if (!$auth->isLoggedIn()) {
     exit;
 }
 
+// Check if user has system admin access (superadmin)
+$user = $auth->getCurrentUser();
+$isSuperAdmin = ($user['role'] === 'super_admin');
+
 $method = $_SERVER['REQUEST_METHOD'];
 $user = $auth->getCurrentUser();
 
@@ -41,7 +45,8 @@ function handleGet($db, $auth) {
 
     switch ($action) {
         case 'list_users':
-            if (!$auth->hasPermission('users.view')) {
+            global $isSuperAdmin;
+            if (!$isSuperAdmin && !$auth->hasPermission('users.view')) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'error' => 'Access denied']);
                 return;
@@ -66,7 +71,8 @@ function handleGet($db, $auth) {
             break;
 
         case 'get_user':
-            if (!$auth->hasPermission('users.view')) {
+            global $isSuperAdmin;
+            if (!$isSuperAdmin && !$auth->hasPermission('users.view')) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'error' => 'Access denied']);
                 return;
@@ -108,7 +114,8 @@ function handleGet($db, $auth) {
 }
 
 function handlePost($db, $auth, $currentUser) {
-    if (!$auth->hasPermission('users.manage')) {
+    global $isSuperAdmin;
+    if (!$isSuperAdmin && !$auth->hasPermission('users.manage')) {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Access denied']);
         return;
@@ -269,7 +276,8 @@ function handlePut($db, $auth, $currentUser) {
 }
 
 function handleDelete($db, $auth, $currentUser) {
-    if (!$auth->hasPermission('users.manage')) {
+    global $isSuperAdmin;
+    if (!$isSuperAdmin && !$auth->hasPermission('users.manage')) {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Access denied']);
         return;
