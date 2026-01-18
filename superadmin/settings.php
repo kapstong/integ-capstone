@@ -27,83 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$isSuperAdmin && !$auth->hasPermission('roles.manage')) {
         $error = 'You do not have permission to manage roles and permissions.';
     } else {
-        switch ($action) {
-            case 'create_role':
-                if (empty($_POST['role_name'])) {
-                    $error = 'Role name is required.';
-                } else {
-                    $result = $permManager->createRole($_POST['role_name'], $_POST['description'] ?? '');
-                    if ($result['success']) {
-                        $message = 'Role created successfully.';
-                        Logger::getInstance()->logUserAction(
-                            'Created role',
-                            'roles',
-                            $result['role_id'],
-                            null,
-                            ['name' => $_POST['role_name'], 'description' => $_POST['description']]
-                        );
-                    } else {
-                        $error = $result['error'];
-                    }
-                }
-                break;
-
-            case 'assign_role':
-                if (empty($_POST['user_id']) || empty($_POST['role_id'])) {
-                    $error = 'User and role are required.';
-                } else {
-                    $result = $permManager->assignRole($_POST['user_id'], $_POST['role_id']);
-                    if ($result['success']) {
-                        $message = 'Role assigned successfully.';
-                        Logger::getInstance()->logUserAction(
-                            'Assigned role to user',
-                            'user_roles',
-                            null,
-                            null,
-                            ['user_id' => $_POST['user_id'], 'role_id' => $_POST['role_id']]
-                        );
-                    } else {
-                        $error = $result['error'];
-                    }
-                }
-                break;
-
-            case 'assign_permission':
-                if (empty($_POST['role_id']) || empty($_POST['permission_id'])) {
-                    $error = 'Role and permission are required.';
-                } else {
-                    $result = $permManager->assignPermissionToRole($_POST['role_id'], $_POST['permission_id']);
-                    if ($result['success']) {
-                        $message = 'Permission assigned successfully.';
-                        Logger::getInstance()->logUserAction(
-                            'Assigned permission to role',
-                            'role_permissions',
-                            null,
-                            null,
-                            ['role_id' => $_POST['role_id'], 'permission_id' => $_POST['permission_id']]
-                        );
-                    } else {
-                        $error = $result['error'];
-                    }
-                }
-                break;
-
-            case 'initialize_defaults':
-                $result = $permManager->initializeDefaults();
-                if ($result['success']) {
-                    $message = 'Default roles and permissions initialized successfully.';
-                    Logger::getInstance()->logUserAction(
-                        'Initialized default roles and permissions',
-                        'roles',
-                        null,
-                        null,
-                        null
-                    );
-                } else {
-                    $error = $result['error'];
-                }
-                break;
-        }
+        // No role-related actions for user management
     }
 }
 
@@ -119,53 +43,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && isset($_GET['action'])) {
 
     $action = $_GET['action'];
 
-    switch ($action) {
-        case 'remove_role':
-            if (!isset($_GET['user_id']) || !isset($_GET['role_id'])) {
-                echo json_encode(['success' => false, 'error' => 'User ID and Role ID required']);
-                exit;
-            }
-
-            $result = $permManager->removeRole($_GET['user_id'], $_GET['role_id']);
-            if ($result['success']) {
-                Logger::getInstance()->logUserAction(
-                    'Removed role from user',
-                    'user_roles',
-                    null,
-                    null,
-                    ['user_id' => $_GET['user_id'], 'role_id' => $_GET['role_id']]
-                );
-            }
-            echo json_encode($result);
-            break;
-
-        case 'remove_permission':
-            if (!isset($_GET['role_id']) || !isset($_GET['permission_id'])) {
-                echo json_encode(['success' => false, 'error' => 'Role ID and Permission ID required']);
-                exit;
-            }
-
-            $result = $permManager->removePermissionFromRole($_GET['role_id'], $_GET['permission_id']);
-            if ($result['success']) {
-                Logger::getInstance()->logUserAction(
-                    'Removed permission from role',
-                    'role_permissions',
-                    null,
-                    null,
-                    ['role_id' => $_GET['role_id'], 'permission_id' => $_GET['permission_id']]
-                );
-            }
-            echo json_encode($result);
-            break;
-
-        default:
-            echo json_encode(['success' => false, 'error' => 'Invalid action']);
-    }
+    // No role-related DELETE actions for user management
+    echo json_encode(['success' => false, 'error' => 'Invalid action']);
     exit;
 }
 
 // Get data for display
-$roles = $permManager->getAllRoles();
 $permissions = $permManager->getAllPermissions();
 $users = $auth->getAllUsers();
 $departments = [
@@ -837,7 +720,7 @@ $departments = [
                                 <button class="nav-link active" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance" type="button" role="tab" aria-controls="maintenance" aria-selected="true"><i class="fas fa-tools"></i> Maintenance Mode</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="roles-tab" data-bs-toggle="tab" data-bs-target="#roles" type="button" role="tab" aria-controls="roles" aria-selected="false"><i class="fas fa-users"></i> User Management</button>
+                                <button class="nav-link" id="user-tab" data-bs-toggle="tab" data-bs-target="#user" type="button" role="tab" aria-controls="user" aria-selected="false"><i class="fas fa-users"></i> User Management</button>
                             </li>
 
                             <li class="nav-item" role="presentation">
@@ -867,13 +750,10 @@ $departments = [
                                     <button type="submit" class="btn btn-primary">Save Changes</button>
                                 </form>
                             </div>
-                            <div class="tab-pane fade" id="roles" role="tabpanel" aria-labelledby="roles-tab">
+                            <div class="tab-pane fade" id="user" role="tabpanel" aria-labelledby="user-tab">
                                 <div id="usersAlertContainer"></div>
                                 <div class="d-flex justify-content-between align-items-center mb-4">
                                     <h6 class="mb-0">User Management</h6>
-                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createUserModal">
-                                        <i class="fas fa-user-plus"></i> Create New User
-                                    </button>
                                 </div>
 
                                 <!-- Users Table -->
@@ -1121,133 +1001,7 @@ $departments = [
         </div>
     </div>
 
-    <!-- Create Role Modal -->
-    <div class="modal fade" id="createRoleModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Create New Role</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form method="POST">
-                    <div class="modal-body">
-                        <input type="hidden" name="action" value="create_role">
-                        <div class="mb-3">
-                            <label for="role_name" class="form-label">Role Name *</label>
-                            <input type="text" class="form-control" id="role_name" name="role_name" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Description</label>
-                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Create Role</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
-    <!-- Assign Role Modal -->
-    <div class="modal fade" id="assignRoleModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Assign Role to User</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form method="POST">
-                    <div class="modal-body">
-                        <input type="hidden" name="action" value="assign_role">
-                        <div class="mb-3">
-                            <label for="assign_user_id" class="form-label">User *</label>
-                            <select class="form-control" id="assign_user_id" name="user_id" required>
-                                <option value="">Select User</option>
-                                <?php foreach ($users as $userData): ?>
-                                <option value="<?php echo $userData['id']; ?>">
-                                    <?php echo htmlspecialchars($userData['username'] . ' - ' . $userData['full_name']); ?>
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="assign_role_id" class="form-label">Role *</label>
-                            <select class="form-control" id="assign_role_id" name="role_id" required>
-                                <option value="">Select Role</option>
-                                <?php foreach ($roles as $role): ?>
-                                <option value="<?php echo $role['id']; ?>">
-                                    <?php echo htmlspecialchars($role['name']); ?>
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Assign Role</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Assign Permission Modal -->
-    <div class="modal fade" id="assignPermissionModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Assign Permission to Role</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form method="POST">
-                    <div class="modal-body">
-                        <input type="hidden" name="action" value="assign_permission">
-                        <input type="hidden" name="role_id" id="permission_role_id">
-                        <div class="mb-3">
-                            <label for="permission_id" class="form-label">Permission *</label>
-                            <select class="form-control" id="permission_id" name="permission_id" required>
-                                <option value="">Select Permission</option>
-                                <?php foreach ($permissions as $permission): ?>
-                                <option value="<?php echo $permission['id']; ?>">
-                                    <?php echo htmlspecialchars($permission['name'] . ' - ' . $permission['description']); ?>
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Assign Permission</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Initialize Defaults Modal -->
-    <div class="modal fade" id="initializeModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Initialize Default Roles & Permissions</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form method="POST">
-                    <div class="modal-body">
-                        <input type="hidden" name="action" value="initialize_defaults">
-                        <p>This will create default roles (super_admin, admin, staff) and assign appropriate permissions to each role.</p>
-                        <p class="text-warning"><strong>Warning:</strong> This action cannot be undone. Existing roles and permissions may be affected.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-warning">Initialize Defaults</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
     <!-- Footer -->
 
