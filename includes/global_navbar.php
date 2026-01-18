@@ -20,6 +20,14 @@ if (!empty($firstName) || !empty($lastName)) {
 
 $profileLink = $isUserArea ? 'profile.php' : 'admin-profile-settings.php';
 $settingsLink = $isUserArea ? 'settings.php' : 'settings.php';
+
+// Get user role for display
+require_once '../includes/permissions.php';
+$permManager = PermissionManager::getInstance();
+$permManager->loadUserPermissions($_SESSION['user']['id']);
+$userRoles = $permManager->getUserRoles();
+$userRoleDisplay = !empty($userRoles) ? $userRoles[0]['role_name'] : 'User';
+$userRoleDisplay = ucwords(str_replace('_', ' ', $userRoleDisplay));
 ?>
 <style>
     .navbar-date-time {
@@ -39,7 +47,10 @@ $settingsLink = $isUserArea ? 'settings.php' : 'settings.php';
                     <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
                         <i class="fas fa-user"></i>
                     </div>
-                    <span><strong><?php echo htmlspecialchars($displayName); ?></strong></span>
+                    <div class="d-flex flex-column align-items-start">
+                        <span><strong><?php echo htmlspecialchars($displayName); ?></strong></span>
+                        <small class="text-muted" style="font-size: 0.75rem; line-height: 1;"><?php echo htmlspecialchars($userRoleDisplay); ?></small>
+                    </div>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                     <li><a class="dropdown-item" href="<?php echo htmlspecialchars($profileLink); ?>"><i class="fas fa-user me-2"></i>Profile</a></li>
