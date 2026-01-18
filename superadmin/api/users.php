@@ -15,9 +15,10 @@ if (!$auth->isLoggedIn()) {
     exit;
 }
 
-// Check if user has system admin access (superadmin)
+// Check if user has system admin access (superadmin or admin)
 $user = $auth->getCurrentUser();
 $isSuperAdmin = ($user['role'] === 'super_admin');
+$isAdmin = ($user['role'] === 'admin');
 
 $method = $_SERVER['REQUEST_METHOD'];
 $user = $auth->getCurrentUser();
@@ -45,8 +46,8 @@ function handleGet($db, $auth) {
 
     switch ($action) {
         case 'list_users':
-            global $isSuperAdmin;
-            if (!$isSuperAdmin && !$auth->hasPermission('users.view')) {
+            global $isSuperAdmin, $isAdmin;
+            if (!$isSuperAdmin && !$isAdmin && !$auth->hasPermission('users.view')) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'error' => 'Access denied']);
                 return;
@@ -71,8 +72,8 @@ function handleGet($db, $auth) {
             break;
 
         case 'get_user':
-            global $isSuperAdmin;
-            if (!$isSuperAdmin && !$auth->hasPermission('users.view')) {
+            global $isSuperAdmin, $isAdmin;
+            if (!$isSuperAdmin && !$isAdmin && !$auth->hasPermission('users.view')) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'error' => 'Access denied']);
                 return;
@@ -114,8 +115,8 @@ function handleGet($db, $auth) {
 }
 
 function handlePost($db, $auth, $currentUser) {
-    global $isSuperAdmin;
-    if (!$isSuperAdmin && !$auth->hasPermission('users.manage')) {
+    global $isSuperAdmin, $isAdmin;
+    if (!$isSuperAdmin && !$isAdmin && !$auth->hasPermission('users.manage')) {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Access denied']);
         return;
@@ -291,8 +292,8 @@ function handlePut($db, $auth, $currentUser) {
 }
 
 function handleDelete($db, $auth, $currentUser) {
-    global $isSuperAdmin;
-    if (!$isSuperAdmin && !$auth->hasPermission('users.manage')) {
+    global $isSuperAdmin, $isAdmin;
+    if (!$isSuperAdmin && !$isAdmin && !$auth->hasPermission('users.manage')) {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Access denied']);
         return;
@@ -331,17 +332,22 @@ function handleDelete($db, $auth, $currentUser) {
                 ");
                 $stmt->execute([$userId]);
 
-                // Insert into deleted_items table
-                $stmt = $db->prepare("
-                    INSERT INTO deleted_items (table_name, record_id, data, deleted_by, deleted_at, auto_delete_at)
-                    VALUES (?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY))
-                ");
-                $stmt->execute([
-                    'users',
-                    $userId,
-                    json_encode($userData),
-                    $currentUser['id']
-                ]);
+                // Insert into deleted_items table (if it exists)
+                try {
+                    $stmt = $db->prepare("
+                        INSERT INTO deleted_items (table_name, record_id, data, deleted_by, deleted_at, auto_delete_at)
+                        VALUES (?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY))
+                    ");
+                    $stmt->execute([
+                        'users',
+                        $userId,
+                        json_encode($userData),
+                        $currentUser['id']
+                    ]);
+                } catch (Exception $e) {
+                    // Ignore if deleted_items table doesn't exist
+                    Logger::getInstance()->logDatabaseError('Insert deleted_items (optional)', $e->getMessage());
+                }
 
                 Logger::getInstance()->logUserAction(
                     'Soft deleted user',
