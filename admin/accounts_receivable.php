@@ -1607,7 +1607,7 @@ try {
 
             try {
                 showLoading();
-                const response = await fetch('api/invoices.php', {
+                const response = await fetch('admin/api/invoices.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1724,7 +1724,7 @@ try {
         // Payment Functions
         async function loadPayments() {
             try {
-                const response = await fetch('api/payments.php?type=received');
+                const response = await fetch('admin/api/payments.php?type=received');
                 const result = await response.json();
 
                 if (result.success !== false && Array.isArray(result)) {
@@ -1823,7 +1823,7 @@ try {
         // Adjustment Functions
         async function loadAdjustments() {
             try {
-                const response = await fetch('api/adjustments.php?type=receivable');
+                const response = await fetch('admin/api/adjustments.php?type=receivable');
                 const adjustments = await response.json();
 
                 const tbody = document.querySelector('#adjustmentsTable tbody');

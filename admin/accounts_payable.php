@@ -1815,7 +1815,7 @@ try {
                 description: description
             };
 
-            const apiUrl = isEditMode ? `api/adjustments.php?id=${this.dataset.adjustmentId}` : 'api/adjustments.php';
+            const apiUrl = isEditMode ? `admin/api/adjustments.php?id=${this.dataset.adjustmentId}` : 'admin/api/adjustments.php';
             const method = isEditMode ? 'PUT' : 'POST';
 
             try {
@@ -1860,7 +1860,7 @@ try {
         // Load vendors
         async function loadVendors() {
             try {
-                const response = await fetch('api/vendors.php');
+                const response = await fetch('superadmin/api/vendors.php');
                 const data = await response.json();
 
                 if (data.error) {
@@ -1913,7 +1913,7 @@ try {
         // Load bills
         async function loadBills() {
             try {
-                const response = await fetch('admin/api/bills.php');
+                const response = await fetch('superadmin/api/bills.php');
                 const data = await response.json();
 
                 if (data.error) {
@@ -2332,7 +2332,7 @@ try {
                 const selectedPeriod = periodSelect ? periodSelect.value : '30';
 
                 // Get all bills with their aging status
-                const response = await fetch('api/bills.php?action=aging&period=' + selectedPeriod);
+                const response = await fetch('admin/api/bills.php?action=aging&period=' + selectedPeriod);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2448,16 +2448,16 @@ try {
 
                 switch(type) {
                     case 'payables':
-                        apiUrl = 'api/bills.php';
+                        apiUrl = 'admin/api/bills.php';
                         filename = `payables_report_${new Date().toISOString().split('T')[0]}.csv`;
                         break;
                     case 'payments':
-                        apiUrl = 'api/payments.php?type=made';
+                        apiUrl = 'admin/api/payments.php?type=made';
                         filename = `payments_report_${new Date().toISOString().split('T')[0]}.csv`;
                         break;
                     case 'aging':
                         // Get aging data with 120+ days period to get all data
-                        apiUrl = 'api/bills.php?action=aging&period=120';
+                        apiUrl = 'admin/api/bills.php?action=aging&period=120';
                         filename = `aging_report_${new Date().toISOString().split('T')[0]}.csv`;
                         break;
                     default:
@@ -2591,7 +2591,7 @@ try {
         async function generateNextBillNumber() {
             try {
                 // Get the next bill number from the API
-                const response = await fetch('api/bills.php?action=next_number');
+                const response = await fetch('admin/api/bills.php?action=next_number');
                 const data = await response.json();
 
                 if (data.success && data.next_number) {
@@ -2669,7 +2669,7 @@ try {
         // Load bills for a specific vendor (for payment dropdown)
         async function loadBillsForVendor(vendorId) {
             try {
-                const response = await fetch(`api/bills.php?vendor_id=${vendorId}&status=draft,approved,overdue`);
+                const response = await fetch(`admin/api/bills.php?vendor_id=${vendorId}&status=draft,approved,overdue`);
                 const data = await response.json();
 
                 if (data.error) {
