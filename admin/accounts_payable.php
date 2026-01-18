@@ -2697,7 +2697,7 @@ try {
         // View bill details
         async function viewBill(billId) {
             try {
-                const response = await fetch(`api/bills.php?id=${billId}`);
+                const response = await fetch(`superadmin/api/bills.php?id=${billId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2816,7 +2816,7 @@ try {
         // Edit bill
         async function editBill(billId) {
             try {
-                const response = await fetch(`api/bills.php?id=${billId}`);
+                const response = await fetch(`superadmin/api/bills.php?id=${billId}`);
                 const data = await response.json();
 
                 if (data.error) {
