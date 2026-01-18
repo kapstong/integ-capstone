@@ -1555,7 +1555,7 @@ try {
             };
 
             const method = isEditMode ? 'PUT' : 'POST';
-            const apiUrl = isEditMode ? `../api/vendors.php?id=${vendorId}` : '../api/vendors.php';
+            const apiUrl = isEditMode ? `api/vendors.php?id=${vendorId}` : 'api/vendors.php';
 
             try {
                 const response = await fetch(apiUrl, {
@@ -1638,7 +1638,7 @@ try {
             }
 
             const method = isEditMode ? 'PUT' : 'POST';
-            const apiUrl = isEditMode ? `../api/bills.php?id=${editBillId}` : '../api/bills.php';
+            const apiUrl = isEditMode ? `api/bills.php?id=${editBillId}` : 'api/bills.php';
 
             try {
                 const response = await fetch(apiUrl, {
@@ -1860,7 +1860,7 @@ try {
         // Load vendors
         async function loadVendors() {
             try {
-                const response = await fetch('../api/vendors.php');
+                const response = await fetch('api/vendors.php');
                 const data = await response.json();
 
                 if (data.error) {
