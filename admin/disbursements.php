@@ -393,50 +393,10 @@ body {
     </style>
 </head>
 <body>
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <div class="p-3">
-            <h5 class="navbar-brand"><img src="atieralogo.png" alt="Atiera Logo" style="height: 100px;"></h5>
-            <hr style="border-top: 2px solid white; margin: 10px 0;">
-        </div>
-        <nav class="nav flex-column">
-            <a class="nav-link" href="index.php">
-                <i class="fas fa-tachometer-alt me-2"></i><span>Dashboard</span>
-            </a>
-            <div class="nav-item">
-                <a class="nav-link" href="general_ledger.php">
-                    <i class="fas fa-book me-2"></i><span>General Ledger</span>
-                </a>
-                <i class="fas fa-chevron-right" data-bs-toggle="collapse" data-bs-target="#generalLedgerMenu" aria-expanded="false" style="cursor: pointer; color: white; padding: 5px 10px;"></i>
-                <div class="collapse" id="generalLedgerMenu">
-                    <div class="submenu">
-                        <a class="nav-link" href="accounts_payable.php">
-                            <i class="fas fa-credit-card me-2"></i><span>Accounts Payable</span>
-                        </a>
-                        <a class="nav-link" href="accounts_receivable.php">
-                            <i class="fas fa-money-bill-wave me-2"></i><span>Accounts Receivable</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-            <a class="nav-link active" href="disbursements.php">
-                <i class="fas fa-money-check me-2"></i><span>Disbursements</span>
-            </a>
-            <a class="nav-link" href="budget_management.php">
-                <i class="fas fa-chart-line me-2"></i><span>Budget Management</span>
-            </a>
-        <a class="nav-link" href="reports.php">
-            <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
-        </a>
-        <hr class="my-3">
-    </nav>
-    </div>
-
-    <div class="sidebar-toggle" onclick="toggleSidebarDesktop()">
-        <i class="fas fa-chevron-right" id="sidebarArrow"></i>
-    </div>
+    <?php include '../includes/admin_navigation.php'; ?>
 
     <div class="content">
+        <!-- Top Navbar -->
         <?php include '../includes/global_navbar.php'; ?>
 
         <!-- Navigation Tabs -->
@@ -1561,5 +1521,3 @@ body {
 </html>
     <script src="../includes/inactivity_timeout.js?v=3"></script>
 <script src="../includes/navbar_datetime.js"></script>
-
-
