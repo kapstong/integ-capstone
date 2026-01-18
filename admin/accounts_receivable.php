@@ -1788,7 +1788,7 @@ try {
             };
 
             try {
-                const response = await fetch('api/payments.php', {
+                const response = await fetch('superadmin/api/payments.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1880,7 +1880,7 @@ try {
             };
 
             try {
-                const response = await fetch('api/adjustments.php', {
+                const response = await fetch('superadmin/api/adjustments.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1912,7 +1912,7 @@ try {
         // Aging Report Functions
         async function generateAgingReport() {
             try {
-                const response = await fetch('api/invoices.php?aging=true');
+                const response = await fetch('superadmin/api/invoices.php?aging=true');
                 const agingData = await response.json();
 
                 const tbody = document.querySelector('#agingTable tbody');
@@ -1956,7 +1956,7 @@ try {
         // Reports Functions
         async function loadReportsData() {
             try {
-                const response = await fetch('api/invoices.php?action=get_summary_stats');
+                const response = await fetch('superadmin/api/invoices.php?action=get_summary_stats');
                 const data = await response.json();
 
                 const totalReceivablesEl = document.getElementById('totalReceivables');
@@ -2145,7 +2145,7 @@ try {
         // Invoice action functions
         async function viewInvoice(id) {
             try {
-                const response = await fetch(`api/invoices.php?id=${id}`);
+                const response = await fetch(`superadmin/api/invoices.php?id=${id}`);
                 const invoice = await response.json();
                 if (invoice.error) {
                     throw new Error(invoice.error);
@@ -2249,7 +2249,7 @@ try {
             }
 
             try {
-                const response = await fetch(`api/invoices.php?id=${id}`, {
+                const response = await fetch(`superadmin/api/invoices.php?id=${id}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2286,7 +2286,7 @@ try {
             }
 
             try {
-                const response = await fetch(`api/invoices.php?id=${id}`, {
+                const response = await fetch(`superadmin/api/invoices.php?id=${id}`, {
                     method: 'DELETE'
                 });
 
@@ -2307,7 +2307,7 @@ try {
         // Payment action functions
         async function viewPayment(id) {
             try {
-                const response = await fetch(`api/payments.php?id=${id}&type=received`);
+                const response = await fetch(`superadmin/api/payments.php?id=${id}&type=received`);
                 const payment = await response.json();
 
                 if (payment.error) {
