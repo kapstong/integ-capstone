@@ -5,8 +5,15 @@ require_once '../../includes/logger.php';
 
 header('Content-Type: application/json');
 
-$auth = new Auth();
-$db = Database::getInstance()->getConnection();
+try {
+    $auth = new Auth();
+    $db = Database::getInstance()->getConnection();
+} catch (Exception $e) {
+    error_log('API Initialization Error: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Initialization failed']);
+    exit;
+}
 
 // Check if user is logged in
 if (!$auth->isLoggedIn()) {
