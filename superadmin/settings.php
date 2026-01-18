@@ -837,7 +837,10 @@ $departments = [
                                 <button class="nav-link active" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance" type="button" role="tab" aria-controls="maintenance" aria-selected="true"><i class="fas fa-tools"></i> Maintenance Mode</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="user_management-tab" data-bs-toggle="tab" data-bs-target="#user_management" type="button" role="tab" aria-controls="user_management" aria-selected="false"><i class="fas fa-users-cog"></i> User Management</button>
+                                <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab" aria-controls="users" aria-selected="false"><i class="fas fa-users"></i> User Management</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="roles-tab" data-bs-toggle="tab" data-bs-target="#roles" type="button" role="tab" aria-controls="roles" aria-selected="false"><i class="fas fa-user-shield"></i> Roles & Permissions</button>
                             </li>
 
                             <li class="nav-item" role="presentation">
@@ -867,8 +870,8 @@ $departments = [
                                     <button type="submit" class="btn btn-primary">Save Changes</button>
                                 </form>
                             </div>
-                            <div class="tab-pane fade" id="user_management" role="tabpanel" aria-labelledby="user_management-tab">
-                                <div id="userManagementAlertContainer"></div>
+                            <div class="tab-pane fade" id="roles" role="tabpanel" aria-labelledby="roles-tab">
+                                <div id="rolesAlertContainer"></div>
                                 <?php if ($message): ?>
                                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                                     <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($message); ?>
@@ -883,59 +886,54 @@ $departments = [
                                 <?php endif; ?>
 
                                 <div class="d-flex justify-content-between align-items-center mb-4">
-                                    <h6 class="mb-0">User Management</h6>
+                                    <h6 class="mb-0">Roles & Permissions Management</h6>
+                                    <?php if ($auth->hasPermission('roles.manage')): ?>
+                                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#initializeModal">
+                                        <i class="fas fa-magic"></i> Initialize Defaults
+                                    </button>
+                                    <?php endif; ?>
                                 </div>
 
-                                <!-- Users Table -->
-                                <?php
-                                $filteredUsers = array_filter($users, fn($u) => $u['role'] !== 'super_admin');
-                                ?>
-                                <div class="card">
+                                <!-- Roles Section -->
+                                <div class="card mb-4">
                                     <div class="card-header">
-                                        <h5 class="mb-0"><i class="fas fa-users me-2"></i> System Users</h5>
+                                        <h5 class="mb-0"><i class="fas fa-users-cog"></i> Roles</h5>
                                     </div>
                                     <div class="card-body">
+                                        <?php if ($auth->hasPermission('roles.manage')): ?>
+                                        <button type="button" class="btn btn-success btn-sm mb-3" data-bs-toggle="modal" data-bs-target="#createRoleModal">
+                                            <i class="fas fa-plus"></i> Create New Role
+                                        </button>
+                                        <?php endif; ?>
+
                                         <div class="table-responsive">
                                             <table class="table table-striped table-hover">
                                                 <thead class="table-dark">
                                                     <tr>
-                                                        <th>Username</th>
-                                                        <th>Full Name</th>
-                                                        <th>Email</th>
-                                                        <th>Role</th>
-                                                        <th>Status</th>
-                                                        <th>Last Login</th>
+                                                        <th>Role Name</th>
+                                                        <th>Description</th>
+                                                        <th>Users Count</th>
                                                         <th>Actions</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <?php foreach ($filteredUsers as $userData): ?>
+                                                    <?php foreach ($roles as $role): ?>
                                                     <tr>
-                                                        <td><?php echo htmlspecialchars($userData['username']); ?></td>
-                                                        <td><?php echo htmlspecialchars($userData['full_name']); ?></td>
-                                                        <td><?php echo htmlspecialchars($userData['email'] ?? 'N/A'); ?></td>
+                                                        <td><?php echo htmlspecialchars($role['name']); ?></td>
+                                                        <td><?php echo htmlspecialchars($role['description'] ?? ''); ?></td>
+                                                        <td><?php echo $role['user_count']; ?></td>
                                                         <td>
-                                                            <span class="badge bg-<?php
-                                                                echo $userData['role'] === 'admin' ? 'warning' : 'info';
-                                                            ?>">
-                                                                <?php echo ucfirst(str_replace('_', ' ', $userData['role'])); ?>
-                                                            </span>
-                                                        </td>
-                                                        <td>
-                                                            <span class="badge bg-<?php echo $userData['status'] === 'active' ? 'success' : 'secondary'; ?>">
-                                                                <?php echo ucfirst($userData['status'] ?? 'active'); ?>
-                                                            </span>
-                                                        </td>
-                                                        <td><?php echo $userData['last_login'] ? date('M j, Y H:i', strtotime($userData['last_login'])) : 'Never'; ?></td>
-                                                        <td>
-                                                            <div class="btn-group btn-group-sm">
-                                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="editUser(<?php echo $userData['id']; ?>)">
-                                                                    <i class="fas fa-edit"></i> Edit
-                                                                </button>
-                                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteUser(<?php echo $userData['id']; ?>, '<?php echo htmlspecialchars($userData['username']); ?>')">
-                                                                    <i class="fas fa-trash"></i> Delete
-                                                                </button>
-                                                            </div>
+                                                            <button type="button" class="btn btn-sm btn-info" onclick="viewRolePermissions(<?php echo $role['id']; ?>)">
+                                                                <i class="fas fa-eye"></i> View Permissions
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-warning" onclick="viewRoleUsers(<?php echo $role['id']; ?>)">
+                                                                <i class="fas fa-users"></i> View Users
+                                                            </button>
+                                                            <?php if ($auth->hasPermission('roles.manage')): ?>
+                                                            <button type="button" class="btn btn-sm btn-primary" onclick="assignPermissionToRole(<?php echo $role['id']; ?>)">
+                                                                <i class="fas fa-plus"></i> Add Permission
+                                                            </button>
+                                                            <?php endif; ?>
                                                         </td>
                                                     </tr>
                                                     <?php endforeach; ?>
@@ -944,6 +942,88 @@ $departments = [
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Permissions Section -->
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5 class="mb-0"><i class="fas fa-key"></i> Permissions</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-hover">
+                                                <thead class="table-dark">
+                                                    <tr>
+                                                        <th>Permission</th>
+                                                        <th>Description</th>
+                                                        <th>Module</th>
+                                                        <th>Roles Count</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($permissions as $permission): ?>
+                                                    <tr>
+                                                        <td><?php echo htmlspecialchars($permission['name']); ?></td>
+                                                        <td><?php echo htmlspecialchars($permission['description'] ?? ''); ?></td>
+                                                        <td><?php echo htmlspecialchars($permission['module'] ?? ''); ?></td>
+                                                        <td><?php echo $permission['role_count']; ?></td>
+                                                    </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- User Roles Assignment Section -->
+                                <?php if ($auth->hasPermission('roles.manage')): ?>
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0"><i class="fas fa-user-tag"></i> User Role Assignments</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <button type="button" class="btn btn-success btn-sm mb-3" data-bs-toggle="modal" data-bs-target="#assignRoleModal">
+                                            <i class="fas fa-plus"></i> Assign Role to User
+                                        </button>
+
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-hover">
+                                                <thead class="table-dark">
+                                                    <tr>
+                                                        <th>Username</th>
+                                                        <th>Full Name</th>
+                                                        <th>Current Roles</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($users as $userData): ?>
+                                                    <tr>
+                                                        <td><?php echo htmlspecialchars($userData['username']); ?></td>
+                                                        <td><?php echo htmlspecialchars($userData['full_name']); ?></td>
+                                                        <td>
+                                                            <?php
+                                                            $permManager->loadUserPermissions($userData['id']);
+                                                            $userRoles = $permManager->getUserRoles();
+                                                            $roleNames = array_column($userRoles, 'role_name');
+                                                            echo htmlspecialchars(implode(', ', $roleNames));
+                                                            ?>
+                                                        </td>
+                                                        <td>
+                                                            <button type="button" class="btn btn-sm btn-info" onclick="viewUserPermissions(<?php echo $userData['id']; ?>)">
+                                                                <i class="fas fa-eye"></i> View Permissions
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-primary" onclick="assignRoleToUser(<?php echo $userData['id']; ?>)">
+                                                                <i class="fas fa-plus"></i> Assign Role
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
                             </div>
 
                             <div class="tab-pane fade" id="departments" role="tabpanel" aria-labelledby="departments-tab">
@@ -998,7 +1078,72 @@ $departments = [
                                     </div>
                                 </div>
                             </div>
+                            <div class="tab-pane fade" id="users" role="tabpanel" aria-labelledby="users-tab">
+                                <div id="usersAlertContainer"></div>
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h6 class="mb-0">User Management</h6>
+                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createUserModal">
+                                        <i class="fas fa-user-plus"></i> Create New User
+                                    </button>
+                                </div>
 
+                                <!-- Users Table -->
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0"><i class="fas fa-users me-2"></i> System Users</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-hover">
+                                                <thead class="table-dark">
+                                                    <tr>
+                                                        <th>Username</th>
+                                                        <th>Full Name</th>
+                                                        <th>Email</th>
+                                                        <th>Role</th>
+                                                        <th>Status</th>
+                                                        <th>Last Login</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($users as $userData): ?>
+                                                    <tr>
+                                                        <td><?php echo htmlspecialchars($userData['username']); ?></td>
+                                                        <td><?php echo htmlspecialchars($userData['full_name']); ?></td>
+                                                        <td><?php echo htmlspecialchars($userData['email'] ?? 'N/A'); ?></td>
+                                                        <td>
+                                                            <span class="badge bg-<?php
+                                                                echo $userData['role'] === 'super_admin' ? 'danger' :
+                                                                     ($userData['role'] === 'admin' ? 'warning' : 'info');
+                                                            ?>">
+                                                                <?php echo ucfirst(str_replace('_', ' ', $userData['role'])); ?>
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-<?php echo $userData['status'] === 'active' ? 'success' : 'secondary'; ?>">
+                                                                <?php echo ucfirst($userData['status'] ?? 'active'); ?>
+                                                            </span>
+                                                        </td>
+                                                        <td><?php echo $userData['last_login'] ? date('M j, Y H:i', strtotime($userData['last_login'])) : 'Never'; ?></td>
+                                                        <td>
+                                                            <div class="btn-group btn-group-sm">
+                                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="editUser(<?php echo $userData['id']; ?>)">
+                                                                    <i class="fas fa-edit"></i> Edit
+                                                                </button>
+                                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteUser(<?php echo $userData['id']; ?>, '<?php echo htmlspecialchars($userData['username']); ?>')">
+                                                                    <i class="fas fa-trash"></i> Delete
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="tab-pane fade" id="trash" role="tabpanel" aria-labelledby="trash-tab">
                                 <div id="trashAlertContainer"></div>
                                 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -1180,126 +1325,6 @@ $departments = [
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-warning">Initialize Defaults</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit User Modal -->
-    <div class="modal fade" id="editUserModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit User</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="editUserForm">
-                    <div class="modal-body">
-                        <input type="hidden" id="edit_user_id" name="user_id">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="edit_username" class="form-label">Username</label>
-                                    <input type="text" class="form-control" id="edit_username" name="username" readonly>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="edit_full_name" class="form-label">Full Name *</label>
-                                    <input type="text" class="form-control" id="edit_full_name" name="full_name" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="edit_email" class="form-label">Email</label>
-                                    <input type="email" class="form-control" id="edit_email" name="email">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="edit_role" class="form-label">Role</label>
-                                    <select class="form-select" id="edit_role" name="role">
-                                        <option value="staff">Staff</option>
-                                        <option value="admin">Admin</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="edit_status" class="form-label">Status</label>
-                                    <select class="form-select" id="edit_status" name="status">
-                                        <option value="active">Active</option>
-                                        <option value="inactive">Inactive</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Sites Access</label>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="edit_general_ledger" name="sites[]" value="general_ledger">
-                                        <label class="form-check-label" for="edit_general_ledger">
-                                            General Ledger
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="edit_accounts_payable" name="sites[]" value="accounts_payable">
-                                        <label class="form-check-label" for="edit_accounts_payable">
-                                            Accounts Payable
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="edit_accounts_receivable" name="sites[]" value="accounts_receivable">
-                                        <label class="form-check-label" for="edit_accounts_receivable">
-                                            Accounts Receivable
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="edit_reports" name="sites[]" value="reports">
-                                        <label class="form-check-label" for="edit_reports">
-                                            Reports
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="edit_budget_management" name="sites[]" value="budget_management">
-                                        <label class="form-check-label" for="edit_budget_management">
-                                            Budget Management
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="edit_disbursements" name="sites[]" value="disbursements">
-                                        <label class="form-check-label" for="edit_disbursements">
-                                            Disbursements
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="edit_audit" name="sites[]" value="audit">
-                                        <label class="form-check-label" for="edit_audit">
-                                            Audit
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="edit_settings" name="sites[]" value="settings">
-                                        <label class="form-check-label" for="edit_settings">
-                                            Settings
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
                     </div>
                 </form>
             </div>
@@ -1494,61 +1519,21 @@ $departments = [
         }
 
         // User Management Functions
-        function showUserManagementAlert(message, type) {
+        function showUsersAlert(message, type) {
             const alert = `
                 <div class="alert alert-${type} alert-dismissible fade show" role="alert">
                     ${message}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             `;
-            document.getElementById('userManagementAlertContainer').innerHTML = alert;
+            document.getElementById('usersAlertContainer').innerHTML = alert;
             setTimeout(() => {
-                document.querySelector('#userManagementAlertContainer .alert')?.remove();
+                document.querySelector('#usersAlertContainer .alert')?.remove();
             }, 5000);
         }
 
         function editUser(userId) {
-            // Fetch user data and open edit modal
-            fetch(`api/users.php?action=get_user&user_id=${userId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Populate edit modal with user data
-                        document.getElementById('edit_user_id').value = data.user.id;
-                        document.getElementById('edit_username').value = data.user.username;
-                        document.getElementById('edit_full_name').value = data.user.full_name;
-                        document.getElementById('edit_email').value = data.user.email || '';
-                        document.getElementById('edit_role').value = data.user.role;
-                        document.getElementById('edit_status').value = data.user.status;
-
-                        // Get user permissions for sites
-                        fetch(`api/users.php?action=get_user_permissions&user_id=${userId}`)
-                            .then(response => response.json())
-                            .then(permData => {
-                                if (permData.success) {
-                                    // Check checkboxes for sites user has access to
-                                    const sites = ['general_ledger', 'accounts_payable', 'accounts_receivable', 'reports', 'budget_management', 'disbursements', 'audit', 'settings'];
-                                    sites.forEach(site => {
-                                        const checkbox = document.getElementById(`edit_${site}`);
-                                        if (checkbox) {
-                                            checkbox.checked = permData.permissions.some(p => p.name === `${site}.view`);
-                                        }
-                                    });
-                                }
-                                // Show modal
-                                const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
-                                modal.show();
-                            })
-                            .catch(error => {
-                                showUserManagementAlert('Error loading user permissions: ' + error.message, 'danger');
-                            });
-                    } else {
-                        showUserManagementAlert(data.error || 'Failed to load user data', 'danger');
-                    }
-                })
-                .catch(error => {
-                    showUserManagementAlert('Error: ' + error.message, 'danger');
-                });
+            alert('Edit user modal would open here for user ID: ' + userId);
         }
 
         function deleteUser(userId, username) {
@@ -1566,14 +1551,14 @@ $departments = [
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        showUserManagementAlert('User deleted successfully', 'success');
+                        showUsersAlert('User deleted successfully', 'success');
                         setTimeout(() => location.reload(), 1500);
                     } else {
-                        showUserManagementAlert(data.error || 'Failed to delete user', 'danger');
+                        showUsersAlert(data.error || 'Failed to delete user', 'danger');
                     }
                 })
                 .catch(error => {
-                    showUserManagementAlert('Error: ' + error.message, 'danger');
+                    showUsersAlert('Error: ' + error.message, 'danger');
                 });
             }
         }
@@ -1790,33 +1775,6 @@ $departments = [
             });
 
             syncDepartmentIntegrations();
-        });
-
-        // Handle edit user form submission
-        document.getElementById('editUserForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            const formData = new FormData(this);
-            formData.append('action', 'update_user');
-
-            fetch('api/users.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showUserManagementAlert('User updated successfully', 'success');
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
-                    modal.hide();
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    showUserManagementAlert(data.error || 'Failed to update user', 'danger');
-                }
-            })
-            .catch(error => {
-                showUserManagementAlert('Error: ' + error.message, 'danger');
-            });
         });
 
         // Initialize sidebar state on page load

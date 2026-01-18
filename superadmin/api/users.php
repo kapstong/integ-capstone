@@ -70,7 +70,7 @@ function handleGet($db, $auth) {
             }
             break;
 
-    case 'get_user':
+        case 'get_user':
             global $isSuperAdmin;
             if (!$isSuperAdmin && !$auth->hasPermission('users.view')) {
                 http_response_code(403);
@@ -102,33 +102,6 @@ function handleGet($db, $auth) {
                 }
             } catch (Exception $e) {
                 Logger::getInstance()->logDatabaseError('Get user', $e->getMessage());
-                http_response_code(500);
-                echo json_encode(['success' => false, 'error' => 'Database error']);
-            }
-            break;
-
-        case 'get_user_permissions':
-            global $isSuperAdmin;
-            if (!$isSuperAdmin && !$auth->hasPermission('users.view')) {
-                http_response_code(403);
-                echo json_encode(['success' => false, 'error' => 'Access denied']);
-                return;
-            }
-
-            $userId = $_GET['user_id'] ?? null;
-            if (!$userId) {
-                http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'User ID required']);
-                return;
-            }
-
-            try {
-                require_once '../../includes/permissions.php';
-                $permManager = PermissionManager::getInstance();
-                $userPermissions = $permManager->getUserSpecificPermissions($userId);
-                echo json_encode(['success' => true, 'permissions' => $userPermissions]);
-            } catch (Exception $e) {
-                Logger::getInstance()->logDatabaseError('Get user permissions', $e->getMessage());
                 http_response_code(500);
                 echo json_encode(['success' => false, 'error' => 'Database error']);
             }
@@ -213,7 +186,6 @@ function handlePost($db, $auth, $currentUser) {
             $email = trim($data['email'] ?? '');
             $role = $data['role'] ?? null;
             $status = $data['status'] ?? null;
-            $sites = $data['sites'] ?? [];
 
             if (!$userId || empty($fullName)) {
                 http_response_code(400);
@@ -236,8 +208,6 @@ function handlePost($db, $auth, $currentUser) {
             }
 
             try {
-                $db->beginTransaction();
-
                 $updateFields = [];
                 $params = [];
 
@@ -258,51 +228,36 @@ function handlePost($db, $auth, $currentUser) {
                     $params[] = $status;
                 }
 
-                if (!empty($updateFields)) {
-                    $updateFields[] = "updated_at = NOW()";
-                    $params[] = $userId;
-
-                    $stmt = $db->prepare("
-                        UPDATE users
-                        SET " . implode(', ', $updateFields) . "
-                        WHERE id = ? AND deleted_at IS NULL
-                    ");
-                    $stmt->execute($params);
+                if (empty($updateFields)) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'error' => 'No fields to update']);
+                    return;
                 }
 
-                // Update user permissions
-                // First, clear existing user-specific permissions
-                $stmt = $db->prepare("DELETE FROM user_permissions WHERE user_id = ?");
-                $stmt->execute([$userId]);
+                $updateFields[] = "updated_at = NOW()";
+                $params[] = $userId;
 
-                // Add selected permissions
-                if (!empty($sites)) {
-                    require_once '../../includes/permissions.php';
-                    $permManager = PermissionManager::getInstance();
+                $stmt = $db->prepare("
+                    UPDATE users
+                    SET " . implode(', ', $updateFields) . "
+                    WHERE id = ? AND deleted_at IS NULL
+                ");
+                $stmt->execute($params);
 
-                    foreach ($sites as $site) {
-                        // Find permission ID by name
-                        $stmt = $db->prepare("SELECT id FROM permissions WHERE name = ?");
-                        $stmt->execute([$site . '.view']);
-                        $perm = $stmt->fetch();
-                        if ($perm) {
-                            $permManager->assignPermissionToUser($userId, $perm['id']);
-                        }
-                    }
+                if ($stmt->rowCount() > 0) {
+                    Logger::getInstance()->logUserAction(
+                        'Updated user',
+                        'users',
+                        $userId,
+                        null,
+                        ['updated_fields' => $updateFields]
+                    );
+                    echo json_encode(['success' => true, 'message' => 'User updated successfully']);
+                } else {
+                    http_response_code(404);
+                    echo json_encode(['success' => false, 'error' => 'User not found']);
                 }
-
-                $db->commit();
-
-                Logger::getInstance()->logUserAction(
-                    'Updated user',
-                    'users',
-                    $userId,
-                    null,
-                    ['updated_fields' => $updateFields, 'sites' => $sites]
-                );
-                echo json_encode(['success' => true, 'message' => 'User updated successfully']);
             } catch (Exception $e) {
-                $db->rollback();
                 Logger::getInstance()->logDatabaseError('Update user', $e->getMessage());
                 http_response_code(500);
                 echo json_encode(['success' => false, 'error' => 'Database error']);
