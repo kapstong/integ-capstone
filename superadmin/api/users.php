@@ -1,292 +1,344 @@
 <?php
-// Users API
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-
-// Start output buffering to catch any unwanted output
-ob_start();
-
-// Suppress any HTML output from errors
-ini_set('display_errors', 0);
-error_reporting(0);
-
-// Clean any buffered output before including files
-ob_clean();
-
 require_once '../../includes/auth.php';
 require_once '../../includes/database.php';
-// require_once '../../includes/logger.php'; // Temporarily disabled to avoid potential issues
+require_once '../../includes/logger.php';
 
-// Start session safely
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+header('Content-Type: application/json');
 
-$method = $_SERVER['REQUEST_METHOD'];
-if ($method !== 'GET') {
-    // Check if user is logged in and has admin privileges
-    if (!isset($_SESSION['user'])) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Unauthorized - Session not found']);
-        exit;
-    }
+$auth = new Auth();
+$db = Database::getInstance()->getConnection();
 
-    // Check if user has admin role or permission to manage users
-    $auth = new Auth();
-    if (!$auth->hasRole('admin') && !$auth->hasRole('super_admin') && !$auth->hasPermission('manage_users')) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Forbidden - Insufficient privileges']);
-        exit;
-    }
-}
-?>
-
-<?php
-$db = null;
-
-try {
-    $db = Database::getInstance();
-} catch (Exception $e) {
-    error_log("Database connection error in users API: " . $e->getMessage());
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Database connection failed. Please check your configuration.']);
+// Check if user is logged in
+if (!$auth->isLoggedIn()) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'error' => 'Authentication required']);
     exit;
 }
 
-function sanitizeUser($user) {
-    if (!$user || !is_array($user)) {
-        return $user;
-    }
-    $blockedKeys = [
-        'password',
-        'password_hash',
-        'password_reset_token',
-        'reset_token',
-        'reset_token_expires',
-        'two_factor_secret'
-    ];
-    foreach ($blockedKeys as $key) {
-        if (array_key_exists($key, $user)) {
-            unset($user[$key]);
-        }
-    }
-    return $user;
+$method = $_SERVER['REQUEST_METHOD'];
+$user = $auth->getCurrentUser();
+
+switch ($method) {
+    case 'GET':
+        handleGet($db, $auth);
+        break;
+    case 'POST':
+        handlePost($db, $auth, $user);
+        break;
+    case 'PUT':
+        handlePut($db, $auth, $user);
+        break;
+    case 'DELETE':
+        handleDelete($db, $auth, $user);
+        break;
+    default:
+        http_response_code(405);
+        echo json_encode(['success' => false, 'error' => 'Method not allowed']);
 }
 
-try {
-    switch ($method) {
-        case 'GET':
-            if (isset($_GET['id'])) {
-                // Get single user
-                $stmt = $db->query(
-                    "SELECT id, username, email, full_name, role, status, last_login, created_at, department, phone
-                     FROM users WHERE id = ?",
-                    [$_GET['id']]
-                );
+function handleGet($db, $auth) {
+    $action = $_GET['action'] ?? '';
+
+    switch ($action) {
+        case 'list_users':
+            if (!$auth->hasPermission('users.view')) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Access denied']);
+                return;
+            }
+
+            try {
+                $stmt = $db->prepare("
+                    SELECT id, username, full_name, email, role, status, created_at, updated_at, last_login
+                    FROM users
+                    WHERE deleted_at IS NULL
+                    ORDER BY created_at DESC
+                ");
+                $stmt->execute();
+                $users = $stmt->fetchAll();
+
+                echo json_encode(['success' => true, 'users' => $users]);
+            } catch (Exception $e) {
+                Logger::getInstance()->logDatabaseError('List users', $e->getMessage());
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'Database error']);
+            }
+            break;
+
+        case 'get_user':
+            if (!$auth->hasPermission('users.view')) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Access denied']);
+                return;
+            }
+
+            $userId = $_GET['user_id'] ?? null;
+            if (!$userId) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'User ID required']);
+                return;
+            }
+
+            try {
+                $stmt = $db->prepare("
+                    SELECT id, username, full_name, email, role, status, created_at, updated_at, last_login
+                    FROM users
+                    WHERE id = ? AND deleted_at IS NULL
+                ");
+                $stmt->execute([$userId]);
                 $user = $stmt->fetch();
-                echo json_encode($user ? sanitizeUser($user) : ['error' => 'User not found']);
-            } else {
-                // Get all users with optional filters
-                $where = [];
-                $params = [];
 
-                if (isset($_GET['status'])) {
-                    $where[] = "status = ?";
-                    $params[] = $_GET['status'];
+                if ($user) {
+                    echo json_encode(['success' => true, 'user' => $user]);
+                } else {
+                    http_response_code(404);
+                    echo json_encode(['success' => false, 'error' => 'User not found']);
                 }
-
-                if (isset($_GET['role'])) {
-                    $where[] = "role = ?";
-                    $params[] = $_GET['role'];
-                }
-
-                $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
-
-                $users = $db->select(
-                    "SELECT id, username, email, full_name, role, status, last_login, created_at, department, phone
-                     FROM users {$whereClause}
-                     ORDER BY created_at DESC"
-                );
-                $users = array_map('sanitizeUser', $users);
-                echo json_encode($users);
+            } catch (Exception $e) {
+                Logger::getInstance()->logDatabaseError('Get user', $e->getMessage());
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'Database error']);
             }
-            break;
-
-        case 'POST':
-            // Create new user
-            $data = json_decode(file_get_contents('php://input'), true);
-
-            if (!$data) {
-                // Handle form data
-                $data = $_POST;
-            }
-
-            // Validate required fields
-            if (empty($data['username']) || empty($data['password']) || empty($data['email']) || empty($data['full_name'])) {
-                http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'Missing required fields: username, password, email, full_name']);
-                exit;
-            }
-
-            // Check if username already exists
-            $existing = $db->select("SELECT id FROM users WHERE username = ?", [$data['username']]);
-            if (!empty($existing)) {
-                http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'Username already exists']);
-                exit;
-            }
-
-            // Check if email already exists
-            $existing = $db->select("SELECT id FROM users WHERE email = ?", [$data['email']]);
-            if (!empty($existing)) {
-                http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'Email already exists']);
-                exit;
-            }
-
-            $userId = $db->insert(
-                "INSERT INTO users (username, password_hash, email, full_name, role, status, department, phone)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                [
-                    $data['username'],
-                    password_hash($data['password'], PASSWORD_DEFAULT),
-                    $data['email'],
-                    $data['full_name'],
-                    $data['role'] ?? 'staff',
-                    $data['status'] ?? 'active',
-                    $data['department'] ?? null,
-                    $data['phone'] ?? null
-                ]
-            );
-
-            // Log the action (disabled temporarily)
-            // Logger::getInstance()->logUserAction('Created user', 'users', $userId, null, $data);
-
-            echo json_encode(['success' => true, 'id' => $userId]);
-            break;
-
-        case 'PUT':
-            // Update user
-            if (!isset($_GET['id'])) {
-                http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'User ID required']);
-                exit;
-            }
-
-            $data = json_decode(file_get_contents('php://input'), true);
-            if (!$data) {
-                $data = $_POST;
-            }
-
-            // Get old values for audit
-            $oldUser = $db->select("SELECT * FROM users WHERE id = ?", [$_GET['id']]);
-            $oldValues = $oldUser[0] ?? null;
-
-            if (!$oldValues) {
-                http_response_code(404);
-                echo json_encode(['success' => false, 'error' => 'User not found']);
-                exit;
-            }
-
-            $fields = [];
-            $params = [];
-
-            if (isset($data['email'])) {
-                // Check if email is already used by another user
-                $existing = $db->select("SELECT id FROM users WHERE email = ? AND id != ?", [$data['email'], $_GET['id']]);
-                if (!empty($existing)) {
-                    http_response_code(400);
-                    echo json_encode(['success' => false, 'error' => 'Email already exists']);
-                    exit;
-                }
-                $fields[] = "email = ?";
-                $params[] = $data['email'];
-            }
-            if (isset($data['full_name'])) {
-                $fields[] = "full_name = ?";
-                $params[] = $data['full_name'];
-            }
-            if (isset($data['role'])) {
-                $fields[] = "role = ?";
-                $params[] = $data['role'];
-            }
-            if (isset($data['status'])) {
-                $fields[] = "status = ?";
-                $params[] = $data['status'];
-            }
-            if (isset($data['department'])) {
-                $fields[] = "department = ?";
-                $params[] = $data['department'];
-            }
-            if (isset($data['phone'])) {
-                $fields[] = "phone = ?";
-                $params[] = $data['phone'];
-            }
-            if (isset($data['password']) && !empty($data['password'])) {
-                $fields[] = "password_hash = ?";
-                $params[] = password_hash($data['password'], PASSWORD_DEFAULT);
-            }
-
-            if (empty($fields)) {
-                http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'No fields to update']);
-                exit;
-            }
-
-            $params[] = $_GET['id'];
-            $sql = "UPDATE users SET " . implode(', ', $fields) . " WHERE id = ?";
-
-            $affected = $db->execute($sql, $params);
-
-            // Log the action (disabled temporarily)
-            // Logger::getInstance()->logUserAction('Updated user', 'users', $_GET['id'], $oldValues, $data);
-
-            echo json_encode(['success' => $affected > 0]);
-            break;
-
-        case 'DELETE':
-            // Delete user
-            if (!isset($_GET['id'])) {
-                http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'User ID required']);
-                exit;
-            }
-
-            // Prevent deletion of current user
-            if ($_GET['id'] == $_SESSION['user']['id']) {
-                http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'Cannot delete your own account']);
-                exit;
-            }
-
-            // Get old values for audit
-            $oldUser = $db->select("SELECT * FROM users WHERE id = ?", [$_GET['id']]);
-            $oldValues = $oldUser[0] ?? null;
-
-            if (!$oldValues) {
-                http_response_code(404);
-                echo json_encode(['success' => false, 'error' => 'User not found']);
-                exit;
-            }
-
-            $affected = $db->execute("DELETE FROM users WHERE id = ?", [$_GET['id']]);
-
-            // Log the action (disabled temporarily)
-            // Logger::getInstance()->logUserAction('Deleted user', 'users', $_GET['id'], $oldValues, null);
-
-            echo json_encode(['success' => $affected > 0]);
             break;
 
         default:
-            http_response_code(405);
-            echo json_encode(['error' => 'Method not allowed']);
-            break;
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Invalid action']);
     }
-} catch (Exception $e) {
-    error_log("User API operation error: " . $e->getMessage());
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Database error occurred']);
+}
+
+function handlePost($db, $auth, $currentUser) {
+    if (!$auth->hasPermission('users.manage')) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Access denied']);
+        return;
+    }
+
+    $data = json_decode(file_get_contents('php://input'), true);
+    $action = $data['action'] ?? '';
+
+    switch ($action) {
+        case 'create_user':
+            $username = trim($data['username'] ?? '');
+            $fullName = trim($data['full_name'] ?? '');
+            $email = trim($data['email'] ?? '');
+            $password = $data['password'] ?? '';
+            $role = $data['role'] ?? 'staff';
+
+            if (empty($username) || empty($fullName) || empty($password)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Username, full name, and password are required']);
+                return;
+            }
+
+            // Validate role
+            if (!in_array($role, ['super_admin', 'admin', 'staff'])) {
+                $role = 'staff';
+            }
+
+            try {
+                // Check if username already exists
+                $stmt = $db->prepare("SELECT id FROM users WHERE username = ? AND deleted_at IS NULL");
+                $stmt->execute([$username]);
+                if ($stmt->fetch()) {
+                    http_response_code(409);
+                    echo json_encode(['success' => false, 'error' => 'Username already exists']);
+                    return;
+                }
+
+                // Hash password
+                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
+                // Insert user
+                $stmt = $db->prepare("
+                    INSERT INTO users (username, full_name, email, password, role, status, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, 'active', NOW(), NOW())
+                ");
+                $stmt->execute([$username, $fullName, $email, $hashedPassword, $role]);
+                $userId = $db->lastInsertId();
+
+                Logger::getInstance()->logUserAction(
+                    'Created user',
+                    'users',
+                    $userId,
+                    null,
+                    ['username' => $username, 'role' => $role]
+                );
+
+                echo json_encode(['success' => true, 'user_id' => $userId, 'message' => 'User created successfully']);
+            } catch (Exception $e) {
+                Logger::getInstance()->logDatabaseError('Create user', $e->getMessage());
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'Database error']);
+            }
+            break;
+
+        case 'update_user':
+            $userId = $data['user_id'] ?? null;
+            $fullName = trim($data['full_name'] ?? '');
+            $email = trim($data['email'] ?? '');
+            $role = $data['role'] ?? null;
+            $status = $data['status'] ?? null;
+
+            if (!$userId || empty($fullName)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'User ID and full name are required']);
+                return;
+            }
+
+            // Validate role
+            if ($role && !in_array($role, ['super_admin', 'admin', 'staff'])) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Invalid role']);
+                return;
+            }
+
+            // Validate status
+            if ($status && !in_array($status, ['active', 'inactive'])) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Invalid status']);
+                return;
+            }
+
+            try {
+                $updateFields = [];
+                $params = [];
+
+                if (!empty($fullName)) {
+                    $updateFields[] = "full_name = ?";
+                    $params[] = $fullName;
+                }
+                if (!empty($email)) {
+                    $updateFields[] = "email = ?";
+                    $params[] = $email;
+                }
+                if ($role) {
+                    $updateFields[] = "role = ?";
+                    $params[] = $role;
+                }
+                if ($status) {
+                    $updateFields[] = "status = ?";
+                    $params[] = $status;
+                }
+
+                if (empty($updateFields)) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'error' => 'No fields to update']);
+                    return;
+                }
+
+                $updateFields[] = "updated_at = NOW()";
+                $params[] = $userId;
+
+                $stmt = $db->prepare("
+                    UPDATE users
+                    SET " . implode(', ', $updateFields) . "
+                    WHERE id = ? AND deleted_at IS NULL
+                ");
+                $stmt->execute($params);
+
+                if ($stmt->rowCount() > 0) {
+                    Logger::getInstance()->logUserAction(
+                        'Updated user',
+                        'users',
+                        $userId,
+                        null,
+                        ['updated_fields' => $updateFields]
+                    );
+                    echo json_encode(['success' => true, 'message' => 'User updated successfully']);
+                } else {
+                    http_response_code(404);
+                    echo json_encode(['success' => false, 'error' => 'User not found']);
+                }
+            } catch (Exception $e) {
+                Logger::getInstance()->logDatabaseError('Update user', $e->getMessage());
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'Database error']);
+            }
+            break;
+
+        default:
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Invalid action']);
+    }
+}
+
+function handlePut($db, $auth, $currentUser) {
+    // PUT requests can be handled the same as POST for updates
+    handlePost($db, $auth, $currentUser);
+}
+
+function handleDelete($db, $auth, $currentUser) {
+    if (!$auth->hasPermission('users.manage')) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Access denied']);
+        return;
+    }
+
+    $data = json_decode(file_get_contents('php://input'), true);
+    $action = $data['action'] ?? '';
+
+    switch ($action) {
+        case 'delete_user':
+            $userId = $data['user_id'] ?? null;
+
+            if (!$userId) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'User ID required']);
+                return;
+            }
+
+            try {
+                // Get user data before deletion for logging
+                $stmt = $db->prepare("SELECT * FROM users WHERE id = ? AND deleted_at IS NULL");
+                $stmt->execute([$userId]);
+                $userData = $stmt->fetch();
+
+                if (!$userData) {
+                    http_response_code(404);
+                    echo json_encode(['success' => false, 'error' => 'User not found']);
+                    return;
+                }
+
+                // Soft delete the user
+                $stmt = $db->prepare("
+                    UPDATE users
+                    SET deleted_at = NOW(), updated_at = NOW()
+                    WHERE id = ?
+                ");
+                $stmt->execute([$userId]);
+
+                // Insert into deleted_items table
+                $stmt = $db->prepare("
+                    INSERT INTO deleted_items (table_name, record_id, data, deleted_by, deleted_at, auto_delete_at)
+                    VALUES (?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY))
+                ");
+                $stmt->execute([
+                    'users',
+                    $userId,
+                    json_encode($userData),
+                    $currentUser['id']
+                ]);
+
+                Logger::getInstance()->logUserAction(
+                    'Soft deleted user',
+                    'users',
+                    $userId,
+                    null,
+                    ['username' => $userData['username']]
+                );
+
+                echo json_encode(['success' => true, 'message' => 'User deleted successfully']);
+            } catch (Exception $e) {
+                Logger::getInstance()->logDatabaseError('Delete user', $e->getMessage());
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'Database error']);
+            }
+            break;
+
+        default:
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Invalid action']);
+    }
 }
 ?>

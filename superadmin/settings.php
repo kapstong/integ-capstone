@@ -829,6 +829,9 @@ $departments = [
                                 <button class="nav-link active" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance" type="button" role="tab" aria-controls="maintenance" aria-selected="true"><i class="fas fa-tools"></i> Maintenance Mode</button>
                             </li>
                             <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab" aria-controls="users" aria-selected="false"><i class="fas fa-users"></i> User Management</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
                                 <button class="nav-link" id="roles-tab" data-bs-toggle="tab" data-bs-target="#roles" type="button" role="tab" aria-controls="roles" aria-selected="false"><i class="fas fa-user-shield"></i> Roles & Permissions</button>
                             </li>
                             <li class="nav-item" role="presentation">
@@ -836,6 +839,9 @@ $departments = [
                             </li>
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" id="departments-tab" data-bs-toggle="tab" data-bs-target="#departments" type="button" role="tab" aria-controls="departments" aria-selected="false"><i class="fas fa-sitemap"></i> Departments Integration</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="trash-tab" data-bs-toggle="tab" data-bs-target="#trash" type="button" role="tab" aria-controls="trash" aria-selected="false"><i class="fas fa-trash"></i> Recently Deleted</button>
                             </li>
                         </ul>
                         <div class="tab-content mt-3" id="settingsTabContent">
@@ -1077,6 +1083,121 @@ $departments = [
                                                         </td>
                                                     </tr>
                                                     <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="users" role="tabpanel" aria-labelledby="users-tab">
+                                <div id="usersAlertContainer"></div>
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h6 class="mb-0">User Management</h6>
+                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createUserModal">
+                                        <i class="fas fa-user-plus"></i> Create New User
+                                    </button>
+                                </div>
+
+                                <!-- Users Table -->
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0"><i class="fas fa-users me-2"></i> System Users</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-hover">
+                                                <thead class="table-dark">
+                                                    <tr>
+                                                        <th>Username</th>
+                                                        <th>Full Name</th>
+                                                        <th>Email</th>
+                                                        <th>Role</th>
+                                                        <th>Status</th>
+                                                        <th>Last Login</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($users as $userData): ?>
+                                                    <tr>
+                                                        <td><?php echo htmlspecialchars($userData['username']); ?></td>
+                                                        <td><?php echo htmlspecialchars($userData['full_name']); ?></td>
+                                                        <td><?php echo htmlspecialchars($userData['email'] ?? 'N/A'); ?></td>
+                                                        <td>
+                                                            <span class="badge bg-<?php
+                                                                echo $userData['role'] === 'super_admin' ? 'danger' :
+                                                                     ($userData['role'] === 'admin' ? 'warning' : 'info');
+                                                            ?>">
+                                                                <?php echo ucfirst(str_replace('_', ' ', $userData['role'])); ?>
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-<?php echo $userData['status'] === 'active' ? 'success' : 'secondary'; ?>">
+                                                                <?php echo ucfirst($userData['status'] ?? 'active'); ?>
+                                                            </span>
+                                                        </td>
+                                                        <td><?php echo $userData['last_login'] ? date('M j, Y H:i', strtotime($userData['last_login'])) : 'Never'; ?></td>
+                                                        <td>
+                                                            <div class="btn-group btn-group-sm">
+                                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="editUser(<?php echo $userData['id']; ?>)">
+                                                                    <i class="fas fa-edit"></i> Edit
+                                                                </button>
+                                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteUser(<?php echo $userData['id']; ?>, '<?php echo htmlspecialchars($userData['username']); ?>')">
+                                                                    <i class="fas fa-trash"></i> Delete
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="trash" role="tabpanel" aria-labelledby="trash-tab">
+                                <div id="trashAlertContainer"></div>
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <div>
+                                        <h6 class="mb-0">Recently Deleted Items</h6>
+                                        <small class="text-muted">Items are automatically permanently deleted after 30 days</small>
+                                    </div>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-outline-info btn-sm" onclick="refreshTrash()">
+                                            <i class="fas fa-sync"></i> Refresh
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="emptyTrash()">
+                                            <i class="fas fa-trash-alt"></i> Empty All
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Trash Table -->
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0"><i class="fas fa-trash me-2"></i> Deleted Items</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-hover">
+                                                <thead class="table-dark">
+                                                    <tr>
+                                                        <th>Item Type</th>
+                                                        <th>Item ID</th>
+                                                        <th>Deleted By</th>
+                                                        <th>Deleted At</th>
+                                                        <th>Auto Delete In</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="trashTableBody">
+                                                    <!-- Will be populated by JavaScript -->
+                                                    <tr>
+                                                        <td colspan="6" class="text-center text-muted py-4">
+                                                            <i class="fas fa-inbox fa-2x mb-2"></i>
+                                                            <br>Loading deleted items...
+                                                        </td>
+                                                    </tr>
                                                 </tbody>
                                             </table>
                                         </div>
@@ -1369,6 +1490,265 @@ $departments = [
         function assignRoleToUser(userId) {
             alert('Role assignment modal would open here');
         }
+
+        // User Management Functions
+        function showUsersAlert(message, type) {
+            const alert = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            document.getElementById('usersAlertContainer').innerHTML = alert;
+            setTimeout(() => {
+                document.querySelector('#usersAlertContainer .alert')?.remove();
+            }, 5000);
+        }
+
+        function editUser(userId) {
+            alert('Edit user modal would open here for user ID: ' + userId);
+        }
+
+        function deleteUser(userId, username) {
+            if (confirm(`Are you sure you want to delete user "${username}"? This action will soft delete the user.`)) {
+                fetch('api/users.php', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'delete_user',
+                        user_id: userId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showUsersAlert('User deleted successfully', 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showUsersAlert(data.error || 'Failed to delete user', 'danger');
+                    }
+                })
+                .catch(error => {
+                    showUsersAlert('Error: ' + error.message, 'danger');
+                });
+            }
+        }
+
+        // Trash Management Functions
+        function showTrashAlert(message, type) {
+            const alert = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            document.getElementById('trashAlertContainer').innerHTML = alert;
+            setTimeout(() => {
+                document.querySelector('#trashAlertContainer .alert')?.remove();
+            }, 5000);
+        }
+
+        function refreshTrash() {
+            loadTrashItems();
+        }
+
+        function emptyTrash() {
+            if (confirm('Are you sure you want to permanently delete ALL items in the trash? This action cannot be undone.')) {
+                fetch('api/trash.php', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'empty_trash'
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showTrashAlert('All trash items permanently deleted', 'success');
+                        loadTrashItems();
+                    } else {
+                        showTrashAlert(data.error || 'Failed to empty trash', 'danger');
+                    }
+                })
+                .catch(error => {
+                    showTrashAlert('Error: ' + error.message, 'danger');
+                });
+            }
+        }
+
+        function loadTrashItems() {
+            const tbody = document.getElementById('trashTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                        <br>Loading deleted items...
+                    </td>
+                </tr>
+            `;
+
+            fetch('api/trash.php?action=get_trash')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.items.length === 0) {
+                            tbody.innerHTML = `
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                                        <br>No deleted items found
+                                    </td>
+                                </tr>
+                            `;
+                            return;
+                        }
+
+                        tbody.innerHTML = data.items.map(item => {
+                            const deletedDate = new Date(item.deleted_at);
+                            const autoDeleteDate = new Date(item.auto_delete_at);
+                            const now = new Date();
+                            const daysLeft = Math.ceil((autoDeleteDate - now) / (1000 * 60 * 60 * 24));
+
+                            return `
+                                <tr>
+                                    <td>${item.table_name}</td>
+                                    <td>${item.record_id}</td>
+                                    <td>${item.deleted_by_name || 'Unknown'}</td>
+                                    <td>${deletedDate.toLocaleDateString()} ${deletedDate.toLocaleTimeString()}</td>
+                                    <td>
+                                        <span class="badge bg-${daysLeft <= 7 ? 'danger' : daysLeft <= 14 ? 'warning' : 'info'}">
+                                            ${daysLeft > 0 ? daysLeft + ' days' : 'Expired'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-info btn-sm" onclick="viewTrashItem(${item.id})">
+                                                <i class="fas fa-eye"></i> View
+                                            </button>
+                                            <button type="button" class="btn btn-outline-success btn-sm" onclick="restoreTrashItem(${item.id})">
+                                                <i class="fas fa-undo"></i> Restore
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="permanentDelete(${item.id})">
+                                                <i class="fas fa-trash-alt"></i> Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('');
+                    } else {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="text-center text-danger py-4">
+                                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                                    <br>Error loading trash items: ${data.error}
+                                </td>
+                            </tr>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center text-danger py-4">
+                                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                                <br>Error: ${error.message}
+                            </td>
+                        </tr>
+                    `;
+                });
+        }
+
+        function viewTrashItem(itemId) {
+            fetch(`api/trash.php?action=view_item&item_id=${itemId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Item data:\n' + JSON.stringify(data.item, null, 2));
+                    } else {
+                        showTrashAlert(data.error || 'Failed to load item', 'danger');
+                    }
+                })
+                .catch(error => {
+                    showTrashAlert('Error: ' + error.message, 'danger');
+                });
+        }
+
+        function restoreTrashItem(itemId) {
+            if (confirm('Are you sure you want to restore this item?')) {
+                fetch('api/trash.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'restore_item',
+                        item_id: itemId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showTrashAlert('Item restored successfully', 'success');
+                        loadTrashItems();
+                    } else {
+                        showTrashAlert(data.error || 'Failed to restore item', 'danger');
+                    }
+                })
+                .catch(error => {
+                    showTrashAlert('Error: ' + error.message, 'danger');
+                });
+            }
+        }
+
+        function permanentDelete(itemId) {
+            if (confirm('Are you sure you want to permanently delete this item? This action cannot be undone.')) {
+                fetch('api/trash.php', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'permanent_delete',
+                        item_id: itemId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showTrashAlert('Item permanently deleted', 'success');
+                        loadTrashItems();
+                    } else {
+                        showTrashAlert(data.error || 'Failed to delete item', 'danger');
+                    }
+                })
+                .catch(error => {
+                    showTrashAlert('Error: ' + error.message, 'danger');
+                });
+            }
+        }
+
+        // Initialize trash on page load when trash tab is active
+        document.addEventListener('DOMContentLoaded', function() {
+            // ... existing code ...
+
+            // Load trash items if on trash tab
+            const trashTab = document.getElementById('trash-tab');
+            if (trashTab && trashTab.classList.contains('active')) {
+                loadTrashItems();
+            }
+
+            // Load trash items when trash tab is clicked
+            trashTab?.addEventListener('shown.bs.tab', function() {
+                loadTrashItems();
+            });
+
+            syncDepartmentIntegrations();
+        });
 
         // Initialize sidebar state on page load
         document.addEventListener('DOMContentLoaded', function() {
