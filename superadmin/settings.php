@@ -5,7 +5,14 @@ require_once '../includes/logger.php';
 
 $auth = new Auth();
 $auth->requireLogin();
-$auth->requirePermission('roles.view');
+
+// Allow superadmin users to bypass permission checks
+$user = $auth->getCurrentUser();
+$isSuperAdmin = ($user['role'] === 'super_admin');
+
+if (!$isSuperAdmin) {
+    $auth->requirePermission('roles.view');
+}
 
 $permManager = PermissionManager::getInstance();
 $user = $auth->getCurrentUser();
@@ -17,7 +24,7 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    if (!$auth->hasPermission('roles.manage')) {
+    if (!$isSuperAdmin && !$auth->hasPermission('roles.manage')) {
         $error = 'You do not have permission to manage roles and permissions.';
     } else {
         switch ($action) {
@@ -104,7 +111,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && isset($_GET['action'])) {
     header('Content-Type: application/json');
 
-    if (!$auth->hasPermission('roles.manage')) {
+    global $isSuperAdmin;
+    if (!$isSuperAdmin && !$auth->hasPermission('roles.manage')) {
         echo json_encode(['success' => false, 'error' => 'Access denied']);
         exit;
     }
@@ -1267,6 +1275,39 @@ $departments = [
         </div>
     </div>
 
+    <!-- Assign Permission Modal -->
+    <div class="modal fade" id="assignPermissionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Assign Permission to Role</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" name="action" value="assign_permission">
+                        <input type="hidden" name="role_id" id="permission_role_id">
+                        <div class="mb-3">
+                            <label for="permission_id" class="form-label">Permission *</label>
+                            <select class="form-control" id="permission_id" name="permission_id" required>
+                                <option value="">Select Permission</option>
+                                <?php foreach ($permissions as $permission): ?>
+                                <option value="<?php echo $permission['id']; ?>">
+                                    <?php echo htmlspecialchars($permission['name'] . ' - ' . $permission['description']); ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Assign Permission</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Initialize Defaults Modal -->
     <div class="modal fade" id="initializeModal" tabindex="-1">
         <div class="modal-dialog">
@@ -1465,11 +1506,16 @@ $departments = [
         }
 
         function assignPermissionToRole(roleId) {
-            alert('Permission assignment modal would open here');
+            document.getElementById('permission_role_id').value = roleId;
+            const modal = new bootstrap.Modal(document.getElementById('assignPermissionModal'));
+            modal.show();
         }
 
         function assignRoleToUser(userId) {
-            alert('Role assignment modal would open here');
+            const modal = new bootstrap.Modal(document.getElementById('assignRoleModal'));
+            // Pre-select the user
+            document.getElementById('assign_user_id').value = userId;
+            modal.show();
         }
 
         // User Management Functions
