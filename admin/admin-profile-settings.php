@@ -1,4 +1,5 @@
 <?php
+$pageTitle = 'Profile Settings';
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
 
@@ -131,120 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin: 0;
             padding: 0;
         }
-        .sidebar {
-            height: 100vh;
-            max-height: 100vh;
-            overflow-y: auto;
-            overscroll-behavior: contain;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 2rem;
-            background-color: #1e2936;
-            color: white;
-            min-height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 300px;
-            z-index: 1000;
-            transition: transform 0.3s ease, width 0.3s ease;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .sidebar.sidebar-collapsed {
-            width: 120px;
-        }
-        .sidebar.sidebar-collapsed span {
-            display: none;
-        }
-        .sidebar.sidebar-collapsed .nav-link {
-            padding: 10px;
-            text-align: center;
-        }
-        .sidebar.sidebar-collapsed .navbar-brand {
-            text-align: center;
-        }
-        .sidebar.sidebar-collapsed .nav-item i[data-bs-toggle="collapse"] {
-            display: none;
-        }
-        .sidebar.sidebar-collapsed .submenu {
-            display: none;
-        }
-        .sidebar .nav-link {
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-        .sidebar .nav-link i {
-            font-size: 1.4em;
-        }
-        .sidebar .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-        .sidebar .nav-link.active {
-            background-color: rgba(255, 255, 255, 0.2);
-        }
-        .sidebar .submenu {
-            padding-left: 20px;
-        }
-        .sidebar .submenu .nav-link {
-            padding: 5px 20px;
-            font-size: 0.9em;
-        }
-        .sidebar .nav-item {
-            position: relative;
-        }
-        .sidebar .nav-item i[data-bs-toggle="collapse"] {
-            position: absolute;
-            right: 20px;
-            top: 10px;
-            transition: transform 0.3s ease;
-        }
-        .sidebar .nav-item i[aria-expanded="true"] {
-            transform: rotate(90deg);
-        }
-        .sidebar .nav-item i[aria-expanded="false"] {
-            transform: rotate(0deg);
-        }
-        .sidebar .navbar-brand {
-            color: white !important;
-            font-weight: bold;
-        }
-        .sidebar .navbar-brand img {
-            height: 50px;
-            width: auto;
-            max-width: 100%;
-            transition: height 0.3s ease;
-        }
-        .sidebar.sidebar-collapsed .navbar-brand img {
-            height: 80px;
-        }
-        .sidebar-toggle {
-            position: fixed;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            color: white;
-            font-size: 1.5em;
-            width: 40px;
-            height: 40px;
-            background-color: #1e2936;
-            border: 2px solid white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: left 0.3s ease, background-color 0.3s ease;
-            z-index: 1001;
-        }
-        .sidebar-toggle:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        .toggle-btn {
-            display: none;
-        }
+
         .navbar {
             background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
             padding: 1rem 1.5rem;
@@ -505,45 +393,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-    <!-- Sidebar -->
-    <div class="sidebar sidebar-collapsed" id="sidebar">
-        <div class="p-3">
-            <h5 class="navbar-brand"><img src="atieralogo.png" alt="Atiera Logo" style="height: 100px;"></h5>
-            <hr style="border-top: 2px solid white; margin: 10px 0;">
-        </div>
-        <nav class="nav flex-column">
-            <a class="nav-link" href="index.php">
-                <i class="fas fa-tachometer-alt me-2"></i><span>Dashboard</span>
-            </a>
-            <div class="nav-item">
-                <a class="nav-link" href="general_ledger.php">
-                    <i class="fas fa-book me-2"></i><span>General Ledger</span>
-                </a>
-                <i class="fas fa-chevron-right" data-bs-toggle="collapse" data-bs-target="#generalLedgerMenu" aria-expanded="false" style="cursor: pointer; color: white; padding: 5px 10px;"></i>
-                <div class="collapse" id="generalLedgerMenu">
-                    <div class="submenu">
-                        <a class="nav-link" href="accounts_payable.php">
-                            <i class="fas fa-credit-card me-2"></i><span>Accounts Payable</span>
-                        </a>
-                        <a class="nav-link" href="accounts_receivable.php">
-                            <i class="fas fa-money-bill-wave me-2"></i><span>Accounts Receivable</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <a class="nav-link" href="disbursements.php">
-                <i class="fas fa-money-check me-2"></i><span>Disbursements</span>
-            </a>
-              <a class="nav-link" href="reports.php">
-                  <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
-              </a>
-              <hr class="my-3">
-          </nav>
-    </div>
-    <div class="sidebar-toggle" onclick="toggleSidebarDesktop()">
-        <i class="fas fa-chevron-right" id="sidebarArrow"></i>
-    </div>
+    <?php include '../includes/admin_navigation.php'; ?>
 
     <div class="content">
         <?php include '../includes/global_navbar.php'; ?>
@@ -776,62 +626,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../includes/privacy_mode.js?v=7"></script>
-    <script>
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('show');
-        }
-
-        function toggleSidebarDesktop() {
-            const sidebar = document.getElementById('sidebar');
-            const content = document.querySelector('.content');
-            const arrow = document.getElementById('sidebarArrow');
-            const toggle = document.querySelector('.sidebar-toggle');
-            const logoImg = document.querySelector('.navbar-brand img');
-            sidebar.classList.toggle('sidebar-collapsed');
-            const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
-            if (isCollapsed) {
-                logoImg.src = 'atieralogo2.png';
-                content.style.marginLeft = '120px';
-                arrow.classList.remove('fa-chevron-left');
-                arrow.classList.add('fa-chevron-right');
-                toggle.style.left = '110px';
-            } else {
-                logoImg.src = 'atieralogo.png';
-                content.style.marginLeft = '300px';
-                arrow.classList.remove('fa-chevron-right');
-                arrow.classList.add('fa-chevron-left');
-                toggle.style.left = '290px';
-            }
-        }
-
-        // Initialize sidebar state on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            const sidebar = document.getElementById('sidebar');
-            const content = document.querySelector('.content');
-            const arrow = document.getElementById('sidebarArrow');
-            const toggle = document.querySelector('.sidebar-toggle');
-            const logoImg = document.querySelector('.navbar-brand img');
-            // Default state is collapsed (consistent with other admin pages)
-            const isCollapsed = localStorage.getItem('sidebarCollapsed') !== 'false';
-            if (isCollapsed) {
-                sidebar.classList.add('sidebar-collapsed');
-                logoImg.src = 'atieralogo2.png';
-                content.style.marginLeft = '120px';
-                arrow.classList.remove('fa-chevron-left');
-                arrow.classList.add('fa-chevron-right');
-                toggle.style.left = '110px';
-            } else {
-                sidebar.classList.remove('sidebar-collapsed');
-                logoImg.src = 'atieralogo.png';
-                content.style.marginLeft = '300px';
-                arrow.classList.remove('fa-chevron-right');
-                arrow.classList.add('fa-chevron-left');
-                toggle.style.left = '290px';
-            }
-        });
-    </script>
 </body>
 </html>
 </html>
-
