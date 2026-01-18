@@ -37,22 +37,31 @@ class PermissionManager {
 
         // Get all permissions for user's roles
         $roleIds = array_column($this->userRoles, 'role_id');
-        if (empty($roleIds)) {
-            $this->userPermissions = [];
-            return;
+        $rolePermissions = [];
+        if (!empty($roleIds)) {
+            $placeholders = str_repeat('?,', count($roleIds) - 1) . '?';
+            $stmt = $this->db->prepare("
+                SELECT DISTINCT p.name as permission_name
+                FROM role_permissions rp
+                JOIN permissions p ON rp.permission_id = p.id
+                WHERE rp.role_id IN ($placeholders)
+            ");
+            $stmt->execute($roleIds);
+            $rolePermissions = array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'permission_name');
         }
 
-        $placeholders = str_repeat('?,', count($roleIds) - 1) . '?';
+        // Get user-specific permissions
         $stmt = $this->db->prepare("
-            SELECT DISTINCT p.name as permission_name
-            FROM role_permissions rp
-            JOIN permissions p ON rp.permission_id = p.id
-            WHERE rp.role_id IN ($placeholders)
+            SELECT p.name as permission_name
+            FROM user_permissions up
+            JOIN permissions p ON up.permission_id = p.id
+            WHERE up.user_id = ?
         ");
-        $stmt->execute($roleIds);
-        $permissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt->execute([$userId]);
+        $userSpecificPermissions = array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'permission_name');
 
-        $this->userPermissions = array_column($permissions, 'permission_name');
+        // Combine role permissions and user-specific permissions
+        $this->userPermissions = array_unique(array_merge($rolePermissions, $userSpecificPermissions));
     }
 
     /**
@@ -228,6 +237,66 @@ class PermissionManager {
         } catch (Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Assign permission to user
+     */
+    public function assignPermissionToUser($userId, $permissionId) {
+        try {
+            // Check if assignment already exists
+            $stmt = $this->db->prepare("
+                SELECT id FROM user_permissions WHERE user_id = ? AND permission_id = ?
+            ");
+            $stmt->execute([$userId, $permissionId]);
+
+            if ($stmt->fetch()) {
+                return ['success' => true, 'message' => 'Permission already assigned to user'];
+            }
+
+            // Assign permission
+            $stmt = $this->db->prepare("
+                INSERT INTO user_permissions (user_id, permission_id, assigned_at) VALUES (?, ?, NOW())
+            ");
+            $stmt->execute([$userId, $permissionId]);
+
+            return ['success' => true, 'message' => 'Permission assigned to user successfully'];
+
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Remove permission from user
+     */
+    public function removePermissionFromUser($userId, $permissionId) {
+        try {
+            $stmt = $this->db->prepare("
+                DELETE FROM user_permissions WHERE user_id = ? AND permission_id = ?
+            ");
+            $stmt->execute([$userId, $permissionId]);
+
+            return ['success' => true, 'message' => 'Permission removed from user successfully'];
+
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get user-specific permissions
+     */
+    public function getUserSpecificPermissions($userId) {
+        $stmt = $this->db->prepare("
+            SELECT p.*
+            FROM permissions p
+            JOIN user_permissions up ON p.id = up.permission_id
+            WHERE up.user_id = ?
+            ORDER BY p.name ASC
+        ");
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
