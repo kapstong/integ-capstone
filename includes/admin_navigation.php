@@ -68,9 +68,6 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
         <!-- Financials Section (if user has permissions) -->
         <?php if ($showFinancialsNav): ?>
         <hr class="my-3">
-        <div class="px-3 mb-2">
-            <small class="text-white-50 text-uppercase fw-bold">Financials</small>
-        </div>
         <?php if ($canFinancialSetup): ?>
         <a class="nav-link <?php echo ($currentPage === 'financial_setup.php') ? 'active' : ''; ?>" href="financials/financial_setup.php">
             <i class="fas fa-cogs me-2"></i><span>Financial Setup</span>
