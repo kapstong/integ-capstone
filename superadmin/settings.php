@@ -1033,7 +1033,7 @@ $departments = [
             formData.append('action', 'test');
             formData.append('integration_name', name);
 
-            fetch('api/integrations.php', {
+            fetch('../../api/integrations.php', {
                 method: 'POST',
                 body: formData
             })
@@ -1071,7 +1071,7 @@ $departments = [
             formData.append('action', 'test');
             formData.append('integration_name', name);
 
-            fetch('api/integrations.php', {
+            fetch('../api/integrations.php', {
                 method: 'POST',
                 body: formData
             })
@@ -1130,7 +1130,7 @@ $departments = [
         }
 
         function viewRolePermissions(roleId) {
-            fetch(`api/roles.php?action=role_permissions&role_id=${roleId}`)
+            fetch(`../../api/roles.php?action=role_permissions&role_id=${roleId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1146,7 +1146,7 @@ $departments = [
         }
 
         function viewRoleUsers(roleId) {
-            fetch(`api/roles.php?action=role_users&role_id=${roleId}`)
+            fetch(`../../api/roles.php?action=role_users&role_id=${roleId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1162,7 +1162,7 @@ $departments = [
         }
 
         function viewUserPermissions(userId) {
-            fetch(`api/roles.php?action=user_roles&user_id=${userId}`)
+            fetch(`../api/roles.php?action=user_roles&user_id=${userId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1206,7 +1206,7 @@ $departments = [
 
         function editUser(userId) {
             // Fetch user data
-            fetch(`api/users.php?action=get_user&user_id=${userId}`)
+            fetch(`../api/users.php?action=get_user&user_id=${userId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1240,14 +1240,14 @@ $departments = [
             container.innerHTML = '<div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading permissions...</div>';
 
             // Fetch all available permissions
-            fetch('api/roles.php?action=permissions')
+            fetch('../api/roles.php?action=permissions')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         const allPermissions = data.permissions;
 
                         // Fetch user's current permissions
-                        fetch(`api/roles.php?action=user_roles&user_id=${userId}`)
+                        fetch(`../api/roles.php?action=user_roles&user_id=${userId}`)
                             .then(response => response.json())
                             .then(userData => {
                                 const userPermissions = userData.success ? userData.permissions : [];
@@ -1302,7 +1302,7 @@ $departments = [
                 permissions: formData.getAll('permissions[]')
             };
 
-            fetch('api/users.php', {
+            fetch('../api/users.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1327,7 +1327,7 @@ $departments = [
 
         function deleteUser(userId, username) {
             if (confirm(`Are you sure you want to delete user "${username}"? This action will soft delete the user.`)) {
-                fetch('api/users.php', {
+                fetch('../api/users.php', {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1372,7 +1372,7 @@ $departments = [
 
         function emptyTrash() {
             if (confirm('Are you sure you want to permanently delete ALL items in the trash? This action cannot be undone.')) {
-                fetch('api/trash.php', {
+                fetch('../api/trash.php', {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1407,7 +1407,7 @@ $departments = [
                 </tr>
             `;
 
-            fetch('api/trash.php?action=get_trash')
+            fetch('../api/trash.php?action=get_trash')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1480,7 +1480,7 @@ $departments = [
         }
 
         function viewTrashItem(itemId) {
-            fetch(`api/trash.php?action=view_item&item_id=${itemId}`)
+            fetch(`../api/trash.php?action=view_item&item_id=${itemId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1496,7 +1496,7 @@ $departments = [
 
         function restoreTrashItem(itemId) {
             if (confirm('Are you sure you want to restore this item?')) {
-                fetch('api/trash.php', {
+                fetch('../api/trash.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1523,7 +1523,7 @@ $departments = [
 
         function permanentDelete(itemId) {
             if (confirm('Are you sure you want to permanently delete this item? This action cannot be undone.')) {
-                fetch('api/trash.php', {
+                fetch('../api/trash.php', {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',

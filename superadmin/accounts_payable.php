@@ -1555,7 +1555,7 @@ try {
             };
 
             const method = isEditMode ? 'PUT' : 'POST';
-            const apiUrl = isEditMode ? `api/vendors.php?id=${vendorId}` : 'api/vendors.php';
+            const apiUrl = isEditMode ? `../api/vendors.php?id=${vendorId}` : '../api/vendors.php';
 
             try {
                 const response = await fetch(apiUrl, {
@@ -1638,7 +1638,7 @@ try {
             }
 
             const method = isEditMode ? 'PUT' : 'POST';
-            const apiUrl = isEditMode ? `api/bills.php?id=${editBillId}` : 'api/bills.php';
+            const apiUrl = isEditMode ? `../api/bills.php?id=${editBillId}` : '../api/bills.php';
 
             try {
                 const response = await fetch(apiUrl, {
@@ -1705,7 +1705,7 @@ try {
             paymentData.reference_number = referenceNumber;
 
             try {
-                const response = await fetch('api/payments.php', {
+                const response = await fetch('../api/payments.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1769,7 +1769,7 @@ try {
                     bill_id: null
                 };
 
-                const response = await fetch('api/payments.php', {
+                const response = await fetch('../api/payments.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1815,7 +1815,7 @@ try {
                 description: description
             };
 
-            const apiUrl = isEditMode ? `api/adjustments.php?id=${this.dataset.adjustmentId}` : 'api/adjustments.php';
+            const apiUrl = isEditMode ? `../api/adjustments.php?id=${this.dataset.adjustmentId}` : '../api/adjustments.php';
             const method = isEditMode ? 'PUT' : 'POST';
 
             try {
@@ -1860,7 +1860,7 @@ try {
         // Load vendors
         async function loadVendors() {
             try {
-                const response = await fetch('api/vendors.php');
+                const response = await fetch('../api/vendors.php');
                 const data = await response.json();
 
                 if (data.error) {
@@ -1913,7 +1913,7 @@ try {
         // Load bills
         async function loadBills() {
             try {
-                const response = await fetch('api/bills.php');
+                const response = await fetch('../api/bills.php');
                 const data = await response.json();
 
                 if (data.error) {
@@ -1996,7 +1996,7 @@ try {
         // Load payments made to vendors
         async function loadPayments() {
             try {
-                const response = await fetch('api/payments.php?type=made');
+                const response = await fetch('../api/payments.php?type=made');
                 const data = await response.json();
 
                 // Filter out collection entries (those with COLL- reference)
@@ -2050,7 +2050,7 @@ try {
         // Load collections from payments_made table
         async function loadCollections() {
             try {
-                const response = await fetch('api/payments.php?type=made');
+                const response = await fetch('../api/payments.php?type=made');
                 const data = await response.json();
 
                 // Filter only collection entries (those with COLL- reference or Collection notes)
@@ -2121,7 +2121,7 @@ try {
         // Load adjustments from adjustments API (payable type only)
         async function loadAdjustments() {
             try {
-                const response = await fetch('api/adjustments.php?type=payable');
+                const response = await fetch('../api/adjustments.php?type=payable');
                 const data = await response.json();
 
                 renderAdjustmentsTable(data);
@@ -2196,7 +2196,7 @@ try {
         // Edit vendor
         async function editVendor(vendorId) {
             try {
-                const response = await fetch(`api/vendors.php?id=${vendorId}`);
+                const response = await fetch(`../api/vendors.php?id=${vendorId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2252,7 +2252,7 @@ try {
             }
 
             try {
-                const response = await fetch(`api/vendors.php?id=${vendorId}`, {
+                const response = await fetch(`../api/vendors.php?id=${vendorId}`, {
                     method: 'DELETE'
                 });
 
@@ -2272,7 +2272,7 @@ try {
 
         // Filter bills
         function filterBills() {
-            let apiUrl = 'api/bills.php';
+            let apiUrl = '../api/bills.php';
             const params = [];
 
             // Get status filter
@@ -2332,7 +2332,7 @@ try {
                 const selectedPeriod = periodSelect ? periodSelect.value : '30';
 
                 // Get all bills with their aging status
-                const response = await fetch('api/bills.php?action=aging&period=' + selectedPeriod);
+                const response = await fetch('../api/bills.php?action=aging&period=' + selectedPeriod);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2448,16 +2448,16 @@ try {
 
                 switch(type) {
                     case 'payables':
-                        apiUrl = 'api/bills.php';
+                        apiUrl = '../api/bills.php';
                         filename = `payables_report_${new Date().toISOString().split('T')[0]}.csv`;
                         break;
                     case 'payments':
-                        apiUrl = 'api/payments.php?type=made';
+                        apiUrl = '../api/payments.php?type=made';
                         filename = `payments_report_${new Date().toISOString().split('T')[0]}.csv`;
                         break;
                     case 'aging':
                         // Get aging data with 120+ days period to get all data
-                        apiUrl = 'api/bills.php?action=aging&period=120';
+                        apiUrl = '../api/bills.php?action=aging&period=120';
                         filename = `aging_report_${new Date().toISOString().split('T')[0]}.csv`;
                         break;
                     default:
@@ -2591,7 +2591,7 @@ try {
         async function generateNextBillNumber() {
             try {
                 // Get the next bill number from the API
-                const response = await fetch('api/bills.php?action=next_number');
+                const response = await fetch('../api/bills.php?action=next_number');
                 const data = await response.json();
 
                 if (data.success && data.next_number) {
@@ -2669,7 +2669,7 @@ try {
         // Load bills for a specific vendor (for payment dropdown)
         async function loadBillsForVendor(vendorId) {
             try {
-                const response = await fetch(`api/bills.php?vendor_id=${vendorId}&status=draft,approved,overdue`);
+                const response = await fetch(`../api/bills.php?vendor_id=${vendorId}&status=draft,approved,overdue`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2697,7 +2697,7 @@ try {
         // View bill details
         async function viewBill(billId) {
             try {
-                const response = await fetch(`api/bills.php?id=${billId}`);
+                const response = await fetch(`../api/bills.php?id=${billId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2816,7 +2816,7 @@ try {
         // Edit bill
         async function editBill(billId) {
             try {
-                const response = await fetch(`api/bills.php?id=${billId}`);
+                const response = await fetch(`../api/bills.php?id=${billId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2876,7 +2876,7 @@ try {
             }
 
             try {
-                const response = await fetch(`api/bills.php?id=${billId}`, {
+                const response = await fetch(`../api/bills.php?id=${billId}`, {
                     method: 'DELETE'
                 });
 
@@ -2901,7 +2901,7 @@ try {
         // View payment details
         async function viewPayment(paymentId) {
             try {
-                const response = await fetch(`api/payments.php?id=${paymentId}`);
+                const response = await fetch(`../api/payments.php?id=${paymentId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -3023,7 +3023,7 @@ try {
             }
 
             try {
-                const response = await fetch(`api/payments.php?id=${paymentId}&type=made`, {
+                const response = await fetch(`../api/payments.php?id=${paymentId}&type=made`, {
                     method: 'DELETE'
                 });
 
@@ -3044,7 +3044,7 @@ try {
         // View collection details
         async function viewCollection(collectionId) {
             try {
-                const response = await fetch(`api/payments.php?id=${collectionId}&type=made`);
+                const response = await fetch(`../api/payments.php?id=${collectionId}&type=made`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -3168,7 +3168,7 @@ try {
             }
 
             try {
-                const response = await fetch(`api/payments.php?id=${collectionId}&type=made`, {
+                const response = await fetch(`../api/payments.php?id=${collectionId}&type=made`, {
                     method: 'DELETE'
                 });
 
@@ -3190,7 +3190,7 @@ try {
         async function viewAdjustment(adjustmentId) {
             try {
                 // Fetch adjustment details from API
-                const response = await fetch(`api/adjustments.php?id=${adjustmentId}`);
+                const response = await fetch(`../api/adjustments.php?id=${adjustmentId}`);
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -3332,7 +3332,7 @@ try {
             }
 
             try {
-                const response = await fetch(`api/adjustments.php?id=${adjustmentId}`, {
+                const response = await fetch(`../api/adjustments.php?id=${adjustmentId}`, {
                     method: 'DELETE'
                 });
 

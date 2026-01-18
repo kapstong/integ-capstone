@@ -1225,7 +1225,7 @@ try {
 
             // Make API call to get trial balance data
             const currentDate = new Date().toISOString().split('T')[0];
-            fetch(`api/reports.php?type=trial_balance&date_to=${currentDate}&format=csv`, {
+            fetch(`../api/reports.php?type=trial_balance&date_to=${currentDate}&format=csv`, {
                 method: 'GET'
             })
             .then(response => {
@@ -1357,7 +1357,7 @@ try {
             button.disabled = true;
 
             // Make API call
-            fetch('api/chart_of_accounts.php', {
+            fetch('../api/chart_of_accounts.php', {
                 method: 'POST',
                 body: formData
             })
@@ -1402,7 +1402,7 @@ try {
             if (action) params.append('action', action);
 
             // Fetch filtered audit trail
-            fetch(`api/audit.php?${params.toString()}`, {
+            fetch(`../api/audit.php?${params.toString()}`, {
                 method: 'GET'
             })
             .then(response => response.json())
@@ -1560,7 +1560,7 @@ try {
             button.disabled = true;
 
             // Make API call
-            fetch(`api/chart_of_accounts.php?id=${accountId}`, {
+            fetch(`../api/chart_of_accounts.php?id=${accountId}`, {
                 method: 'PUT',
                 body: formData
             })
@@ -1600,14 +1600,14 @@ try {
             showAlert('info', 'Deleting journal entry...');
 
             // First get the journal entry by reference to obtain the ID
-            fetch(`api/journal_entries.php?reference=${encodeURIComponent(entryReference)}`, {
+            fetch(`../api/journal_entries.php?reference=${encodeURIComponent(entryReference)}`, {
                 method: 'GET'
             })
             .then(response => response.json())
             .then(data => {
                 if (data && data.journal_entry && data.journal_entry.id) {
                     // Now delete using the actual ID
-                    return fetch(`api/journal_entries.php?id=${data.journal_entry.id}`, {
+                    return fetch(`../api/journal_entries.php?id=${data.journal_entry.id}`, {
                         method: 'DELETE'
                     });
                 } else {
@@ -1728,7 +1728,7 @@ try {
         }
 
         function loadAccountsForSelect(select) {
-            fetch('api/chart_of_accounts.php', {
+            fetch('../api/chart_of_accounts.php', {
                 method: 'GET'
             })
             .then(response => response.json())
@@ -1861,7 +1861,7 @@ try {
             button.disabled = true;
 
             // Make API call
-            fetch('api/journal_entries.php', {
+            fetch('../api/journal_entries.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -1897,7 +1897,7 @@ try {
 
         function editEntry(entryReference) {
             // Fetch journal entry data
-            fetch(`api/journal_entries.php?reference=${encodeURIComponent(entryReference)}`, {
+            fetch(`../api/journal_entries.php?reference=${encodeURIComponent(entryReference)}`, {
                 method: 'GET'
             })
             .then(response => response.json())
@@ -2071,7 +2071,7 @@ try {
             button.disabled = true;
 
             // Make API call
-            fetch(`api/journal_entries.php?id=${journalEntryId}`, {
+            fetch(`../api/journal_entries.php?id=${journalEntryId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'

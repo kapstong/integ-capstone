@@ -1365,7 +1365,7 @@ $db = Database::getInstance()->getConnection();
         // Load budgets
         async function loadBudgets() {
             try {
-                const response = await fetch('api/budgets.php');
+                const response = await fetch('../api/budgets.php');
                 const data = await response.json();
 
                 if (data.error) {
@@ -1422,7 +1422,7 @@ $db = Database::getInstance()->getConnection();
         // Load allocations
         async function loadAllocations() {
             try {
-                const response = await fetch('api/budgets.php?action=allocations');
+                const response = await fetch('../api/budgets.php?action=allocations');
                 const data = await response.json();
 
                 if (data.error) {
@@ -1531,7 +1531,7 @@ $db = Database::getInstance()->getConnection();
                 const trackingPeriodSelect = document.querySelector('#tracking select');
                 const period = trackingPeriodSelect ? trackingPeriodSelect.value : 'year_to_date';
                 const trackingParams = new URLSearchParams({ action: 'tracking', period });
-                const response = await fetch(`api/budgets.php?${trackingParams.toString()}`);
+                const response = await fetch(`../api/budgets.php?${trackingParams.toString()}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -1613,7 +1613,7 @@ $db = Database::getInstance()->getConnection();
             }
 
             try {
-                const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=getClaimsBreakdown');
+                const response = await fetch('../../api/integrations.php?action=execute&integration_name=hr3&action_name=getClaimsBreakdown');
                 const payload = await response.json();
 
                 if (!payload.success) {
@@ -1757,7 +1757,7 @@ $db = Database::getInstance()->getConnection();
 // Create budget
         async function createBudget(formData) {
             try {
-                const response = await fetch('api/budgets.php', {
+                const response = await fetch('../api/budgets.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1790,7 +1790,7 @@ $db = Database::getInstance()->getConnection();
 
         async function createBudgetItem(formData) {
             try {
-                const response = await fetch('api/budgets.php', {
+                const response = await fetch('../api/budgets.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1823,7 +1823,7 @@ $db = Database::getInstance()->getConnection();
 
         async function requestAdjustment(formData) {
             try {
-                const response = await fetch('api/budgets.php', {
+                const response = await fetch('../api/budgets.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1960,7 +1960,7 @@ $db = Database::getInstance()->getConnection();
 
         async function updateBudget(budgetId, formData) {
             try {
-                const response = await fetch(`api/budgets.php?id=${budgetId}`, {
+                const response = await fetch(`../api/budgets.php?id=${budgetId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2001,7 +2001,7 @@ $db = Database::getInstance()->getConnection();
 
         async function updateAdjustmentStatus(adjustmentId, status) {
             try {
-                const response = await fetch('api/budgets.php', {
+                const response = await fetch('../api/budgets.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2112,7 +2112,7 @@ $db = Database::getInstance()->getConnection();
 
         async function updateAdjustment(adjustmentId, formData) {
             try {
-                const response = await fetch(`api/budgets.php?id=${adjustmentId}`, {
+                const response = await fetch(`../api/budgets.php?id=${adjustmentId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2153,7 +2153,7 @@ $db = Database::getInstance()->getConnection();
             }
 
             try {
-                const response = await fetch(`api/budgets.php?action=adjustment&id=${adjustmentId}`, {
+                const response = await fetch(`../api/budgets.php?action=adjustment&id=${adjustmentId}`, {
                     method: 'DELETE'
                 });
 
@@ -2397,7 +2397,7 @@ $db = Database::getInstance()->getConnection();
         // Load vendors for dropdowns
         async function loadVendors() {
             try {
-                const response = await fetch('api/vendors.php');
+                const response = await fetch('../api/vendors.php');
                 const data = await response.json();
 
                 if (data.error) {
@@ -2415,7 +2415,7 @@ $db = Database::getInstance()->getConnection();
 
         async function loadDepartments() {
             try {
-                const response = await fetch('api/financials/departments.php');
+                const response = await fetch('../api/financials/departments.php');
                 const data = await response.json();
 
                 if (!data.success) {
@@ -2433,7 +2433,7 @@ $db = Database::getInstance()->getConnection();
 
         async function loadCategories() {
             try {
-                const response = await fetch('api/budgets.php?action=categories');
+                const response = await fetch('../api/budgets.php?action=categories');
                 const data = await response.json();
 
                 if (data.error) {
@@ -2451,7 +2451,7 @@ $db = Database::getInstance()->getConnection();
 
         async function loadAccounts() {
             try {
-                const response = await fetch('api/chart_of_accounts.php?active=true');
+                const response = await fetch('../api/chart_of_accounts.php?active=true');
                 const data = await response.json();
 
                 if (data.error) {
@@ -2469,7 +2469,7 @@ $db = Database::getInstance()->getConnection();
 
         async function loadAdjustments() {
             try {
-                const response = await fetch('api/budgets.php?action=adjustments');
+                const response = await fetch('../api/budgets.php?action=adjustments');
                 const data = await response.json();
 
                 if (data.error) {
@@ -2553,7 +2553,7 @@ $db = Database::getInstance()->getConnection();
                     'budget_categories',
                     'hr3_integrations'
                 ];
-                const response = await fetch(`api/audit.php?table_name=${encodeURIComponent(tables.join(','))}`);
+                const response = await fetch(`../api/audit.php?table_name=${encodeURIComponent(tables.join(','))}`);
                 const logs = await response.json();
 
                 if (!Array.isArray(logs) || logs.length === 0) {
@@ -2670,7 +2670,7 @@ $db = Database::getInstance()->getConnection();
         // Load alerts
         async function loadAlerts() {
             try {
-                const response = await fetch('api/budgets.php?action=alerts');
+                const response = await fetch('../api/budgets.php?action=alerts');
                 const data = await response.json();
 
                 if (data.error) {

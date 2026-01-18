@@ -410,7 +410,7 @@ function getSizeBadgeClass(size) {
 
 // Preview default dashboard
 function previewDashboard() {
-    fetch('api/dashboard.php?action=get_default_layout')
+    fetch('../api/dashboard.php?action=get_default_layout')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -451,7 +451,7 @@ function previewDashboard() {
 
 // Configure widget
 function configureWidget(widgetId) {
-    fetch(`api/dashboard.php?action=get_widget_config&widget_id=${widgetId}`)
+    fetch(`../api/dashboard.php?action=get_widget_config&widget_id=${widgetId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -472,7 +472,7 @@ function configureWidget(widgetId) {
 
 // View user dashboard
 function viewUserDashboard(userId) {
-    window.open(`api/dashboard.php?action=get_user_layout&user_id=${userId}`, '_blank');
+    window.open(`../api/dashboard.php?action=get_user_layout&user_id=${userId}`, '_blank');
 }
 
 // Reset user dashboard

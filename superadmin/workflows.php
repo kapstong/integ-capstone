@@ -531,7 +531,7 @@ function toggleWorkflow(workflowId, activate, workflowName) {
 
 // View workflow details
 function viewWorkflow(workflowId) {
-    fetch(`api/workflows.php?action=get_workflow&id=${workflowId}`)
+    fetch(`../api/workflows.php?action=get_workflow&id=${workflowId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -547,7 +547,7 @@ function viewWorkflow(workflowId) {
 
 // View workflow instance details
 function viewWorkflowInstance(instanceId) {
-    fetch(`api/workflows.php?action=get_instance&id=${instanceId}`)
+    fetch(`../api/workflows.php?action=get_instance&id=${instanceId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {

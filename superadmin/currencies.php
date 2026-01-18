@@ -185,7 +185,7 @@ $(document).ready(function() {
 
         const formData = new FormData(this);
 
-        fetch('api/currencies.php', {
+        fetch('../api/currencies.php', {
             method: 'POST',
             body: formData
         })
@@ -213,7 +213,7 @@ $(document).ready(function() {
         const currencyId = $('#edit_currency_id').val();
         const formData = new FormData(this);
 
-        fetch(`api/currencies.php?id=${currencyId}`, {
+        fetch(`../api/currencies.php?id=${currencyId}`, {
             method: 'PUT',
             body: formData
         })
@@ -236,7 +236,7 @@ $(document).ready(function() {
     // Delete currency
     window.deleteCurrency = function(id, name) {
         if (confirm(`Are you sure you want to delete the currency "${name}"?`)) {
-            fetch(`api/currencies.php?id=${id}`, {
+            fetch(`../api/currencies.php?id=${id}`, {
                 method: 'DELETE'
             })
             .then(response => response.json())
@@ -257,7 +257,7 @@ $(document).ready(function() {
 
     // Edit currency button click
     window.editCurrency = function(id) {
-        fetch(`api/currencies.php?id=${id}`)
+        fetch(`../api/currencies.php?id=${id}`)
         .then(response => response.json())
         .then(data => {
             $('#edit_currency_id').val(data.id);
@@ -277,7 +277,7 @@ $(document).ready(function() {
 });
 
 function loadCurrencies() {
-    fetch('api/currencies.php')
+    fetch('../api/currencies.php')
     .then(response => response.json())
     .then(data => {
         const tbody = $('#currenciesTable tbody');
