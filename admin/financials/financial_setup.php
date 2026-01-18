@@ -10,7 +10,7 @@ $auth->requireLogin();
 $auth->requirePermission('settings.edit');
 
 $pageTitle = 'Financial Setup';
-include '../legacy_header.php';
+include '../../includes/admin_navigation.php';
 ?>
 
 <div class="container-fluid">

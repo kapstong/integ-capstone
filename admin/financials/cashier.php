@@ -15,7 +15,7 @@ if (!$auth->hasAnyPermission(['cashier.operate', 'cashier.view_all'])) {
 }
 
 $pageTitle = 'Cashier / Collection';
-include '../legacy_header.php';
+include '../../includes/admin_navigation.php';
 ?>
 
 <div class="container-fluid">
