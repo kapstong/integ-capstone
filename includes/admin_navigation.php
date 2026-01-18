@@ -80,50 +80,27 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
         <a class="nav-link <?php echo ($currentPage === 'outlets.php') ? 'active' : ''; ?>" href="financials/outlets.php">
             <i class="fas fa-store me-2"></i><span>Outlets</span>
         </a>
-        <a class="nav-link <?php echo ($currentPage === 'daily_revenue.php') ? 'active' : ''; ?>" href="financials/daily_revenue.php">
-            <i class="fas fa-receipt me-2"></i><span>Daily Revenue</span>
-        </a>
         <?php endif; ?>
         <?php if ($canCashier): ?>
         <a class="nav-link <?php echo ($currentPage === 'cashier.php') ? 'active' : ''; ?>" href="financials/cashier.php">
             <i class="fas fa-cash-register me-2"></i><span>Cashier Shifts</span>
         </a>
         <?php endif; ?>
-        <?php if ($canFinancialReports): ?>
-        <a class="nav-link <?php echo ($currentPage === 'financial_reports.php') ? 'active' : ''; ?>" href="financials/financial_reports.php">
-            <i class="fas fa-chart-line me-2"></i><span>Financial Reports</span>
-        </a>
-        <?php endif; ?>
         <?php endif; ?>
 
-        <!-- Other Admin Sections -->
+        <!-- Admin & Security -->
         <hr class="my-3">
-        <a class="nav-link <?php echo ($currentPage === 'customer_handler.php') ? 'active' : ''; ?>" href="customer_handler.php">
-            <i class="fas fa-users me-2"></i><span>Customer Management</span>
-        </a>
         <a class="nav-link <?php echo ($currentPage === 'audit.php') ? 'active' : ''; ?>" href="audit.php">
             <i class="fas fa-history me-2"></i><span>Audit Trail</span>
         </a>
-        <a class="nav-link <?php echo ($currentPage === 'search.php') ? 'active' : ''; ?>" href="search.php">
-            <i class="fas fa-search me-2"></i><span>Search</span>
-        </a>
         <a class="nav-link <?php echo ($currentPage === 'two_factor_auth.php') ? 'active' : ''; ?>" href="two_factor_auth.php">
             <i class="fas fa-shield-alt me-2"></i><span>2FA Management</span>
-        </a>
-        <a class="nav-link <?php echo ($currentPage === 'backups.php') ? 'active' : ''; ?>" href="backups.php">
-            <i class="fas fa-save me-2"></i><span>Backup & Recovery</span>
-        </a>
-        <a class="nav-link <?php echo ($currentPage === 'workflows.php') ? 'active' : ''; ?>" href="workflows.php">
-            <i class="fas fa-cogs me-2"></i><span>Workflows</span>
         </a>
         <a class="nav-link <?php echo ($currentPage === 'roles.php') ? 'active' : ''; ?>" href="roles.php">
             <i class="fas fa-user-shield me-2"></i><span>Roles & Permissions</span>
         </a>
         <a class="nav-link <?php echo ($currentPage === 'settings.php') ? 'active' : ''; ?>" href="settings.php">
             <i class="fas fa-cog me-2"></i><span>Settings</span>
-        </a>
-        <a class="nav-link <?php echo ($currentPage === 'performance.php') ? 'active' : ''; ?>" href="performance.php">
-            <i class="fas fa-tachometer-alt me-2"></i><span>Performance</span>
         </a>
 
         <!-- Logout -->
