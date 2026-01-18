@@ -834,9 +834,7 @@ $departments = [
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" id="roles-tab" data-bs-toggle="tab" data-bs-target="#roles" type="button" role="tab" aria-controls="roles" aria-selected="false"><i class="fas fa-user-shield"></i> Roles & Permissions</button>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="rbac-tab" data-bs-toggle="tab" data-bs-target="#rbac" type="button" role="tab" aria-controls="rbac" aria-selected="false"><i class="fas fa-users-cog"></i> RBAC Settings</button>
-                            </li>
+
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" id="departments-tab" data-bs-toggle="tab" data-bs-target="#departments" type="button" role="tab" aria-controls="departments" aria-selected="false"><i class="fas fa-sitemap"></i> Departments Integration</button>
                             </li>
@@ -1019,24 +1017,7 @@ $departments = [
                                 </div>
                                 <?php endif; ?>
                             </div>
-                            <div class="tab-pane fade" id="rbac" role="tabpanel" aria-labelledby="rbac-tab">
-                                <h6>RBAC Settings for Financial Manager and Staff</h6>
-                                <form>
-                                    <div class="mb-3">
-                                        <label for="financialManagerRoles" class="form-label">Financial Manager Roles</label>
-                                        <textarea class="form-control" id="financialManagerRoles" rows="4" placeholder="Define permissions and access levels for Financial Manager (will implement soon)"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="staffRoles" class="form-label">Staff Roles</label>
-                                        <textarea class="form-control" id="staffRoles" rows="4" placeholder="Define permissions and access levels for Staff (will implement soon)"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="roleHierarchy" class="form-label">Role Hierarchy</label>
-                                        <textarea class="form-control" id="roleHierarchy" rows="3" placeholder="Set up role hierarchy and approval workflows"></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                </form>
-                            </div>
+
                             <div class="tab-pane fade" id="departments" role="tabpanel" aria-labelledby="departments-tab">
                                 <div id="departmentsAlertContainer"></div>
                                 <div class="card">
