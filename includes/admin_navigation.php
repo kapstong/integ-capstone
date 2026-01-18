@@ -27,7 +27,6 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
 <div class="sidebar sidebar-collapsed" id="sidebar">
     <div class="p-3">
         <h5 class="navbar-brand"><img src="atieralogo.png" alt="Atiera Logo" style="height: 100px;"></h5>
-        <hr style="border-top: 2px solid white; margin: 10px 0;">
     </div>
     <nav class="nav flex-column">
         <!-- Dashboard -->
@@ -65,11 +64,6 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
             <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
         </a>
 
-        <!-- Admin & Security -->
-        <hr class="my-3">
-
-        <!-- Logout -->
-        <hr class="my-3">
         <a class="nav-link text-danger" href="../logout.php">
             <i class="fas fa-sign-out-alt me-2"></i><span>Logout</span>
         </a>
