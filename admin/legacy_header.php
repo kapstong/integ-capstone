@@ -5,6 +5,13 @@
 $pageTitle = $pageTitle ?? 'Admin';
 $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
 $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.php', 'accounts_receivable.php'], true);
+require_once __DIR__ . '/../includes/auth.php';
+$auth = $auth ?? new Auth();
+$canFinancialSetup = $auth->hasPermission('settings.edit');
+$canDepartmentView = $auth->hasPermission('departments.view');
+$canCashier = $auth->hasAnyPermission(['cashier.operate', 'cashier.view_all']);
+$canFinancialReports = $auth->hasPermission('reports.view');
+$showFinancialsNav = $canFinancialSetup || $canDepartmentView || $canCashier || $canFinancialReports;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -385,7 +392,36 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
             <a class="nav-link <?php echo ($currentPage === 'reports.php') ? 'active' : ''; ?>" href="/admin/reports.php">
                 <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
             </a>
+            <?php if ($showFinancialsNav): ?>
             <hr class="my-3">
+            <div class="px-3 mb-2">
+                <small class="text-white-50 text-uppercase fw-bold">Financials</small>
+            </div>
+            <?php if ($canFinancialSetup): ?>
+            <a class="nav-link <?php echo ($currentPage === 'financial_setup.php') ? 'active' : ''; ?>" href="/admin/financials/financial_setup.php">
+                <i class="fas fa-cogs me-2"></i><span>Financial Setup</span>
+            </a>
+            <?php endif; ?>
+            <?php if ($canDepartmentView): ?>
+            <a class="nav-link <?php echo ($currentPage === 'outlets.php') ? 'active' : ''; ?>" href="/admin/financials/outlets.php">
+                <i class="fas fa-store me-2"></i><span>Outlets</span>
+            </a>
+            <a class="nav-link <?php echo ($currentPage === 'daily_revenue.php') ? 'active' : ''; ?>" href="/admin/financials/daily_revenue.php">
+                <i class="fas fa-receipt me-2"></i><span>Daily Revenue</span>
+            </a>
+            <?php endif; ?>
+            <?php if ($canCashier): ?>
+            <a class="nav-link <?php echo ($currentPage === 'cashier.php') ? 'active' : ''; ?>" href="/admin/financials/cashier.php">
+                <i class="fas fa-cash-register me-2"></i><span>Cashier Shifts</span>
+            </a>
+            <?php endif; ?>
+            <?php if ($canFinancialReports): ?>
+            <a class="nav-link <?php echo ($currentPage === 'financial_reports.php') ? 'active' : ''; ?>" href="/admin/financials/financial_reports.php">
+                <i class="fas fa-chart-line me-2"></i><span>Financial Reports</span>
+            </a>
+            <?php endif; ?>
+            <hr class="my-3">
+            <?php endif; ?>
         </nav>
     </div>
 
