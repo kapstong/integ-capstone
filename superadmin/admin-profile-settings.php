@@ -1,4 +1,5 @@
 <?php
+$pageTitle = 'Profile Settings';
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
 
@@ -834,4 +835,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </body>
 </html>
 </html>
-
