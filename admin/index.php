@@ -840,7 +840,7 @@ body {
 </style>
 </head>
 <body>
-    <?php include '../includes/superadmin_navigation.php'; ?>
+    <?php include '../includes/admin_navigation.php'; ?>
 
     <div class="content">
         <!-- Top Navbar -->

@@ -1,7 +1,7 @@
 <?php
 /**
- * Admin Navigation Component
- * Intermediate sidebar navigation for admin users
+ * Staff Navigation Component
+ * Limited sidebar navigation for staff users
  */
 
 // Get current page for active state
@@ -9,7 +9,7 @@ $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
 $currentPage = basename($scriptName);
 ?>
 
-<!-- Admin Sidebar Navigation -->
+<!-- Staff Sidebar Navigation -->
 <div class="sidebar sidebar-collapsed" id="sidebar">
     <div class="p-3">
         <h5 class="navbar-brand"><img src="atieralogo.png" alt="Atiera Logo" style="height: 100px;"></h5>
@@ -20,38 +20,19 @@ $currentPage = basename($scriptName);
             <i class="fas fa-tachometer-alt me-2"></i><span>Dashboard</span>
         </a>
 
-        <!-- General Ledger Section -->
-        <div class="nav-item">
-            <a class="nav-link <?php echo ($currentPage === 'general_ledger.php') ? 'active' : ''; ?>" href="general_ledger.php">
-                <i class="fas fa-book me-2"></i><span>General Ledger</span>
-            </a>
-            <i class="fas fa-chevron-right" data-bs-toggle="collapse" data-bs-target="#generalLedgerMenu"
-               aria-expanded="false" style="cursor: pointer; color: white; padding: 5px 10px;"></i>
-            <div class="collapse" id="generalLedgerMenu">
-                <div class="submenu">
-                    <a class="nav-link <?php echo ($currentPage === 'accounts_payable.php') ? 'active' : ''; ?>" href="accounts_payable.php">
-                        <i class="fas fa-credit-card me-2"></i><span>Accounts Payable</span>
-                    </a>
-                    <a class="nav-link <?php echo ($currentPage === 'accounts_receivable.php') ? 'active' : ''; ?>" href="accounts_receivable.php">
-                        <i class="fas fa-money-bill-wave me-2"></i><span>Accounts Receivable</span>
-                    </a>
-                </div>
-            </div>
-        </div>
+        <!-- Tasks -->
+        <a class="nav-link <?php echo ($currentPage === 'tasks.php') ? 'active' : ''; ?>" href="tasks.php">
+            <i class="fas fa-tasks me-2"></i><span>My Tasks</span>
+        </a>
 
-        <!-- Financial Reports -->
+        <!-- Reports -->
         <a class="nav-link <?php echo ($currentPage === 'reports.php') ? 'active' : ''; ?>" href="reports.php">
             <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
         </a>
 
-        <!-- Budget Management -->
-        <a class="nav-link <?php echo ($currentPage === 'budget_management.php') ? 'active' : ''; ?>" href="budget_management.php">
-            <i class="fas fa-chart-line me-2"></i><span>Budget Management</span>
-        </a>
-
-        <!-- Settings -->
-        <a class="nav-link <?php echo ($currentPage === 'settings.php') ? 'active' : ''; ?>" href="settings.php">
-            <i class="fas fa-cog me-2"></i><span>Settings</span>
+        <!-- Profile -->
+        <a class="nav-link <?php echo ($currentPage === 'profile.php') ? 'active' : ''; ?>" href="profile.php">
+            <i class="fas fa-user me-2"></i><span>Profile</span>
         </a>
 
         <!-- Logout -->
