@@ -1184,7 +1184,7 @@ body {
 
                 // Log HR3 claim processing to audit trail
                 try {
-                    await fetch('../api/audit.php', {
+                    await fetch('api/audit.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         credentials: 'include',

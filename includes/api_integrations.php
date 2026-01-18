@@ -1146,6 +1146,15 @@ class HR4Integration extends BaseIntegration {
 
             if ((isset($result['status']) && strtolower($result['status']) === 'success') ||
                 (isset($result['success']) && $result['success'])) {
+                if (class_exists('Logger')) {
+                    Logger::getInstance()->logUserAction(
+                        $statusValue,
+                        'payroll',
+                        $payrollId,
+                        ['status' => 'processed'],
+                        ['status' => $statusValue, 'action' => $action]
+                    );
+                }
                 return ['success' => true, 'message' => $result['message'] ?? 'Payroll updated'];
             }
 

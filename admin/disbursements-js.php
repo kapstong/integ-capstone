@@ -53,7 +53,7 @@ header('Content-Type: application/javascript');
         // Audit Trail Functionality
         async function loadAuditTrail() {
             try {
-                const response = await fetch('api/audit.php', {
+                const response = await fetch('api/audit.php?scope=disbursements', {
                     credentials: 'include'
                 });
                 const auditLogs = await response.json();
@@ -66,9 +66,10 @@ header('Content-Type: application/javascript');
                     return;
                 }
 
-                tbody.innerHTML = auditLogs.map(log =>
-                    '<tr><td>' + log.formatted_date + '</td><td>' + (log.full_name || log.username || 'Unknown') + '</td><td><span class="badge bg-info">' + log.action + '</span></td><td>' + (log.disbursement_number || log.record_id || 'N/A') + '</td><td>' + log.action_description + '</td></tr>'
-                ).join('');
+                tbody.innerHTML = auditLogs.map(log => {
+                    const actionLabel = log.action_label || log.action;
+                    return '<tr><td>' + log.formatted_date + '</td><td>' + (log.full_name || log.username || 'Unknown') + '</td><td><span class="badge bg-info">' + actionLabel + '</span></td><td>' + (log.disbursement_number || log.record_id || 'N/A') + '</td><td>' + log.action_description + '</td></tr>';
+                }).join('');
 
             } catch (error) {
                 const tbody = document.getElementById('auditTableBody');

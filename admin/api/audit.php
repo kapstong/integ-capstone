@@ -36,6 +36,9 @@ function getAuditTrail($db, $filters = []) {
     try {
         $where = [];
         $params = [];
+        $allowedTables = ['disbursements', 'hr3_claims', 'payroll'];
+        $allowedActions = ['created', 'updated', 'deleted', 'approved', 'rejected', 'processed_payment'];
+        $scope = $filters['scope'] ?? '';
 
         // Filter by table
         if (isset($filters['table_name'])) {
@@ -49,6 +52,20 @@ function getAuditTrail($db, $filters = []) {
                     $where[] = "a.table_name = ?";
                     $params[] = $tables[0];
                 }
+            }
+        }
+
+        if ($scope === 'disbursements') {
+            if (!empty($allowedTables)) {
+                $placeholders = implode(',', array_fill(0, count($allowedTables), '?'));
+                $where[] = "a.table_name IN ($placeholders)";
+                $params = array_merge($params, $allowedTables);
+            }
+
+            if (!empty($allowedActions)) {
+                $placeholders = implode(',', array_fill(0, count($allowedActions), '?'));
+                $where[] = "a.action IN ($placeholders)";
+                $params = array_merge($params, $allowedActions);
             }
         }
 
@@ -101,7 +118,8 @@ function getAuditTrail($db, $filters = []) {
 
         // Format the results
         foreach ($logs as &$log) {
-            $log['formatted_date'] = date('M j, Y g:i A', strtotime($log['created_at']));
+            $log['formatted_date'] = date('M j, Y g:i:s A', strtotime($log['created_at']));
+            $log['action_label'] = formatActionLabel($log['action']);
             $log['action_description'] = formatAction($log);
         }
 
@@ -142,6 +160,19 @@ function logDisbursementAction($db, $action, $recordId, $oldValues = null, $newV
     }
 }
 
+function formatActionLabel($action) {
+    $action = strtolower($action);
+    $labels = [
+        'created' => 'Created',
+        'updated' => 'Updated',
+        'deleted' => 'Deleted',
+        'approved' => 'Approved',
+        'rejected' => 'Rejected',
+        'processed_payment' => 'Processed Payment'
+    ];
+    return $labels[$action] ?? ucfirst($action);
+}
+
 function formatAction($log) {
     $action = strtolower($log['action']);
     $table = $log['table_name'];
@@ -153,6 +184,12 @@ function formatAction($log) {
     switch ($table) {
         case 'disbursements':
             $record = $log['disbursement_number'] ? "disbursement {$log['disbursement_number']}" : "disbursement ID {$log['record_id']}";
+            break;
+        case 'payroll':
+            $record = "payroll ID {$log['record_id']}";
+            break;
+        case 'hr3_claims':
+            $record = "HR3 claim {$log['record_id']}";
             break;
         case 'budgets':
             $budgetName = $newValues['budget_name'] ?? $newValues['name'] ?? $oldValues['budget_name'] ?? $oldValues['name'] ?? null;
@@ -202,6 +239,11 @@ function formatAction($log) {
             return "Requested $record";
         case 'integration_execute':
             return "Loaded $record";
+        case 'processed_payment':
+            if (!empty($newValues['description'])) {
+                return $newValues['description'];
+            }
+            return "Processed payment for $record";
         case 'generated':
             return "Generated report";
         default:
@@ -223,9 +265,53 @@ try {
                 $filters['action'] = $_GET['action'];
             }
             if (isset($_GET['table_name'])) $filters['table_name'] = $_GET['table_name'];
+            if (isset($_GET['scope'])) $filters['scope'] = $_GET['scope'];
 
             $auditTrail = getAuditTrail($db, $filters);
             echo json_encode($auditTrail);
+            break;
+        case 'POST':
+            if (isset($_POST['action']) && $_POST['action'] === 'log') {
+                $action = strtolower(trim($_POST['action_type'] ?? ''));
+                $table = trim($_POST['table_name'] ?? '');
+                $recordId = trim($_POST['record_id'] ?? '');
+                $oldValues = $_POST['old_values'] ?? null;
+                $newValues = $_POST['new_values'] ?? null;
+
+                $allowedTables = ['disbursements', 'hr3_claims', 'payroll'];
+                $allowedActions = ['created', 'updated', 'deleted', 'approved', 'rejected', 'processed_payment'];
+
+                if (!in_array($table, $allowedTables, true) || !in_array($action, $allowedActions, true)) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Unsupported audit log action']);
+                    break;
+                }
+
+                $stmt = $db->prepare("
+                    INSERT INTO audit_log (
+                        user_id, action, table_name, record_id, old_values, new_values,
+                        ip_address, user_agent, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                ");
+
+                $stmt->execute([
+                    $_SESSION['user']['id'] ?? null,
+                    $action,
+                    $table,
+                    $recordId !== '' ? $recordId : null,
+                    $oldValues,
+                    $newValues
+                        ? (is_string($newValues) ? $newValues : json_encode($newValues))
+                        : null,
+                    $_SERVER['REMOTE_ADDR'] ?? null,
+                    $_SERVER['HTTP_USER_AGENT'] ?? null
+                ]);
+
+                echo json_encode(['success' => true]);
+                break;
+            }
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
             break;
 
         default:

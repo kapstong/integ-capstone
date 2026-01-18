@@ -41,6 +41,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $method = $_SERVER['REQUEST_METHOD'];
 
+function logAuditEntry($db, $action, $table, $recordId, $oldValues = null, $newValues = null) {
+    try {
+        $stmt = $db->prepare("
+            INSERT INTO audit_log (
+                user_id, action, table_name, record_id, old_values, new_values,
+                ip_address, user_agent, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+
+        $stmt->execute([
+            $_SESSION['user']['id'] ?? null,
+            $action,
+            $table,
+            $recordId,
+            $oldValues ? json_encode($oldValues) : null,
+            $newValues ? json_encode($newValues) : null,
+            $_SERVER['REMOTE_ADDR'] ?? null,
+            $_SERVER['HTTP_USER_AGENT'] ?? null
+        ]);
+    } catch (Exception $e) {
+        error_log("Audit log insert failed: " . $e->getMessage());
+    }
+}
+
 function processPayment($db, $data) {
     try {
         // Validate required fields
@@ -84,6 +108,15 @@ function processPayment($db, $data) {
 
         // Create journal entry for the disbursement
         createDisbursementJournalEntry($db, $disbursementId, $data);
+
+        logAuditEntry($db, 'created', 'disbursements', $disbursementId, null, [
+            'disbursement_number' => $disbursementNumber,
+            'disbursement_date' => $data['payment_date'],
+            'payee' => $data['payee'],
+            'amount' => $data['amount'],
+            'payment_method' => $data['payment_method'],
+            'reference_number' => $data['reference_number'] ?? null
+        ]);
 
         $db->commit();
 
@@ -361,6 +394,15 @@ function handlePost($db) {
         // Create journal entry for the disbursement
         createDisbursementJournalEntry($db, $disbursementId, $data);
 
+        logAuditEntry($db, 'created', 'disbursements', $disbursementId, null, [
+            'disbursement_number' => $disbursementNumber,
+            'disbursement_date' => $data['disbursement_date'],
+            'payee' => $data['payee'],
+            'amount' => $data['amount'],
+            'payment_method' => $data['payment_method'],
+            'reference_number' => $data['reference_number'] ?? null
+        ]);
+
         // Update bill status if bill_id is provided
         if (isset($data['bill_id']) && !empty($data['bill_id'])) {
             updateBillPaymentStatus($db, $data['bill_id'], $data['amount']);
@@ -401,6 +443,10 @@ function handlePut($db) {
             return;
         }
 
+        $stmt = $db->prepare("SELECT * FROM disbursements WHERE id = ?");
+        $stmt->execute([$id]);
+        $oldRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+
         $db->beginTransaction();
 
         // Update disbursement
@@ -429,6 +475,15 @@ function handlePut($db) {
         // Update journal entry
         updateDisbursementJournalEntry($db, $id, $data);
 
+        logAuditEntry($db, 'updated', 'disbursements', $id, $oldRecord, [
+            'amount' => $data['amount'],
+            'payment_method' => $data['payment_method'],
+            'reference_number' => $data['reference_number'] ?? null,
+            'purpose' => $data['purpose'] ?? $data['notes'] ?? null,
+            'disbursement_date' => $data['disbursement_date'],
+            'status' => $data['status'] ?? 'completed'
+        ]);
+
         $db->commit();
 
         echo json_encode([
@@ -454,6 +509,10 @@ function handleDelete($db) {
             return;
         }
 
+        $stmt = $db->prepare("SELECT * FROM disbursements WHERE id = ?");
+        $stmt->execute([$id]);
+        $oldRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+
         $db->beginTransaction();
 
         // Delete journal entries first
@@ -463,6 +522,8 @@ function handleDelete($db) {
         // Delete disbursement
         $stmt = $db->prepare("DELETE FROM disbursements WHERE id = ?");
         $stmt->execute([$id]);
+
+        logAuditEntry($db, 'deleted', 'disbursements', $id, $oldRecord, null);
 
         $db->commit();
 
