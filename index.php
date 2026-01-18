@@ -27,12 +27,14 @@ if (isset($_GET['info'])) {
 if ($auth->isLoggedIn()) {
     $user = $auth->getCurrentUser();
     $role = strtolower($user['role_name'] ?? '');
-    if (in_array($role, ['admin', 'super_admin'], true)) {
+    if ($role === 'super_admin') {
+        header('Location: superadmin/index.php');
+    } elseif ($role === 'admin') {
         header('Location: admin/index.php');
     } elseif ($role === 'staff') {
-        header('Location: user/index.php');
+        header('Location: staff/index.php');
     } else {
-        header('Location: user/index.php'); // Default to staff dashboard
+        header('Location: staff/index.php'); // Default to staff dashboard
     }
     exit();
 }
@@ -75,12 +77,14 @@ if ($_POST) {
             // No 2FA required, proceed with normal login
             // Route users based on their role
             $role = strtolower($result['user']['role_name'] ?? '');
-            if (in_array($role, ['admin', 'super_admin'], true)) {
+            if ($role === 'super_admin') {
+                $target = 'superadmin/index.php';
+            } elseif ($role === 'admin') {
                 $target = 'admin/index.php';
             } elseif ($role === 'staff') {
-                $target = 'user/index.php';
+                $target = 'staff/index.php';
             } else {
-                $target = 'user/index.php'; // Default to staff dashboard
+                $target = 'staff/index.php'; // Default to staff dashboard
             }
             header('Location: ' . $target);
             exit();

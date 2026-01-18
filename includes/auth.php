@@ -287,7 +287,8 @@ class Auth {
     public function checkAccess($permission, $redirect = true) {
         if (!$this->hasPermission($permission)) {
             if ($redirect) {
-                header('Location: /admin/index.php?error=access_denied');
+                $redirectUrl = $this->getRoleBasedRedirectUrl('?error=access_denied');
+                header('Location: ' . $redirectUrl);
                 exit;
             }
             return false;
@@ -309,7 +310,8 @@ class Auth {
     public function requireRole($role, $redirect = true) {
         if (!$this->hasRole($role)) {
             if ($redirect) {
-                header('Location: /admin/index.php?error=access_denied');
+                $redirectUrl = $this->getRoleBasedRedirectUrl('?error=access_denied');
+                header('Location: ' . $redirectUrl);
                 exit;
             }
             return false;
@@ -327,6 +329,20 @@ class Auth {
             return true;
         }
         return $this->permManager->hasRole('admin') || $this->permManager->hasRole('super_admin');
+    }
+
+    private function getRoleBasedRedirectUrl($queryString = '') {
+        $roleName = $_SESSION['user']['role_name'] ?? '';
+        switch ($roleName) {
+            case 'super_admin':
+                return '/superadmin/index.php' . $queryString;
+            case 'admin':
+                return '/admin/index.php' . $queryString;
+            case 'staff':
+                return '/staff/index.php' . $queryString;
+            default:
+                return '/staff/index.php' . $queryString;
+        }
     }
 }
 ?>
