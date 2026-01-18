@@ -53,7 +53,7 @@ $userRoleDisplay = ucwords(str_replace('_', ' ', $userRoleDisplay));
                     </div>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                    <li><a class="dropdown-item" href="<?php echo htmlspecialchars($profileLink); ?>"><i class="fas fa-user me-2"></i>Profile</a></li>
+                    <li><a class="dropdown-item" href="<?php echo htmlspecialchars($profileLink); ?>"><i class="fas fa-user me-2"></i>Profile Settings</a></li>
                     <li><a class="dropdown-item" href="<?php echo htmlspecialchars($settingsLink); ?>"><i class="fas fa-cog me-2"></i>Settings</a></li>
                 </ul>
             </div>
