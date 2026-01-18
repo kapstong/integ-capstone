@@ -1521,6 +1521,9 @@ try {
             loadAdjustments();
         });
 
+        // API base URL for different user types
+        const apiBase = window.location.pathname.includes('/superadmin/') ? '../api/' : 'api/';
+
         // Handle vendor form submission
         document.getElementById('addVendorForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -1860,7 +1863,7 @@ try {
         // Load vendors
         async function loadVendors() {
             try {
-                const response = await fetch('api/vendors.php');
+                const response = await fetch(`${apiBase}vendors.php`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -1913,7 +1916,7 @@ try {
         // Load bills
         async function loadBills() {
             try {
-                const response = await fetch('../api/bills.php');
+                const response = await fetch(`${apiBase}bills.php`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -1996,7 +1999,7 @@ try {
         // Load payments made to vendors
         async function loadPayments() {
             try {
-                const response = await fetch('../api/payments.php?type=made');
+                const response = await fetch(`${apiBase}payments.php?type=made`);
                 const data = await response.json();
 
                 // Filter out collection entries (those with COLL- reference)
@@ -2050,7 +2053,7 @@ try {
         // Load collections from payments_made table
         async function loadCollections() {
             try {
-                const response = await fetch('../api/payments.php?type=made');
+                const response = await fetch(`${apiBase}payments.php?type=made`);
                 const data = await response.json();
 
                 // Filter only collection entries (those with COLL- reference or Collection notes)
@@ -2121,7 +2124,7 @@ try {
         // Load adjustments from adjustments API (payable type only)
         async function loadAdjustments() {
             try {
-                const response = await fetch('../api/adjustments.php?type=payable');
+                const response = await fetch(`${apiBase}adjustments.php?type=payable`);
                 const data = await response.json();
 
                 renderAdjustmentsTable(data);
