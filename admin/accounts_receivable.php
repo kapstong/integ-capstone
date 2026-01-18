@@ -1513,7 +1513,7 @@ try {
         async function loadInvoices() {
             try {
                 showLoading();
-                const response = await fetch('api/invoices.php');
+                const response = await fetch('admin/api/invoices.php');
                 const invoices = await response.json();
 
                 if (invoices && !invoices.error) {
