@@ -752,7 +752,7 @@ try {
         // Task management functions
         async function updateTaskStatus(taskId, status) {
             try {
-                const response = await fetch('../admin/api/tasks.php', {
+                const response = await fetch('../superadmin/api/tasks.php', {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -788,7 +788,7 @@ try {
             }
 
             try {
-                const response = await fetch('../admin/api/tasks.php?id=' + taskId, {
+                const response = await fetch('../superadmin/api/tasks.php?id=' + taskId, {
                     method: 'DELETE'
                 });
 
@@ -827,7 +827,7 @@ try {
             };
 
             try {
-                const response = await fetch('../admin/api/tasks.php', {
+                const response = await fetch('../superadmin/api/tasks.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
