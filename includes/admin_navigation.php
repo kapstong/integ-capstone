@@ -93,9 +93,6 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
         <a class="nav-link <?php echo ($currentPage === 'roles.php') ? 'active' : ''; ?>" href="roles.php">
             <i class="fas fa-user-shield me-2"></i><span>Roles & Permissions</span>
         </a>
-        <a class="nav-link <?php echo ($currentPage === 'settings.php') ? 'active' : ''; ?>" href="settings.php">
-            <i class="fas fa-cog me-2"></i><span>Settings</span>
-        </a>
 
         <!-- Logout -->
         <hr class="my-3">
