@@ -51,8 +51,8 @@ UPDATE approval_workflows SET level2_role = 'admin' WHERE level2_role = 'manager
 -- Update roles table to reflect new hierarchy
 UPDATE roles SET name = 'Super Administrator', description = 'System super administrator with full access to all modules including superadmin folder' WHERE name = 'Administrator';
 
--- Insert new 'admin' role for financial managers
-INSERT INTO roles (name, description, is_system) VALUES
+-- Insert new 'admin' role for financial managers (only if it doesn't exist)
+INSERT IGNORE INTO roles (name, description, is_system) VALUES
 ('Financial Manager', 'Financial administrator with access to financial management modules', 0);
 
 -- Update user_roles to reflect new role assignments
