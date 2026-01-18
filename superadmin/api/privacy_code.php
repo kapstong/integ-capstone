@@ -36,6 +36,7 @@ try {
 
     // Handle GET request - check if privacy mode is already unlocked
     if ($action === 'check_status') {
+        // Don't require database for status check - just check session
         $unlocked = isset($_SESSION['privacy_mode_unlocked']) && $_SESSION['privacy_mode_unlocked'] === true;
         ob_end_clean();
         echo json_encode([
