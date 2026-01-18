@@ -13,6 +13,10 @@ $pageTitle = 'Financial Reports';
 include '../../includes/admin_navigation.php';
 ?>
 
+<div class="content">
+    <!-- Top Navbar -->
+    <?php include '../../includes/global_navbar.php'; ?>
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">

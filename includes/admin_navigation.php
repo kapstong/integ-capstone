@@ -1,7 +1,7 @@
 <?php
 /**
  * Unified Admin Navigation Component
- * Combines sidebar navigation, top navbar, and permission-based menu items
+ * Global sidebar navigation with permission-based menu items
  */
 
 // Get current page for active state
@@ -23,10 +23,7 @@ $showFinancialsNav = $canFinancialSetup || $canDepartmentView || $canCashier || 
 $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.php', 'accounts_receivable.php'], true);
 ?>
 
-<!-- Top Navbar -->
-<?php include_once __DIR__ . '/global_navbar.php'; ?>
-
-<!-- Sidebar Navigation -->
+<!-- Global Sidebar Navigation -->
 <div class="sidebar sidebar-collapsed" id="sidebar">
     <div class="p-3">
         <h5 class="navbar-brand"><img src="atieralogo.png" alt="Atiera Logo" style="height: 100px;"></h5>

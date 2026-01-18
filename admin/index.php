@@ -843,6 +843,9 @@ body {
     <?php include '../includes/admin_navigation.php'; ?>
 
     <div class="content">
+        <!-- Top Navbar -->
+        <?php include '../includes/global_navbar.php'; ?>
+
         <!-- Welcome Section -->
         <div class="row mb-4">
             <div class="col-12">
