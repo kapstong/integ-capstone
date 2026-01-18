@@ -1860,7 +1860,7 @@ try {
         // Load vendors
         async function loadVendors() {
             try {
-                const response = await fetch('../superadmin/api/vendors.php');
+                const response = await fetch('api/vendors.php');
                 const data = await response.json();
 
                 if (data.error) {
@@ -1913,7 +1913,7 @@ try {
         // Load bills
         async function loadBills() {
             try {
-                const response = await fetch('../superadmin/api/bills.php');
+                const response = await fetch('api/bills.php');
                 const data = await response.json();
 
                 if (data.error) {
@@ -2196,7 +2196,7 @@ try {
         // Edit vendor
         async function editVendor(vendorId) {
             try {
-                const response = await fetch(`admin/api/vendors.php?id=${vendorId}`);
+                const response = await fetch(`api/vendors.php?id=${vendorId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2252,7 +2252,7 @@ try {
             }
 
             try {
-                const response = await fetch(`admin/api/vendors.php?id=${vendorId}`, {
+                const response = await fetch(`api/vendors.php?id=${vendorId}`, {
                     method: 'DELETE'
                 });
 
@@ -2272,7 +2272,7 @@ try {
 
         // Filter bills
         function filterBills() {
-            let apiUrl = 'admin/api/bills.php';
+            let apiUrl = 'api/bills.php';
             const params = [];
 
             // Get status filter
@@ -2332,7 +2332,7 @@ try {
                 const selectedPeriod = periodSelect ? periodSelect.value : '30';
 
                 // Get all bills with their aging status
-                const response = await fetch('admin/api/bills.php?action=aging&period=' + selectedPeriod);
+                const response = await fetch('api/bills.php?action=aging&period=' + selectedPeriod);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2448,16 +2448,16 @@ try {
 
                 switch(type) {
                     case 'payables':
-                        apiUrl = 'admin/api/bills.php';
+                        apiUrl = 'api/bills.php';
                         filename = `payables_report_${new Date().toISOString().split('T')[0]}.csv`;
                         break;
                     case 'payments':
-                        apiUrl = 'admin/api/payments.php?type=made';
+                        apiUrl = 'api/payments.php?type=made';
                         filename = `payments_report_${new Date().toISOString().split('T')[0]}.csv`;
                         break;
                     case 'aging':
                         // Get aging data with 120+ days period to get all data
-                        apiUrl = 'admin/api/bills.php?action=aging&period=120';
+                        apiUrl = 'api/bills.php?action=aging&period=120';
                         filename = `aging_report_${new Date().toISOString().split('T')[0]}.csv`;
                         break;
                     default:
@@ -2591,7 +2591,7 @@ try {
         async function generateNextBillNumber() {
             try {
                 // Get the next bill number from the API
-                const response = await fetch('admin/api/bills.php?action=next_number');
+                const response = await fetch('api/bills.php?action=next_number');
                 const data = await response.json();
 
                 if (data.success && data.next_number) {
@@ -2669,7 +2669,7 @@ try {
         // Load bills for a specific vendor (for payment dropdown)
         async function loadBillsForVendor(vendorId) {
             try {
-                const response = await fetch(`admin/api/bills.php?vendor_id=${vendorId}&status=draft,approved,overdue`);
+                const response = await fetch(`api/bills.php?vendor_id=${vendorId}&status=draft,approved,overdue`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2697,7 +2697,7 @@ try {
         // View bill details
         async function viewBill(billId) {
             try {
-                const response = await fetch(`superadmin/api/bills.php?id=${billId}`);
+                const response = await fetch(`api/bills.php?id=${billId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2816,7 +2816,7 @@ try {
         // Edit bill
         async function editBill(billId) {
             try {
-                const response = await fetch(`superadmin/api/bills.php?id=${billId}`);
+                const response = await fetch(`api/bills.php?id=${billId}`);
                 const data = await response.json();
 
                 if (data.error) {
