@@ -9,8 +9,8 @@ echo "Testing database connection...\n\n";
 
 $host = 'localhost';
 $dbname = 'fina_financialmngmnt';
-$username = 'financia';
-$password = 'Atiera@123';
+$username = 'fina_financialg10';
+$password = 'jekjek123';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password, [

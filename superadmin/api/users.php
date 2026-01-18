@@ -24,11 +24,11 @@ if (!$auth->isLoggedIn()) {
 
 // Check if user has system admin access (superadmin or admin)
 $user = $auth->getCurrentUser();
-$isSuperAdmin = ($user['role'] === 'super_admin');
-$isAdmin = ($user['role'] === 'admin');
+$isSuperAdmin = ($user['role_name'] === 'super_admin');
+$isAdmin = ($user['role_name'] === 'admin');
 
 $method = $_SERVER['REQUEST_METHOD'];
-$user = $auth->getCurrentUser();
+$currentUser = $auth->getCurrentUser();
 
 try {
     switch ($method) {
@@ -36,13 +36,13 @@ try {
             handleGet($db, $auth);
             break;
         case 'POST':
-            handlePost($db, $auth, $user);
+            handlePost($db, $auth, $currentUser);
             break;
         case 'PUT':
-            handlePut($db, $auth, $user);
+            handlePut($db, $auth, $currentUser);
             break;
         case 'DELETE':
-            handleDelete($db, $auth, $user);
+            handleDelete($db, $auth, $currentUser);
             break;
         default:
             http_response_code(405);
