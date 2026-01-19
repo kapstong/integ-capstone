@@ -338,7 +338,20 @@
      * Get API path based on current location
      */
     function getApiPath(filename) {
-        // Use absolute path from domain root
+        // Get the base URL dynamically from current page location
+        const baseUrl = window.location.origin;
+        const pathArray = window.location.pathname.split('/');
+        
+        // Find the integ-capstone directory position
+        const captStoneIndex = pathArray.indexOf('integ-capstone');
+        
+        if (captStoneIndex !== -1) {
+            // Reconstruct path up to integ-capstone
+            const basePath = pathArray.slice(0, captStoneIndex + 1).join('/');
+            return basePath + '/api/' + filename;
+        }
+        
+        // Fallback to absolute path
         return '/integ-capstone/api/' + filename;
     }
 
