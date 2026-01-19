@@ -5,33 +5,37 @@ require_once '../../includes/logger.php';
 
 header('Content-Type: application/json');
 
+$auth = new Auth();
+$db = Database::getInstance()->getConnection();
+
+// Check if user is logged in
+if (!isset($_SESSION['user'])) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+    exit;
+}
+
 try {
-    $auth = new Auth();
-    $db = Database::getInstance()->getConnection();
-
-    // Check if user is logged in
-    if (!isset($_SESSION['user'])) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-        exit;
-    }
-
     $method = $_SERVER['REQUEST_METHOD'];
     $user = $_SESSION['user'];
 
-switch ($method) {
-    case 'GET':
-        handleGet($db);
-        break;
-    case 'POST':
-        handlePost($db, $user);
-        break;
-    case 'DELETE':
-        handleDelete($db, $user);
-        break;
-    default:
-        http_response_code(405);
-        echo json_encode(['success' => false, 'error' => 'Method not allowed']);
+    switch ($method) {
+        case 'GET':
+            handleGet($db);
+            break;
+        case 'POST':
+            handlePost($db, $user);
+            break;
+        case 'DELETE':
+            handleDelete($db, $user);
+            break;
+        default:
+            http_response_code(405);
+            echo json_encode(['success' => false, 'error' => 'Method not allowed']);
+    }
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Server error: ' . $e->getMessage()]);
 }
 
 function handleGet($db) {
@@ -351,9 +355,6 @@ function handleDelete($db, $currentUser) {
             http_response_code(400);
             echo json_encode(['success' => false, 'error' => 'Invalid action']);
     }
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Server error: ' . $e->getMessage()]);
 }
 ?>
 
