@@ -44,6 +44,11 @@ $currentPage = basename($scriptName);
             <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
         </a>
 
+        <!-- Disbursements -->
+        <a class="nav-link <?php echo ($currentPage === 'disbursements.php') ? 'active' : ''; ?>" href="disbursements.php">
+            <i class="fas fa-money-check me-2"></i><span>Disbursements</span>
+        </a>
+
         <!-- Budget Management -->
         <a class="nav-link <?php echo ($currentPage === 'budget_management.php') ? 'active' : ''; ?>" href="budget_management.php">
             <i class="fas fa-chart-line me-2"></i><span>Budget Management</span>
