@@ -1051,7 +1051,7 @@ class HR4Integration extends BaseIntegration {
             }
         } catch (Exception $e) {
             Logger::getInstance()->error('HR4 getPayrollData failed: ' . $e->getMessage());
-            throw $e; // Re-throw the exception instead of falling back to mock data
+            return []; // Return empty array instead of throwing to prevent 500 errors
         }
     }
 
