@@ -1513,7 +1513,6 @@ try {
                 }
             );
         }
-        }
 
         // Invoice Functions
         async function loadInvoices() {
@@ -2576,6 +2575,3 @@ try {
 </body>
 </html>
     <!-- Inactivity Timeout - Blur screen + Auto logout -->
-
-
-
