@@ -1,6 +1,6 @@
 <?php
-require_once 'database.php';
-require_once 'permissions.php';
+require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/permissions.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

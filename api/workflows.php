@@ -4,8 +4,8 @@
  * Handles workflow management and execution operations
  */
 
-require_once '../../includes/auth.php';
-require_once '../../includes/workflow.php';
+require_once '../includes/auth.php';
+require_once '../includes/workflow.php';
 
 header('Content-Type: application/json');
 session_start();

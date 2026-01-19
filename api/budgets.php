@@ -1,8 +1,8 @@
 <?php
 // For API endpoints, we don't want to redirect on auth failure
 // So we'll handle authentication differently
-require_once '../../includes/database.php';
-require_once '../../includes/logger.php';
+require_once '../includes/database.php';
+require_once '../includes/logger.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');

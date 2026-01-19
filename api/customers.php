@@ -14,8 +14,8 @@ header('Content-Type: application/json');
 
 try {
     // Include required files
-    require_once '../../includes/auth.php';
-    require_once '../../includes/database.php';
+    require_once '../includes/auth.php';
+    require_once '../includes/database.php';
 
     // Check if user is logged in
     if (!isset($_SESSION['user'])) {

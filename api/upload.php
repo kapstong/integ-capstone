@@ -4,9 +4,9 @@
  * Handles secure file uploads with validation and storage
  */
 
-require_once '../../includes/auth.php';
-require_once '../../includes/file_upload.php';
-require_once '../../includes/logger.php';
+require_once '../includes/auth.php';
+require_once '../includes/file_upload.php';
+require_once '../includes/logger.php';
 
 header('Content-Type: application/json');
 session_start();

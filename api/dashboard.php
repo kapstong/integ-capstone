@@ -4,8 +4,8 @@
  * Handles dashboard customization and widget operations
  */
 
-require_once '../../includes/auth.php';
-require_once '../../includes/dashboard.php';
+require_once '../includes/auth.php';
+require_once '../includes/dashboard.php';
 
 header('Content-Type: application/json');
 session_start();

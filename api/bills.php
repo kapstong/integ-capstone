@@ -19,9 +19,9 @@ set_exception_handler(function($exception) {
 });
 
 try {
-require_once '../../includes/auth.php';
-require_once '../../includes/database.php';
-require_once '../../includes/logger.php';
+require_once '../includes/auth.php';
+require_once '../includes/database.php';
+require_once '../includes/logger.php';
 
     // Session is already started in auth.php
 

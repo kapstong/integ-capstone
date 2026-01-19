@@ -4,8 +4,8 @@
  * Handles backup operations and downloads
  */
 
-require_once '../../includes/auth.php';
-require_once '../../includes/backup.php';
+require_once '../includes/auth.php';
+require_once '../includes/backup.php';
 
 header('Content-Type: application/json');
 session_start();

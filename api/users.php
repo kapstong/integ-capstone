@@ -29,15 +29,15 @@ set_exception_handler(function($exception) {
 });
 
 try {
-require_once '../../includes/auth.php';
-require_once '../../includes/database.php';
+require_once '../includes/auth.php';
+require_once '../includes/database.php';
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Failed to load required files: ' . $e->getMessage()]);
     ob_end_flush();
     exit(1);
 }
-require_once '../../includes/logger.php';
+require_once '../includes/logger.php';
 
 // Start session safely
 if (session_status() === PHP_SESSION_NONE) {

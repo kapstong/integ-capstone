@@ -4,9 +4,9 @@
  * Handles PDF report generation requests
  */
 
-require_once '../../includes/auth.php';
-require_once '../../includes/pdf_generator.php';
-require_once '../../includes/logger.php';
+require_once '../includes/auth.php';
+require_once '../includes/pdf_generator.php';
+require_once '../includes/logger.php';
 
 header('Content-Type: application/json');
 session_start();
