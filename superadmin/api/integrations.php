@@ -91,33 +91,6 @@ try {
                     echo json_encode(['success' => true, 'integrations' => $integrationList]);
                     break;
 
-                default:
-                    http_response_code(400);
-                    echo json_encode(['error' => 'Invalid action']);
-                    exit;
-            }
-            break;
-
-        case 'POST':
-            $action = $_POST['action'] ?? '';
-
-            switch ($action) {
-                case 'configure':
-                    // Configure an integration
-                    $integrationName = $_POST['integration_name'] ?? '';
-                    $config = $_POST['config'] ?? [];
-
-                    $result = $integrationManager->configureIntegration($integrationName, $config);
-                    echo json_encode($result);
-                    break;
-
-                case 'test':
-                    // Test integration connection
-                    $integrationName = $_POST['integration_name'] ?? '';
-                    $result = $integrationManager->testIntegration($integrationName);
-                    echo json_encode($result);
-                    break;
-
                 case 'execute':
                     // Execute integration action (support both GET and POST)
                     $integrationName = $_REQUEST['integration_name'] ?? '';
@@ -156,6 +129,33 @@ try {
                             'error' => $e->getMessage()
                         ]);
                     }
+                    break;
+
+                default:
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Invalid action']);
+                    exit;
+            }
+            break;
+
+        case 'POST':
+            $action = $_POST['action'] ?? '';
+
+            switch ($action) {
+                case 'configure':
+                    // Configure an integration
+                    $integrationName = $_POST['integration_name'] ?? '';
+                    $config = $_POST['config'] ?? [];
+
+                    $result = $integrationManager->configureIntegration($integrationName, $config);
+                    echo json_encode($result);
+                    break;
+
+                case 'test':
+                    // Test integration connection
+                    $integrationName = $_POST['integration_name'] ?? '';
+                    $result = $integrationManager->testIntegration($integrationName);
+                    echo json_encode($result);
                     break;
 
                 default:
