@@ -1523,7 +1523,7 @@ try {
         });
 
         // API base URL for different user types (use local api folder for consistency)
-        const apiBase = 'api/';
+        const apiBase = '../api/';
 
         // Handle vendor form submission
         document.getElementById('addVendorForm').addEventListener('submit', async function(e) {
@@ -1559,7 +1559,7 @@ try {
             };
 
             const method = isEditMode ? 'PUT' : 'POST';
-            const apiUrl = isEditMode ? `api/vendors.php?id=${vendorId}` : 'api/vendors.php';
+            const apiUrl = isEditMode ? `${apiBase}vendors.php?id=${vendorId}` : `${apiBase}vendors.php`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -1642,7 +1642,7 @@ try {
             }
 
             const method = isEditMode ? 'PUT' : 'POST';
-            const apiUrl = isEditMode ? `api/bills.php?id=${editBillId}` : 'api/bills.php';
+            const apiUrl = isEditMode ? `${apiBase}bills.php?id=${editBillId}` : `${apiBase}bills.php`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -1709,7 +1709,7 @@ try {
             paymentData.reference_number = referenceNumber;
 
             try {
-                const response = await fetch('../api/payments.php', {
+                const response = await fetch(`${apiBase}payments.php`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1773,7 +1773,7 @@ try {
                     bill_id: null
                 };
 
-                const response = await fetch('../api/payments.php', {
+                const response = await fetch(`${apiBase}payments.php`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2200,7 +2200,7 @@ try {
         // Edit vendor
         async function editVendor(vendorId) {
             try {
-                const response = await fetch(`api/vendors.php?id=${vendorId}`);
+                const response = await fetch(`${apiBase}vendors.php?id=${vendorId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2278,7 +2278,7 @@ try {
 
         // Filter bills
         function filterBills() {
-            let apiUrl = 'api/bills.php';
+            let apiUrl = `${apiBase}bills.php`;
             const params = [];
 
             // Get status filter
@@ -2338,7 +2338,7 @@ try {
                 const selectedPeriod = periodSelect ? periodSelect.value : '30';
 
                 // Get all bills with their aging status
-                const response = await fetch('../api/bills.php?action=aging&period=' + selectedPeriod);
+                const response = await fetch(`${apiBase}bills.php?action=aging&period=` + selectedPeriod);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2454,16 +2454,16 @@ try {
 
                 switch(type) {
                     case 'payables':
-                        apiUrl = 'api/bills.php';
+                        apiUrl = `${apiBase}bills.php`;
                         filename = `payables_report_${new Date().toISOString().split('T')[0]}.csv`;
                         break;
                     case 'payments':
-                        apiUrl = 'api/payments.php?type=made';
+                        apiUrl = `${apiBase}payments.php?type=made`;
                         filename = `payments_report_${new Date().toISOString().split('T')[0]}.csv`;
                         break;
                     case 'aging':
                         // Get aging data with 120+ days period to get all data
-                        apiUrl = 'api/bills.php?action=aging&period=120';
+                        apiUrl = `${apiBase}bills.php?action=aging&period=120`;
                         filename = `aging_report_${new Date().toISOString().split('T')[0]}.csv`;
                         break;
                     default:
@@ -2597,7 +2597,7 @@ try {
         async function generateNextBillNumber() {
             try {
                 // Get the next bill number from the API
-                const response = await fetch('../api/bills.php?action=next_number');
+                const response = await fetch(`${apiBase}bills.php?action=next_number`);
                 const data = await response.json();
 
                 if (data.success && data.next_number) {
@@ -2703,7 +2703,7 @@ try {
         // View bill details
         async function viewBill(billId) {
             try {
-                const response = await fetch(`api/bills.php?id=${billId}`);
+                const response = await fetch(`${apiBase}bills.php?id=${billId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -3394,6 +3394,3 @@ try {
 </body>
 </html>
     <!-- Inactivity Timeout - Blur screen + Auto logout -->
-
-
-
