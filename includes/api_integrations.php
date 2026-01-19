@@ -239,14 +239,18 @@ class APIIntegrationManager {
      * Encrypt sensitive configuration data
      */
     private function encryptConfig($config) {
-        $key = Config::get('app.encryption_key', 'default_key_change_in_production');
+        $encKey = Config::get('app.key', 'default_key_change_in_production');
+        // Handle base64-encoded keys (Laravel convention)
+        if (strpos($encKey, 'base64:') === 0) {
+            $encKey = base64_decode(substr($encKey, 7));
+        }
         $encrypted = [];
 
-        foreach ($config as $key => $value) {
+        foreach ($config as $configKey => $value) {
             if (is_string($value) && strlen($value) > 0) {
-                $encrypted[$key] = openssl_encrypt($value, 'AES-256-CBC', $key, 0, substr($key, 0, 16));
+                $encrypted[$configKey] = openssl_encrypt($value, 'AES-256-CBC', $encKey, 0, substr($encKey, 0, 16));
             } else {
-                $encrypted[$key] = $value;
+                $encrypted[$configKey] = $value;
             }
         }
 
@@ -257,15 +261,19 @@ class APIIntegrationManager {
      * Decrypt configuration data
      */
     private function decryptConfig($encryptedConfig) {
-        $key = Config::get('app.encryption_key', 'default_key_change_in_production');
+        $encKey = Config::get('app.key', 'default_key_change_in_production');
+        // Handle base64-encoded keys (Laravel convention)
+        if (strpos($encKey, 'base64:') === 0) {
+            $encKey = base64_decode(substr($encKey, 7));
+        }
         $config = [];
 
-        foreach ($encryptedConfig as $key => $value) {
+        foreach ($encryptedConfig as $configKey => $value) {
             if (is_string($value) && strlen($value) > 0) {
-                $decrypted = openssl_decrypt($value, 'AES-256-CBC', $key, 0, substr($key, 0, 16));
-                $config[$key] = $decrypted ?: $value; // Fallback to encrypted if decryption fails
+                $decrypted = openssl_decrypt($value, 'AES-256-CBC', $encKey, 0, substr($encKey, 0, 16));
+                $config[$configKey] = $decrypted ?: $value; // Fallback to encrypted if decryption fails
             } else {
-                $config[$key] = $value;
+                $config[$configKey] = $value;
             }
         }
 
