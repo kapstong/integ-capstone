@@ -119,17 +119,19 @@ try {
                     break;
 
                 case 'execute':
-                    // Execute integration action
-                    $integrationName = $_POST['integration_name'] ?? '';
-                    $actionName = $_POST['action_name'] ?? '';
+                    // Execute integration action (support both GET and POST)
+                    $integrationName = $_REQUEST['integration_name'] ?? '';
+                    $actionName = $_REQUEST['action_name'] ?? '';
                     $params = [];
-                    $rawParams = $_POST;
+                    
+                    // Get params from POST/GET (excluding our control params)
+                    $rawParams = $_REQUEST;
                     unset($rawParams['action'], $rawParams['integration_name'], $rawParams['action_name'], $rawParams['params']);
                     if (!empty($rawParams)) {
                         $params = $rawParams;
                     }
-                    if (isset($_POST['params'])) {
-                        $decodedParams = json_decode($_POST['params'], true);
+                    if (isset($_REQUEST['params'])) {
+                        $decodedParams = json_decode($_REQUEST['params'], true);
                         if (is_array($decodedParams)) {
                             $params = array_merge($params, $decodedParams);
                         }

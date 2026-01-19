@@ -255,6 +255,7 @@ function generateIncomeStatement($db, $dateFrom, $dateTo, $format) {
         $netProfit = $totalRevenue - $totalExpenses;
 
         $report = [
+            'success' => true,
             'report_type' => 'Income Statement',
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
@@ -272,13 +273,15 @@ function generateIncomeStatement($db, $dateFrom, $dateTo, $format) {
 
         outputReport($report, $format, 'income_statement');
     } catch (Exception $e) {
-        // Return empty report structure on error
-        $report = [
+        // Return error response
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Unable to generate report: ' . $e->getMessage(),
             'report_type' => 'Income Statement',
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
             'generated_at' => date('Y-m-d H:i:s'),
-            'error' => 'Unable to generate report: ' . $e->getMessage(),
             'revenue' => [
                 'accounts' => [],
                 'total' => 0
@@ -288,9 +291,7 @@ function generateIncomeStatement($db, $dateFrom, $dateTo, $format) {
                 'total' => 0
             ],
             'net_profit' => 0
-        ];
-
-        outputReport($report, $format, 'income_statement');
+        ]);
     }
 }
 
@@ -567,6 +568,11 @@ function calculateNetProfit($db, $dateFrom, $dateTo) {
 }
 
 function outputReport($report, $format, $filename) {
+    // Ensure success flag is set
+    if (!isset($report['success'])) {
+        $report['success'] = true;
+    }
+    
     switch ($format) {
         case 'csv':
             outputCSV($report, $filename);
