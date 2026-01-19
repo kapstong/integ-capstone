@@ -15,16 +15,23 @@ ini_set('display_errors', 0);
 error_reporting(0);
 ob_clean();
 
-require_once '../../includes/auth.php';
-require_once '../../includes/database.php';
-require_once '../../includes/mailer.php';
-
 // Start session safely
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
 try {
+    // Load required files
+    if (file_exists(__DIR__ . '/../includes/auth.php')) {
+        require_once __DIR__ . '/../includes/auth.php';
+    }
+    if (file_exists(__DIR__ . '/../includes/database.php')) {
+        require_once __DIR__ . '/../includes/database.php';
+    }
+    if (file_exists(__DIR__ . '/../includes/mailer.php')) {
+        require_once __DIR__ . '/../includes/mailer.php';
+    }
+    
     // Check if user is logged in
     if (!isset($_SESSION['user'])) {
         http_response_code(401);
@@ -186,7 +193,6 @@ function maskEmail($email) {
     $name_length = strlen($name);
     $masked_name = substr($name, 0, 1) . str_repeat('*', max(1, $name_length - 2)) . substr($name, -1);
     
-    echo json_encode(['masked_email' => $masked_name . '@' . $domain]);
     return $masked_name . '@' . $domain;
 }
 ?>
