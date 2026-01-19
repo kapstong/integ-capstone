@@ -485,6 +485,7 @@ include 'legacy_header.php';
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../includes/alert-modal.js"></script>
 <script>
 // Create new workflow
 function createNewWorkflow() {

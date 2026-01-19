@@ -1267,6 +1267,7 @@ try {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../includes/alert-modal.js"></script>
     <script>
         // Pass customers data from PHP to JavaScript
         const phpCustomers = <?php echo json_encode($customers); ?>;
