@@ -167,7 +167,7 @@ function setDefaultDate() {
 }
 
 function loadOutlets() {
-    fetch('api/financials/outlets.php?action=list')
+    fetch('../api/financials/outlets.php?action=list')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -180,7 +180,7 @@ function loadOutlets() {
 }
 
 function loadShifts() {
-    fetch('api/financials/cashier_shifts.php?action=list')
+    fetch('../api/financials/cashier_shifts.php?action=list')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -230,7 +230,7 @@ document.getElementById('openShiftForm').addEventListener('submit', function(e) 
     const data = Object.fromEntries(formData);
     data.action = 'open_shift';
 
-    fetch('api/financials/cashier_shifts.php', {
+    fetch('../api/financials/cashier_shifts.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
@@ -257,7 +257,7 @@ document.getElementById('closeShiftForm').addEventListener('submit', function(e)
     const data = Object.fromEntries(formData);
     data.action = 'close_shift';
 
-    fetch('api/financials/cashier_shifts.php', {
+    fetch('../api/financials/cashier_shifts.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
@@ -323,5 +323,6 @@ function escapeHtml(text) {
 </script>
 
 <?php include '../legacy_footer.php'; ?>
+
 
 

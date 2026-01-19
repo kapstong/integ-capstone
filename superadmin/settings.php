@@ -1034,7 +1034,7 @@ $departments = [
             formData.append('action', 'test');
             formData.append('integration_name', name);
 
-            fetch('api/integrations.php', {
+            fetch('../api/integrations.php', {
                 method: 'POST',
                 body: formData
             })
@@ -1072,7 +1072,7 @@ $departments = [
             formData.append('action', 'test');
             formData.append('integration_name', name);
 
-            fetch('api/integrations.php', {
+            fetch('../api/integrations.php', {
                 method: 'POST',
                 body: formData
             })
@@ -1241,7 +1241,7 @@ $departments = [
             container.innerHTML = '<div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading permissions...</div>';
 
             // Fetch all available permissions
-            fetch('api/roles.php?action=permissions')
+            fetch('../api/roles.php?action=permissions')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1303,7 +1303,7 @@ $departments = [
                 permissions: formData.getAll('permissions[]')
             };
 
-            fetch('api/users.php', {
+            fetch('../api/users.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1332,7 +1332,7 @@ $departments = [
                 `Are you sure you want to delete user "${username}"? This action will soft delete the user.`,
                 async () => {
                     try {
-                        const response = await fetch('api/users.php', {
+                        const response = await fetch('../api/users.php', {
                             method: 'DELETE',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1380,7 +1380,7 @@ $departments = [
                 'Are you sure you want to permanently delete ALL items in the trash? This action cannot be undone.',
                 async () => {
                     try {
-                        const response = await fetch('api/trash.php', {
+                        const response = await fetch('../api/trash.php', {
                             method: 'DELETE',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1414,7 +1414,7 @@ $departments = [
                 </tr>
             `;
 
-            fetch('api/trash.php?action=get_trash')
+            fetch('../api/trash.php?action=get_trash')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1507,7 +1507,7 @@ $departments = [
                 'Are you sure you want to restore this item?',
                 async () => {
                     try {
-                        const response = await fetch('api/trash.php', {
+                        const response = await fetch('../api/trash.php', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1537,7 +1537,7 @@ $departments = [
                 'Are you sure you want to permanently delete this item? This action cannot be undone.',
                 async () => {
                     try {
-                        const response = await fetch('api/trash.php', {
+                        const response = await fetch('../api/trash.php', {
                             method: 'DELETE',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1612,5 +1612,6 @@ $departments = [
     </script>
 </body>
 </html>
+
 
 

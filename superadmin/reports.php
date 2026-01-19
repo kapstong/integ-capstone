@@ -1756,7 +1756,7 @@ $db = Database::getInstance()->getConnection();
             `;
 
             try {
-                const response = await fetch('api/reports.php?type=budget_vs_actual');
+                const response = await fetch('../api/reports.php?type=budget_vs_actual');
 
                 // Check if response is OK
                 if (!response.ok) {
@@ -1818,7 +1818,7 @@ $db = Database::getInstance()->getConnection();
             `;
 
             try {
-                const response = await fetch('api/reports.php?type=cash_flow_summary');
+                const response = await fetch('../api/reports.php?type=cash_flow_summary');
 
                 // Check if response is OK
                 if (!response.ok) {
@@ -2243,7 +2243,7 @@ $db = Database::getInstance()->getConnection();
                 const dateTo = document.getElementById('reportDateTo')?.value || '';
 
                 // Send email via API
-                fetch('api/reports.php', {
+                fetch('../api/reports.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -2317,7 +2317,7 @@ $db = Database::getInstance()->getConnection();
         }
 
         function loadAnalyticsSummary() {
-            fetch('api/reports.php?type=analytics_summary')
+            fetch('../api/reports.php?type=analytics_summary')
                 .then(response => response.json())
                 .then(data => {
                     if (!data.success) {
@@ -2402,5 +2402,6 @@ $db = Database::getInstance()->getConnection();
 </body>
 </html>
 </body>
+
 
 

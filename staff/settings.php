@@ -1107,7 +1107,7 @@ $departments = [
             formData.append('action', 'test');
             formData.append('integration_name', name);
 
-            fetch('api/integrations.php', {
+            fetch('../api/integrations.php', {
                 method: 'POST',
                 body: formData
             })
@@ -1145,7 +1145,7 @@ $departments = [
             formData.append('action', 'test');
             formData.append('integration_name', name);
 
-            fetch('api/integrations.php', {
+            fetch('../api/integrations.php', {
                 method: 'POST',
                 body: formData
             })
@@ -1452,5 +1452,6 @@ $departments = [
     </script>
 </body>
 </html>
+
 
 

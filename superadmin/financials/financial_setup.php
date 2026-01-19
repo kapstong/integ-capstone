@@ -82,7 +82,7 @@ include '../../includes/admin_navigation.php';
 
 <script>
 function runSetup(type) {
-    fetch('api/financials/setup.php', {
+    fetch('../api/financials/setup.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ action: type })
@@ -114,5 +114,6 @@ function showAlert(message, type) {
 </script>
 
 <?php include '../legacy_footer.php'; ?>
+
 
 

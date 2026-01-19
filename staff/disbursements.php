@@ -1145,7 +1145,7 @@ body {
 
                 // Log HR3 claim processing to audit trail
                 try {
-                    await fetch('api/audit.php', {
+                    await fetch('../api/audit.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         credentials: 'include',
@@ -1522,4 +1522,5 @@ body {
 </html>
     <script src="../includes/inactivity_timeout.js?v=3"></script>
 <script src="../includes/navbar_datetime.js"></script>
+
 

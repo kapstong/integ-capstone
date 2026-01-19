@@ -1709,7 +1709,7 @@ try {
             paymentData.reference_number = referenceNumber;
 
             try {
-                const response = await fetch('api/payments.php', {
+                const response = await fetch('../api/payments.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1773,7 +1773,7 @@ try {
                     bill_id: null
                 };
 
-                const response = await fetch('api/payments.php', {
+                const response = await fetch('../api/payments.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2338,7 +2338,7 @@ try {
                 const selectedPeriod = periodSelect ? periodSelect.value : '30';
 
                 // Get all bills with their aging status
-                const response = await fetch('api/bills.php?action=aging&period=' + selectedPeriod);
+                const response = await fetch('../api/bills.php?action=aging&period=' + selectedPeriod);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2597,7 +2597,7 @@ try {
         async function generateNextBillNumber() {
             try {
                 // Get the next bill number from the API
-                const response = await fetch('api/bills.php?action=next_number');
+                const response = await fetch('../api/bills.php?action=next_number');
                 const data = await response.json();
 
                 if (data.success && data.next_number) {
@@ -3394,5 +3394,6 @@ try {
 </body>
 </html>
     <!-- Inactivity Timeout - Blur screen + Auto logout -->
+
 
 

@@ -1366,7 +1366,7 @@ $db = Database::getInstance()->getConnection();
         // Load budgets
         async function loadBudgets() {
             try {
-                const response = await fetch('api/budgets.php');
+                const response = await fetch('../api/budgets.php');
                 const data = await response.json();
 
                 if (data.error) {
@@ -1423,7 +1423,7 @@ $db = Database::getInstance()->getConnection();
         // Load allocations
         async function loadAllocations() {
             try {
-                const response = await fetch('api/budgets.php?action=allocations');
+                const response = await fetch('../api/budgets.php?action=allocations');
                 const data = await response.json();
 
                 if (data.error) {
@@ -1758,7 +1758,7 @@ $db = Database::getInstance()->getConnection();
 // Create budget
         async function createBudget(formData) {
             try {
-                const response = await fetch('api/budgets.php', {
+                const response = await fetch('../api/budgets.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1791,7 +1791,7 @@ $db = Database::getInstance()->getConnection();
 
         async function createBudgetItem(formData) {
             try {
-                const response = await fetch('api/budgets.php', {
+                const response = await fetch('../api/budgets.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1824,7 +1824,7 @@ $db = Database::getInstance()->getConnection();
 
         async function requestAdjustment(formData) {
             try {
-                const response = await fetch('api/budgets.php', {
+                const response = await fetch('../api/budgets.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2002,7 +2002,7 @@ $db = Database::getInstance()->getConnection();
 
         async function updateAdjustmentStatus(adjustmentId, status) {
             try {
-                const response = await fetch('api/budgets.php', {
+                const response = await fetch('../api/budgets.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2400,7 +2400,7 @@ $db = Database::getInstance()->getConnection();
         // Load vendors for dropdowns
         async function loadVendors() {
             try {
-                const response = await fetch('api/vendors.php');
+                const response = await fetch('../api/vendors.php');
                 const data = await response.json();
 
                 if (data.error) {
@@ -2418,7 +2418,7 @@ $db = Database::getInstance()->getConnection();
 
         async function loadDepartments() {
             try {
-                const response = await fetch('api/financials/departments.php');
+                const response = await fetch('../api/financials/departments.php');
                 const data = await response.json();
 
                 if (!data.success) {
@@ -2436,7 +2436,7 @@ $db = Database::getInstance()->getConnection();
 
         async function loadCategories() {
             try {
-                const response = await fetch('api/budgets.php?action=categories');
+                const response = await fetch('../api/budgets.php?action=categories');
                 const data = await response.json();
 
                 if (data.error) {
@@ -2454,7 +2454,7 @@ $db = Database::getInstance()->getConnection();
 
         async function loadAccounts() {
             try {
-                const response = await fetch('api/chart_of_accounts.php?active=true');
+                const response = await fetch('../api/chart_of_accounts.php?active=true');
                 const data = await response.json();
 
                 if (data.error) {
@@ -2472,7 +2472,7 @@ $db = Database::getInstance()->getConnection();
 
         async function loadAdjustments() {
             try {
-                const response = await fetch('api/budgets.php?action=adjustments');
+                const response = await fetch('../api/budgets.php?action=adjustments');
                 const data = await response.json();
 
                 if (data.error) {
@@ -2673,7 +2673,7 @@ $db = Database::getInstance()->getConnection();
         // Load alerts
         async function loadAlerts() {
             try {
-                const response = await fetch('api/budgets.php?action=alerts');
+                const response = await fetch('../api/budgets.php?action=alerts');
                 const data = await response.json();
 
                 if (data.error) {
@@ -3297,5 +3297,6 @@ $db = Database::getInstance()->getConnection();
 </body>
                             </div>
                             </div>
+
 
 

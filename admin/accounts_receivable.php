@@ -1519,7 +1519,7 @@ try {
         async function loadInvoices() {
             try {
                 showLoading();
-                const response = await fetch('api/invoices.php');
+                const response = await fetch('../api/invoices.php');
                 const invoices = await response.json();
 
                 if (invoices && !invoices.error) {
@@ -1613,7 +1613,7 @@ try {
 
             try {
                 showLoading();
-                const response = await fetch('api/invoices.php', {
+                const response = await fetch('../api/invoices.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1730,7 +1730,7 @@ try {
         // Payment Functions
         async function loadPayments() {
             try {
-                const response = await fetch('api/payments.php?type=received');
+                const response = await fetch('../api/payments.php?type=received');
                 const result = await response.json();
 
                 if (result.success !== false && Array.isArray(result)) {
@@ -1829,7 +1829,7 @@ try {
         // Adjustment Functions
         async function loadAdjustments() {
             try {
-                const response = await fetch('api/adjustments.php?type=receivable');
+                const response = await fetch('../api/adjustments.php?type=receivable');
                 const adjustments = await response.json();
 
                 const tbody = document.querySelector('#adjustmentsTable tbody');
@@ -1991,7 +1991,7 @@ try {
                 switch (type) {
                     case 'receivables':
                         // Export receivables report
-                        const receivablesResponse = await fetch('api/invoices.php');
+                        const receivablesResponse = await fetch('../api/invoices.php');
                         const receivablesData = await receivablesResponse.json();
 
                         data = receivablesData.map(invoice => ({
@@ -2012,7 +2012,7 @@ try {
 
                     case 'collections':
                         // Export collections report
-                        const collectionsResponse = await fetch('api/payments.php?type=received');
+                        const collectionsResponse = await fetch('../api/payments.php?type=received');
                         const collectionsData = await collectionsResponse.json();
 
                         if (collectionsData.success !== false) {
@@ -2034,7 +2034,7 @@ try {
 
                     case 'aging':
                         // Export aging report
-                        const agingResponse = await fetch('api/invoices.php?aging=true');
+                        const agingResponse = await fetch('../api/invoices.php?aging=true');
                         const agingData = await agingResponse.json();
 
                         if (agingData && Array.isArray(agingData)) {
@@ -2576,5 +2576,6 @@ try {
 </body>
 </html>
     <!-- Inactivity Timeout - Blur screen + Auto logout -->
+
 
 

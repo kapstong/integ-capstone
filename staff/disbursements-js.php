@@ -22,7 +22,7 @@ header('Content-Type: application/javascript');
             }
 
             try {
-                const response = await fetch('api/disbursements.php', {
+                const response = await fetch('../api/disbursements.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -53,7 +53,7 @@ header('Content-Type: application/javascript');
         // Audit Trail Functionality
         async function loadAuditTrail() {
             try {
-                const response = await fetch('api/audit.php?scope=disbursements', {
+                const response = await fetch('../api/audit.php?scope=disbursements', {
                     credentials: 'include'
                 });
                 const auditLogs = await response.json();
@@ -83,7 +83,7 @@ header('Content-Type: application/javascript');
         async function loadDisbursementReports() {
             try {
                 // Load disbursement summary
-                const response = await fetch('api/disbursements.php', {
+                const response = await fetch('../api/disbursements.php', {
                     credentials: 'include'
                 });
                 const disbursements = await response.json();
@@ -452,7 +452,7 @@ header('Content-Type: application/javascript');
         // Load vendors for dropdown
         async function loadVendors() {
             try {
-                const response = await fetch('api/vendors.php', {
+                const response = await fetch('../api/vendors.php', {
                     credentials: 'include'
                 });
 
@@ -856,4 +856,5 @@ header('Content-Type: application/javascript');
             }
         );
         }
+
 

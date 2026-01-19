@@ -185,7 +185,7 @@ $(document).ready(function() {
 
         const formData = new FormData(this);
 
-        fetch('api/currencies.php', {
+        fetch('../api/currencies.php', {
             method: 'POST',
             body: formData
         })
@@ -280,7 +280,7 @@ $(document).ready(function() {
 });
 
 function loadCurrencies() {
-    fetch('api/currencies.php')
+    fetch('../api/currencies.php')
     .then(response => response.json())
     .then(data => {
         const tbody = $('#currenciesTable tbody');
@@ -343,3 +343,4 @@ function showToast(message, type = 'info') {
 </style>
 
 <?php include 'legacy_footer.php'; ?>
+

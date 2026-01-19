@@ -1358,7 +1358,7 @@ try {
             button.disabled = true;
 
             // Make API call
-            fetch('api/chart_of_accounts.php', {
+            fetch('../api/chart_of_accounts.php', {
                 method: 'POST',
                 body: formData
             })
@@ -1730,7 +1730,7 @@ try {
         }
 
         function loadAccountsForSelect(select) {
-            fetch('api/chart_of_accounts.php', {
+            fetch('../api/chart_of_accounts.php', {
                 method: 'GET'
             })
             .then(response => response.json())
@@ -1863,7 +1863,7 @@ try {
             button.disabled = true;
 
             // Make API call
-            fetch('api/journal_entries.php', {
+            fetch('../api/journal_entries.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -2278,4 +2278,5 @@ try {
 </body>
 </html>
     <!-- Inactivity Timeout - Blur screen + Auto logout -->
+
 

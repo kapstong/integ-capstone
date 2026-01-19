@@ -410,7 +410,7 @@ function getSizeBadgeClass(size) {
 
 // Preview default dashboard
 function previewDashboard() {
-    fetch('api/dashboard.php?action=get_default_layout')
+    fetch('../api/dashboard.php?action=get_default_layout')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -538,5 +538,6 @@ function showWidgetLibrary() {
 </style>
 
 <?php include 'legacy_footer.php'; ?>
+
 
 

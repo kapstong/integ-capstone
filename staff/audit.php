@@ -787,7 +787,7 @@ function cleanupOldLogs() {
         'Are you sure you want to cleanup audit logs older than 1 year? This action cannot be undone.',
         async () => {
             try {
-                const response = await fetch('api/audit.php?action=cleanup', { method: 'POST' });
+                const response = await fetch('../api/audit.php?action=cleanup', { method: 'POST' });
                 const data = await response.json();
                 if (data.success) {
                     showAlert(`Successfully cleaned up ${data.deleted_count} old audit log entries.`, 'success');
@@ -820,4 +820,5 @@ document.getElementById('limit').addEventListener('change', function() {
 
 </body>
 </html>
+
 
