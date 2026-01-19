@@ -4,14 +4,30 @@
  * Handles external API integration operations
  */
 
+// Start buffering to catch any output before we're ready
+ob_start();
+
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
 session_start();
 
-require_once '../../includes/auth.php';
-require_once '../../includes/api_integrations.php';
+// Clear any buffered output
+ob_end_clean();
+
+try {
+    require_once '../../includes/auth.php';
+    require_once '../../includes/api_integrations.php';
+} catch (Exception $e) {
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode([
+        'error' => 'Failed to load API files',
+        'message' => $e->getMessage()
+    ]);
+    exit;
+}
 
 header('Content-Type: application/json');
 
@@ -27,10 +43,17 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 try {
     $auth = new Auth();
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Failed to initialize Auth: ' . $e->getMessage()]);
+    exit;
+}
+
+try {
     $integrationManager = APIIntegrationManager::getInstance();
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['error' => 'Failed to initialize API: ' . $e->getMessage()]);
+    echo json_encode(['error' => 'Failed to initialize Integration Manager: ' . $e->getMessage()]);
     exit;
 }
 
@@ -167,6 +190,46 @@ try {
                     $integrationName = $_POST['integration_name'] ?? '';
                     $result = $integrationManager->testIntegration($integrationName);
                     echo json_encode($result);
+                    break;
+
+                case 'execute':
+                    // Execute integration action (support both GET and POST)
+                    $integrationName = $_REQUEST['integration_name'] ?? '';
+                    $actionName = $_REQUEST['action_name'] ?? '';
+                    $params = [];
+                    
+                    // Get params from POST/GET (excluding our control params)
+                    $rawParams = $_REQUEST;
+                    unset($rawParams['action'], $rawParams['integration_name'], $rawParams['action_name'], $rawParams['params']);
+                    if (!empty($rawParams)) {
+                        $params = $rawParams;
+                    }
+                    if (isset($_REQUEST['params'])) {
+                        $decodedParams = json_decode($_REQUEST['params'], true);
+                        if (is_array($decodedParams)) {
+                            $params = array_merge($params, $decodedParams);
+                        }
+                    }
+
+                    try {
+                        $result = $integrationManager->executeIntegrationAction($integrationName, $actionName, $params);
+                        if (is_array($result) && isset($result['success']) && $result['success'] === false) {
+                            echo json_encode([
+                                'success' => false,
+                                'error' => $result['error'] ?? $result['message'] ?? 'Integration action failed',
+                                'result' => $result
+                            ]);
+                            exit;
+                        }
+
+                        echo json_encode(['success' => true, 'result' => $result]);
+                    } catch (Exception $e) {
+                        http_response_code(400);
+                        echo json_encode([
+                            'success' => false,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
                     break;
 
                 default:
