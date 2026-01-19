@@ -1044,7 +1044,7 @@ $db = Database::getInstance()->getConnection();
                 }
 
                 // Fetch income statement data
-                const response = await fetch(`api/reports.php?type=income_statement&date_from=${dateFrom}&date_to=${dateTo}`);
+                const response = await fetch(`../api/reports.php?type=income_statement&date_from=${dateFrom}&date_to=${dateTo}`);
 
                 // Get the response text first (even if status is error, API returns JSON with details)
                 const responseText = await response.text();
@@ -1313,7 +1313,7 @@ $db = Database::getInstance()->getConnection();
 
             try {
                 // Fetch balance sheet data
-                const response = await fetch(`api/reports.php?type=balance_sheet&as_of_date=${asOfDate}`);
+                const response = await fetch(`../api/reports.php?type=balance_sheet&as_of_date=${asOfDate}`);
 
                 // Check if response is OK
                 if (!response.ok) {
@@ -1454,7 +1454,7 @@ $db = Database::getInstance()->getConnection();
 
             try {
                 // Fetch cash flow data
-                const response = await fetch(`api/reports.php?type=cash_flow&period=${period}`);
+                const response = await fetch(`../api/reports.php?type=cash_flow&period=${period}`);
 
                 // Check if response is OK
                 if (!response.ok) {
