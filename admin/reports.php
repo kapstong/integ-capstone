@@ -1065,7 +1065,8 @@ $db = Database::getInstance()->getConnection();
                     throw new Error(data.error || `HTTP error! status: ${response.status}`);
                 }
 
-                if (!data.success || data.error) {
+                // Check if we have the expected data fields for income statement
+                if (!data.report_type || data.error) {
                     throw new Error(data.error || 'Failed to generate income statement');
                 }
 
@@ -1335,7 +1336,7 @@ $db = Database::getInstance()->getConnection();
                     throw new Error('Invalid JSON response from server');
                 }
 
-                if (!data.success || data.error) {
+                if (!data.assets || data.error) {
                     throw new Error(data.error || 'Failed to generate balance sheet');
                 }
 
@@ -1476,13 +1477,13 @@ $db = Database::getInstance()->getConnection();
                     throw new Error('Invalid JSON response from server');
                 }
 
-                if (!data.success || data.error) {
+                if (!data.operating_activities || data.error) {
                     throw new Error(data.error || 'Failed to generate cash flow statement');
                 }
 
-                // Check if cash_flow data exists
-                if (!data.cash_flow) {
-                    throw new Error('Invalid response format: missing cash_flow data');
+                // Check if operating activities data exists
+                if (!data.operating_activities) {
+                    throw new Error('Invalid response format: missing operating activities data');
                 }
 
                 // Store data globally for export
@@ -1840,7 +1841,7 @@ $db = Database::getInstance()->getConnection();
                     throw new Error('Invalid JSON response from server');
                 }
 
-                if (!data.success || data.error) {
+                if (!data.summary || data.error) {
                     throw new Error(data.error || 'Failed to generate cash flow summary');
                 }
 
@@ -2320,7 +2321,7 @@ $db = Database::getInstance()->getConnection();
             fetch('../api/reports.php?type=analytics_summary')
                 .then(response => response.json())
                 .then(data => {
-                    if (!data.success) {
+                    if (!data.mtd) {
                         showAlert(data.error || 'Failed to load analytics', 'danger');
                         return;
                     }
