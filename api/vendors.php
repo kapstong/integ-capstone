@@ -25,6 +25,7 @@ if (session_status() === PHP_SESSION_NONE) {
 if (!isset($_SESSION['user'])) {
     http_response_code(401);
     echo json_encode(['error' => 'Unauthorized - Session not found']);
+    ob_end_flush();
     exit;
 }
 ?>
@@ -207,7 +208,10 @@ try {
     error_log("Vendor API operation error: " . $e->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Database error occurred']);
+    ob_end_flush();
     exit;
 }
+
+ob_end_flush();
 ?>
 

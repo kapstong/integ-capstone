@@ -35,6 +35,7 @@ try {
     if (!isset($_SESSION['user'])) {
         http_response_code(401);
         echo json_encode(['error' => 'Unauthorized']);
+        ob_end_flush();
         exit;
     }
 
@@ -194,5 +195,7 @@ function maskEmail($email) {
     
     return $masked_name . '@' . $domain;
 }
+
+ob_end_flush();
 ?>
 

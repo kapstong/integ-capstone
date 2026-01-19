@@ -19,6 +19,7 @@ if (session_status() === PHP_SESSION_NONE) {
 if (!isset($_SESSION['user'])) {
     http_response_code(401);
     echo json_encode(['error' => 'Unauthorized']);
+    ob_end_flush();
     exit;
 }
 
@@ -322,5 +323,7 @@ try {
     http_response_code(500);
     echo json_encode(['error' => 'Internal server error']);
 }
+
+ob_end_flush();
 ?>
 
