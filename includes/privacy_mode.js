@@ -338,7 +338,8 @@
      * Get API path based on current location
      */
     function getApiPath(filename) {
-        return '/api/' + filename;
+        // Use absolute path from domain root
+        return '/integ-capstone/api/' + filename;
     }
 
     /**
