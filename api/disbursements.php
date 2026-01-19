@@ -12,9 +12,6 @@ ob_start();
 ini_set('display_errors', 0);
 error_reporting(0);
 
-// Clean any buffered output before including files
-ob_clean();
-
 require_once '../../includes/auth.php';
 require_once '../../includes/database.php';
 require_once '../../includes/logger.php';

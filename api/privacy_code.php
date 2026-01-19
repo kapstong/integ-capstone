@@ -13,7 +13,6 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization');
 ob_start();
 ini_set('display_errors', 0);
 error_reporting(0);
-ob_clean();
 
 // Start session safely
 if (session_status() === PHP_SESSION_NONE) {
