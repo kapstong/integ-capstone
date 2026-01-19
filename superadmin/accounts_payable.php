@@ -2251,10 +2251,10 @@ try {
 
         // Delete vendor
         async function deleteVendor(vendorId) {
-            if (!confirm('Are you sure you want to delete this vendor?')) {
-                return;
-            }
-
+            showConfirmDialog(
+                'Delete Vendor',
+                'Are you sure you want to delete this vendor?',
+                async () => {
             try {
                 const response = await fetch(`api/vendors.php?id=${vendorId}`, {
                     method: 'DELETE'
@@ -2272,6 +2272,8 @@ try {
                 console.error('Error deleting vendor:', error);
                 showAlert('Error deleting vendor: ' + error.message, 'danger');
             }
+                }
+            );
         }
 
         // Filter bills
@@ -2875,10 +2877,10 @@ try {
 
         // Delete bill
         async function deleteBill(billId) {
-            if (!confirm('Are you sure you want to delete this bill? This action cannot be undone.')) {
-                return;
-            }
-
+            showConfirmDialog(
+                'Delete Bill',
+                'Are you sure you want to delete this bill? This action cannot be undone.',
+                async () => {
             try {
                 const response = await fetch(`api/bills.php?id=${billId}`, {
                     method: 'DELETE'
@@ -2896,6 +2898,8 @@ try {
                 console.error('Error deleting bill:', error);
                 showAlert('Error deleting bill: ' + error.message, 'danger');
             }
+                }
+            );
         }
 
         // Update bill form submission to handle both create and edit
@@ -3022,10 +3026,10 @@ try {
 
         // Delete payment
         async function deletePayment(paymentId) {
-            if (!confirm('Are you sure you want to delete this payment? This action cannot be undone.')) {
-                return;
-            }
-
+            showConfirmDialog(
+                'Delete Payment',
+                'Are you sure you want to delete this payment? This action cannot be undone.',
+                async () => {
             try {
                 const response = await fetch(`api/payments.php?id=${paymentId}&type=made`, {
                     method: 'DELETE'
@@ -3043,6 +3047,8 @@ try {
                 console.error('Error deleting payment:', error);
                 showAlert('Error deleting payment: ' + error.message, 'danger');
             }
+                }
+            );
         }
 
         // View collection details
@@ -3167,10 +3173,10 @@ try {
 
         // Delete collection
         async function deleteCollection(collectionId) {
-            if (!confirm('Are you sure you want to delete this collection? This action cannot be undone.')) {
-                return;
-            }
-
+            showConfirmDialog(
+                'Delete Collection',
+                'Are you sure you want to delete this collection? This action cannot be undone.',
+                async () => {
             try {
                 const response = await fetch(`api/payments.php?id=${collectionId}&type=made`, {
                     method: 'DELETE'
@@ -3188,6 +3194,8 @@ try {
                 console.error('Error deleting collection:', error);
                 showAlert('Error deleting collection: ' + error.message, 'danger');
             }
+                }
+            );
         }
 
         // View adjustment details
@@ -3331,10 +3339,10 @@ try {
 
         // Delete adjustment
         async function deleteAdjustment(adjustmentId) {
-            if (!confirm('Are you sure you want to delete this adjustment? This action cannot be undone.')) {
-                return;
-            }
-
+            showConfirmDialog(
+                'Delete Adjustment',
+                'Are you sure you want to delete this adjustment? This action cannot be undone.',
+                async () => {
             try {
                 const response = await fetch(`api/adjustments.php?id=${adjustmentId}`, {
                     method: 'DELETE'
@@ -3352,6 +3360,8 @@ try {
                 console.error('Error deleting adjustment:', error);
                 showAlert('Error deleting adjustment: ' + error.message, 'danger');
             }
+                }
+            );
         }
 
         // Alert function
