@@ -338,7 +338,7 @@
      * Get API path based on current location
      */
     function getApiPath(filename) {
-        return '/superapi/' + filename;
+        return '/api/' + filename;
     }
 
     /**
