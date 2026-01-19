@@ -4,11 +4,16 @@
  * Handles external API integration operations
  */
 
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
+session_start();
+
 require_once '../../includes/auth.php';
 require_once '../../includes/api_integrations.php';
 
 header('Content-Type: application/json');
-session_start();
 
 // Check if user is logged in
 if (!isset($_SESSION['user'])) {
@@ -20,8 +25,14 @@ if (!isset($_SESSION['user'])) {
 $userId = $_SESSION['user']['id'];
 $method = $_SERVER['REQUEST_METHOD'];
 
-$auth = new Auth();
-$integrationManager = APIIntegrationManager::getInstance();
+try {
+    $auth = new Auth();
+    $integrationManager = APIIntegrationManager::getInstance();
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Failed to initialize API: ' . $e->getMessage()]);
+    exit;
+}
 
 // Require settings edit permission for integrations
 if (!$auth->hasPermission('settings.edit')) {
@@ -229,7 +240,12 @@ try {
 } catch (Exception $e) {
     Logger::getInstance()->logDatabaseError('Integration API operation', $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Internal server error']);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Internal server error',
+        'debug_message' => $e->getMessage(),
+        'debug_trace' => $e->getTraceAsString()
+    ]);
 }
 
 /**
