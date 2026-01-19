@@ -114,3 +114,4 @@ include '../../includes/admin_navigation.php';
 </div>
 
 <?php include '../legacy_footer.php'; ?>
+

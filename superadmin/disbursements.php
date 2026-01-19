@@ -1008,7 +1008,7 @@ body {
             }
 
             try {
-                const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=getApprovedClaims', {
+                const response = await fetch('api/integrations.php?action=execute&integration_name=hr3&action_name=getApprovedClaims', {
                     method: 'GET',
                     credentials: 'include' // Include cookies for session
                 });
@@ -1169,7 +1169,7 @@ body {
                     // Don't fail the main operation if audit logging fails
                 }
 
-                const response = await fetch('../api/disbursements.php', {
+                const response = await fetch('api/disbursements.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -1220,7 +1220,7 @@ body {
         window.markHR3ClaimAsPaid = async function(claimId) {
             // This would call the HR3 API to update claim status to "Paid"
             // Implementation depends on HR3 API capabilities
-            const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=updateClaimStatus', {
+            const response = await fetch('api/integrations.php?action=execute&integration_name=hr3&action_name=updateClaimStatus', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -1247,7 +1247,7 @@ body {
 
             try {
                 // First, get an actual claim from the HR3 API to test with
-                const claimsResponse = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=getApprovedClaims', {
+                const claimsResponse = await fetch('api/integrations.php?action=execute&integration_name=hr3&action_name=getApprovedClaims', {
                     method: 'GET'
                 });
                 const claimsData = await claimsResponse.json();
@@ -1263,7 +1263,7 @@ body {
                 const testClaimId = claimsData.data[0].claim_id;
 
                 // Test claim status update with the actual claim ID
-                const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=updateClaimStatus', {
+                const response = await fetch('api/integrations.php?action=execute&integration_name=hr3&action_name=updateClaimStatus', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -1369,7 +1369,7 @@ body {
 
             try {
                 // Use the integration API to fetch payroll data
-                const response = await fetch('../api/integrations.php', {
+                const response = await fetch('api/integrations.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -1467,7 +1467,7 @@ body {
                     }
                 }
 
-                const response = await fetch('../api/integrations.php', {
+                const response = await fetch('api/integrations.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -1521,3 +1521,4 @@ body {
 </html>
     <script src="../includes/inactivity_timeout.js?v=3"></script>
 <script src="../includes/navbar_datetime.js"></script>
+

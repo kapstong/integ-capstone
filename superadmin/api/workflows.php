@@ -396,3 +396,4 @@ try {
     echo json_encode(['success' => false, 'error' => 'Internal server error']);
 }
 ?>
+

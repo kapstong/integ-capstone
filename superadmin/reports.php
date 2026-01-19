@@ -1043,7 +1043,7 @@ $db = Database::getInstance()->getConnection();
                 }
 
                 // Fetch income statement data
-                const response = await fetch(`../api/reports.php?type=income_statement&date_from=${dateFrom}&date_to=${dateTo}`);
+                const response = await fetch(`api/reports.php?type=income_statement&date_from=${dateFrom}&date_to=${dateTo}`);
 
                 // Get the response text first (even if status is error, API returns JSON with details)
                 const responseText = await response.text();
@@ -1312,7 +1312,7 @@ $db = Database::getInstance()->getConnection();
 
             try {
                 // Fetch balance sheet data
-                const response = await fetch(`../api/reports.php?type=balance_sheet&as_of_date=${asOfDate}`);
+                const response = await fetch(`api/reports.php?type=balance_sheet&as_of_date=${asOfDate}`);
 
                 // Check if response is OK
                 if (!response.ok) {
@@ -1453,7 +1453,7 @@ $db = Database::getInstance()->getConnection();
 
             try {
                 // Fetch cash flow data
-                const response = await fetch(`../api/reports.php?type=cash_flow&period=${period}`);
+                const response = await fetch(`api/reports.php?type=cash_flow&period=${period}`);
 
                 // Check if response is OK
                 if (!response.ok) {
@@ -1755,7 +1755,7 @@ $db = Database::getInstance()->getConnection();
             `;
 
             try {
-                const response = await fetch('../api/reports.php?type=budget_vs_actual');
+                const response = await fetch('api/reports.php?type=budget_vs_actual');
 
                 // Check if response is OK
                 if (!response.ok) {
@@ -1817,7 +1817,7 @@ $db = Database::getInstance()->getConnection();
             `;
 
             try {
-                const response = await fetch('../api/reports.php?type=cash_flow_summary');
+                const response = await fetch('api/reports.php?type=cash_flow_summary');
 
                 // Check if response is OK
                 if (!response.ok) {
@@ -2242,7 +2242,7 @@ $db = Database::getInstance()->getConnection();
                 const dateTo = document.getElementById('reportDateTo')?.value || '';
 
                 // Send email via API
-                fetch('../api/reports.php', {
+                fetch('api/reports.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -2316,7 +2316,7 @@ $db = Database::getInstance()->getConnection();
         }
 
         function loadAnalyticsSummary() {
-            fetch('../api/reports.php?type=analytics_summary')
+            fetch('api/reports.php?type=analytics_summary')
                 .then(response => response.json())
                 .then(data => {
                     if (!data.success) {
@@ -2401,3 +2401,4 @@ $db = Database::getInstance()->getConnection();
 </body>
 </html>
 </body>
+

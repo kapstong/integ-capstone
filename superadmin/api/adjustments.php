@@ -339,3 +339,4 @@ function updateAdjustmentJournalEntry($db, $adjustmentId, $data) {
     error_log("Journal entry update skipped for adjustment $adjustmentId");
 }
 ?>
+

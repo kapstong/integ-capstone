@@ -374,7 +374,7 @@ function exportTranslations(language) {
 
 // View missing translations
 function viewMissingTranslations(language) {
-    fetch(`../api/translations.php?action=missing&language=${language}`)
+    fetch(`api/translations.php?action=missing&language=${language}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -435,3 +435,4 @@ document.getElementById('addTranslationModal').addEventListener('hidden.bs.modal
 </script>
 
 <?php include 'legacy_footer.php'; ?>
+

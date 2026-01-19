@@ -391,3 +391,4 @@ function generateTransactionBreakdown($db, $dateFrom, $dateTo) {
     echo json_encode($report, JSON_PRETTY_PRINT);
 }
 ?>
+

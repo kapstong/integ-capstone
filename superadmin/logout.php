@@ -8,3 +8,4 @@ $target = '../logout.php' . ($reason ? '?reason=' . $reason : '');
 header('Location: ' . $target);
 exit;
 ?>
+

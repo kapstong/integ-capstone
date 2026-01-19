@@ -354,7 +354,7 @@ include 'legacy_header.php';
                 <h5 class="modal-title">Save Search</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="../api/search.php?action=save">
+            <form method="POST" action="api/search.php?action=save">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="searchName" class="form-label">Search Name *</label>
@@ -419,7 +419,7 @@ include 'legacy_header.php';
 <script>
 // Load saved search
 function loadSavedSearch(searchId) {
-    fetch(`../api/search.php?action=load&id=${searchId}`)
+    fetch(`api/search.php?action=load&id=${searchId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -458,7 +458,7 @@ function loadSavedSearch(searchId) {
 // Delete saved search
 function deleteSavedSearch(searchId) {
     if (confirm('Delete this saved search?')) {
-        fetch(`../api/search.php?action=delete&id=${searchId}`, { method: 'DELETE' })
+        fetch(`api/search.php?action=delete&id=${searchId}`, { method: 'DELETE' })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -499,7 +499,7 @@ function viewRecord(table, id) {
 function exportResults() {
     const params = new URLSearchParams(window.location.search);
     params.set('export', '1');
-    window.open(`../api/search.php?${params.toString()}`, '_blank');
+    window.open(`api/search.php?${params.toString()}`, '_blank');
 }
 
 // Initialize chart if data exists
@@ -538,3 +538,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <?php include 'legacy_footer.php'; ?>
+

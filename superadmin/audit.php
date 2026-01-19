@@ -727,7 +727,7 @@ try {
 <script>
 // Show log details
 function showLogDetails(logId) {
-    fetch(`../api/audit.php?action=details&id=${logId}`)
+    fetch(`api/audit.php?action=details&id=${logId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -777,13 +777,13 @@ function showLogDetails(logId) {
 // Export audit logs
 function exportAuditLogs() {
     const filters = new URLSearchParams(window.location.search);
-    window.open(`../api/audit.php?action=export&${filters.toString()}`, '_blank');
+    window.open(`api/audit.php?action=export&${filters.toString()}`, '_blank');
 }
 
 // Cleanup old logs
 function cleanupOldLogs() {
     if (confirm('Are you sure you want to cleanup audit logs older than 1 year? This action cannot be undone.')) {
-        fetch('../api/audit.php?action=cleanup', { method: 'POST' })
+        fetch('api/audit.php?action=cleanup', { method: 'POST' })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -817,3 +817,4 @@ document.getElementById('limit').addEventListener('change', function() {
 
 </body>
 </html>
+

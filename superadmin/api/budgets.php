@@ -979,3 +979,4 @@ function createCategory($db, $logger, $data) {
     ]);
 }
 ?>
+

@@ -155,3 +155,4 @@ function closeShift($db, $data) {
     echo json_encode(['success' => true, 'id' => $data['id']]);
 }
 ?>
+

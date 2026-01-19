@@ -1708,7 +1708,7 @@ try {
             paymentData.reference_number = referenceNumber;
 
             try {
-                const response = await fetch('../api/payments.php', {
+                const response = await fetch('api/payments.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1772,7 +1772,7 @@ try {
                     bill_id: null
                 };
 
-                const response = await fetch('../api/payments.php', {
+                const response = await fetch('api/payments.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -3335,7 +3335,7 @@ try {
             }
 
             try {
-                const response = await fetch(`../api/adjustments.php?id=${adjustmentId}`, {
+                const response = await fetch(`api/adjustments.php?id=${adjustmentId}`, {
                     method: 'DELETE'
                 });
 
@@ -3383,3 +3383,4 @@ try {
 </body>
 </html>
     <!-- Inactivity Timeout - Blur screen + Auto logout -->
+

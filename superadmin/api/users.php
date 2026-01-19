@@ -385,3 +385,4 @@ function handleDelete($db, $auth, $currentUser) {
     }
 }
 ?>
+

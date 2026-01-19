@@ -499,7 +499,7 @@ function runScheduledBackups() {
 
 // Backup management functions
 function verifyBackup(backupId) {
-    fetch(`../api/backups.php?action=verify&id=${backupId}`)
+    fetch(`api/backups.php?action=verify&id=${backupId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -525,13 +525,13 @@ function verifyBackup(backupId) {
 }
 
 function downloadBackup(backupId) {
-    window.open(`../api/backups.php?action=download&id=${backupId}`, '_blank');
+    window.open(`api/backups.php?action=download&id=${backupId}`, '_blank');
 }
 
 function restoreBackup(backupId) {
     if (confirm('WARNING: This will restore the database from backup and may overwrite existing data. Are you sure?')) {
         if (confirm('This action cannot be undone. Confirm restore?')) {
-            fetch(`../api/backups.php?action=restore&id=${backupId}`, { method: 'POST' })
+            fetch(`api/backups.php?action=restore&id=${backupId}`, { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -550,7 +550,7 @@ function restoreBackup(backupId) {
 
 function deleteBackup(backupId) {
     if (confirm('Delete this backup? This action cannot be undone.')) {
-        fetch(`../api/backups.php?action=delete&id=${backupId}`, { method: 'DELETE' })
+        fetch(`api/backups.php?action=delete&id=${backupId}`, { method: 'DELETE' })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -568,7 +568,7 @@ function deleteBackup(backupId) {
 
 function deleteSchedule(scheduleId) {
     if (confirm('Delete this backup schedule?')) {
-        fetch(`../api/backups.php?action=delete_schedule&id=${scheduleId}`, { method: 'DELETE' })
+        fetch(`api/backups.php?action=delete_schedule&id=${scheduleId}`, { method: 'DELETE' })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -602,3 +602,4 @@ function formatFrequency(minutes) {
 </script>
 
 <?php include 'legacy_footer.php'; ?>
+
