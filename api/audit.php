@@ -7,10 +7,33 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 ob_start();
 ini_set('display_errors', 0);
-error_reporting(0);
+error_reporting(E_ALL);
 
+// Set up error handler to catch and output errors as JSON
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Server error: ' . $errstr]);
+    ob_end_flush();
+    exit(1);
+}, E_ALL);
+
+// Set up exception handler
+set_exception_handler(function($exception) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Exception: ' . $exception->getMessage()]);
+    ob_end_flush();
+    exit(1);
+});
+
+try {
 require_once '../../includes/auth.php';
 require_once '../../includes/database.php';
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Failed to load required files: ' . $e->getMessage()]);
+    ob_end_flush();
+    exit(1);
+}
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

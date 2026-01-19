@@ -12,7 +12,23 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization');
 // Start output buffering
 ob_start();
 ini_set('display_errors', 0);
-error_reporting(0);
+error_reporting(E_ALL);
+
+// Set up error handler to catch and output errors as JSON
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Server error: ' . $errstr]);
+    ob_end_flush();
+    exit(1);
+}, E_ALL);
+
+// Set up exception handler
+set_exception_handler(function($exception) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Exception: ' . $exception->getMessage()]);
+    ob_end_flush();
+    exit(1);
+});
 
 // Start session safely
 if (session_status() === PHP_SESSION_NONE) {

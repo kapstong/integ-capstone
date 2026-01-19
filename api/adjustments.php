@@ -1,12 +1,35 @@
 <?php
 // Working Adjustments API with Database Persistence
-require_once '../../includes/auth.php';
-require_once '../../includes/database.php';
-
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
+
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
+// Set up error handler to catch and output errors as JSON
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Server error: ' . $errstr]);
+    exit(1);
+}, E_ALL);
+
+// Set up exception handler
+set_exception_handler(function($exception) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Exception: ' . $exception->getMessage()]);
+    exit(1);
+});
+
+try {
+require_once '../../includes/auth.php';
+require_once '../../includes/database.php';
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Failed to load required files: ' . $e->getMessage()]);
+    exit(1);
+}
 
 $db = Database::getInstance();
 
