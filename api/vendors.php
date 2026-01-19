@@ -17,7 +17,7 @@ ob_clean();
 
 require_once '../../includes/auth.php';
 require_once '../../includes/database.php';
-// require_once '../../includes/logger.php'; // Temporarily disabled to avoid potential issues
+require_once '../../includes/logger.php';
 
 // Start session safely
 if (session_status() === PHP_SESSION_NONE) {
