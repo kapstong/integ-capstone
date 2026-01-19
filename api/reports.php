@@ -4,18 +4,38 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/../../logs/api_reports_admin_error.log');
+ini_set('error_log', __DIR__ . '/../logs/api_reports_admin_error.log');
 
 error_log('[ADMIN API] Reports API called with params: ' . json_encode($_GET));
-
-require_once __DIR__ . '/../../includes/database.php';
-require_once __DIR__ . '/../../includes/logger.php';
-require_once __DIR__ . '/../../includes/mailer.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
+
+// Set up error handler to catch and output errors as JSON
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Server error: ' . $errstr]);
+    exit(1);
+}, E_ALL);
+
+// Set up exception handler
+set_exception_handler(function($exception) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Exception: ' . $exception->getMessage()]);
+    exit(1);
+});
+
+try {
+require_once __DIR__ . '/../includes/database.php';
+require_once __DIR__ . '/../includes/logger.php';
+require_once __DIR__ . '/../includes/mailer.php';
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Failed to load required files: ' . $e->getMessage()]);
+    exit(1);
+}
 
 $db = Database::getInstance()->getConnection();
 $logger = Logger::getInstance();
