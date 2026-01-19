@@ -340,7 +340,7 @@
     function getApiPath(filename) {
         // Determine the correct API path based on current page location
         const pathname = window.location.pathname;
-        
+
         // Check if integ-capstone is in the path
         if (pathname.includes('/integ-capstone/')) {
             // Extract path up to and including integ-capstone
@@ -349,23 +349,18 @@
                 return match[1] + '/api/' + filename;
             }
         }
-        
+
         // For pages in subdirectories like /superadmin/, /staff/, /admin/
-        // Remove the page and folder to get to root, then access /api/
         const parts = pathname.split('/').filter(p => p.length > 0);
-        
+
         // If we're in a folder structure (superadmin, staff, admin, etc.)
-        // Remove the last part (filename) and the folder before it
         if (parts.length >= 2) {
-            // Reconstruct path up to root
-            const rootPath = '/' + parts.slice(0, -1).join('/');
-            // If the last folder is a role folder (superadmin, staff, admin), remove it
             const lastFolder = parts[parts.length - 2];
             if (['superadmin', 'staff', 'admin', 'hotels', 'restaurants'].includes(lastFolder)) {
-                return '/' + parts.slice(0, -2).join('/') + '/api/' + filename;
+                return '../api/' + filename;
             }
         }
-        
+
         // Default: assume app is at domain root
         return '/api/' + filename;
     }
@@ -706,4 +701,3 @@
     init();
 
 })();
-
