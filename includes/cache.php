@@ -398,7 +398,10 @@ class CacheManager {
             case 'json':
                 return json_decode($data, true);
             case 'serialize':
-                return unserialize($data);
+                // SECURITY FIX: Prevent object injection attacks by only allowing JSON
+                // unserialize() is deprecated for untrusted data and can lead to RCE
+                error_log("WARNING: Deprecated serialization method detected. Please migrate to JSON-only serialization.");
+                return json_decode($data, true); // Fallback to JSON
             default:
                 return $data;
         }

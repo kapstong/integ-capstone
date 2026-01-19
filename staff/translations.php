@@ -88,7 +88,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && isset($_GET['action'])) {
             }
 
             // For deletion, we need to load and modify the file directly
-            $file = '../languages/' . $_GET['language'] . '.php';
+            $language = $_GET['language'] ?? '';
+            // Sanitize language to prevent path traversal
+            if (!preg_match('/^[a-z]{2}(?:_[A-Z]{2})?$/', $language)) {
+                echo json_encode(['success' => false, 'error' => 'Invalid language code']);
+                exit;
+            }
+            $file = '../languages/' . $language . '.php';
             if (file_exists($file)) {
                 $translations = include $file;
                 if (is_array($translations) && isset($translations[$_GET['key']])) {
@@ -101,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && isset($_GET['action'])) {
                             'translations',
                             null,
                             null,
-                            ['key' => $_GET['key'], 'language' => $_GET['language']]
+                            ['key' => $_GET['key'], 'language' => $language]
                         );
                         echo json_encode(['success' => true, 'message' => 'Translation deleted successfully']);
                     } else {
@@ -123,12 +129,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && isset($_GET['action'])) {
 
 // Handle export requests
 if (isset($_GET['export']) && isset($_GET['language'])) {
-    $language = $_GET['language'];
+    $language = $_GET['language'] ?? '';
+    // Sanitize language to prevent path traversal
+    if (!preg_match('/^[a-z]{2}(?:_[A-Z]{2})?$/', $language)) {
+        die('Invalid language code');
+    }
     $jsonData = $i18n->exportTranslations($language);
 
     if ($jsonData !== false) {
         header('Content-Type: application/json');
-        header('Content-Disposition: attachment; filename="translations_' . $language . '.json"');
+        header('Content-Disposition: attachment; filename="translations_' . preg_replace('/[^a-zA-Z0-9_-]/', '', $language) . '.json"');
         echo $jsonData;
         exit;
     } else {

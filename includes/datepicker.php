@@ -176,10 +176,13 @@ function initializeDatePickers(container) {
 
                 // Call custom callback if defined
                 if (input.dataset.onDateChange) {
-                    const callback = eval(input.dataset.onDateChange);
-                    if (typeof callback === 'function') {
-                        callback(selectedDates, dateStr, instance);
-                    }
+                    // Dispatch custom event with data instead of using eval()
+                    const event = new CustomEvent('datechange', {
+                        detail: { selectedDates, dateStr, instance },
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    input.dispatchEvent(event);
                 }
             },
             onReady: function(selectedDates, dateStr, instance) {
