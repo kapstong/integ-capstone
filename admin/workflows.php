@@ -634,3 +634,4 @@ document.getElementById('workflowTrigger').addEventListener('change', function()
 </script>
 
 <?php include 'legacy_footer.php'; ?>
+

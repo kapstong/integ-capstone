@@ -140,3 +140,4 @@ function db() {
     return Database::getInstance()->getConnection();
 }
 ?>
+

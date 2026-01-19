@@ -631,3 +631,4 @@ function formatFrequency(minutes) {
 </script>
 
 <?php include 'legacy_footer.php'; ?>
+

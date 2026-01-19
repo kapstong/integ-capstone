@@ -538,3 +538,4 @@ function showWidgetLibrary() {
 </style>
 
 <?php include 'legacy_footer.php'; ?>
+

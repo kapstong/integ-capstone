@@ -129,3 +129,4 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
         }
     });
     </script>
+

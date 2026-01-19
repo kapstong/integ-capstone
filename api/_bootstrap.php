@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, OPTIONS');
@@ -42,3 +42,4 @@ function api_get_date_range() {
     $dateTo = api_date($_GET['date_to'] ?? null);
     return [$dateFrom, $dateTo];
 }
+

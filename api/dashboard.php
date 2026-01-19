@@ -330,3 +330,4 @@ function generateCheckboxField($name, $label, $checked = false) {
     return $html;
 }
 ?>
+

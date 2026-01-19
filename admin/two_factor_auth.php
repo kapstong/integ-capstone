@@ -493,3 +493,4 @@ setInterval(() => {
 </script>
 
 <?php include 'legacy_footer.php'; ?>
+

@@ -552,3 +552,4 @@ function postInvoiceJournalEntry($db, $invoiceId, $subtotal, $taxAmount) {
     }
 }
 ?>
+

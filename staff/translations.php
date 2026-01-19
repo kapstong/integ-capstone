@@ -448,3 +448,4 @@ document.getElementById('addTranslationModal').addEventListener('hidden.bs.modal
 </script>
 
 <?php include 'legacy_footer.php'; ?>
+

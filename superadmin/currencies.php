@@ -344,3 +344,4 @@ function showToast(message, type = 'info') {
 
 <?php include 'legacy_footer.php'; ?>
 
+

@@ -424,3 +424,4 @@ function postPaymentMadeJournalEntry($db, $paymentId, $amount) {
     );
 }
 ?>
+

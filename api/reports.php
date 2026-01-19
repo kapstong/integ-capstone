@@ -814,3 +814,4 @@ function buildReportEmailBody($reportName, $reportType, $reportData, $dateFrom, 
     return $html;
 }
 ?>
+

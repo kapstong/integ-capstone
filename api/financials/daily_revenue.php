@@ -252,3 +252,4 @@ function updateDailyRevenueSummary($db, $businessDate, $outletId) {
     ]);
 }
 ?>
+

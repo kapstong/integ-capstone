@@ -114,3 +114,4 @@ function showAlert(message, type) {
 </script>
 
 <?php include '../legacy_footer.php'; ?>
+

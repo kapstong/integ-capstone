@@ -50,3 +50,4 @@ api_send([
     'total_revenue' => $totalRevenue,
     'by_department' => $rows
 ]);
+

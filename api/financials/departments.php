@@ -399,3 +399,4 @@ function handleDelete($auth, $db) {
     echo json_encode(['success' => true, 'message' => 'Department deactivated successfully']);
 }
 ?>
+

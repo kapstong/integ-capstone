@@ -345,3 +345,4 @@ function escapeHtml(text) {
 
 <?php include '../legacy_footer.php'; ?>
 
+

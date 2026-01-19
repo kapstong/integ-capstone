@@ -449,3 +449,4 @@ document.getElementById('addTranslationModal').addEventListener('hidden.bs.modal
 
 <?php include 'legacy_footer.php'; ?>
 
+

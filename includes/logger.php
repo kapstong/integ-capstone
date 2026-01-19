@@ -384,3 +384,4 @@ set_exception_handler(function($exception) {
     Logger::getInstance()->critical($message, $context);
 });
 ?>
+

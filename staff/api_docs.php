@@ -408,3 +408,4 @@ code {
 </style>
 
 <?php require_once 'templates/footer.php'; ?>
+

@@ -246,3 +246,4 @@ function generateCustomReportPDF($pdfGenerator, $reportData) {
     }
 }
 ?>
+

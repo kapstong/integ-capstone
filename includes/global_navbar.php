@@ -68,3 +68,4 @@ $userRoleDisplay = ucwords(str_replace('_', ' ', $userRoleDisplay));
         </div>
     </div>
 </nav>
+

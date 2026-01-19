@@ -185,3 +185,4 @@ function handleDeleteCustomer($db, $id) {
     }
 }
 ?>
+

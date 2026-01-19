@@ -2401,3 +2401,4 @@ class Logistics2Integration extends BaseIntegration {
     }
 }
 ?>
+

@@ -513,3 +513,4 @@ function confirmClearCache() {
 </script>
 
 <?php include 'legacy_footer.php'; ?>
+

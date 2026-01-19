@@ -45,3 +45,4 @@ api_send([
     'total_expenses' => $totalExpenses,
     'profit' => $totalRevenue - $totalExpenses
 ]);
+

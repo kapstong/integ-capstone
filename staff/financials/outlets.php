@@ -421,3 +421,4 @@ function escapeHtml(text) {
 </script>
 
 <?php include '../legacy_footer.php'; ?>
+

@@ -752,3 +752,4 @@ function deleteJournalEntry($db, $entryId, $client) {
     }
 }
 ?>
+

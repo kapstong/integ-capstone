@@ -70,3 +70,4 @@ if ($logoutType === 'timeout') {
 }
 exit;
 ?>
+

@@ -663,3 +663,4 @@ function updateBillPaymentStatus($db, $billId, $paymentAmount) {
     $stmt->execute([$newBalance, $status, $billId]);
 }
 ?>
+

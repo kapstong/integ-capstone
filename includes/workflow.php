@@ -774,3 +774,4 @@ class WorkflowEngine {
 ?>
 ?>
                        COUNT(CASE WHEN ws.status = 'completed' THEN 1 END) as completed_steps
+

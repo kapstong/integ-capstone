@@ -503,3 +503,4 @@ function postBillJournalEntry($db, $billId, $subtotal, $taxAmount) {
         [$entryId, $subtotal + $taxAmount]
     );
 }
+

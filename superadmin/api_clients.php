@@ -304,3 +304,4 @@ function deleteClient(clientId, clientName) {
 
 <?php require_once 'templates/footer.php'; ?>
 
+

@@ -26,3 +26,4 @@ function csrf_input() {
     echo '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(csrf_token()) . '">';
 }
 ?>
+
