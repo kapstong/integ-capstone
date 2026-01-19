@@ -2895,6 +2895,8 @@ try {
                 console.error('Error deleting bill:', error);
                 showAlert('Error deleting bill: ' + error.message, 'danger');
             }
+                }
+            );
         }
 
         // Update bill form submission to handle both create and edit
@@ -3187,6 +3189,8 @@ try {
                 console.error('Error deleting collection:', error);
                 showAlert('Error deleting collection: ' + error.message, 'danger');
             }
+                }
+            );
         }
 
         // View adjustment details
@@ -3351,6 +3355,8 @@ try {
                 console.error('Error deleting adjustment:', error);
                 showAlert('Error deleting adjustment: ' + error.message, 'danger');
             }
+                }
+            );
         }
 
         // Alert function

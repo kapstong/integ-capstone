@@ -1488,7 +1488,10 @@ try {
         }
 
         async function deleteCustomer(id) {
-            if (confirm('Are you sure you want to delete this customer?')) {
+            showConfirmDialog(
+                'Delete Customer',
+                'Are you sure you want to delete this customer?',
+                async () => {
                 try {
                     const response = await fetch(`customer_handler.php?action=delete&id=${id}`, {
                         method: 'DELETE'
@@ -1507,7 +1510,9 @@ try {
                     console.error('Error deleting customer:', error);
                     showAlert('Error deleting customer: ' + error.message, 'danger');
                 }
-            }
+                }
+            );
+        }
         }
 
         // Invoice Functions
@@ -2245,10 +2250,10 @@ try {
         }
 
         async function sendInvoice(id) {
-            if (!confirm('Are you sure you want to mark this invoice as sent? This will send notification emails.')) {
-                return;
-            }
-
+            showConfirmDialog(
+                'Send Invoice',
+                'Are you sure you want to mark this invoice as sent? This will send notification emails.',
+                async () => {
             try {
                 const response = await fetch(`api/invoices.php?id=${id}`, {
                     method: 'PUT',
@@ -2279,13 +2284,15 @@ try {
                 console.error('Error sending invoice:', error);
                 showAlert('Error sending invoice: ' + error.message, 'danger');
             }
+            }
+        );
         }
 
         async function deleteInvoice(id) {
-            if (!confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
-                return;
-            }
-
+            showConfirmDialog(
+                'Delete Invoice',
+                'Are you sure you want to delete this invoice? This action cannot be undone.',
+                async () => {
             try {
                 const response = await fetch(`api/invoices.php?id=${id}`, {
                     method: 'DELETE'
@@ -2303,6 +2310,8 @@ try {
                 console.error('Error deleting invoice:', error);
                 showAlert('Error deleting invoice: ' + error.message, 'danger');
             }
+            }
+        );
         }
 
         // Payment action functions
@@ -2391,10 +2400,10 @@ try {
         }
 
         async function deletePayment(id) {
-            if (!confirm('Are you sure you want to delete this payment? This action cannot be undone.')) {
-                return;
-            }
-
+            showConfirmDialog(
+                'Delete Payment',
+                'Are you sure you want to delete this payment? This action cannot be undone.',
+                async () => {
             try {
                 const response = await fetch(`api/payments.php?id=${id}&type=received`, {
                     method: 'DELETE'
@@ -2412,6 +2421,8 @@ try {
                 console.error('Error deleting payment:', error);
                 showAlert('Error deleting payment: ' + error.message, 'danger');
             }
+            }
+        );
         }
 
         // Adjustment action functions
@@ -2492,10 +2503,10 @@ try {
         }
 
         async function deleteAdjustment(id) {
-            if (!confirm('Are you sure you want to delete this adjustment? This action cannot be undone.')) {
-                return;
-            }
-
+            showConfirmDialog(
+                'Delete Adjustment',
+                'Are you sure you want to delete this adjustment? This action cannot be undone.',
+                async () => {
             try {
                 const response = await fetch(`api/adjustments.php?id=${id}`, {
                     method: 'DELETE'
@@ -2513,6 +2524,8 @@ try {
                 console.error('Error deleting adjustment:', error);
                 showAlert('Error deleting adjustment: ' + error.message, 'danger');
             }
+            }
+        );
         }
 
         // Loading and utility functions

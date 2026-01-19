@@ -477,16 +477,20 @@ function viewUserDashboard(userId) {
 
 // Reset user dashboard
 function resetUserDashboard(userId, username) {
-    if (confirm(`Reset dashboard for user "${username}" to default layout?`)) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = `
-            <input type="hidden" name="action" value="reset_user_dashboard">
-            <input type="hidden" name="user_id" value="${userId}">
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    }
+    showConfirmDialog(
+        'Reset Dashboard',
+        `Reset dashboard for user "${username}" to default layout?`,
+        () => {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = `
+                <input type="hidden" name="action" value="reset_user_dashboard">
+                <input type="hidden" name="user_id" value="${userId}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    );
 }
 
 // Show dashboard statistics

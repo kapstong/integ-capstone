@@ -278,10 +278,10 @@ header('Content-Type: application/javascript');
 
     // Delete disbursement
     async function deleteDisbursement(id) {
-        if (!confirm('Are you sure you want to delete this disbursement?')) {
-            return;
-        }
-
+        showConfirmDialog(
+            'Delete Disbursement',
+            'Are you sure you want to delete this disbursement?',
+            async () => {
         try {
             const response = await fetch(`api/disbursements.php?id=${id}`, {
                 method: 'DELETE',
@@ -300,6 +300,8 @@ header('Content-Type: application/javascript');
             console.error('Error deleting disbursement:', error);
             showAlert('Error deleting disbursement', 'danger');
         }
+        }
+    );
     }
 
     // Save disbursement
@@ -792,10 +794,10 @@ header('Content-Type: application/javascript');
             const count = selectedDisbursements.size;
             const confirmMessage = `Are you sure you want to delete ${count} disbursement${count === 1 ? '' : 's'}? This action cannot be undone.`;
 
-            if (!confirm(confirmMessage)) {
-                return;
-            }
-
+            showConfirmDialog(
+                'Delete Disbursements',
+                confirmMessage,
+                async () => {
             const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
             const originalText = bulkDeleteBtn.innerHTML;
             bulkDeleteBtn.disabled = true;
@@ -851,5 +853,7 @@ header('Content-Type: application/javascript');
                 bulkDeleteBtn.disabled = false;
                 bulkDeleteBtn.innerHTML = originalText;
             }
+            }
+        );
         }
 

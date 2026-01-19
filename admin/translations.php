@@ -407,23 +407,26 @@ function editTranslation(key, value) {
 
 // Delete translation
 function deleteTranslation(key, language) {
-    if (confirm(`Delete translation "${key}" for language ${language.toUpperCase()}?`)) {
-        fetch(`translations.php?action=delete_translation&key=${encodeURIComponent(key)}&language=${language}`, {
-            method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Translation deleted successfully.');
-                location.reload();
-            } else {
-                alert('Delete failed: ' + data.error);
+    showConfirmDialog(
+        'Delete Translation',
+        `Delete translation "${key}" for language ${language.toUpperCase()}?`,
+        async () => {
+            try {
+                const response = await fetch(`translations.php?action=delete_translation&key=${encodeURIComponent(key)}&language=${language}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showAlert('Translation deleted successfully.', 'success');
+                    location.reload();
+                } else {
+                    showAlert('Delete failed: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
             }
-        })
-        .catch(error => {
-            alert('Error: ' + error.message);
-        });
-    }
+        }
+    );
 }
 
 // Reset modal when closed

@@ -457,20 +457,23 @@ function loadSavedSearch(searchId) {
 
 // Delete saved search
 function deleteSavedSearch(searchId) {
-    if (confirm('Delete this saved search?')) {
-        fetch(`api/search.php?action=delete&id=${searchId}`, { method: 'DELETE' })
-            .then(response => response.json())
-            .then(data => {
+    showConfirmDialog(
+        'Delete Search',
+        'Delete this saved search?',
+        async () => {
+            try {
+                const response = await fetch(`api/search.php?action=delete&id=${searchId}`, { method: 'DELETE' });
+                const data = await response.json();
                 if (data.success) {
                     location.reload();
                 } else {
-                    alert('Delete failed: ' + data.error);
+                    showAlert('Delete failed: ' + data.error, 'danger');
                 }
-            })
-            .catch(error => {
-                alert('Error: ' + error.message);
-            });
-    }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            }
+        }
+    );
 }
 
 // View record details

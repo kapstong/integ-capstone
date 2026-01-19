@@ -164,9 +164,9 @@ include 'legacy_header.php';
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3">
-                            <form method="POST" class="d-inline">
+                            <form method="POST" class="d-inline" id="clearCacheForm">
                                 <input type="hidden" name="action" value="clear_cache">
-                                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Clear all cache?')">
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmClearCache()">
                                     <i class="fas fa-trash"></i> Clear Cache
                                 </button>
                             </form>
@@ -500,6 +500,16 @@ setInterval(function() {
     // This would typically make an AJAX call to refresh stats
     // For now, we'll just update the timestamp
 }, 30000);
+
+function confirmClearCache() {
+    showConfirmDialog(
+        'Clear Cache',
+        'Clear all cache?',
+        () => {
+            document.getElementById('clearCacheForm').submit();
+        }
+    );
+}
 </script>
 
 <?php include 'legacy_footer.php'; ?>

@@ -458,43 +458,59 @@ include 'legacy_header.php';
 <script>
 // Quick backup functions
 function createDatabaseBackup() {
-    if (confirm('Create a database backup? This will backup all tables and data.')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = '<input type="hidden" name="action" value="create_database_backup">';
-        document.body.appendChild(form);
-        form.submit();
-    }
+    showConfirmDialog(
+        'Create Database Backup',
+        'Create a database backup? This will backup all tables and data.',
+        () => {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = '<input type="hidden" name="action" value="create_database_backup">';
+            document.body.appendChild(form);
+            form.submit();
+        }
+    );
 }
 
 function createFilesystemBackup() {
-    if (confirm('Create a filesystem backup? This will backup application files and uploads.')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = '<input type="hidden" name="action" value="create_filesystem_backup">';
-        document.body.appendChild(form);
-        form.submit();
-    }
+    showConfirmDialog(
+        'Create Filesystem Backup',
+        'Create a filesystem backup? This will backup application files and uploads.',
+        () => {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = '<input type="hidden" name="action" value="create_filesystem_backup">';
+            document.body.appendChild(form);
+            form.submit();
+        }
+    );
 }
 
 function createFullBackup() {
-    if (confirm('Create a full system backup? This includes both database and filesystem.')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = '<input type="hidden" name="action" value="create_full_backup">';
-        document.body.appendChild(form);
-        form.submit();
-    }
+    showConfirmDialog(
+        'Create Full Backup',
+        'Create a full system backup? This includes both database and filesystem.',
+        () => {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = '<input type="hidden" name="action" value="create_full_backup">';
+            document.body.appendChild(form);
+            form.submit();
+        }
+    );
 }
 
 function runScheduledBackups() {
-    if (confirm('Run all scheduled backups now?')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = '<input type="hidden" name="action" value="run_scheduled">';
-        document.body.appendChild(form);
-        form.submit();
-    }
+    showConfirmDialog(
+        'Run Scheduled Backups',
+        'Run all scheduled backups now?',
+        () => {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = '<input type="hidden" name="action" value="run_scheduled">';
+            document.body.appendChild(form);
+            form.submit();
+        }
+    );
 }
 
 // Backup management functions
@@ -529,59 +545,72 @@ function downloadBackup(backupId) {
 }
 
 function restoreBackup(backupId) {
-    if (confirm('WARNING: This will restore the database from backup and may overwrite existing data. Are you sure?')) {
-        if (confirm('This action cannot be undone. Confirm restore?')) {
-            fetch(`api/backups.php?action=restore&id=${backupId}`, { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Database restored successfully. You may need to refresh the page.');
-                        location.reload();
-                    } else {
-                        alert('Restore failed: ' + data.error);
+    showConfirmDialog(
+        'Restore Backup',
+        'WARNING: This will restore the database from backup and may overwrite existing data. Are you sure?',
+        () => {
+            showConfirmDialog(
+                'Confirm Restore',
+                'This action cannot be undone. Confirm restore?',
+                async () => {
+                    try {
+                        const response = await fetch(`api/backups.php?action=restore&id=${backupId}`, { method: 'POST' });
+                        const data = await response.json();
+                        if (data.success) {
+                            showAlert('Database restored successfully. You may need to refresh the page.', 'success');
+                            location.reload();
+                        } else {
+                            showAlert('Restore failed: ' + data.error, 'danger');
+                        }
+                    } catch (error) {
+                        showAlert('Error: ' + error.message, 'danger');
                     }
-                })
-                .catch(error => {
-                    alert('Error: ' + error.message);
-                });
+                }
+            );
         }
-    }
+    );
 }
 
 function deleteBackup(backupId) {
-    if (confirm('Delete this backup? This action cannot be undone.')) {
-        fetch(`api/backups.php?action=delete&id=${backupId}`, { method: 'DELETE' })
-            .then(response => response.json())
-            .then(data => {
+    showConfirmDialog(
+        'Delete Backup',
+        'Delete this backup? This action cannot be undone.',
+        async () => {
+            try {
+                const response = await fetch(`api/backups.php?action=delete&id=${backupId}`, { method: 'DELETE' });
+                const data = await response.json();
                 if (data.success) {
-                    alert('Backup deleted successfully.');
+                    showAlert('Backup deleted successfully.', 'success');
                     location.reload();
                 } else {
-                    alert('Delete failed: ' + data.error);
+                    showAlert('Delete failed: ' + data.error, 'danger');
                 }
-            })
-            .catch(error => {
-                alert('Error: ' + error.message);
-            });
-    }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            }
+        }
+    );
 }
 
 function deleteSchedule(scheduleId) {
-    if (confirm('Delete this backup schedule?')) {
-        fetch(`api/backups.php?action=delete_schedule&id=${scheduleId}`, { method: 'DELETE' })
-            .then(response => response.json())
-            .then(data => {
+    showConfirmDialog(
+        'Delete Schedule',
+        'Delete this backup schedule?',
+        async () => {
+            try {
+                const response = await fetch(`api/backups.php?action=delete_schedule&id=${scheduleId}`, { method: 'DELETE' });
+                const data = await response.json();
                 if (data.success) {
-                    alert('Schedule deleted successfully.');
+                    showAlert('Schedule deleted successfully.', 'success');
                     location.reload();
                 } else {
-                    alert('Delete failed: ' + data.error);
+                    showAlert('Delete failed: ' + data.error, 'danger');
                 }
-            })
-            .catch(error => {
-                alert('Error: ' + error.message);
-            });
-    }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            }
+        }
+    );
 }
 
 // Utility functions

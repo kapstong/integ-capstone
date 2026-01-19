@@ -782,21 +782,24 @@ function exportAuditLogs() {
 
 // Cleanup old logs
 function cleanupOldLogs() {
-    if (confirm('Are you sure you want to cleanup audit logs older than 1 year? This action cannot be undone.')) {
-        fetch('api/audit.php?action=cleanup', { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
+    showConfirmDialog(
+        'Cleanup Audit Logs',
+        'Are you sure you want to cleanup audit logs older than 1 year? This action cannot be undone.',
+        async () => {
+            try {
+                const response = await fetch('api/audit.php?action=cleanup', { method: 'POST' });
+                const data = await response.json();
                 if (data.success) {
-                    alert(`Successfully cleaned up ${data.deleted_count} old audit log entries.`);
+                    showAlert(`Successfully cleaned up ${data.deleted_count} old audit log entries.`, 'success');
                     location.reload();
                 } else {
-                    alert('Error: ' + data.error);
+                    showAlert('Error: ' + data.error, 'danger');
                 }
-            })
-            .catch(error => {
-                alert('Error: ' + error.message);
-            });
-    }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            }
+        }
+    );
 }
 
 // Update limit when changed

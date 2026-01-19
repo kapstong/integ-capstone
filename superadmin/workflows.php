@@ -517,17 +517,21 @@ function testWorkflow(workflowId, workflowName) {
 // Toggle workflow status
 function toggleWorkflow(workflowId, activate, workflowName) {
     const action = activate ? 'enable' : 'disable';
-    if (confirm(`Are you sure you want to ${action} the workflow "${workflowName}"?`)) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = `
-            <input type="hidden" name="action" value="toggle_workflow">
-            <input type="hidden" name="workflow_id" value="${workflowId}">
-            <input type="hidden" name="is_active" value="${activate}">
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    }
+    showConfirmDialog(
+        'Toggle Workflow',
+        `Are you sure you want to ${action} the workflow "${workflowName}"?`,
+        () => {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = `
+                <input type="hidden" name="action" value="toggle_workflow">
+                <input type="hidden" name="workflow_id" value="${workflowId}">
+                <input type="hidden" name="is_active" value="${activate}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    );
 }
 
 // View workflow details

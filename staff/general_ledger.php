@@ -1593,42 +1593,43 @@ try {
         }
 
         function deleteEntry(entryReference) {
-            if (!confirm('Are you sure you want to delete this journal entry? This action cannot be undone.')) {
-                return;
-            }
+            showConfirmDialog(
+                'Delete Journal Entry',
+                'Are you sure you want to delete this journal entry? This action cannot be undone.',
+                async () => {
+                // Show loading alert
+                showAlert('Deleting journal entry...', 'info');
 
-            // Show loading alert
-            showAlert('info', 'Deleting journal entry...');
-
-            // First get the journal entry by reference to obtain the ID
-            fetch(`api/journal_entries.php?reference=${encodeURIComponent(entryReference)}`, {
-                method: 'GET'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data && data.journal_entry && data.journal_entry.id) {
-                    // Now delete using the actual ID
-                    return fetch(`api/journal_entries.php?id=${data.journal_entry.id}`, {
-                        method: 'DELETE'
+                try {
+                    // First get the journal entry by reference to obtain the ID
+                    const response1 = await fetch(`api/journal_entries.php?reference=${encodeURIComponent(entryReference)}`, {
+                        method: 'GET'
                     });
-                } else {
-                    throw new Error('Journal entry not found');
+                    const data = await response1.json();
+
+                    if (data && data.journal_entry && data.journal_entry.id) {
+                        // Now delete using the actual ID
+                        const response2 = await fetch(`api/journal_entries.php?id=${data.journal_entry.id}`, {
+                            method: 'DELETE'
+                        });
+                        const result = await response2.json();
+
+                        if (result.success) {
+                            showAlert('Journal entry deleted successfully!', 'success');
+                            // Refresh the journal entries table
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            throw new Error(result.error || 'Failed to delete journal entry');
+                        }
+                    } else {
+                        throw new Error('Journal entry not found');
+                    }
+                } catch (error) {
+                    console.error('Error deleting journal entry:', error);
+                    showAlert(error.message || 'Failed to delete journal entry. Please try again.', 'danger');
                 }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showAlert('success', 'Journal entry deleted successfully!');
-                    // Refresh the journal entries table
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    throw new Error(data.error || 'Failed to delete journal entry');
                 }
-            })
-            .catch(error => {
-                console.error('Error deleting journal entry:', error);
-                showAlert('error', error.message || 'Failed to delete journal entry. Please try again.');
-            });
+            );
         }
 
         // Utility function to show alerts

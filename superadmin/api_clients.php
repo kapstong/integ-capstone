@@ -267,30 +267,38 @@ function showFullKey(fullKey) {
 
 // Regenerate API key
 function regenerateKey(clientId, clientName) {
-    if (confirm('Are you sure you want to regenerate the API key for "' + clientName + '"?\n\nThis will invalidate the current key and any systems using it will need to be updated.')) {
-        const form = document.createElement('form');
-        form.method = 'post';
-        form.innerHTML = `
-            <input type="hidden" name="action" value="regenerate_key">
-            <input type="hidden" name="client_id" value="${clientId}">
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    }
+    showConfirmDialog(
+        'Regenerate API Key',
+        'Are you sure you want to regenerate the API key for "' + clientName + '"?\n\nThis will invalidate the current key and any systems using it will need to be updated.',
+        () => {
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.innerHTML = `
+                <input type="hidden" name="action" value="regenerate_key">
+                <input type="hidden" name="client_id" value="${clientId}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    );
 }
 
 // Delete API client
 function deleteClient(clientId, clientName) {
-    if (confirm('Are you sure you want to delete the API client "' + clientName + '"?\n\nThis action cannot be undone and will permanently remove the client and all associated request logs.')) {
-        const form = document.createElement('form');
-        form.method = 'post';
-        form.innerHTML = `
-            <input type="hidden" name="action" value="delete_client">
-            <input type="hidden" name="client_id" value="${clientId}">
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    }
+    showConfirmDialog(
+        'Delete API Client',
+        'Are you sure you want to delete the API client "' + clientName + '"?\n\nThis action cannot be undone and will permanently remove the client and all associated request logs.',
+        () => {
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.innerHTML = `
+                <input type="hidden" name="action" value="delete_client">
+                <input type="hidden" name="client_id" value="${clientId}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    );
 }
 </script>
 

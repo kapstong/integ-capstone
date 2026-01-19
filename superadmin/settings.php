@@ -1327,30 +1327,33 @@ $departments = [
         });
 
         function deleteUser(userId, username) {
-            if (confirm(`Are you sure you want to delete user "${username}"? This action will soft delete the user.`)) {
-                fetch('api/users.php', {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'delete_user',
-                        user_id: userId
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showUsersAlert('User deleted successfully', 'success');
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        showUsersAlert(data.error || 'Failed to delete user', 'danger');
+            showConfirmDialog(
+                'Delete User',
+                `Are you sure you want to delete user "${username}"? This action will soft delete the user.`,
+                async () => {
+                    try {
+                        const response = await fetch('api/users.php', {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                action: 'delete_user',
+                                user_id: userId
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            showUsersAlert('User deleted successfully', 'success');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            showUsersAlert(data.error || 'Failed to delete user', 'danger');
+                        }
+                    } catch (error) {
+                        showUsersAlert('Error: ' + error.message, 'danger');
                     }
-                })
-                .catch(error => {
-                    showUsersAlert('Error: ' + error.message, 'danger');
-                });
-            }
+                }
+            );
         }
 
         // Trash Management Functions
@@ -1372,29 +1375,32 @@ $departments = [
         }
 
         function emptyTrash() {
-            if (confirm('Are you sure you want to permanently delete ALL items in the trash? This action cannot be undone.')) {
-                fetch('api/trash.php', {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'empty_trash'
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showTrashAlert('All trash items permanently deleted', 'success');
-                        loadTrashItems();
-                    } else {
-                        showTrashAlert(data.error || 'Failed to empty trash', 'danger');
+            showConfirmDialog(
+                'Empty Trash',
+                'Are you sure you want to permanently delete ALL items in the trash? This action cannot be undone.',
+                async () => {
+                    try {
+                        const response = await fetch('api/trash.php', {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                action: 'empty_trash'
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            showTrashAlert('All trash items permanently deleted', 'success');
+                            loadTrashItems();
+                        } else {
+                            showTrashAlert(data.error || 'Failed to empty trash', 'danger');
+                        }
+                    } catch (error) {
+                        showTrashAlert('Error: ' + error.message, 'danger');
                     }
-                })
-                .catch(error => {
-                    showTrashAlert('Error: ' + error.message, 'danger');
-                });
-            }
+                }
+            );
         }
 
         function loadTrashItems() {
@@ -1496,53 +1502,64 @@ $departments = [
         }
 
         function restoreTrashItem(itemId) {
-            if (confirm('Are you sure you want to restore this item?')) {
-                fetch('api/trash.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'restore_item',
-                        item_id: itemId
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showTrashAlert('Item restored successfully', 'success');
-                        loadTrashItems();
-                    } else {
-                        showTrashAlert(data.error || 'Failed to restore item', 'danger');
+            showConfirmDialog(
+                'Restore Item',
+                'Are you sure you want to restore this item?',
+                async () => {
+                    try {
+                        const response = await fetch('api/trash.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                action: 'restore_item',
+                                item_id: itemId
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            showTrashAlert('Item restored successfully', 'success');
+                            loadTrashItems();
+                        } else {
+                            showTrashAlert(data.error || 'Failed to restore item', 'danger');
+                        }
+                    } catch (error) {
+                        showTrashAlert('Error: ' + error.message, 'danger');
                     }
-                })
-                .catch(error => {
-                    showTrashAlert('Error: ' + error.message, 'danger');
-                });
-            }
+                }
+            );
         }
 
         function permanentDelete(itemId) {
-            if (confirm('Are you sure you want to permanently delete this item? This action cannot be undone.')) {
-                fetch('api/trash.php', {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'permanent_delete',
-                        item_id: itemId
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showTrashAlert('Item permanently deleted', 'success');
-                        loadTrashItems();
-                    } else {
-                        showTrashAlert(data.error || 'Failed to delete item', 'danger');
+            showConfirmDialog(
+                'Permanent Delete',
+                'Are you sure you want to permanently delete this item? This action cannot be undone.',
+                async () => {
+                    try {
+                        const response = await fetch('api/trash.php', {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                action: 'permanent_delete',
+                                item_id: itemId
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            showTrashAlert('Item permanently deleted', 'success');
+                            loadTrashItems();
+                        } else {
+                            showTrashAlert(data.error || 'Failed to delete item', 'danger');
+                        }
+                    } catch (error) {
+                        showTrashAlert('Error: ' + error.message, 'danger');
                     }
-                })
+                }
+            );
+        }
                 .catch(error => {
                     showTrashAlert('Error: ' + error.message, 'danger');
                 });

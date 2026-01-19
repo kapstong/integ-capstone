@@ -2149,10 +2149,10 @@ $db = Database::getInstance()->getConnection();
         }
 
         async function deleteAdjustment(adjustmentId) {
-            if (!confirm('Are you sure you want to delete this adjustment? This action cannot be undone.')) {
-                return;
-            }
-
+            showConfirmDialog(
+                'Delete Adjustment',
+                'Are you sure you want to delete this adjustment? This action cannot be undone.',
+                async () => {
             try {
                 const response = await fetch(`api/budgets.php?action=adjustment&id=${adjustmentId}`, {
                     method: 'DELETE'
@@ -2174,6 +2174,8 @@ $db = Database::getInstance()->getConnection();
                 console.error('Error deleting adjustment:', error);
                 showAlert('Error deleting adjustment: ' + error.message, 'danger');
             }
+            }
+        );
         }
 
         // Utility functions

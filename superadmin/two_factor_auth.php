@@ -452,30 +452,38 @@ function show2FAStats() {
 
 // Reset user 2FA
 function resetUser2FA(userId, username) {
-    if (confirm(`Are you sure you want to reset 2FA for user "${username}"?\n\nThis will disable their 2FA and they will need to set it up again.`)) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = `
-            <input type="hidden" name="action" value="reset_user_2fa">
-            <input type="hidden" name="user_id" value="${userId}">
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    }
+    showConfirmDialog(
+        'Reset 2FA',
+        `Are you sure you want to reset 2FA for user "${username}"?\n\nThis will disable their 2FA and they will need to set it up again.`,
+        () => {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = `
+                <input type="hidden" name="action" value="reset_user_2fa">
+                <input type="hidden" name="user_id" value="${userId}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    );
 }
 
 // Regenerate backup codes
 function regenerateBackupCodes(userId, username) {
-    if (confirm(`Regenerate backup codes for user "${username}"?\n\nThis will invalidate their current backup codes.`)) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = `
-            <input type="hidden" name="action" value="regenerate_backup_codes">
-            <input type="hidden" name="user_id" value="${userId}">
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    }
+    showConfirmDialog(
+        'Regenerate Backup Codes',
+        `Regenerate backup codes for user "${username}"?\n\nThis will invalidate their current backup codes.`,
+        () => {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = `
+                <input type="hidden" name="action" value="regenerate_backup_codes">
+                <input type="hidden" name="user_id" value="${userId}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    );
 }
 
 // Auto-refresh failed attempts every 5 minutes

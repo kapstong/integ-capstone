@@ -235,24 +235,27 @@ $(document).ready(function() {
 
     // Delete currency
     window.deleteCurrency = function(id, name) {
-        if (confirm(`Are you sure you want to delete the currency "${name}"?`)) {
-            fetch(`api/currencies.php?id=${id}`, {
-                method: 'DELETE'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    loadCurrencies();
-                    showToast('Currency deleted successfully', 'success');
-                } else {
-                    showToast(data.error || 'Failed to delete currency', 'error');
+        showConfirmDialog(
+            'Delete Currency',
+            `Are you sure you want to delete the currency "${name}"?`,
+            async () => {
+                try {
+                    const response = await fetch(`api/currencies.php?id=${id}`, {
+                        method: 'DELETE'
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        loadCurrencies();
+                        showToast('Currency deleted successfully', 'success');
+                    } else {
+                        showToast(data.error || 'Failed to delete currency', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('An error occurred', 'error');
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showToast('An error occurred', 'error');
-            });
-        }
+            }
+        );
     };
 
     // Edit currency button click
