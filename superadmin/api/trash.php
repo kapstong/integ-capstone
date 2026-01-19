@@ -5,19 +5,25 @@ require_once '../../includes/logger.php';
 
 header('Content-Type: application/json');
 
-$auth = new Auth();
-$db = Database::getInstance()->getConnection();
+try {
+    // Get database connection
+    $db = Database::getInstance()->getConnection();
 
-// Check if user is logged in
-if (!isset($_SESSION['user'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+    // Check if user is logged in
+    if (!isset($_SESSION['user'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+        exit;
+    }
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Initialization error: ' . $e->getMessage()]);
     exit;
 }
 
 try {
     $method = $_SERVER['REQUEST_METHOD'];
-    $user = $_SESSION['user'];
+    $user = $_SESSION['user'] ?? null;
 
     switch ($method) {
         case 'GET':
@@ -39,11 +45,11 @@ try {
 }
 
 function handleGet($db) {
-    $action = $_GET['action'] ?? '';
+    try {
+        $action = $_GET['action'] ?? '';
 
-    switch ($action) {
-        case 'get_trash':
-            try {
+        switch ($action) {
+            case 'get_trash':
                 $stmt = $db->prepare("
                     SELECT
                         di.id,
@@ -67,12 +73,7 @@ function handleGet($db) {
                 }
 
                 echo json_encode(['success' => true, 'items' => $items]);
-            } catch (Exception $e) {
-                Logger::getInstance()->logDatabaseError('Get trash items', $e->getMessage());
-                http_response_code(500);
-                echo json_encode(['success' => false, 'error' => 'Database error']);
-            }
-            break;
+                break;
 
         case 'view_item':
             $itemId = $_GET['item_id'] ?? null;
@@ -112,13 +113,18 @@ function handleGet($db) {
             http_response_code(400);
             echo json_encode(['success' => false, 'error' => 'Invalid action']);
     }
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
+    }
 }
 
 function handlePost($db, $currentUser) {
-    $data = json_decode(file_get_contents('php://input'), true);
-    $action = $data['action'] ?? '';
+    try {
+        $data = json_decode(file_get_contents('php://input'), true);
+        $action = $data['action'] ?? '';
 
-    switch ($action) {
+        switch ($action) {
         case 'restore_item':
             $itemId = $data['item_id'] ?? null;
 
@@ -250,10 +256,15 @@ function handlePost($db, $currentUser) {
         default:
             http_response_code(400);
             echo json_encode(['success' => false, 'error' => 'Invalid action']);
+        }
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
     }
 }
 
 function handleDelete($db, $currentUser) {
+    try {
     $data = json_decode(file_get_contents('php://input'), true);
     $action = $data['action'] ?? '';
 
@@ -354,6 +365,10 @@ function handleDelete($db, $currentUser) {
         default:
             http_response_code(400);
             echo json_encode(['success' => false, 'error' => 'Invalid action']);
+        }
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
     }
 }
 ?>
