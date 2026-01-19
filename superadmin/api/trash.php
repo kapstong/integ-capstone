@@ -58,13 +58,18 @@ function handleGet($db) {
                         di.data,
                         di.deleted_at,
                         di.auto_delete_at,
-                        u.username as deleted_by_name
+                        di.deleted_by
                     FROM deleted_items di
-                    LEFT JOIN users u ON di.deleted_by = u.id
                     WHERE di.auto_delete_at > NOW()
                     ORDER BY di.deleted_at DESC
                 ");
-                $stmt->execute();
+                if (!$stmt) {
+                    throw new Exception('Query preparation failed: ' . implode(' ', $db->errorInfo()));
+                }
+                $result = $stmt->execute();
+                if (!$result) {
+                    throw new Exception('Query execution failed: ' . implode(' ', $stmt->errorInfo()));
+                }
                 $items = $stmt->fetchAll();
 
                 // Decode JSON data for each item
@@ -83,29 +88,27 @@ function handleGet($db) {
                 return;
             }
 
-            try {
-                $stmt = $db->prepare("
-                    SELECT
-                        di.*,
-                        u.username as deleted_by_name
-                    FROM deleted_items di
-                    LEFT JOIN users u ON di.deleted_by = u.id
-                    WHERE di.id = ? AND di.auto_delete_at > NOW()
-                ");
-                $stmt->execute([$itemId]);
-                $item = $stmt->fetch();
+            $stmt = $db->prepare("
+                SELECT
+                    di.*
+                FROM deleted_items di
+                WHERE di.id = ? AND di.auto_delete_at > NOW()
+            ");
+            if (!$stmt) {
+                throw new Exception('Query preparation failed: ' . implode(' ', $db->errorInfo()));
+            }
+            $result = $stmt->execute([$itemId]);
+            if (!$result) {
+                throw new Exception('Query execution failed: ' . implode(' ', $stmt->errorInfo()));
+            }
+            $item = $stmt->fetch();
 
-                if ($item) {
-                    $item['data'] = json_decode($item['data'], true);
-                    echo json_encode(['success' => true, 'item' => $item]);
-                } else {
-                    http_response_code(404);
-                    echo json_encode(['success' => false, 'error' => 'Item not found']);
-                }
-            } catch (Exception $e) {
-                Logger::getInstance()->logDatabaseError('View trash item', $e->getMessage());
-                http_response_code(500);
-                echo json_encode(['success' => false, 'error' => 'Database error']);
+            if ($item) {
+                $item['data'] = json_decode($item['data'], true);
+                echo json_encode(['success' => true, 'item' => $item]);
+            } else {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'error' => 'Item not found']);
             }
             break;
 
