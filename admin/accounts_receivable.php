@@ -1519,7 +1519,7 @@ try {
         async function loadInvoices() {
             try {
                 showLoading();
-                const response = await fetch('admin/api/invoices.php');
+                const response = await fetch('api/invoices.php');
                 const invoices = await response.json();
 
                 if (invoices && !invoices.error) {
@@ -1613,7 +1613,7 @@ try {
 
             try {
                 showLoading();
-                const response = await fetch('admin/api/invoices.php', {
+                const response = await fetch('api/invoices.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1730,7 +1730,7 @@ try {
         // Payment Functions
         async function loadPayments() {
             try {
-                const response = await fetch('admin/api/payments.php?type=received');
+                const response = await fetch('api/payments.php?type=received');
                 const result = await response.json();
 
                 if (result.success !== false && Array.isArray(result)) {
@@ -1794,7 +1794,7 @@ try {
             };
 
             try {
-                const response = await fetch('superadmin/api/payments.php', {
+                const response = await fetch('superapi/payments.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1829,7 +1829,7 @@ try {
         // Adjustment Functions
         async function loadAdjustments() {
             try {
-                const response = await fetch('admin/api/adjustments.php?type=receivable');
+                const response = await fetch('api/adjustments.php?type=receivable');
                 const adjustments = await response.json();
 
                 const tbody = document.querySelector('#adjustmentsTable tbody');
@@ -1886,7 +1886,7 @@ try {
             };
 
             try {
-                const response = await fetch('superadmin/api/adjustments.php', {
+                const response = await fetch('superapi/adjustments.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1918,7 +1918,7 @@ try {
         // Aging Report Functions
         async function generateAgingReport() {
             try {
-                const response = await fetch('superadmin/api/invoices.php?aging=true');
+                const response = await fetch('superapi/invoices.php?aging=true');
                 const agingData = await response.json();
 
                 const tbody = document.querySelector('#agingTable tbody');
@@ -1962,7 +1962,7 @@ try {
         // Reports Functions
         async function loadReportsData() {
             try {
-                const response = await fetch('superadmin/api/invoices.php?action=get_summary_stats');
+                const response = await fetch('superapi/invoices.php?action=get_summary_stats');
                 const data = await response.json();
 
                 const totalReceivablesEl = document.getElementById('totalReceivables');
@@ -2151,7 +2151,7 @@ try {
         // Invoice action functions
         async function viewInvoice(id) {
             try {
-                const response = await fetch(`superadmin/api/invoices.php?id=${id}`);
+                const response = await fetch(`superapi/invoices.php?id=${id}`);
                 const invoice = await response.json();
                 if (invoice.error) {
                     throw new Error(invoice.error);
@@ -2255,7 +2255,7 @@ try {
                 'Are you sure you want to mark this invoice as sent? This will send notification emails.',
                 async () => {
             try {
-                const response = await fetch(`superadmin/api/invoices.php?id=${id}`, {
+                const response = await fetch(`superapi/invoices.php?id=${id}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2294,7 +2294,7 @@ try {
                 'Are you sure you want to delete this invoice? This action cannot be undone.',
                 async () => {
             try {
-                const response = await fetch(`superadmin/api/invoices.php?id=${id}`, {
+                const response = await fetch(`superapi/invoices.php?id=${id}`, {
                     method: 'DELETE'
                 });
 
@@ -2317,7 +2317,7 @@ try {
         // Payment action functions
         async function viewPayment(id) {
             try {
-                const response = await fetch(`superadmin/api/payments.php?id=${id}&type=received`);
+                const response = await fetch(`superapi/payments.php?id=${id}&type=received`);
                 const payment = await response.json();
 
                 if (payment.error) {
@@ -2576,3 +2576,4 @@ try {
 </body>
 </html>
     <!-- Inactivity Timeout - Blur screen + Auto logout -->
+

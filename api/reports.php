@@ -1,1215 +1,816 @@
 <?php
-/**
- * ATIERA Financial Management System - Reports API
- * Handles report generation with integrated payroll data from HR4
- */
-
-// Prevent any HTML output that would break JSON
+// For API endpoints, we don't want to redirect on auth failure
+// So we'll handle authentication differently
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../../logs/api_reports_admin_error.log');
+
+error_log('[ADMIN API] Reports API called with params: ' . json_encode($_GET));
+
+require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/logger.php';
+require_once __DIR__ . '/../../includes/mailer.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-// Start output buffering to catch any unexpected output
-ob_start();
+$db = Database::getInstance()->getConnection();
+$logger = Logger::getInstance();
 
-// Wrap everything in try-catch to capture ANY error
+// Check authentication for API calls
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+if (!isset($_SESSION['user'])) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Authentication required']);
+    exit();
+}
+
+// Handle preflight OPTIONS request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+$method = $_SERVER['REQUEST_METHOD'];
+
 try {
-    // Require core files
-    require_once '../config.php';
-    require_once '../includes/logger.php';
-    require_once '../includes/database.php';
-    require_once '../includes/auth.php';
-
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
+    switch ($method) {
+        case 'GET':
+            handleGet($db, $logger);
+            break;
+        case 'POST':
+            handlePost($db, $logger);
+            break;
+        default:
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
     }
-
-    // Initialize auth and database
-    $auth = new Auth();
-
-    // For AJAX/fetch requests, return JSON error instead of redirecting
-    // More reliable detection for fetch API and AJAX calls
-    $isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest')
-              || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
-              || (isset($_SERVER['REQUEST_METHOD']) && in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST', 'PUT', 'DELETE']) && isset($_GET['type']))
-              || isset($_SERVER['HTTP_FETCH_ID'])
-              || isset($_SERVER['HTTP_FETCH_UID']); // Fetch API headers
-
-    // Additional check: if URL contains API parameters, treat as AJAX
-    if (!$isAjax && isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], 'api/') !== false) {
-        $isAjax = true;
+} catch (Exception $e) {
+    error_log("API Error in reports.php: " . $e->getMessage());
+    if (isset($logger)) {
+        $logger->log("API Error in reports.php: " . $e->getMessage(), 'ERROR');
     }
+    http_response_code(500);
+    echo json_encode(['error' => 'Internal server error: ' . $e->getMessage()]);
+}
 
-    if (!$auth->isLoggedIn()) {
-        if ($isAjax) {
-            ob_clean();
-            echo json_encode([
-                'success' => false,
-                'error' => 'Authentication required'
-            ]);
-            exit;
-        } else {
-            $auth->requireLogin();
-        }
-    }
-    $db = Database::getInstance()->getConnection();
+function handleGet($db, $logger) {
+    try {
+        $reportType = isset($_GET['type']) ? $_GET['type'] : null;
+        $dateFrom = isset($_GET['date_from']) ? $_GET['date_from'] : null;
+        $dateTo = isset($_GET['date_to']) ? $_GET['date_to'] : null;
+        $format = isset($_GET['format']) ? $_GET['format'] : 'json'; // json, csv, pdf
 
-    // Handle preflight OPTIONS request
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        exit(0);
-    }
-
-    // Handle email report request
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $payload = json_decode(file_get_contents('php://input'), true);
-        $action = $payload['action'] ?? '';
-
-        if ($action === 'email') {
-            require_once '../includes/mailer.php';
-
-            $reportType = $payload['report_type'] ?? '';
-            $reportName = $payload['report_name'] ?? 'Financial Report';
-            $email = $payload['email'] ?? '';
-            $dateFrom = $payload['date_from'] ?? '';
-            $dateTo = $payload['date_to'] ?? '';
-
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                ob_clean();
-                echo json_encode(['success' => false, 'error' => 'Invalid email address']);
-                exit;
-            }
-
-            $dateFromFinal = $dateFrom ?: date('Y-m-01');
-            $dateToFinal = $dateTo ?: date('Y-m-d');
-
-            $summary = buildReportSummary($db, $reportType, $dateFromFinal, $dateToFinal);
-            $message = buildReportEmailBody($reportName, $dateFromFinal, $dateToFinal, $summary);
-
-            $mailer = Mailer::getInstance();
-            $sent = $mailer->send($email, $reportName . ' - ATIERA Finance', $message, ['html' => true]);
-
-            ob_clean();
-            echo json_encode([
-                'success' => $sent,
-                'error' => $sent ? null : 'Failed to send email'
-            ]);
-            exit;
-        }
-    }
-    $reportType = $_GET['type'] ?? '';
-    $dateFrom = $_GET['date_from'] ?? '';
-    $dateTo = $_GET['date_to'] ?? '';
-
-    // Handle income statement generation
-    if ($reportType === 'income_statement') {
-        // Check if we need to fetch recent HR4 payroll data
-        // If daily_expense_summary has no recent data, try to import from HR4
-        $recentDataCheck = $db->prepare("
-            SELECT COUNT(*) as record_count
-            FROM daily_expense_summary
-            WHERE business_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-        ");
-        $recentDataCheck->execute();
-        $recordCount = $recentDataCheck->fetch(PDO::FETCH_ASSOC)['record_count'];
-
-        // Suppress all output during auto-import to prevent JSON corruption
-        $autoImportBuffer = '';
-        if ($recordCount == 0) {
-            $autoImportBuffer = ob_get_clean(); // Stop buffering and save current content
-            ob_start(); // Start new buffer for auto-import operations
-
-            // Auto-import from external systems if no recent data
-            try {
-                require_once '../includes/api_integrations.php';
-                $integrationManager = APIIntegrationManager::getInstance();
-
-                // Check for recent data from each source and import if needed
-                $sources = [
-                    'HR_SYSTEM' => ['integration' => 'hr4', 'action' => 'importPayroll', 'name' => 'HR4 payroll'],
-                    'LOGISTICS1' => ['integration' => 'logistics1', 'action' => 'importInvoices', 'name' => 'Logistics 1 invoices'],
-                    'LOGISTICS2' => ['integration' => 'logistics2', 'action' => 'importTripCosts', 'name' => 'Logistics 2 trip costs']
-                ];
-
-                foreach ($sources as $sourceSystem => $config) {
-                    // Check if this source has recent data
-                    $sourceCheck = $db->prepare("
-                        SELECT COUNT(*) as count
-                        FROM daily_expense_summary
-                        WHERE source_system = ?
-                        AND business_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-                    ");
-                    $sourceCheck->execute([$sourceSystem]);
-                    $sourceCount = $sourceCheck->fetch(PDO::FETCH_ASSOC)['count'];
-
-                    // If no recent data from this source, try to import
-                    if ($sourceCount == 0) {
-                        $integrationConfig = $integrationManager->getIntegrationConfig($config['integration']);
-                        if ($integrationConfig && !empty($integrationConfig['api_url'])) {
-                            try {
-                                $result = $integrationManager->executeIntegrationAction($config['integration'], $config['action'], []);
-                                Logger::getInstance()->info("Auto-imported {$config['name']}", ['result' => $result]);
-                            } catch (Exception $importException) {
-                                // Log import failures but don't break the report
-                                Logger::getInstance()->warning("Auto-import failed for {$config['name']}", [
-                                    'error' => $importException->getMessage()
-                                ]);
-                            }
-                        }
-                    }
-                }
-            } catch (Exception $e) {
-                Logger::getInstance()->warning('Auto-import setup failed during report generation', [
-                    'error' => $e->getMessage()
-                ]);
-            }
-
-            // Clear any output from auto-import operations
-            if (ob_get_length()) {
-                ob_clean();
-            }
-
-            // Restore original buffer content
-            echo $autoImportBuffer;
-            ob_start();
+        if (!$reportType) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Report type is required']);
+            return;
         }
 
-        // Get revenue data from daily revenue summary by department
-        if (!empty($dateFrom) || !empty($dateTo)) {
-            $whereConditions = [];
-            if (!empty($dateFrom)) $whereConditions[] = "drs.business_date >= :date_from";
-            if (!empty($dateTo)) $whereConditions[] = "drs.business_date <= :date_to";
-
-            $revenueQuery = $db->prepare("
-                SELECT
-                    COALESCE(d.dept_name, 'General Revenue') as account_name,
-                    SUM(drs.net_revenue) as amount
-                FROM daily_revenue_summary drs
-                LEFT JOIN departments d ON drs.department_id = d.id
-                " . (!empty($whereConditions) ? "WHERE " . implode(" AND ", $whereConditions) : "") . "
-                GROUP BY d.dept_name
-                HAVING amount > 0
-            ");
-            $params = [];
-            if (!empty($dateFrom)) $params['date_from'] = $dateFrom;
-            if (!empty($dateTo)) $params['date_to'] = $dateTo;
-            $revenueQuery->execute($params);
-        } else {
-            $revenueQuery = $db->prepare("
-                SELECT
-                    COALESCE(d.dept_name, 'General Revenue') as account_name,
-                    SUM(drs.net_revenue) as amount
-                FROM daily_revenue_summary drs
-                LEFT JOIN departments d ON drs.department_id = d.id
-                GROUP BY d.dept_name
-                HAVING amount > 0
-            ");
-            $revenueQuery->execute();
+        // Set default date range if not provided (current month)
+        if (!$dateFrom) {
+            $dateFrom = date('Y-m-01'); // First day of current month
         }
-        $revenueData = $revenueQuery->fetchAll(PDO::FETCH_ASSOC);
-
-        // Calculate total revenue
-        $totalRevenue = array_sum(array_column($revenueData, 'amount'));
-
-        // Get expense data from daily_expense_summary (includes HR4 payroll)
-        if (!empty($dateFrom) || !empty($dateTo)) {
-            $whereConditions = [];
-            if (!empty($dateFrom)) $whereConditions[] = "des.business_date >= :date_from";
-            if (!empty($dateTo)) $whereConditions[] = "des.business_date <= :date_to";
-
-            $expenseQuery = $db->prepare("
-                SELECT
-                    d.dept_name as department,
-                    SUM(des.total_amount) as amount
-                FROM daily_expense_summary des
-                LEFT JOIN departments d ON des.department_id = d.id
-                " . (!empty($whereConditions) ? "WHERE " . implode(" AND ", $whereConditions) : "") . "
-                GROUP BY d.dept_name
-                ORDER BY d.dept_name
-            ");
-
-            $params = [];
-            if (!empty($dateFrom)) $params['date_from'] = $dateFrom;
-            if (!empty($dateTo)) $params['date_to'] = $dateTo;
-            $expenseQuery->execute($params);
-        } else {
-            $expenseQuery = $db->prepare("
-                SELECT
-                    d.dept_name as department,
-                    SUM(des.total_amount) as amount
-                FROM daily_expense_summary des
-                LEFT JOIN departments d ON des.department_id = d.id
-                GROUP BY d.dept_name
-                ORDER BY d.dept_name
-            ");
-            $expenseQuery->execute();
-        }
-        $expenseData = $expenseQuery->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get expense data from journal entries too (other expenses not tracked in daily_expense_summary)
-        if (!empty($dateFrom) || !empty($dateTo)) {
-            $journalExpenseQuery = $db->prepare("
-                SELECT
-                    coa.account_name,
-                    SUM(COALESCE(jel.debit, 0)) as amount
-                FROM chart_of_accounts coa
-                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-                    AND je.status = 'posted'
-                    " . (!empty($dateFrom) ? "AND je.entry_date >= :date_from" : "") . "
-                    " . (!empty($dateTo) ? "AND je.entry_date <= :date_to" : "") . "
-                WHERE coa.account_type = 'expense'
-                    AND coa.is_active = 1
-                    AND coa.category NOT IN ('Payroll', 'Salary')
-                GROUP BY coa.id, coa.account_name
-                HAVING amount > 0
-            ");
-            $params = [];
-            if (!empty($dateFrom)) $params['date_from'] = $dateFrom;
-            if (!empty($dateTo)) $params['date_to'] = $dateTo;
-            $journalExpenseQuery->execute($params);
-        } else {
-            $journalExpenseQuery = $db->prepare("
-                SELECT
-                    coa.account_name,
-                    SUM(COALESCE(jel.debit, 0)) as amount
-                FROM chart_of_accounts coa
-                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-                    AND je.status = 'posted'
-                WHERE coa.account_type = 'expense'
-                    AND coa.is_active = 1
-                    AND coa.category NOT IN ('Payroll', 'Salary')
-                GROUP BY coa.id, coa.account_name
-                HAVING amount > 0
-            ");
-            $journalExpenseQuery->execute();
-        }
-        $journalExpenseData = $journalExpenseQuery->fetchAll(PDO::FETCH_ASSOC);
-
-        // Consolidate expense data
-        $allExpenses = [];
-
-        // Add departmental expenses from daily_expense_summary (includes HR4 payroll)
-        foreach ($expenseData as $expense) {
-            $departmentName = $expense['department'] ?: 'General';
-            $expenseName = $departmentName . ' Department Expenses'; // Will show as "Kitchen Department Expenses"
-
-            $allExpenses[] = [
-                'account_name' => $expenseName,
-                'amount' => intval($expense['amount'])
-            ];
+        if (!$dateTo) {
+            $dateTo = date('Y-m-t'); // Last day of current month
         }
 
-        // Add other expenses from journal entries
-        foreach ($journalExpenseData as $expense) {
-            $allExpenses[] = [
-                'account_name' => $expense['account_name'],
-                'amount' => intval($expense['amount'])
-            ];
-        }
-
-        // Calculate totals
-        $totalExpenses = array_sum(array_column($allExpenses, 'amount'));
-        $netProfit = $totalRevenue - $totalExpenses;
-
-        // Return formatted data
-        ob_clean(); // Clear any buffered output
-        echo json_encode([
-            'success' => true,
-            'date_from' => $dateFrom ?: date('Y-m-d', strtotime('first day of this month')),
-            'date_to' => $dateTo ?: date('Y-m-d'),
-            'revenue' => [
-                'accounts' => $revenueData,
-                'total' => intval($totalRevenue)
-            ],
-            'expenses' => [
-                'accounts' => $allExpenses,
-                'total' => intval($totalExpenses)
-            ],
-            'net_profit' => intval($netProfit)
-        ]);
-        exit;
-    }
-
-    // Handle balance sheet generation
-    if ($reportType === 'balance_sheet') {
-        $asOfDate = $_GET['as_of'] ?? $dateTo ?? date('Y-m-d');
-
-        // Get assets data from chart of accounts
-        $assetsQuery = $db->prepare("
-            SELECT
-                coa.account_name,
-                coa.account_type,
-                coa.category,
-                COALESCE(SUM(
-                    CASE
-                        WHEN jel.account_id IS NOT NULL THEN COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)
-                        ELSE 0
-                    END
-                ), 0) as account_balance
-            FROM chart_of_accounts coa
-            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-                AND je.status = 'posted'
-                AND je.entry_date <= ?
-            WHERE coa.account_type IN ('asset')
-                AND coa.is_active = 1
-            GROUP BY coa.id, coa.account_name, coa.account_type, coa.category
-            HAVING account_balance > 0
-            ORDER BY coa.account_type, coa.category, coa.account_name
-        ");
-        $assetsQuery->execute([$asOfDate]);
-        $assetsData = $assetsQuery->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get liabilities data
-        $liabilitiesQuery = $db->prepare("
-            SELECT
-                coa.account_name,
-                coa.account_type,
-                coa.category,
-                COALESCE(SUM(
-                    CASE
-                        WHEN jel.account_id IS NOT NULL THEN COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)
-                        ELSE 0
-                    END
-                ), 0) as account_balance
-            FROM chart_of_accounts coa
-            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-                AND je.status = 'posted'
-                AND je.entry_date <= ?
-            WHERE coa.account_type IN ('liability')
-                AND coa.is_active = 1
-            GROUP BY coa.id, coa.account_name, coa.account_type, coa.category
-            HAVING account_balance > 0
-            ORDER BY coa.account_type, coa.category, coa.account_name
-        ");
-        $liabilitiesQuery->execute([$asOfDate]);
-        $liabilitiesData = $liabilitiesQuery->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get equity data
-        $equityQuery = $db->prepare("
-            SELECT
-                coa.account_name,
-                coa.account_type,
-                coa.category,
-                COALESCE(SUM(
-                    CASE
-                        WHEN jel.account_id IS NOT NULL THEN COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)
-                        ELSE 0
-                    END
-                ), 0) as account_balance
-            FROM chart_of_accounts coa
-            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-                AND je.status = 'posted'
-                AND je.entry_date <= ?
-            WHERE coa.account_type IN ('equity')
-                AND coa.is_active = 1
-            GROUP BY coa.id, coa.account_name, coa.account_type, coa.category
-            HAVING account_balance > 0
-            ORDER BY coa.account_type, coa.category, coa.account_name
-        ");
-        $equityQuery->execute([$asOfDate]);
-        $equityData = $equityQuery->fetchAll(PDO::FETCH_ASSOC);
-
-        // Calculate retained earnings (net profit minus distributions, etc.)
-        $retainedEarnings = intval($totalRevenue ?? 0) - intval($totalExpenses ?? 0);
-
-        if ($retainedEarnings > 0) {
-            $equityData[] = [
-                'account_name' => 'Retained Earnings',
-                'account_type' => 'equity',
-                'category' => 'retained_earnings',
-                'account_balance' => $retainedEarnings
-            ];
-        }
-
-        ob_clean(); // Clear any buffered output
-        echo json_encode([
-            'success' => true,
-            'as_of_date' => $asOfDate,
-            'assets' => [
-                'accounts' => $assetsData,
-                'total' => array_sum(array_column($assetsData, 'account_balance'))
-            ],
-            'liabilities' => [
-                'accounts' => $liabilitiesData,
-                'total' => array_sum(array_column($liabilitiesData, 'account_balance'))
-            ],
-            'equity' => [
-                'accounts' => $equityData,
-                'total' => array_sum(array_column($equityData, 'account_balance'))
-            ]
-        ]);
-        exit;
-    }
-
-    // Handle cash flow statement generation
-    if ($reportType === 'cash_flow') {
-        $period = $_GET['period'] ?? 'last_quarter';
-
-        // Calculate date range based on period
-        switch ($period) {
-            case 'last_quarter':
-                $endDate = date('Y-m-d');
-                $startDate = date('Y-m-d', strtotime('-3 months'));
+        switch ($reportType) {
+            case 'balance_sheet':
+                generateBalanceSheet($db, $dateFrom, $dateTo, $format);
                 break;
-            case 'last_6_months':
-                $endDate = date('Y-m-d');
-                $startDate = date('Y-m-d', strtotime('-6 months'));
+            case 'income_statement':
+                generateIncomeStatement($db, $dateFrom, $dateTo, $format);
                 break;
-            case 'year_to_date':
-                $endDate = date('Y-m-d');
-                $startDate = date('Y-m-01', strtotime('this year'));
+            case 'cash_flow':
+                generateCashFlowStatement($db, $dateFrom, $dateTo, $format);
+                break;
+            case 'trial_balance':
+                generateTrialBalance($db, $dateFrom, $dateTo, $format);
+                break;
+            case 'aging_receivable':
+                generateAgingReceivable($db, $format);
+                break;
+            case 'aging_payable':
+                generateAgingPayable($db, $format);
+                break;
+            case 'vendor_summary':
+                generateVendorSummary($db, $dateFrom, $dateTo, $format);
+                break;
+            case 'customer_summary':
+                generateCustomerSummary($db, $dateFrom, $dateTo, $format);
                 break;
             default:
-                $endDate = $dateTo ?: date('Y-m-d');
-                $startDate = $dateFrom ?: date('Y-m-d', strtotime('-3 months'));
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid report type']);
+                return;
         }
 
-        // Default empty arrays in case queries fail
-        $operatingData = [];
-        $investingData = [];
-        $financingData = [];
-
-        try {
-            // Operating activities - Revenue (cash inflows)
-            $revenueQuery = $db->prepare("
-                SELECT
-                    coa.account_name as name,
-                    'Revenue' as category,
-                    SUM(COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)) as amount
-                FROM chart_of_accounts coa
-                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-                WHERE coa.account_type = 'revenue'
-                    AND je.status = 'posted'
-                    AND je.entry_date BETWEEN :start_date AND :end_date
-                GROUP BY coa.id, coa.account_name
-                HAVING amount != 0
-                ORDER BY amount DESC
-            ");
-            $revenueQuery->execute(['start_date' => $startDate, 'end_date' => $endDate]);
-            $revenueData = $revenueQuery->fetchAll(PDO::FETCH_ASSOC);
-
-            // Operating activities - Expenses by category
-            $expenseByCategory = $db->prepare("
-                SELECT
-                    CASE des.expense_category
-                        WHEN 'labor_payroll' THEN 'Payroll & Salaries'
-                        WHEN 'supplies_materials' THEN 'Materials & Supplies'
-                        WHEN 'fuel_transportation' THEN 'Fuel Costs'
-                        WHEN 'transportation_other' THEN 'Transportation Costs'
-                        ELSE 'Other Operating Expenses'
-                    END as name,
-                    'Operating Expense' as category,
-                    des.expense_category as subcategory,
-                    SUM(des.total_amount) as amount,
-                    GROUP_CONCAT(DISTINCT des.source_system) as sources
-                FROM daily_expense_summary des
-                WHERE des.business_date BETWEEN :start_date AND :end_date
-                GROUP BY des.expense_category
-                ORDER BY amount DESC
-            ");
-            $expenseByCategory->execute(['start_date' => $startDate, 'end_date' => $endDate]);
-            $expenseCategories = $expenseByCategory->fetchAll(PDO::FETCH_ASSOC);
-
-            // Operating activities - Detailed breakdown by department for each category
-            $detailedExpenses = $db->prepare("
-                SELECT
-                    d.dept_name as department,
-                    des.expense_category,
-                    des.source_system,
-                    SUM(des.total_amount) as amount,
-                    COUNT(*) as transaction_count
-                FROM daily_expense_summary des
-                LEFT JOIN departments d ON des.department_id = d.id
-                WHERE des.business_date BETWEEN :start_date AND :end_date
-                GROUP BY d.dept_name, des.expense_category, des.source_system
-                ORDER BY des.expense_category, amount DESC
-            ");
-            $detailedExpenses->execute(['start_date' => $startDate, 'end_date' => $endDate]);
-            $expenseDetails = $detailedExpenses->fetchAll(PDO::FETCH_ASSOC);
-
-            // Combine into operating data structure
-            $operatingData = [
-                'revenue' => $revenueData,
-                'expenses_by_category' => $expenseCategories,
-                'expense_details' => $expenseDetails
-            ];
-        } catch (Exception $e) {
-            // Continue with empty data if query fails
-            $operatingData = [];
-        }
-
-        try {
-            // Investing activities (simplified - from journal entries)
-            $investingQuery = $db->prepare("
-                SELECT
-                    coa.account_name as name,
-                    SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as amount
-                FROM chart_of_accounts coa
-                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-                WHERE coa.category IN ('fixed_assets', 'investments')
-                    AND (:active_check IS NULL OR coa.is_active = 1)
-                    AND (:status_check IS NULL OR je.status = 'posted')
-                    AND je.entry_date BETWEEN :start_date AND :end_date
-                GROUP BY coa.id, coa.account_name
-                HAVING amount != 0
-            ");
-            $investingQuery->execute([
-                'active_check' => 1,
-                'status_check' => 'posted',
-                'start_date' => $startDate,
-                'end_date' => $endDate
-            ]);
-            $investingData = $investingQuery->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            // Continue with empty data if query fails
-            $investingData = [];
-        }
-
-        try {
-            // Financing activities (loans, equity, etc.)
-            $financingQuery = $db->prepare("
-                SELECT
-                    coa.account_name as name,
-                    SUM(COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)) as amount
-                FROM chart_of_accounts coa
-                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-                WHERE coa.account_type = 'liability'
-                    AND coa.category IN ('long_term_liabilities', 'current_liabilities')
-                    AND (:active_check IS NULL OR coa.is_active = 1)
-                    AND (:status_check IS NULL OR je.status = 'posted')
-                    AND je.entry_date BETWEEN :start_date AND :end_date
-                GROUP BY coa.id, coa.account_name
-                HAVING amount != 0
-            ");
-            $financingQuery->execute([
-                'active_check' => 1,
-                'status_check' => 'posted',
-                'start_date' => $startDate,
-                'end_date' => $endDate
-            ]);
-            $financingData = $financingQuery->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            // Continue with empty data if query fails
-            $financingData = [];
-        }
-
-        // Calculate totals with safe array handling
-        $totalRevenue = 0;
-        $totalExpenses = 0;
-
-        if (is_array($operatingData) && isset($operatingData['revenue'])) {
-            $totalRevenue = array_sum(array_column($operatingData['revenue'], 'amount')) ?: 0;
-        }
-        if (is_array($operatingData) && isset($operatingData['expenses_by_category'])) {
-            $totalExpenses = array_sum(array_column($operatingData['expenses_by_category'], 'amount')) ?: 0;
-        }
-
-        $operatingCash = $totalRevenue - $totalExpenses;
-        $investingCash = -abs(array_sum(array_column($investingData, 'amount')) ?: 0); // Always negative for purchases
-        $financingCash = array_sum(array_column($financingData, 'amount')) ?: 0;
-
-        // Always return success with cash_flow structure
-        ob_clean(); // Clear any buffered output
-        echo json_encode([
-            'success' => true,
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'cash_flow' => [
-                'operating_activities' => [
-                    'amount' => intval($operatingCash),
-                    'revenue' => $operatingData['revenue'] ?? [],
-                    'total_revenue' => intval($totalRevenue),
-                    'expenses_by_category' => $operatingData['expenses_by_category'] ?? [],
-                    'expense_details' => $operatingData['expense_details'] ?? [],
-                    'total_expenses' => intval($totalExpenses),
-                    'breakdown' => $operatingData
-                ],
-                'investing_activities' => [
-                    'amount' => intval($investingCash),
-                    'accounts' => $investingData ?: []
-                ],
-                'financing_activities' => [
-                    'amount' => intval($financingCash),
-                    'accounts' => $financingData ?: []
-                ],
-                'net_change' => intval($operatingCash + $investingCash + $financingCash)
-            ]
-        ]);
-        exit;
+    } catch (Exception $e) {
+        $logger->log("Error in handleGet reports: " . $e->getMessage(), 'ERROR');
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to generate report']);
     }
+}
 
-    // Handle budget vs actual report
-    if ($reportType === 'budget_vs_actual') {
-        $budgetYear = $_GET['year'] ?? date('Y');
-        $budgetMonth = $_GET['month'] ?? date('n');
-        $departmentId = $_GET['department_id'] ?? null;
+function generateBalanceSheet($db, $dateFrom, $dateTo, $format) {
+    // Get asset accounts balances
+    $stmt = $db->prepare("
+        SELECT
+            coa.account_name,
+            coa.account_code,
+            coa.account_type,
+            COALESCE(SUM(CASE WHEN jel.debit > 0 THEN jel.debit ELSE -jel.credit END), 0) as balance
+        FROM chart_of_accounts coa
+        LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+        WHERE coa.account_type = 'asset'
+        AND coa.is_active = 1
+        AND je.entry_date <= ?
+        GROUP BY coa.id, coa.account_name, coa.account_code, coa.account_type
+        HAVING balance != 0
+        ORDER BY coa.account_code
+    ");
+    $stmt->execute([$dateTo]);
+    $assets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Get departmental budget vs actual data
-        $budgetQuery = $db->prepare("
+    // Get liability accounts balances
+    $stmt = $db->prepare("
+        SELECT
+            coa.account_name,
+            coa.account_code,
+            coa.account_type,
+            COALESCE(SUM(CASE WHEN jel.credit > 0 THEN jel.credit ELSE -jel.debit END), 0) as balance
+        FROM chart_of_accounts coa
+        LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+        WHERE coa.account_type = 'liability'
+        AND coa.is_active = 1
+        AND je.entry_date <= ?
+        GROUP BY coa.id, coa.account_name, coa.account_code, coa.account_type
+        HAVING balance != 0
+        ORDER BY coa.account_code
+    ");
+    $stmt->execute([$dateTo]);
+    $liabilities = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get equity accounts balances
+    $stmt = $db->prepare("
+        SELECT
+            coa.account_name,
+            coa.account_code,
+            coa.account_type,
+            COALESCE(SUM(CASE WHEN jel.credit > 0 THEN jel.credit ELSE -jel.debit END), 0) as balance
+        FROM chart_of_accounts coa
+        LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+        WHERE coa.account_type = 'equity'
+        AND coa.is_active = 1
+        AND je.entry_date <= ?
+        GROUP BY coa.id, coa.account_name, coa.account_code, coa.account_type
+        HAVING balance != 0
+        ORDER BY coa.account_code
+    ");
+    $stmt->execute([$dateTo]);
+    $equities = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Calculate retained earnings (net profit)
+    $netProfit = calculateNetProfit($db, $dateFrom, $dateTo);
+
+    $totalAssets = array_sum(array_column($assets, 'balance'));
+    $totalLiabilities = array_sum(array_column($liabilities, 'balance'));
+    $totalEquity = array_sum(array_column($equities, 'balance')) + $netProfit;
+
+    $report = [
+        'report_type' => 'Balance Sheet',
+        'date_from' => $dateFrom,
+        'date_to' => $dateTo,
+        'generated_at' => date('Y-m-d H:i:s'),
+        'assets' => [
+            'accounts' => $assets,
+            'total' => $totalAssets
+        ],
+        'liabilities' => [
+            'accounts' => $liabilities,
+            'total' => $totalLiabilities
+        ],
+        'equity' => [
+            'accounts' => $equities,
+            'retained_earnings' => $netProfit,
+            'total' => $totalEquity
+        ],
+        'total_liabilities_equity' => $totalLiabilities + $totalEquity
+    ];
+
+    outputReport($report, $format, 'balance_sheet');
+}
+
+function generateIncomeStatement($db, $dateFrom, $dateTo, $format) {
+    try {
+        // Get revenue accounts
+        $stmt = $db->prepare("
             SELECT
-                d.dept_name,
-                d.id as department_id,
-                db.budget_type,
-                CASE db.budget_type
-                    WHEN 'revenue' THEN 'jan_revenue'
-                    WHEN 'expense' THEN 'jan_amount'
-                END as jan_budget,
-                db.jan_amount as jan_actual,
-                COALESCE(db.jan_amount, 0) as jan_budget_amount,
-                0 as jan_actual_amount,
-                db.feb_amount as feb_budget_amount, 0 as feb_actual_amount,
-                db.mar_amount as mar_budget_amount, 0 as mar_actual_amount,
-                db.apr_amount as apr_budget_amount, 0 as apr_actual_amount,
-                db.may_amount as may_budget_amount, 0 as may_actual_amount,
-                db.jun_amount as jun_budget_amount, 0 as jun_actual_amount,
-                db.jul_amount as jul_budget_amount, 0 as jul_actual_amount,
-                db.aug_amount as aug_budget_amount, 0 as aug_actual_amount,
-                db.sep_amount as sep_budget_amount, 0 as sep_actual_amount,
-                db.oct_amount as oct_budget_amount, 0 as oct_actual_amount,
-                db.nov_amount as nov_budget_amount, 0 as nov_actual_amount,
-                db.dec_amount as dec_budget_amount, 0 as dec_actual_amount,
-                db.annual_total
-            FROM departments d
-            CROSS JOIN (SELECT 'revenue' as budget_type UNION SELECT 'expense' as budget_type) bt
-            LEFT JOIN department_budgets db ON d.id = db.department_id
-                AND db.budget_year = ?
-                AND db.budget_type = bt.budget_type
-            WHERE d.is_active = 1
-                " . (!empty($departmentId) ? "AND d.id = ?" : "") . "
-            ORDER BY d.dept_name, db.budget_type
+                coa.account_name,
+                coa.account_code,
+                COALESCE(SUM(jel.credit - jel.debit), 0) as amount
+            FROM chart_of_accounts coa
+            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+            WHERE coa.account_type = 'revenue'
+            AND coa.is_active = 1
+            AND je.entry_date BETWEEN ? AND ?
+            GROUP BY coa.id, coa.account_name, coa.account_code
+            HAVING amount != 0
+            ORDER BY coa.account_code
         ");
+        $stmt->execute([$dateFrom, $dateTo]);
+        $revenues = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $params = [$budgetYear];
-        if (!empty($departmentId)) $params[] = $departmentId;
-        $budgetQuery->execute($params);
-        $budgetData = $budgetQuery->fetchAll(PDO::FETCH_ASSOC);
-
-        // Load actuals from daily revenue and expense summaries
-        $revenueActuals = [];
-        $expenseActuals = [];
-
-        $revenueStmt = $db->prepare("
-            SELECT department_id, MONTH(business_date) as month_num, SUM(net_revenue) as amount
-            FROM daily_revenue_summary
-            WHERE YEAR(business_date) = ?
-            GROUP BY department_id, MONTH(business_date)
-        ");
-        $revenueStmt->execute([$budgetYear]);
-        foreach ($revenueStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $revenueActuals[$row['department_id']][intval($row['month_num'])] = floatval($row['amount']);
-        }
-
-        $expenseStmt = $db->prepare("
-            SELECT department_id, MONTH(business_date) as month_num, SUM(total_amount) as amount
-            FROM daily_expense_summary
-            WHERE YEAR(business_date) = ?
-            GROUP BY department_id, MONTH(business_date)
-        ");
-        $expenseStmt->execute([$budgetYear]);
-        foreach ($expenseStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $expenseActuals[$row['department_id']][intval($row['month_num'])] = floatval($row['amount']);
-        }
-
-        $monthKeys = [
-            1 => 'jan', 2 => 'feb', 3 => 'mar', 4 => 'apr', 5 => 'may', 6 => 'jun',
-            7 => 'jul', 8 => 'aug', 9 => 'sep', 10 => 'oct', 11 => 'nov', 12 => 'dec'
-        ];
-
-        // Calculate actuals using summary tables
-        foreach ($budgetData as &$dept) {
-            $deptId = $dept['department_id'];
-            $actualMap = $dept['budget_type'] === 'revenue'
-                ? ($revenueActuals[$deptId] ?? [])
-                : ($expenseActuals[$deptId] ?? []);
-
-            foreach ($monthKeys as $monthNum => $prefix) {
-                $dept[$prefix . '_actual_amount'] = $actualMap[$monthNum] ?? 0;
-            }
-
-            // Calculate variances
-            $dept['jan_variance'] = $dept['jan_actual_amount'] - $dept['jan_budget_amount'];
-            $dept['feb_variance'] = $dept['feb_actual_amount'] - $dept['feb_budget_amount'];
-            $dept['mar_variance'] = $dept['mar_actual_amount'] - $dept['mar_budget_amount'];
-            // ... and so on for all months
-
-            // Calculate YTD totals
-            $dept['ytd_budget'] = array_sum([
-                $dept['jan_budget_amount'] ?? 0, $dept['feb_budget_amount'] ?? 0,
-                $dept['mar_budget_amount'] ?? 0, $dept['apr_budget_amount'] ?? 0,
-                $dept['may_budget_amount'] ?? 0, $dept['jun_budget_amount'] ?? 0,
-                $dept['jul_budget_amount'] ?? 0, $dept['aug_budget_amount'] ?? 0,
-                $dept['sep_budget_amount'] ?? 0, $dept['oct_budget_amount'] ?? 0,
-                $dept['nov_budget_amount'] ?? 0, $dept['dec_budget_amount'] ?? 0
-            ]);
-
-            $dept['ytd_actual'] = array_sum([
-                $dept['jan_actual_amount'], $dept['feb_actual_amount'],
-                $dept['mar_actual_amount'], $dept['apr_actual_amount'],
-                $dept['may_actual_amount'], $dept['jun_actual_amount'],
-                $dept['jul_actual_amount'], $dept['aug_actual_amount'],
-                $dept['sep_actual_amount'], $dept['oct_actual_amount'],
-                $dept['nov_actual_amount'], $dept['dec_actual_amount']
-            ]);
-
-            $dept['ytd_variance'] = $dept['ytd_actual'] - $dept['ytd_budget'];
-        }
-
-        // Get summary totals across all departments
-        $totals = [
-            'revenue' => ['budget' => 0, 'actual' => 0, 'variance' => 0],
-            'expense' => ['budget' => 0, 'actual' => 0, 'variance' => 0],
-            'net_profit' => ['budget' => 0, 'actual' => 0, 'variance' => 0]
-        ];
-
-        foreach ($budgetData as $dept) {
-            if ($dept['budget_type'] === 'revenue') {
-                $totals['revenue']['budget'] += $dept['ytd_budget'];
-                $totals['revenue']['actual'] += $dept['ytd_actual'];
-                $totals['revenue']['variance'] += $dept['ytd_variance'];
-            } else {
-                $totals['expense']['budget'] += $dept['ytd_budget'];
-                $totals['expense']['actual'] += $dept['ytd_actual'];
-                $totals['expense']['variance'] += $dept['ytd_variance'];
-            }
-        }
-
-        $totals['net_profit']['budget'] = $totals['revenue']['budget'] - $totals['expense']['budget'];
-        $totals['net_profit']['actual'] = $totals['revenue']['actual'] - $totals['expense']['actual'];
-        $totals['net_profit']['variance'] = $totals['net_profit']['actual'] - $totals['net_profit']['budget'];
-
-        ob_clean();
-        echo json_encode([
-            'success' => true,
-            'budget_year' => $budgetYear,
-            'budget_month' => $budgetMonth,
-            'department_data' => $budgetData,
-            'totals' => $totals,
-            'report_date' => date('Y-m-d')
-        ]);
-        exit;
-    }
-
-    // Handle cash flow summary report
-    if ($reportType === 'cash_flow_summary') {
-        // Similar to cash flow but simplified summary
-        $summaryQuery = $db->prepare("
+        // Get expense accounts
+        $stmt = $db->prepare("
             SELECT
-                SUM(CASE WHEN expense_category = 'labor_payroll' THEN total_amount ELSE 0 END) as payroll_expenses,
-                SUM(CASE WHEN expense_category != 'labor_payroll' THEN total_amount ELSE 0 END) as operating_expenses,
-                COUNT(DISTINCT business_date) as days_counted
-            FROM daily_expense_summary
-            WHERE business_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                coa.account_name,
+                coa.account_code,
+                COALESCE(SUM(jel.debit - jel.credit), 0) as amount
+            FROM chart_of_accounts coa
+            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+            WHERE coa.account_type = 'expense'
+            AND coa.is_active = 1
+            AND je.entry_date BETWEEN ? AND ?
+            GROUP BY coa.id, coa.account_name, coa.account_code
+            HAVING amount != 0
+            ORDER BY coa.account_code
         ");
-        $summaryQuery->execute();
-        $summaryData = $summaryQuery->fetch(PDO::FETCH_ASSOC);
+        $stmt->execute([$dateFrom, $dateTo]);
+        $expenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        ob_clean(); // Clear any buffered output
-        echo json_encode([
-            'success' => true,
-            'summary' => [
-                'payroll_expenses' => intval($summaryData['payroll_expenses'] ?? 0),
-                'operating_expenses' => intval($summaryData['operating_expenses'] ?? 0),
-                'total_expenses' => intval(($summaryData['payroll_expenses'] ?? 0) + ($summaryData['operating_expenses'] ?? 0)),
-                'days_counted' => intval($summaryData['days_counted'] ?? 0)
-            ]
-        ]);
-        exit;
-    }
+        $totalRevenue = array_sum(array_column($revenues, 'amount'));
+        $totalExpenses = array_sum(array_column($expenses, 'amount'));
+        $netProfit = $totalRevenue - $totalExpenses;
 
-    // Handle analytics summary (trend + MTD)
-    if ($reportType === 'analytics_summary') {
-        $endDate = date('Y-m-d');
-        $startDate = date('Y-m-01', strtotime('-5 months'));
-
-        $trendRevenueStmt = $db->prepare("
-            SELECT DATE_FORMAT(business_date, '%Y-%m') as month_key,
-                   SUM(net_revenue) as total
-            FROM daily_revenue_summary
-            WHERE business_date BETWEEN ? AND ?
-            GROUP BY DATE_FORMAT(business_date, '%Y-%m')
-            ORDER BY month_key
-        ");
-        $trendRevenueStmt->execute([$startDate, $endDate]);
-        $revenueRows = $trendRevenueStmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $trendExpenseStmt = $db->prepare("
-            SELECT DATE_FORMAT(business_date, '%Y-%m') as month_key,
-                   SUM(total_amount) as total
-            FROM daily_expense_summary
-            WHERE business_date BETWEEN ? AND ?
-            GROUP BY DATE_FORMAT(business_date, '%Y-%m')
-            ORDER BY month_key
-        ");
-        $trendExpenseStmt->execute([$startDate, $endDate]);
-        $expenseRows = $trendExpenseStmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $revenueMap = [];
-        foreach ($revenueRows as $row) {
-            $revenueMap[$row['month_key']] = floatval($row['total']);
-        }
-        $expenseMap = [];
-        foreach ($expenseRows as $row) {
-            $expenseMap[$row['month_key']] = floatval($row['total']);
-        }
-
-        $months = [];
-        $revenueSeries = [];
-        $expenseSeries = [];
-
-        for ($i = 5; $i >= 0; $i--) {
-            $monthKey = date('Y-m', strtotime("-{$i} months"));
-            $months[] = date('M Y', strtotime($monthKey . '-01'));
-            $revenueSeries[] = $revenueMap[$monthKey] ?? 0;
-            $expenseSeries[] = $expenseMap[$monthKey] ?? 0;
-        }
-
-        $mtdStart = date('Y-m-01');
-        $mtdRevenueStmt = $db->prepare("
-            SELECT COALESCE(SUM(net_revenue), 0) as total
-            FROM daily_revenue_summary
-            WHERE business_date BETWEEN ? AND ?
-        ");
-        $mtdRevenueStmt->execute([$mtdStart, $endDate]);
-        $mtdRevenue = floatval($mtdRevenueStmt->fetch(PDO::FETCH_ASSOC)['total']);
-
-        $mtdExpenseStmt = $db->prepare("
-            SELECT COALESCE(SUM(total_amount), 0) as total
-            FROM daily_expense_summary
-            WHERE business_date BETWEEN ? AND ?
-        ");
-        $mtdExpenseStmt->execute([$mtdStart, $endDate]);
-        $mtdExpense = floatval($mtdExpenseStmt->fetch(PDO::FETCH_ASSOC)['total']);
-
-        ob_clean();
-        echo json_encode([
-            'success' => true,
-            'trend' => [
-                'labels' => $months,
-                'revenue' => $revenueSeries,
-                'expenses' => $expenseSeries
+        $report = [
+            'report_type' => 'Income Statement',
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'generated_at' => date('Y-m-d H:i:s'),
+            'revenue' => [
+                'accounts' => $revenues,
+                'total' => $totalRevenue
             ],
-            'mtd' => [
-                'revenue' => $mtdRevenue,
-                'expenses' => $mtdExpense,
-                'net' => $mtdRevenue - $mtdExpense
-            ]
-        ]);
-        exit;
+            'expenses' => [
+                'accounts' => $expenses,
+                'total' => $totalExpenses
+            ],
+            'net_profit' => $netProfit
+        ];
+
+        outputReport($report, $format, 'income_statement');
+    } catch (Exception $e) {
+        // Return empty report structure on error
+        $report = [
+            'report_type' => 'Income Statement',
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'generated_at' => date('Y-m-d H:i:s'),
+            'error' => 'Unable to generate report: ' . $e->getMessage(),
+            'revenue' => [
+                'accounts' => [],
+                'total' => 0
+            ],
+            'expenses' => [
+                'accounts' => [],
+                'total' => 0
+            ],
+            'net_profit' => 0
+        ];
+
+        outputReport($report, $format, 'income_statement');
+    }
+}
+
+function generateCashFlowStatement($db, $dateFrom, $dateTo, $format) {
+    // Operating activities - simplified calculation
+    $stmt = $db->prepare("
+        SELECT
+            COALESCE(SUM(CASE WHEN jel.debit > 0 THEN jel.debit ELSE -jel.credit END), 0) as cash_flow
+        FROM journal_entry_lines jel
+        JOIN journal_entries je ON jel.journal_entry_id = je.id
+        JOIN chart_of_accounts coa ON jel.account_id = coa.id
+        WHERE coa.account_code LIKE 'CASH%'
+        AND je.entry_date BETWEEN ? AND ?
+    ");
+    $stmt->execute([$dateFrom, $dateTo]);
+    $operatingCashFlow = $stmt->fetch()['cash_flow'] ?? 0;
+
+    // Calculate net profit for the period
+    $netProfit = calculateNetProfit($db, $dateFrom, $dateTo);
+
+    $report = [
+        'report_type' => 'Cash Flow Statement',
+        'date_from' => $dateFrom,
+        'date_to' => $dateTo,
+        'generated_at' => date('Y-m-d H:i:s'),
+        'operating_activities' => [
+            'net_profit' => $netProfit,
+            'adjustments' => 0, // Simplified
+            'net_cash_operating' => $operatingCashFlow
+        ],
+        'investing_activities' => [
+            'net_cash_investing' => 0 // Simplified
+        ],
+        'financing_activities' => [
+            'net_cash_financing' => 0 // Simplified
+        ],
+        'net_cash_flow' => $operatingCashFlow
+    ];
+
+    outputReport($report, $format, 'cash_flow_statement');
+}
+
+function generateTrialBalance($db, $dateFrom, $dateTo, $format) {
+    $stmt = $db->prepare("
+        SELECT
+            coa.account_code,
+            coa.account_name,
+            coa.account_type,
+            COALESCE(SUM(jel.debit), 0) as debit_total,
+            COALESCE(SUM(jel.credit), 0) as credit_total,
+            (COALESCE(SUM(jel.debit), 0) - COALESCE(SUM(jel.credit), 0)) as balance
+        FROM chart_of_accounts coa
+        LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+        WHERE coa.is_active = 1
+        AND (je.entry_date IS NULL OR je.entry_date <= ?)
+        GROUP BY coa.id, coa.account_code, coa.account_name, coa.account_type
+        HAVING debit_total != 0 OR credit_total != 0
+        ORDER BY coa.account_code
+    ");
+    $stmt->execute([$dateTo]);
+    $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $totalDebits = array_sum(array_column($accounts, 'debit_total'));
+    $totalCredits = array_sum(array_column($accounts, 'credit_total'));
+
+    $report = [
+        'report_type' => 'Trial Balance',
+        'date_to' => $dateTo,
+        'generated_at' => date('Y-m-d H:i:s'),
+        'accounts' => $accounts,
+        'totals' => [
+            'debit' => $totalDebits,
+            'credit' => $totalCredits,
+            'difference' => abs($totalDebits - $totalCredits)
+        ]
+    ];
+
+    outputReport($report, $format, 'trial_balance');
+}
+
+function generateAgingReceivable($db, $format) {
+    $stmt = $db->prepare("
+        SELECT
+            c.company_name as customer_name,
+            i.invoice_number,
+            i.total_amount,
+            i.balance,
+            DATEDIFF(CURDATE(), i.due_date) as days_overdue,
+            CASE
+                WHEN DATEDIFF(CURDATE(), i.due_date) <= 0 THEN 'current'
+                WHEN DATEDIFF(CURDATE(), i.due_date) <= 30 THEN '1-30'
+                WHEN DATEDIFF(CURDATE(), i.due_date) <= 60 THEN '31-60'
+                WHEN DATEDIFF(CURDATE(), i.due_date) <= 90 THEN '61-90'
+                ELSE '90+'
+            END as aging_category
+        FROM invoices i
+        JOIN customers c ON i.customer_id = c.id
+        WHERE i.balance > 0
+        AND i.status IN ('sent', 'overdue')
+        ORDER BY c.company_name, i.due_date
+    ");
+    $stmt->execute();
+    $agingData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Group by aging categories
+    $categories = ['current' => [], '1-30' => [], '31-60' => [], '61-90' => [], '90+' => []];
+    foreach ($agingData as $item) {
+        $categories[$item['aging_category']][] = $item;
     }
 
-    // Handle aging reports
-    if (strpos($reportType, 'aging_') === 0) {
-        $type = str_replace('aging_', '', $reportType); // 'receivable' or 'payable'
+    $totals = [];
+    foreach ($categories as $category => $items) {
+        $totals[$category] = array_sum(array_column($items, 'balance'));
+    }
 
-        if ($type === 'receivable') {
-            // Accounts Receivable Aging
-            $agingQuery = $db->prepare("
-                SELECT
-                    i.invoice_number,
-                    c.company_name as customer_name,
-                    i.invoice_date,
-                    i.due_date,
-                    i.total_amount,
-                    i.paid_amount,
-                    (i.total_amount - i.paid_amount) as outstanding,
-                    DATEDIFF(CURDATE(), i.due_date) as days_overdue,
-                    CASE
-                        WHEN DATEDIFF(CURDATE(), i.due_date) <= 0 THEN 'current'
-                        WHEN DATEDIFF(CURDATE(), i.due_date) BETWEEN 1 AND 30 THEN '1-30'
-                        WHEN DATEDIFF(CURDATE(), i.due_date) BETWEEN 31 AND 60 THEN '31-60'
-                        WHEN DATEDIFF(CURDATE(), i.due_date) > 90 THEN '91+'
-                        ELSE '61-90'
-                    END as age_bucket,
-                    CASE
-                        WHEN DATEDIFF(CURDATE(), i.due_date) <= 0 THEN 0
-                        WHEN DATEDIFF(CURDATE(), i.due_date) BETWEEN 1 AND 30 THEN 1
-                        WHEN DATEDIFF(CURDATE(), i.due_date) BETWEEN 31 AND 60 THEN 2
-                        WHEN DATEDIFF(CURDATE(), i.due_date) > 90 THEN 4
-                        ELSE 3
-                    END as sort_order,
-                    i.status,
-                    i.notes
-                FROM invoices i
-                LEFT JOIN customers c ON i.customer_id = c.id
-                WHERE i.balance > 0
-                    AND i.status IN ('sent', 'overdue')
-                ORDER BY sort_order, i.due_date
-            ");
-            $agingQuery->execute();
-            $agingDetails = $agingQuery->fetchAll(PDO::FETCH_ASSOC);
+    $report = [
+        'report_type' => 'Aging of Accounts Receivable',
+        'generated_at' => date('Y-m-d H:i:s'),
+        'aging_data' => $agingData,
+        'categories' => $categories,
+        'totals' => $totals,
+        'grand_total' => array_sum($totals)
+    ];
 
-            // Calculate totals by age bucket
-            $totals = [
-                'current' => 0,
-                '1-30' => 0,
-                '31-60' => 0,
-                '61-90' => 0,
-                '91+' => 0
-            ];
+    outputReport($report, $format, 'aging_receivable');
+}
 
-            foreach ($agingDetails as $detail) {
-                $outstanding = floatval($detail['outstanding']);
-                $totals[$detail['age_bucket']] += $outstanding;
+function generateAgingPayable($db, $format) {
+    $stmt = $db->prepare("
+        SELECT
+            v.company_name as vendor_name,
+            b.bill_number,
+            b.total_amount,
+            b.balance,
+            DATEDIFF(CURDATE(), b.due_date) as days_overdue,
+            CASE
+                WHEN DATEDIFF(CURDATE(), b.due_date) <= 0 THEN 'current'
+                WHEN DATEDIFF(CURDATE(), b.due_date) <= 30 THEN '1-30'
+                WHEN DATEDIFF(CURDATE(), b.due_date) <= 60 THEN '31-60'
+                WHEN DATEDIFF(CURDATE(), b.due_date) <= 90 THEN '61-90'
+                ELSE '90+'
+            END as aging_category
+        FROM bills b
+        JOIN vendors v ON b.vendor_id = v.id
+        WHERE b.balance > 0
+        AND b.status IN ('approved', 'overdue')
+        ORDER BY v.company_name, b.due_date
+    ");
+    $stmt->execute();
+    $agingData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Group by aging categories
+    $categories = ['current' => [], '1-30' => [], '31-60' => [], '61-90' => [], '90+' => []];
+    foreach ($agingData as $item) {
+        $categories[$item['aging_category']][] = $item;
+    }
+
+    $totals = [];
+    foreach ($categories as $category => $items) {
+        $totals[$category] = array_sum(array_column($items, 'balance'));
+    }
+
+    $report = [
+        'report_type' => 'Aging of Accounts Payable',
+        'generated_at' => date('Y-m-d H:i:s'),
+        'aging_data' => $agingData,
+        'categories' => $categories,
+        'totals' => $totals,
+        'grand_total' => array_sum($totals)
+    ];
+
+    outputReport($report, $format, 'aging_payable');
+}
+
+function generateVendorSummary($db, $dateFrom, $dateTo, $format) {
+    $stmt = $db->prepare("
+        SELECT
+            v.company_name,
+            v.contact_person,
+            COUNT(b.id) as bills_count,
+            COALESCE(SUM(b.total_amount), 0) as total_billed,
+            COALESCE(SUM(b.balance), 0) as outstanding_balance,
+            COALESCE(SUM(p.amount), 0) as payments_received
+        FROM vendors v
+        LEFT JOIN bills b ON v.id = b.vendor_id AND b.created_at BETWEEN ? AND ?
+        LEFT JOIN payments_made p ON v.id = p.vendor_id AND p.payment_date BETWEEN ? AND ?
+        WHERE v.is_active = 1
+        GROUP BY v.id, v.company_name, v.contact_person
+        ORDER BY outstanding_balance DESC
+    ");
+    $stmt->execute([$dateFrom, $dateTo, $dateFrom, $dateTo]);
+    $vendorData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $report = [
+        'report_type' => 'Vendor Summary Report',
+        'date_from' => $dateFrom,
+        'date_to' => $dateTo,
+        'generated_at' => date('Y-m-d H:i:s'),
+        'vendors' => $vendorData,
+        'totals' => [
+            'total_vendors' => count($vendorData),
+            'total_billed' => array_sum(array_column($vendorData, 'total_billed')),
+            'total_outstanding' => array_sum(array_column($vendorData, 'outstanding_balance')),
+            'total_payments' => array_sum(array_column($vendorData, 'payments_received'))
+        ]
+    ];
+
+    outputReport($report, $format, 'vendor_summary');
+}
+
+function generateCustomerSummary($db, $dateFrom, $dateTo, $format) {
+    $stmt = $db->prepare("
+        SELECT
+            c.company_name,
+            c.contact_person,
+            COUNT(i.id) as invoices_count,
+            COALESCE(SUM(i.total_amount), 0) as total_invoiced,
+            COALESCE(SUM(i.balance), 0) as outstanding_balance,
+            COALESCE(SUM(p.amount), 0) as payments_received
+        FROM customers c
+        LEFT JOIN invoices i ON c.id = i.customer_id AND i.created_at BETWEEN ? AND ?
+        LEFT JOIN payments_received p ON c.id = p.customer_id AND p.payment_date BETWEEN ? AND ?
+        WHERE c.is_active = 1
+        GROUP BY c.id, c.company_name, c.contact_person
+        ORDER BY outstanding_balance DESC
+    ");
+    $stmt->execute([$dateFrom, $dateTo, $dateFrom, $dateTo]);
+    $customerData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $report = [
+        'report_type' => 'Customer Summary Report',
+        'date_from' => $dateFrom,
+        'date_to' => $dateTo,
+        'generated_at' => date('Y-m-d H:i:s'),
+        'customers' => $customerData,
+        'totals' => [
+            'total_customers' => count($customerData),
+            'total_invoiced' => array_sum(array_column($customerData, 'total_invoiced')),
+            'total_outstanding' => array_sum(array_column($customerData, 'outstanding_balance')),
+            'total_payments' => array_sum(array_column($customerData, 'payments_received'))
+        ]
+    ];
+
+    outputReport($report, $format, 'customer_summary');
+}
+
+function calculateNetProfit($db, $dateFrom, $dateTo) {
+    // Calculate total revenue
+    $stmt = $db->prepare("
+        SELECT COALESCE(SUM(jel.credit - jel.debit), 0) as total_revenue
+        FROM journal_entry_lines jel
+        JOIN journal_entries je ON jel.journal_entry_id = je.id
+        JOIN chart_of_accounts coa ON jel.account_id = coa.id
+        WHERE coa.account_type = 'revenue'
+        AND je.entry_date BETWEEN ? AND ?
+    ");
+    $stmt->execute([$dateFrom, $dateTo]);
+    $totalRevenue = $stmt->fetch()['total_revenue'] ?? 0;
+
+    // Calculate total expenses
+    $stmt = $db->prepare("
+        SELECT COALESCE(SUM(jel.debit - jel.credit), 0) as total_expenses
+        FROM journal_entry_lines jel
+        JOIN journal_entries je ON jel.journal_entry_id = je.id
+        JOIN chart_of_accounts coa ON jel.account_id = coa.id
+        WHERE coa.account_type = 'expense'
+        AND je.entry_date BETWEEN ? AND ?
+    ");
+    $stmt->execute([$dateFrom, $dateTo]);
+    $totalExpenses = $stmt->fetch()['total_expenses'] ?? 0;
+
+    return $totalRevenue - $totalExpenses;
+}
+
+function outputReport($report, $format, $filename) {
+    switch ($format) {
+        case 'csv':
+            outputCSV($report, $filename);
+            break;
+        case 'pdf':
+            // For now, return JSON with PDF note
+            $report['note'] = 'PDF format not yet implemented. Use JSON format.';
+            echo json_encode($report);
+            break;
+        case 'json':
+        default:
+            echo json_encode($report);
+            break;
+    }
+}
+
+function outputCSV($report, $filename) {
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="' . $filename . '_' . date('Y-m-d') . '.csv"');
+
+    $output = fopen('php://output', 'w');
+
+    // Write report header
+    fputcsv($output, ['Report Type', $report['report_type']]);
+    fputcsv($output, ['Generated At', $report['generated_at']]);
+    fputcsv($output, []);
+
+    // Write report-specific data based on type
+    switch ($filename) {
+        case 'balance_sheet':
+            fputcsv($output, ['ASSETS']);
+            fputcsv($output, ['Account', 'Balance']);
+            foreach ($report['assets']['accounts'] as $account) {
+                fputcsv($output, [$account['account_name'], $account['balance']]);
             }
+            fputcsv($output, ['Total Assets', $report['assets']['total']]);
+            fputcsv($output, []);
 
-            // Add total
-            $totals['total'] = array_sum($totals);
-
-            $agingData = [
-                'totals' => $totals,
-                'details' => $agingDetails,
-                'summary' => [
-                    'total_invoices' => count($agingDetails),
-                    'total_outstanding' => $totals['total'],
-                    'overdue_count' => count(array_filter($agingDetails, function($d) { return $d['days_overdue'] > 0; })),
-                    'overdue_amount' => array_sum(array_filter($agingDetails, function($d) { return $d['days_overdue'] > 0; })),
-                    'average_overdue_days' => count($agingDetails) > 0 ? array_sum(array_column($agingDetails, 'days_overdue')) / count($agingDetails) : 0
-                ]
-            ];
-
-        } elseif ($type === 'payable') {
-            // Accounts Payable Aging
-            $agingQuery = $db->prepare("
-                SELECT
-                    b.bill_number,
-                    v.company_name as vendor_name,
-                    b.bill_date,
-                    b.due_date,
-                    b.total_amount,
-                    b.paid_amount,
-                    (b.total_amount - b.paid_amount) as outstanding,
-                    DATEDIFF(CURDATE(), b.due_date) as days_overdue,
-                    CASE
-                        WHEN DATEDIFF(CURDATE(), b.due_date) <= 0 THEN 'current'
-                        WHEN DATEDIFF(CURDATE(), b.due_date) BETWEEN 1 AND 30 THEN '1-30'
-                        WHEN DATEDIFF(CURDATE(), b.due_date) BETWEEN 31 AND 60 THEN '31-60'
-                        WHEN DATEDIFF(CURDATE(), b.due_date) > 90 THEN '91+'
-                        ELSE '61-90'
-                    END as age_bucket,
-                    CASE
-                        WHEN DATEDIFF(CURDATE(), b.due_date) <= 0 THEN 0
-                        WHEN DATEDIFF(CURDATE(), b.due_date) BETWEEN 1 AND 30 THEN 1
-                        WHEN DATEDIFF(CURDATE(), b.due_date) BETWEEN 31 AND 60 THEN 2
-                        WHEN DATEDIFF(CURDATE(), b.due_date) > 90 THEN 4
-                        ELSE 3
-                    END as sort_order,
-                    b.status,
-                    b.notes
-                FROM bills b
-                LEFT JOIN vendors v ON b.vendor_id = v.id
-                WHERE b.balance > 0
-                    AND b.status IN ('draft', 'approved', 'overdue')
-                ORDER BY sort_order, b.due_date
-            ");
-            $agingQuery->execute();
-            $agingDetails = $agingQuery->fetchAll(PDO::FETCH_ASSOC);
-
-            // Calculate totals by age bucket
-            $totals = [
-                'current' => 0,
-                '1-30' => 0,
-                '31-60' => 0,
-                '61-90' => 0,
-                '91+' => 0
-            ];
-
-            foreach ($agingDetails as $detail) {
-                $outstanding = floatval($detail['outstanding']);
-                $totals[$detail['age_bucket']] += $outstanding;
+            fputcsv($output, ['LIABILITIES']);
+            fputcsv($output, ['Account', 'Balance']);
+            foreach ($report['liabilities']['accounts'] as $account) {
+                fputcsv($output, [$account['account_name'], $account['balance']]);
             }
+            fputcsv($output, ['Total Liabilities', $report['liabilities']['total']]);
+            fputcsv($output, []);
 
-            // Add total
-            $totals['total'] = array_sum($totals);
+            fputcsv($output, ['EQUITY']);
+            fputcsv($output, ['Account', 'Balance']);
+            foreach ($report['equity']['accounts'] as $account) {
+                fputcsv($output, [$account['account_name'], $account['balance']]);
+            }
+            fputcsv($output, ['Retained Earnings', $report['equity']['retained_earnings']]);
+            fputcsv($output, ['Total Equity', $report['equity']['total']]);
+            break;
 
-            $agingData = [
-                'totals' => $totals,
-                'details' => $agingDetails,
-                'summary' => [
-                    'total_bills' => count($agingDetails),
-                    'total_outstanding' => $totals['total'],
-                    'overdue_count' => count(array_filter($agingDetails, function($d) { return $d['days_overdue'] > 0; })),
-                    'overdue_amount' => array_sum(array_filter($agingDetails, function($d) { return $d['days_overdue'] > 0; })),
-                    'average_overdue_days' => count($agingDetails) > 0 ? array_sum(array_column($agingDetails, 'days_overdue')) / count($agingDetails) : 0
-                ]
-            ];
+        case 'trial_balance':
+            fputcsv($output, ['Account Code', 'Account Name', 'Debit Total', 'Credit Total', 'Balance']);
+            foreach ($report['accounts'] as $account) {
+                fputcsv($output, [
+                    $account['account_code'],
+                    $account['account_name'],
+                    $account['debit_total'],
+                    $account['credit_total'],
+                    $account['balance']
+                ]);
+            }
+            fputcsv($output, []);
+            fputcsv($output, ['Total Debits', $report['totals']['debit']]);
+            fputcsv($output, ['Total Credits', $report['totals']['credit']]);
+            fputcsv($output, ['Difference', $report['totals']['difference']]);
+            break;
 
-        } else {
-            throw new Error('Invalid aging report type. Use "receivable" or "payable".');
+        // Add more cases for other report types as needed
+        default:
+            fputcsv($output, ['Report data in JSON format']);
+            fputcsv($output, [json_encode($report)]);
+    }
+
+    fclose($output);
+    exit();
+}
+
+/**
+ * Handle POST requests - Email report functionality
+ */
+function handlePost($db, $logger) {
+    try {
+        // Get POST data
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        if (!$input) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid JSON data']);
+            return;
         }
 
-        ob_clean(); // Clear any buffered output
-        echo json_encode([
-            'success' => true,
-            'type' => $type,
-            'report_date' => date('Y-m-d'),
-            'data' => $agingData
-        ]);
-        exit;
+        $action = $input['action'] ?? null;
+
+        if ($action === 'email') {
+            handleEmailReport($db, $logger, $input);
+        } else {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid action']);
+        }
+
+    } catch (Exception $e) {
+        error_log("Error in handlePost: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Internal server error: ' . $e->getMessage()]);
     }
-
-    // Default response for unsupported report types
-    ob_clean(); // Clear any buffered output
-    echo json_encode([
-        'success' => false,
-        'error' => 'Report type not supported: ' . $reportType
-    ]);
-
-} catch (Exception $e) {
-    ob_clean(); // Clear any buffered output
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => 'System Error: ' . $e->getMessage(),
-        'trace' => $e->getTraceAsString(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine()
-    ]);
-} catch (Error $e) {
-    // Catch fatal errors too
-    ob_clean();
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Fatal Error: ' . $e->getMessage(),
-        'trace' => $e->getTraceAsString(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine()
-    ]);
 }
 
-function buildReportSummary($db, $reportType, $dateFrom, $dateTo) {
+/**
+ * Send report via email
+ */
+function handleEmailReport($db, $logger, $data) {
+    try {
+        // Validate required fields
+        $email = $data['email'] ?? null;
+        $reportType = $data['report_type'] ?? null;
+        $reportName = $data['report_name'] ?? 'Financial Report';
+
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Valid email address is required']);
+            return;
+        }
+
+        if (!$reportType) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Report type is required']);
+            return;
+        }
+
+        // Get report data
+        $dateFrom = $data['date_from'] ?? date('Y-m-01');
+        $dateTo = $data['date_to'] ?? date('Y-m-t');
+        $reportData = $data['report_data'] ?? null;
+
+        // If report data not provided, fetch it
+        if (!$reportData) {
+            // Fetch report data based on type
+            $reportData = fetchReportData($db, $reportType, $dateFrom, $dateTo);
+        }
+
+        // Build email content
+        $subject = "ATIERA Finance - {$reportName}";
+        $message = buildReportEmailBody($reportName, $reportType, $reportData, $dateFrom, $dateTo);
+
+        // Send email using Mailer class
+        $mailer = Mailer::getInstance();
+        $sent = $mailer->send($email, $subject, $message, ['html' => true]);
+
+        if ($sent) {
+            // Log the action
+            if ($logger) {
+                $logger->log("Report '{$reportName}' emailed to {$email} by user " . ($_SESSION['user']['username'] ?? 'unknown'), 'INFO');
+            }
+
+            http_response_code(200);
+            echo json_encode([
+                'success' => true,
+                'message' => "Report successfully sent to {$email}"
+            ]);
+        } else {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Failed to send email. Please check email configuration.'
+            ]);
+        }
+
+    } catch (Exception $e) {
+        error_log("Error sending report email: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Error sending email: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Fetch report data for email
+ */
+function fetchReportData($db, $reportType, $dateFrom, $dateTo) {
+    // This is a simplified version - you can expand this based on report type
     switch ($reportType) {
-        case 'income':
-        case 'income_statement':
-            $revStmt = $db->prepare("
-                SELECT COALESCE(SUM(net_revenue), 0) as total
-                FROM daily_revenue_summary
-                WHERE business_date BETWEEN ? AND ?
-            ");
-            $revStmt->execute([$dateFrom, $dateTo]);
-            $totalRevenue = floatval($revStmt->fetch(PDO::FETCH_ASSOC)['total']);
-
-            $expStmt = $db->prepare("
-                SELECT COALESCE(SUM(total_amount), 0) as total
-                FROM daily_expense_summary
-                WHERE business_date BETWEEN ? AND ?
-            ");
-            $expStmt->execute([$dateFrom, $dateTo]);
-            $totalExpenses = floatval($expStmt->fetch(PDO::FETCH_ASSOC)['total']);
-
-            return [
-                'Total Revenue' => $totalRevenue,
-                'Total Expenses' => $totalExpenses,
-                'Net Profit' => $totalRevenue - $totalExpenses
-            ];
-
-        case 'balance':
         case 'balance_sheet':
-            $asOf = $dateTo;
-            $assetsStmt = $db->prepare("
-                SELECT COALESCE(SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)), 0) as total
-                FROM chart_of_accounts coa
-                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-                    AND je.status = 'posted'
-                    AND je.entry_date <= ?
-                WHERE coa.account_type = 'asset' AND coa.is_active = 1
-            ");
-            $assetsStmt->execute([$asOf]);
-            $assets = floatval($assetsStmt->fetch(PDO::FETCH_ASSOC)['total']);
-
-            $liabStmt = $db->prepare("
-                SELECT COALESCE(SUM(COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)), 0) as total
-                FROM chart_of_accounts coa
-                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-                    AND je.status = 'posted'
-                    AND je.entry_date <= ?
-                WHERE coa.account_type = 'liability' AND coa.is_active = 1
-            ");
-            $liabStmt->execute([$asOf]);
-            $liabilities = floatval($liabStmt->fetch(PDO::FETCH_ASSOC)['total']);
-
-            $equityStmt = $db->prepare("
-                SELECT COALESCE(SUM(COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)), 0) as total
-                FROM chart_of_accounts coa
-                LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-                LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-                    AND je.status = 'posted'
-                    AND je.entry_date <= ?
-                WHERE coa.account_type = 'equity' AND coa.is_active = 1
-            ");
-            $equityStmt->execute([$asOf]);
-            $equity = floatval($equityStmt->fetch(PDO::FETCH_ASSOC)['total']);
-
-            return [
-                'Total Assets' => $assets,
-                'Total Liabilities' => $liabilities,
-                'Total Equity' => $equity
-            ];
-
-        case 'cashflow':
+        case 'balance-sheet':
+            return ['type' => 'Balance Sheet', 'period' => "$dateFrom to $dateTo"];
+        case 'income_statement':
+        case 'income-statement':
+            return ['type' => 'Income Statement', 'period' => "$dateFrom to $dateTo"];
         case 'cash_flow':
-            $revStmt = $db->prepare("
-                SELECT COALESCE(SUM(net_revenue), 0) as total
-                FROM daily_revenue_summary
-                WHERE business_date BETWEEN ? AND ?
-            ");
-            $revStmt->execute([$dateFrom, $dateTo]);
-            $totalRevenue = floatval($revStmt->fetch(PDO::FETCH_ASSOC)['total']);
-
-            $expStmt = $db->prepare("
-                SELECT COALESCE(SUM(total_amount), 0) as total
-                FROM daily_expense_summary
-                WHERE business_date BETWEEN ? AND ?
-            ");
-            $expStmt->execute([$dateFrom, $dateTo]);
-            $totalExpenses = floatval($expStmt->fetch(PDO::FETCH_ASSOC)['total']);
-
-            return [
-                'Operating Cash Inflow' => $totalRevenue,
-                'Operating Cash Outflow' => $totalExpenses,
-                'Net Operating Cash' => $totalRevenue - $totalExpenses
-            ];
-
+        case 'cash-flow':
+            return ['type' => 'Cash Flow Statement', 'period' => "$dateFrom to $dateTo"];
+        case 'trial_balance':
+        case 'trial-balance':
+            return ['type' => 'Trial Balance', 'period' => "$dateFrom to $dateTo"];
+        case 'budget_variance':
+        case 'budget-variance':
+            return ['type' => 'Budget Variance Report', 'period' => "$dateFrom to $dateTo"];
         default:
-            return [
-                'Total Revenue' => 0,
-                'Total Expenses' => 0,
-                'Net Result' => 0
-            ];
+            return ['type' => ucwords(str_replace(['_', '-'], ' ', $reportType)), 'period' => "$dateFrom to $dateTo"];
     }
 }
 
-function buildReportEmailBody($reportName, $dateFrom, $dateTo, $summary) {
-    $rows = '';
-    foreach ($summary as $label => $value) {
-        $rows .= '<tr><td style="padding:8px 0;">' . htmlspecialchars($label) . '</td><td style="padding:8px 0; text-align:right;">ƒ,ñ' . number_format($value, 2) . '</td></tr>';
-    }
+/**
+ * Build HTML email body for report
+ */
+function buildReportEmailBody($reportName, $reportType, $reportData, $dateFrom, $dateTo) {
+    $periodText = date('M d, Y', strtotime($dateFrom)) . ' to ' . date('M d, Y', strtotime($dateTo));
 
-    return '
-        <div style="color:#333; line-height:1.6;">
-            <p style="font-size:16px; margin-bottom:10px;">Here is your requested report summary.</p>
-            <p style="font-size:14px; color:#666;">Report: <strong>' . htmlspecialchars($reportName) . '</strong></p>
-            <p style="font-size:14px; color:#666;">Period: ' . htmlspecialchars($dateFrom) . ' to ' . htmlspecialchars($dateTo) . '</p>
-            <table style="width:100%; border-collapse:collapse; margin-top:15px;">
-                ' . $rows . '
-            </table>
-            <p style="font-size:13px; color:#666; margin-top:20px;">
-                For detailed line items, please open the report inside ATIERA Finance.
+    $html = '
+    <div style="color: #333; line-height: 1.6;">
+        <h2 style="color: #1b2f73; margin-bottom: 20px;">' . htmlspecialchars($reportName) . '</h2>
+
+        <div style="background-color: #f8f9fa; border-left: 4px solid #1b2f73; padding: 15px; margin: 20px 0;">
+            <p style="margin: 5px 0; font-size: 14px;"><strong>Report Type:</strong> ' . htmlspecialchars($reportType) . '</p>
+            <p style="margin: 5px 0; font-size: 14px;"><strong>Period:</strong> ' . htmlspecialchars($periodText) . '</p>
+            <p style="margin: 5px 0; font-size: 14px;"><strong>Generated:</strong> ' . date('M d, Y h:i A') . '</p>
+        </div>
+
+        <p style="font-size: 14px; color: #666; margin: 20px 0;">
+            Your financial report has been generated successfully. Please log in to the ATIERA Financial Management System to view the complete details and download the report in your preferred format.
+        </p>
+
+        <div style="margin: 30px 0;">
+            <a href="' . (Config::get('app.url') ?: 'http://localhost') . '/admin/reports.php"
+               style="display: inline-block; background: linear-gradient(135deg, #1b2f73 0%, #0f1c49 100%); color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                View Full Report
+            </a>
+        </div>
+
+        <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0; color: #856404; font-size: 13px;">
+                <strong>Note:</strong> This is a notification email. For detailed report data, charts, and export options, please access the system directly.
             </p>
         </div>
-    ';
+
+        <p style="font-size: 14px; color: #333; margin-top: 30px;">
+            Best regards,<br>
+            <strong>ATIERA Financial Management System</strong>
+        </p>
+    </div>';
+
+    return $html;
 }
 ?>

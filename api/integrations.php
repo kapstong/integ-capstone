@@ -1,472 +1,342 @@
 <?php
 /**
- * ATIERA Financial Management System - Integrations API Endpoint
- * Handles external API integrations and actions
+ * ATIERA Financial Management System - Integrations API
+ * Handles external API integration operations
  */
 
+require_once '../../includes/auth.php';
+require_once '../../includes/api_integrations.php';
+
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+session_start();
 
-// Require core files for full integration support
-require_once '../config.php';
-require_once '../includes/logger.php';
-require_once '../includes/database.php';
-require_once '../includes/auth.php';
-require_once '../includes/api_integrations.php';
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+// Check if user is logged in
+if (!isset($_SESSION['user'])) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Unauthorized']);
+    exit;
 }
 
-// Initialize auth and integration manager
+$userId = $_SESSION['user']['id'];
+$method = $_SERVER['REQUEST_METHOD'];
+
 $auth = new Auth();
-$auth->requireLogin(); // Require authentication for all integration actions
 $integrationManager = APIIntegrationManager::getInstance();
 
-// Handle preflight OPTIONS request
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    exit(0);
+// Require settings edit permission for integrations
+if (!$auth->hasPermission('settings.edit')) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Access denied']);
+    exit;
 }
 
 try {
-    $action = $_GET['action'] ?? $_POST['action'] ?? '';
-    $integrationName = $_GET['integration'] ?? $_GET['integration_name'] ?? $_POST['integration_name'] ?? '';
-    $actionName = $_GET['action_name'] ?? $_POST['action_name'] ?? '';
-    $params = $_POST ? array_merge($_POST, $_GET) : $_GET;
+    switch ($method) {
+        case 'GET':
+            $action = $_GET['action'] ?? '';
 
-    // Handle integration actions
-    if ($action === 'execute' && $integrationName && $actionName) {
-        try {
-            $result = $integrationManager->executeIntegrationAction($integrationName, $actionName, $params);
-            if (is_array($result) && isset($result['success']) && $result['success'] === false) {
-                echo json_encode([
-                    'success' => false,
-                    'error' => $result['error'] ?? $result['message'] ?? 'Integration action failed',
-                    'result' => $result
-                ]);
-                exit;
+            switch ($action) {
+                case 'get_config_form':
+                    // Get configuration form for an integration
+                    $integrationName = $_GET['integration'] ?? '';
+                    $integration = $integrationManager->getIntegration($integrationName);
+
+                    if (!$integration) {
+                        http_response_code(404);
+                        echo json_encode(['error' => 'Integration not found']);
+                        exit;
+                    }
+
+                    $metadata = $integration->getMetadata();
+                    $currentConfig = $integrationManager->getIntegrationConfig($integrationName);
+
+                    $formHtml = generateConfigForm($metadata, $currentConfig);
+                    echo json_encode(['success' => true, 'form_html' => $formHtml]);
+                    break;
+
+                case 'get_stats':
+                    // Get integration statistics
+                    $stats = $integrationManager->getIntegrationStats();
+                    echo json_encode(['success' => true, 'stats' => $stats]);
+                    break;
+
+                case 'get_logs':
+                    // Get integration activity logs
+                    $limit = (int)($_GET['limit'] ?? 50);
+                    $logs = getIntegrationLogs($limit);
+                    echo json_encode(['success' => true, 'logs' => $logs]);
+                    break;
+
+                case 'list_integrations':
+                    // List all available integrations
+                    $integrations = $integrationManager->getAllIntegrations();
+                    $integrationList = [];
+
+                    foreach ($integrations as $name => $integration) {
+                        $metadata = $integration->getMetadata();
+                        $status = $integrationManager->getIntegrationStatus($name);
+                        $config = $integrationManager->getIntegrationConfig($name);
+
+                        $integrationList[] = [
+                            'name' => $name,
+                            'display_name' => $metadata['display_name'],
+                            'description' => $metadata['description'],
+                            'is_active' => $status ? $status['is_active'] : false,
+                            'is_configured' => $config !== null,
+                            'webhook_support' => $metadata['webhook_support'],
+                            'required_config' => $metadata['required_config']
+                        ];
+                    }
+
+                    echo json_encode(['success' => true, 'integrations' => $integrationList]);
+                    break;
+
+                default:
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Invalid action']);
+                    exit;
             }
+            break;
 
-            $tableName = $integrationName === 'hr3' ? 'hr3_integrations' : 'integrations';
-            Logger::getInstance()->logUserAction(
-                'integration_execute',
-                $tableName,
-                null,
-                null,
-                [
-                    'integration' => $integrationName,
-                    'action' => $actionName,
-                    'source' => $integrationName === 'hr3' ? 'HR3 API' : 'Integration API',
-                    'module' => 'integrations',
-                    'endpoint' => $_SERVER['REQUEST_URI'] ?? '',
-                    'origin' => $_SERVER['HTTP_REFERER'] ?? ''
-                ]
-            );
+        case 'POST':
+            $action = $_POST['action'] ?? '';
 
-            echo json_encode([
-                'success' => true,
-                'result' => $result
-            ]);
-            exit;
-        } catch (Exception $e) {
-            echo json_encode([
-                'success' => false,
-                'error' => $e->getMessage()
-            ]);
-            exit;
-        }
+            switch ($action) {
+                case 'configure':
+                    // Configure an integration
+                    $integrationName = $_POST['integration_name'] ?? '';
+                    $config = $_POST['config'] ?? [];
+
+                    $result = $integrationManager->configureIntegration($integrationName, $config);
+                    echo json_encode($result);
+                    break;
+
+                case 'test':
+                    // Test integration connection
+                    $integrationName = $_POST['integration_name'] ?? '';
+                    $result = $integrationManager->testIntegration($integrationName);
+                    echo json_encode($result);
+                    break;
+
+                case 'execute':
+                    // Execute integration action
+                    $integrationName = $_POST['integration_name'] ?? '';
+                    $actionName = $_POST['action_name'] ?? '';
+                    $params = [];
+                    $rawParams = $_POST;
+                    unset($rawParams['action'], $rawParams['integration_name'], $rawParams['action_name'], $rawParams['params']);
+                    if (!empty($rawParams)) {
+                        $params = $rawParams;
+                    }
+                    if (isset($_POST['params'])) {
+                        $decodedParams = json_decode($_POST['params'], true);
+                        if (is_array($decodedParams)) {
+                            $params = array_merge($params, $decodedParams);
+                        }
+                    }
+
+                    $result = $integrationManager->executeIntegrationAction($integrationName, $actionName, $params);
+                    if (is_array($result) && isset($result['success']) && $result['success'] === false) {
+                        echo json_encode([
+                            'success' => false,
+                            'error' => $result['error'] ?? $result['message'] ?? 'Integration action failed',
+                            'result' => $result
+                        ]);
+                        exit;
+                    }
+
+                    echo json_encode(['success' => true, 'result' => $result]);
+                    break;
+
+                default:
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Invalid action']);
+                    exit;
+            }
+            break;
+
+        case 'PUT':
+            // Update integration status
+            parse_str(file_get_contents('php://input'), $putData);
+            $action = $putData['action'] ?? '';
+
+            switch ($action) {
+                case 'toggle_status':
+                    $integrationName = $putData['integration_name'] ?? '';
+                    $active = (bool)($putData['active'] ?? false);
+
+                    $integrationManager->updateIntegrationStatus($integrationName, $active);
+                    echo json_encode(['success' => true, 'message' => 'Integration status updated']);
+                    break;
+
+                default:
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Invalid action']);
+                    exit;
+            }
+            break;
+
+        case 'DELETE':
+            $action = $_GET['action'] ?? '';
+
+            switch ($action) {
+                case 'remove_config':
+                    // Remove integration configuration
+                    $integrationName = $_GET['integration'] ?? '';
+
+                    $configFile = '../../config/integrations/' . $integrationName . '.json';
+                    if (file_exists($configFile)) {
+                        unlink($configFile);
+                        $integrationManager->updateIntegrationStatus($integrationName, false);
+
+                        Logger::getInstance()->logUserAction(
+                            'Removed integration configuration',
+                            'api_integrations',
+                            null,
+                            null,
+                            ['integration' => $integrationName]
+                        );
+
+                        echo json_encode(['success' => true, 'message' => 'Configuration removed']);
+                    } else {
+                        http_response_code(404);
+                        echo json_encode(['error' => 'Configuration not found']);
+                    }
+                    break;
+
+                default:
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Invalid action']);
+                    exit;
+            }
+            break;
+
+        default:
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+            break;
     }
+} catch (Exception $e) {
+    Logger::getInstance()->logDatabaseError('Integration API operation', $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Internal server error']);
+}
 
-    // Handle integration configuration forms
-    if ($action === 'get_config_form' && $integrationName) {
-        $integration = $integrationManager->getIntegration($integrationName);
-        if ($integration) {
-            $metadata = $integration->getMetadata();
-            $config = $integrationManager->getIntegrationConfig($integrationName);
-            $isConfigured = !empty($config);
+/**
+ * Generate configuration form HTML
+ */
+function generateConfigForm($metadata, $currentConfig = null) {
+    $html = '<div class="row g-3">';
 
-            $formHtml = '<h6>' . htmlspecialchars($metadata['display_name']) . '</h6>';
-            $formHtml .= '<p>' . htmlspecialchars($metadata['description']) . '</p>';
-            $formHtml .= '<small class="text-muted">Required Configuration Fields:</small><br>';
+    foreach ($metadata['required_config'] as $field) {
+        $fieldType = getFieldType($field);
+        $fieldLabel = ucfirst(str_replace(['_', '-'], ' ', $field));
+        $fieldValue = $currentConfig[$field] ?? '';
+        $fieldPlaceholder = getFieldPlaceholder($field);
 
-            $requiredFields = $metadata['required_config'];
-            if (empty($requiredFields)) {
-                $formHtml .= '<span class="badge bg-success">No configuration required</span><br>';
-            } else {
-                foreach ($requiredFields as $field) {
-                    $formHtml .= '<span class="badge bg-primary me-1">' . htmlspecialchars($field) . '</span>';
-                }
-                $formHtml .= '<br>';
+        $html .= '<div class="col-md-6">';
+        $html .= '<label for="' . $field . '" class="form-label">' . $fieldLabel . ' *</label>';
+
+        if ($fieldType === 'textarea') {
+            $html .= '<textarea class="form-control" id="' . $field . '" name="config[' . $field . ']" rows="3" placeholder="' . $fieldPlaceholder . '" required>' . htmlspecialchars($fieldValue) . '</textarea>';
+        } elseif ($fieldType === 'select') {
+            $html .= '<select class="form-control" id="' . $field . '" name="config[' . $field . ']" required>';
+            $html .= '<option value="">Select ' . $fieldLabel . '</option>';
+            $options = getFieldOptions($field);
+            foreach ($options as $value => $label) {
+                $selected = ($fieldValue === $value) ? 'selected' : '';
+                $html .= '<option value="' . $value . '" ' . $selected . '>' . $label . '</option>';
             }
-
-            $formHtml .= '<form class="mt-3">';
-            foreach ([$metadata['required_config'], ['api_key', 'api_secret', 'webhook_url']] as $fieldGroup) {
-                foreach ($fieldGroup as $field) {
-                    $currentValue = $config[$field] ?? '';
-                    $fieldType = (strpos($field, 'secret') !== false || strpos($field, 'key') !== false) ? 'password' : 'text';
-                    $fieldLabel = ucwords(str_replace('_', ' ', $field));
-                    $requiredAttr = in_array($field, $metadata['required_config']) ? 'required' : '';
-
-                    $formHtml .= '<div class="mb-3">';
-                    $formHtml .= '<label for="' . htmlspecialchars($field) . '" class="form-label">' . htmlspecialchars($fieldLabel) . '</label>';
-                    $formHtml .= '<input type="' . $fieldType . '" class="form-control" id="' . htmlspecialchars($field) . '" name="' . htmlspecialchars($field) . '" value="' . htmlspecialchars($currentValue) . '" ' . $requiredAttr . '>';
-                    $formHtml .= '</div>';
-                }
-            }
-            $formHtml .= '</form>';
-
-            echo json_encode([
-                'success' => true,
-                'form_html' => $formHtml
-            ]);
-            exit;
+            $html .= '</select>';
         } else {
-            echo json_encode([
-                'success' => false,
-                'error' => 'Integration not found'
-            ]);
-            exit;
+            $html .= '<input type="' . $fieldType . '" class="form-control" id="' . $field . '" name="config[' . $field . ']" value="' . htmlspecialchars($fieldValue) . '" placeholder="' . $fieldPlaceholder . '" required>';
         }
+
+        $html .= '</div>';
     }
 
-    // Handle integration statistics
-    if ($action === 'get_stats') {
-        $stats = $integrationManager->getIntegrationStats();
-        echo json_encode([
-            'success' => true,
-            'stats' => $stats
-        ]);
-        exit;
+    $html .= '</div>';
+    return $html;
+}
+
+/**
+ * Get field type based on field name
+ */
+function getFieldType($field) {
+    $fieldTypes = [
+        'webhook_secret' => 'password',
+        'api_key' => 'password',
+        'auth_token' => 'password',
+        'access_token' => 'password',
+        'client_secret' => 'password',
+        'refresh_token' => 'password',
+        'phone_number' => 'tel',
+        'email' => 'email',
+        'url' => 'url',
+        'webhook_url' => 'url',
+        'server_prefix' => 'text',
+        'tenant_id' => 'text',
+        'company_id' => 'text'
+    ];
+
+    return $fieldTypes[$field] ?? 'text';
+}
+
+/**
+ * Get field placeholder
+ */
+function getFieldPlaceholder($field) {
+    $placeholders = [
+        'api_key' => 'sk_test_... or sg_...',
+        'auth_token' => 'Your authentication token',
+        'access_token' => 'Your access token',
+        'client_id' => 'Your client ID',
+        'client_secret' => 'Your client secret',
+        'webhook_secret' => 'whsec_...',
+        'webhook_url' => 'https://your-domain.com/webhook',
+        'phone_number' => '+1234567890',
+        'email' => 'your-email@example.com',
+        'server_prefix' => 'us1 or eu1',
+        'tenant_id' => 'Your tenant ID',
+        'company_id' => 'Your company ID'
+    ];
+
+    return $placeholders[$field] ?? 'Enter ' . ucfirst(str_replace(['_', '-'], ' ', $field));
+}
+
+/**
+ * Get field options for select fields
+ */
+function getFieldOptions($field) {
+    if ($field === 'server_prefix') {
+        return [
+            'us1' => 'US Server 1',
+            'us2' => 'US Server 2',
+            'us3' => 'US Server 3',
+            'eu1' => 'EU Server 1',
+            'au1' => 'AU Server 1'
+        ];
     }
 
-    // Handle integration logs
-    if ($action === 'get_logs') {
-        $limit = intval($_GET['limit'] ?? 50);
+    return [];
+}
+
+/**
+ * Get integration logs
+ */
+function getIntegrationLogs($limit = 50) {
+    try {
         $db = Database::getInstance()->getConnection();
         $stmt = $db->prepare("
             SELECT * FROM integration_logs
-            WHERE status = 'success'
             ORDER BY created_at DESC
             LIMIT ?
         ");
         $stmt->execute([$limit]);
-        $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        echo json_encode([
-            'success' => true,
-            'logs' => $logs
-        ]);
-        exit;
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        Logger::getInstance()->error("Failed to get integration logs: " . $e->getMessage());
+        return [];
     }
-
-    // Connect to REAL HR3 API (legacy specific handling)
-    if ($action === 'execute' && $integrationName === 'hr3' && $actionName === 'getApprovedClaims') {
-        // Get HR3 API configuration
-        $configFile = '../config/integrations/hr3.json';
-        $config = ['api_url' => 'https://hr3.atierahotelandrestaurant.com/api/claimsApi.php'];
-
-        if (file_exists($configFile) && ($configData = json_decode(file_get_contents($configFile), true))) {
-            $config = array_merge($config, $configData);
-        }
-
-        // Make HTTP request to HR3 API
-        $ch = curl_init($config['api_url']);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // For HTTPS - remove in production
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // For HTTPS - remove in production
-
-        // Add headers if authentication is configured
-        $headers = ['Content-Type: application/json'];
-        if (!empty($config['api_key'])) {
-            $headers[] = 'Authorization: Bearer ' . $config['api_key'];
-        }
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-
-        if ($curlError) {
-            echo json_encode([
-                'success' => false,
-                'error' => 'Failed to connect to HR3 API: ' . $curlError
-            ]);
-            exit;
-        }
-
-        if ($httpCode === 200) {
-            $claims = json_decode($response, true);
-
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                echo json_encode([
-                    'success' => false,
-                    'error' => 'Invalid JSON response from HR3 API: ' . json_last_error_msg()
-                ]);
-                exit;
-            }
-
-            // Filter for only "Approved" status claims with amounts > 0
-            $approvedClaims = [];
-            if (is_array($claims)) {
-                foreach ($claims as $claim) {
-                    $amount = isset($claim['total_amount']) ? floatval($claim['total_amount']) : 0;
-                    $status = $claim['status'] ?? '';
-
-                    // Only include approved claims with positive amounts and not cancelled/rejected
-                    if ($status === 'Approved' && $amount > 0 && !isset($claim['cancelled_at'])) {
-                        $approvedClaims[] = [
-                            'id' => $claim['claim_id'],
-                            'claim_id' => $claim['claim_id'],
-                            'employee_name' => $claim['employee_name'] ?? 'Unknown',
-                            'employee_id' => $claim['employee_id'] ?? '',
-                            'amount' => $amount,
-                            'currency_code' => $claim['currency_code'] ?? 'PHP',
-                            'description' => $claim['remarks'] ?? '',
-                            'status' => $status,
-                            'claim_date' => $claim['created_at'] ?? $claim['updated_at'] ?? '',
-                            'reference_id' => $claim['reference_id'] ?? ''
-                        ];
-                    }
-                }
-            }
-
-            echo json_encode([
-                'success' => true,
-                'result' => $approvedClaims
-            ]);
-        } else {
-            echo json_encode([
-                'success' => false,
-                'error' => 'HR3 API returned HTTP ' . $httpCode . ': ' . $response
-            ]);
-        }
-        exit;
-    }
-
-    // Update claim status back to HR3 (2-way sync)
-    if ($action === 'execute' && $integrationName === 'hr3' && $actionName === 'updateClaimStatus') {
-        $claimId = $_POST['claim_id'] ?? '';
-        $newStatus = $_POST['status'] ?? 'Paid';
-
-        if (!$claimId) {
-            echo json_encode([
-                'success' => false,
-                'error' => 'claim_id is required'
-            ]);
-            exit;
-        }
-
-        // Get HR3 API configuration
-        $configFile = '../config/integrations/hr3.json';
-        $config = ['api_url' => 'https://hr3.atierahotelandrestaurant.com/api/claimsApi.php'];
-
-        if (file_exists($configFile) && ($configData = json_decode(file_get_contents($configFile), true))) {
-            $config = array_merge($config, $configData);
-        }
-
-        // HR3 API expects form-urlencoded data for PUT requests, not JSON
-        $updateData = http_build_query([
-            'claim_id' => $claimId,
-            'status' => $newStatus, // Must be "Paid" to work with HR3 API
-            'paid_by' => 'Financial System' // Optional field for HR3
-        ]);
-
-        $headers = ['Content-Type: application/x-www-form-urlencoded'];
-        if (!empty($config['api_key'])) {
-            $headers[] = 'Authorization: Bearer ' . $config['api_key'];
-        }
-
-        // Add debugging information for PUT request
-        $ch = curl_init($config['api_url']);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT'); // HR3 requires PUT method
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $updateData); // Form-encoded data
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-
-        // Enable verbose logging for debugging
-        curl_setopt($ch, CURLOPT_VERBOSE, true);
-        $verboseBuffer = fopen('php://temp', 'w+');
-        curl_setopt($ch, CURLOPT_STDERR, $verboseBuffer);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-
-        // Get verbose output
-        rewind($verboseBuffer);
-        $verbose = stream_get_contents($verboseBuffer);
-        fclose($verboseBuffer);
-
-        curl_close($ch);
-
-        // Detailed logging for troubleshooting
-        error_log("=== HR3 PUT REQUEST DEBUG ===");
-        error_log("URL: {$config['api_url']}");
-        error_log("Method: PUT");
-        error_log("Headers: " . json_encode($headers));
-        error_log("Data: {$updateData}");
-        error_log("HTTP Code: {$httpCode}");
-        error_log("Curl Error: {$curlError}");
-        error_log("Response First 200 chars: " . substr($response, 0, 200));
-        error_log("Verbose Log: " . substr($verbose, 0, 500)); // First 500 chars of verbose
-
-        // Check if it's the claims list response (indicating HR3 not processing PUT correctly)
-        $isClaimsList = false;
-        if ($response && substr(trim($response), 0, 1) === '[') { // JSON array starts with [
-            $possibleClaims = json_decode($response, true);
-            if (is_array($possibleClaims) && !empty($possibleClaims) &&
-                isset($possibleClaims[0]['claim_id'])) {
-                $isClaimsList = true;
-            }
-        }
-
-        // Check for 405 Method Not Allowed error (very specific configuration issue)
-        if ($httpCode === 405) {
-            // Log failed HR3 claim status update due to 405 error
-            Logger::getInstance()->logUserAction(
-                'failed_hr3_claim_status_update',
-                'hr3_integrations',
-                $claimId,
-                ['status' => 'Approved'],
-                [
-                    'attempted_status' => $newStatus,
-                    'sync_result' => 'failed',
-                    'error_type' => 'method_not_allowed_405',
-                    'http_code' => $httpCode,
-                    'note' => 'HR3 server configured to block PUT requests'
-                ]
-            );
-
-            echo json_encode([
-                'success' => false,
-                'error' => 'HR3 API returns HTTP 405 (Method Not Allowed) for PUT requests',
-                'http_code' => $httpCode,
-                'note' => 'HR3 web server is explicitly configured to BLOCK PUT requests. This is a server configuration issue.',
-                'solution' => 'Configure Apache/nginx to allow PUT requests. Add the appropriate directives below.',
-                'detailed_solution' => [
-                    'apache_htaccess' => 'Add to HR3 .htaccess: <LimitExcept GET POST HEAD>deny from all</LimitExcept>',
-                    'nginx_location' => 'Add to nginx config: location /api/claimsApi.php { limit_except GET POST PUT PATCH { deny all; } }',
-                    'apache_vhost' => 'Add to Apache VirtualHost/VirtualDirectory: <Directory "/hr3/api/path"> AllowMethods GET POST PUT PATCH HEAD </Directory>'
-                ]
-            ]);
-        } elseif ($isClaimsList) {
-            // Log failed HR3 claim status update attempt
-            Logger::getInstance()->logUserAction(
-                'failed_hr3_claim_status_update',
-                'hr3_integrations',
-                $claimId,
-                ['status' => 'Approved'],
-                [
-                    'attempted_status' => $newStatus,
-                    'sync_result' => 'failed',
-                    'error_type' => 'server_config_issue',
-                    'http_code' => $httpCode,
-                    'note' => 'HR3 server returning claims list instead of processing PUT requests'
-                ]
-            );
-
-            // HR3 is returning claims list instead of processing PUT
-            echo json_encode([
-                'success' => false,
-                'error' => 'HR3 API not processing PUT requests correctly - returning claims list instead of update response',
-                'http_code' => $httpCode,
-                'note' => 'HR3 server may not be configured properly for PUT requests. Disbursement created locally.',
-                'debug_info' => [
-                    'response_starts_with' => substr($response, 0, 50),
-                    'is_json_array' => true,
-                    'likely_claims_list' => true
-                ]
-            ]);
-        } elseif (!$curlError && $httpCode === 200) {
-            $result = json_decode($response, true);
-
-            // HR3 API returns success message on successful update
-            if ($result && isset($result['status']) && $result['status'] === 'success') {
-                // Log successful HR3 claim status update
-                Logger::getInstance()->logUserAction(
-                    'updated_hr3_claim_status',
-                    'hr3_integrations',
-                    $claimId,
-                    ['status' => 'Approved'],
-                    [
-                        'status' => $newStatus,
-                        'sync_result' => 'successful',
-                        'hr3_response' => $result
-                    ]
-                );
-
-                echo json_encode([
-                    'success' => true,
-                    'message' => 'HR3 claim status successfully updated to "' . $newStatus . '"',
-                    'claim_id' => $claimId,
-                    'new_status' => $newStatus,
-                    'hr3_response' => $result
-                ]);
-            } else {
-                // If HR3 API returns an error (like claim not found or wrong status)
-                echo json_encode([
-                    'success' => false,
-                    'error' => 'HR3 API rejected the update: ' . ($result['error'] ?? 'Unknown error'),
-                    'hr3_response' => $result,
-                    'http_code' => $httpCode,
-                    'note' => 'Check if claim exists and is in "Approved" status.'
-                ]);
-            }
-        } else {
-            // Log failed HR3 claim status update due to network/HTTP error
-            Logger::getInstance()->logUserAction(
-                'failed_hr3_claim_status_update',
-                'hr3_integrations',
-                $claimId,
-                ['status' => 'Approved'],
-                [
-                    'attempted_status' => $newStatus,
-                    'sync_result' => 'failed',
-                    'error_type' => 'connection_error',
-                    'http_code' => $httpCode,
-                    'curl_error' => $curlError,
-                    'note' => 'Network or HTTP error connecting to HR3 API'
-                ]
-            );
-
-            // Network or HTTP error
-            $errorMsg = $curlError ?: "HTTP $httpCode";
-            echo json_encode([
-                'success' => false,
-                'error' => 'Failed to connect to HR3 API: ' . $errorMsg,
-                'claim_id' => $claimId,
-                'attempted_status' => $newStatus,
-                'http_code' => $httpCode,
-                'note' => 'Disbursement will still be created locally.'
-            ]);
-        }
-        exit;
-    }
-
-    // Default response for other actions
-    if ($action === 'execute') {
-        echo json_encode([
-            'success' => false,
-            'error' => 'Integration action not implemented in simplified endpoint'
-        ]);
-    } else {
-        echo json_encode([
-            'success' => false,
-            'error' => 'Action not supported in simplified endpoint'
-        ]);
-    }
-
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => 'System Error: ' . $e->getMessage()
-    ]);
 }
+?>

@@ -1366,7 +1366,7 @@ $db = Database::getInstance()->getConnection();
         // Load budgets
         async function loadBudgets() {
             try {
-                const response = await fetch('admin/api/budgets.php');
+                const response = await fetch('api/budgets.php');
                 const data = await response.json();
 
                 if (data.error) {
@@ -1423,7 +1423,7 @@ $db = Database::getInstance()->getConnection();
         // Load allocations
         async function loadAllocations() {
             try {
-                const response = await fetch('admin/api/budgets.php?action=allocations');
+                const response = await fetch('api/budgets.php?action=allocations');
                 const data = await response.json();
 
                 if (data.error) {
@@ -1532,7 +1532,7 @@ $db = Database::getInstance()->getConnection();
                 const trackingPeriodSelect = document.querySelector('#tracking select');
                 const period = trackingPeriodSelect ? trackingPeriodSelect.value : 'year_to_date';
                 const trackingParams = new URLSearchParams({ action: 'tracking', period });
-                const response = await fetch(`admin/api/budgets.php?${trackingParams.toString()}`);
+                const response = await fetch(`api/budgets.php?${trackingParams.toString()}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2673,7 +2673,7 @@ $db = Database::getInstance()->getConnection();
         // Load alerts
         async function loadAlerts() {
             try {
-                const response = await fetch('admin/api/budgets.php?action=alerts');
+                const response = await fetch('api/budgets.php?action=alerts');
                 const data = await response.json();
 
                 if (data.error) {
@@ -3297,3 +3297,4 @@ $db = Database::getInstance()->getConnection();
 </body>
                             </div>
                             </div>
+
