@@ -556,18 +556,25 @@ class HR3Integration extends BaseIntegration {
 
             $claims = isset($data['claims']) ? $data['claims'] : (is_array($data) ? $data : []);
             if (!is_array($claims)) {
-                throw new Exception('Invalid HR3 API response');
+                throw new Exception('Invalid HR3 API response: claims is not an array');
             }
 
-            // Filter only approved claims
+            // Return all claims (don't filter by status - let UI decide which to process)
+            // Filter only approved claims if status is present
             $approvedClaims = array_filter($claims, function($claim) {
-                return isset($claim['status']) && strtolower($claim['status']) === 'approved';
+                // If no status field, include the claim
+                if (!isset($claim['status'])) {
+                    return true;
+                }
+                // If status is set, only include approved claims
+                return strtolower($claim['status']) === 'approved';
             });
 
-            return $approvedClaims;
+            Logger::getInstance()->info('HR3 getApprovedClaims retrieved ' . count($approvedClaims) . ' claims from ' . count($claims) . ' total');
+            return array_values($approvedClaims); // Re-index array
         } catch (Exception $e) {
             Logger::getInstance()->error('HR3 getApprovedClaims failed: ' . $e->getMessage());
-            return [];
+            throw $e; // Re-throw to let the integration API handle it
         }
     }
 

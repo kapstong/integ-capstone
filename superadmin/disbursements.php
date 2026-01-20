@@ -1077,37 +1077,36 @@ body {
             const tbody = document.getElementById('claimsTableBody');
             const normalizedClaims = normalizeClaimsPayload(claims);
 
+            console.log('displayHR3Claims received:', normalizedClaims);
+
             if (!normalizedClaims || normalizedClaims.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No claims yet</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No claims available</td></tr>';
                 return;
             }
 
             tbody.innerHTML = '';
 
-            // Filter only approved claims and sort by created_at descending
-            const approvedClaims = normalizedClaims.filter(claim => claim.status === 'Approved')
-                                        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            // Show all claims (not just approved) - let user decide which to process
+            const sortedClaims = normalizedClaims.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
-            if (approvedClaims.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No approved claims ready for payment processing</td></tr>';
-                return;
-            }
-
-            approvedClaims.forEach(claim => {
-                const amount = parseFloat(claim.total_amount || 0);
-                const statusBadge = claim.status === 'Approved' ? '<span class="badge bg-success">Approved</span>' : '<span class="badge bg-secondary">' + claim.status + '</span>';
+            sortedClaims.forEach(claim => {
+                const amount = parseFloat(claim.total_amount || claim.amount || 0);
+                const status = claim.status || 'Pending';
+                const statusBadge = status === 'Approved' 
+                    ? '<span class="badge bg-success">Approved</span>' 
+                    : '<span class="badge bg-warning text-dark">' + status + '</span>';
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><strong>${claim.claim_id}</strong></td>
-                    <td>${claim.employee_name}</td>
-                    <td>${claim.status === 'Approved' ? 'Approved Claim' : claim.status}</td>
+                    <td><strong>${claim.claim_id || claim.id || 'N/A'}</strong></td>
+                    <td>${claim.employee_name || claim.employee || 'N/A'}</td>
+                    <td>${statusBadge}</td>
                     <td><strong>₱${amount.toFixed(2)}</strong> ${claim.currency_code ? '(' + claim.currency_code + ')' : ''}</td>
                     <td>${window.formatDate(claim.created_at)}</td>
-                    <td>${claim.remarks || 'No remarks'}</td>
+                    <td>${claim.remarks || claim.description || 'No remarks'}</td>
                     <td>
-                        <button class="btn btn-success btn-sm" onclick="processHR3Claim('${claim.claim_id}', '${claim.employee_name}', ${amount}, '${claim.remarks || ''}', '${claim.currency_code || 'PHP'}')">
-                            <i class="fas fa-money-bill-wave me-1"></i>Process Payment
+                        <button class="btn btn-success btn-sm" onclick="processHR3Claim('${claim.claim_id || claim.id}', '${claim.employee_name || claim.employee}', ${amount}, '${(claim.remarks || claim.description || '').replace(/'/g, "\\'")}', '${claim.currency_code || 'PHP'}')">
+                            <i class="fas fa-money-bill-wave me-1"></i>Process
                         </button>
                     </td>
                 `;
