@@ -223,6 +223,37 @@ header('Content-Type: application/javascript');
         filtersSection.style.display = filtersSection.style.display === 'none' ? 'block' : 'none';
     }
 
+    // Dynamically populate status filter based on actual data
+    function populateStatusFilter(disbursements) {
+        const statusSelect = document.getElementById('filterStatus');
+        if (!statusSelect) return;
+
+        // Extract unique statuses from the data
+        const uniqueStatuses = [...new Set(disbursements.map(d => d.status || 'pending'))];
+        
+        // Sort statuses alphabetically
+        uniqueStatuses.sort();
+
+        // Preserve current selected value
+        const currentValue = statusSelect.value;
+
+        // Clear options except the first one (All Status)
+        statusSelect.innerHTML = '<option value="">All Status</option>';
+
+        // Add all unique statuses from the data
+        uniqueStatuses.forEach(status => {
+            const option = document.createElement('option');
+            option.value = status;
+            option.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+            statusSelect.appendChild(option);
+        });
+
+        // Restore previous selection if it still exists
+        if (currentValue && Array.from(statusSelect.options).some(opt => opt.value === currentValue)) {
+            statusSelect.value = currentValue;
+        }
+    }
+
     function showAddDisbursementModal() {
         document.getElementById('disbursementForm').reset();
         document.getElementById('disbursementId').value = '';
@@ -443,6 +474,7 @@ header('Content-Type: application/javascript');
 
                 if (response.ok) {
                     renderDisbursementsTable(data);
+                    populateStatusFilter(data);
                 } else {
                     if (data.error) {
                         const tbody = document.getElementById('disbursementsTableBody');

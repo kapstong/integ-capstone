@@ -468,9 +468,6 @@ body {
                                 <label class="form-label">Status</label>
                                 <select class="form-select" id="filterStatus" onchange="applyFilters()">
                                     <option value="">All Status</option>
-                                    <option value="completed">Completed</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="cancelled">Cancelled</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
