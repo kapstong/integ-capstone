@@ -55,7 +55,7 @@ $action = ($method === 'POST') ? ($_POST['action'] ?? '') : ($_GET['action'] ?? 
 $isSuperadmin = isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'super_admin';
 $canExecuteIntegrations = $auth->hasPermission('settings.edit') || $isSuperadmin;
 
-if (!$canExecuteIntegrations && !$auth->hasPermission('settings.edit')) {
+if (!$canExecuteIntegrations) {
     http_response_code(403);
     echo json_encode(['error' => 'Access denied']);
     exit;
