@@ -52,8 +52,8 @@ $integrationManager = APIIntegrationManager::getInstance();
 $action = ($method === 'POST') ? ($_POST['action'] ?? '') : ($_GET['action'] ?? '');
 
 // Allow superadmin to execute integration actions without settings.edit permission
-$isSuperadmin = isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'admin';
-$canExecuteIntegrations = $auth->hasPermission('settings.edit') || ($isSuperadmin && $action === 'execute');
+$isSuperadmin = isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'super_admin';
+$canExecuteIntegrations = $auth->hasPermission('settings.edit') || $isSuperadmin;
 
 if (!$canExecuteIntegrations && !$auth->hasPermission('settings.edit')) {
     http_response_code(403);
@@ -384,4 +384,3 @@ function getIntegrationLogs($limit = 50) {
     }
 }
 ?>
-
