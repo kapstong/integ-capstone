@@ -1471,6 +1471,27 @@ body {
                 const canApprove = Boolean(payroll.can_approve) || ['processed', 'success', 'pending', 'pending approval', 'for approval'].includes(statusKey);
 
                 const row = document.createElement('tr');
+                let actionsHtml = '';
+                
+                // Show approve/reject buttons only for payroll that can be approved
+                if (canApprove) {
+                    actionsHtml = `
+                        <button class="btn btn-success btn-sm me-2" onclick="updatePayrollApproval(this, '${payroll.payroll_id}', 'approve')">
+                            <i class="fas fa-check me-1"></i>Approve
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="updatePayrollApproval(this, '${payroll.payroll_id}', 'reject')">
+                            <i class="fas fa-times me-1"></i>Reject
+                        </button>
+                    `;
+                } else {
+                    // For already processed payroll, show view details button
+                    actionsHtml = `
+                        <button class="btn btn-info btn-sm" onclick="viewPayrollDetails(this, '${payroll.payroll_id}')">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </button>
+                    `;
+                }
+                
                 row.innerHTML = `
                     <td><strong>${payroll.period_display || payroll.payroll_period || 'N/A'}</strong></td>
                     <td><strong class="text-success">PHP ${totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
@@ -1478,16 +1499,7 @@ body {
                     <td>${payroll.submitted_by || 'N/A'}</td>
                     <td>${submittedAt}</td>
                     <td><span class="badge ${canApprove ? 'bg-info' : 'bg-secondary'}">${statusText}</span></td>
-                    <td>
-                        ${canApprove ? `
-                            <button class="btn btn-success btn-sm me-2" onclick="updatePayrollApproval(this, '${payroll.payroll_id}', 'approve')">
-                                <i class="fas fa-check me-1"></i>Approve
-                            </button>
-                            <button class="btn btn-danger btn-sm" onclick="updatePayrollApproval(this, '${payroll.payroll_id}', 'reject')">
-                                <i class="fas fa-times me-1"></i>Reject
-                            </button>
-                        ` : '<span class="text-muted">N/A</span>'}
-                    </td>
+                    <td>${actionsHtml}</td>
                 `;
                 tbody.appendChild(row);
             });
@@ -1565,6 +1577,13 @@ body {
                     btn.innerHTML = originalText;
                 }
             }
+        };
+
+        // View payroll details
+        window.viewPayrollDetails = function(buttonEl, payrollId) {
+            // Show a simple alert with the payroll ID
+            // Can be expanded to show a modal with full details
+            window.showAlert('Payroll ID: ' + payrollId + ' is already processed and approved.', 'info');
         };
 
         // Auto-load payroll data on page load
