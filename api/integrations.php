@@ -135,17 +135,27 @@ try {
                         }
                     }
 
-                    $result = $integrationManager->executeIntegrationAction($integrationName, $actionName, $params);
-                    if (is_array($result) && isset($result['success']) && $result['success'] === false) {
+                    try {
+                        $result = $integrationManager->executeIntegrationAction($integrationName, $actionName, $params);
+                        if (is_array($result) && isset($result['success']) && $result['success'] === false) {
+                            http_response_code(400);
+                            echo json_encode([
+                                'success' => false,
+                                'error' => $result['error'] ?? $result['message'] ?? 'Integration action failed',
+                                'result' => $result
+                            ]);
+                            exit;
+                        }
+
+                        echo json_encode(['success' => true, 'result' => $result]);
+                    } catch (Exception $e) {
+                        http_response_code(400);
                         echo json_encode([
                             'success' => false,
-                            'error' => $result['error'] ?? $result['message'] ?? 'Integration action failed',
-                            'result' => $result
+                            'error' => $e->getMessage()
                         ]);
                         exit;
                     }
-
-                    echo json_encode(['success' => true, 'result' => $result]);
                     break;
 
                 default:

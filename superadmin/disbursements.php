@@ -1382,11 +1382,15 @@ body {
                     // Try to get error details from response
                     const responseText = await response.text();
                     let errorMessage = `HTTP ${response.status}`;
-                    try {
-                        const errorData = JSON.parse(responseText);
-                        errorMessage = errorData.error || errorData.message || errorMessage;
-                    } catch (e) {
-                        errorMessage = responseText || errorMessage;
+                    if (responseText) {
+                        try {
+                            const errorData = JSON.parse(responseText);
+                            errorMessage = errorData.error || errorData.message || errorMessage;
+                        } catch (e) {
+                            errorMessage = responseText;
+                        }
+                    } else if (response.status === 500) {
+                        errorMessage = 'HR4 Integration not configured or API is unreachable';
                     }
                     throw new Error(errorMessage);
                 }
@@ -1396,6 +1400,9 @@ body {
                 if (result.success && result.result) {
                     window.displayHR4Payroll(result.result);
                     // No success notifications.
+                } else if (result.success && (!result.result || result.result.length === 0)) {
+                    // Integration call succeeded but returned empty data
+                    window.displayHR4Payroll([]);
                 } else {
                     window.showAlert('Error loading payroll: ' + (result.error || 'No payroll data found'), 'danger');
                 }
@@ -1495,6 +1502,20 @@ body {
                         })
                     })
                 });
+
+                if (!response.ok) {
+                    const responseText = await response.text();
+                    let errorMessage = `HTTP ${response.status}`;
+                    if (responseText) {
+                        try {
+                            const errorData = JSON.parse(responseText);
+                            errorMessage = errorData.error || errorData.message || errorMessage;
+                        } catch (e) {
+                            errorMessage = responseText;
+                        }
+                    }
+                    throw new Error(errorMessage);
+                }
 
                 const result = await response.json();
 
