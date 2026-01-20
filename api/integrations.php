@@ -150,9 +150,11 @@ try {
                         echo json_encode(['success' => true, 'result' => $result]);
                     } catch (Exception $e) {
                         http_response_code(400);
+                        error_log("Integration Error: {$integrationName}->{$actionName}: " . $e->getMessage());
                         echo json_encode([
                             'success' => false,
-                            'error' => $e->getMessage()
+                            'error' => $e->getMessage(),
+                            'debug' => ['integration' => $integrationName, 'action' => $actionName]
                         ]);
                         exit;
                     }
