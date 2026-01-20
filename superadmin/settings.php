@@ -1537,9 +1537,36 @@ $departments = [
             );
         }
 
+        // Tab persistence functionality
+        function saveActiveTab(tabId) {
+            localStorage.setItem('superadminSettingsActiveTab', tabId);
+        }
+
+        function restoreActiveTab() {
+            const savedTab = localStorage.getItem('superadminSettingsActiveTab');
+            if (savedTab) {
+                const tabElement = document.getElementById(savedTab + '-tab');
+                if (tabElement) {
+                    const tab = new bootstrap.Tab(tabElement);
+                    tab.show();
+                    return true;
+                }
+            }
+            return false;
+        }
+
         // Initialize trash on page load when trash tab is active
         document.addEventListener('DOMContentLoaded', function() {
-            // ... existing code ...
+            // Restore active tab
+            const tabRestored = restoreActiveTab();
+
+            // Save active tab when it changes
+            document.querySelectorAll('#settingsTabs .nav-link').forEach(tab => {
+                tab.addEventListener('shown.bs.tab', function(e) {
+                    const tabId = e.target.id.replace('-tab', '');
+                    saveActiveTab(tabId);
+                });
+            });
 
             // Load trash items if on trash tab
             const trashTab = document.getElementById('trash-tab');

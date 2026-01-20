@@ -99,12 +99,13 @@ function sanitizeUser($user) {
 try {
     switch ($method) {
         case 'GET':
-            if (isset($_GET['id'])) {
+            $userId = $_GET['user_id'] ?? $_GET['id'] ?? null;
+            if ($userId) {
                 // Get single user (exclude soft-deleted)
                 $stmt = $db->query(
                     "SELECT id, username, email, full_name, role, status, last_login, created_at, department, phone
                      FROM users WHERE id = ? AND deleted_at IS NULL",
-                    [$_GET['id']]
+                    [$userId]
                 );
                 $user = $stmt->fetch();
                 echo json_encode($user ? sanitizeUser($user) : ['error' => 'User not found']);
