@@ -1090,35 +1090,6 @@ $departments = [
             .catch(error => showDepartmentsAlert('Error: ' + error.message, 'danger'));
         }
 
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('show');
-        }
-
-        function toggleSidebarDesktop() {
-            const sidebar = document.getElementById('sidebar');
-            const content = document.querySelector('.content');
-            const arrow = document.getElementById('sidebarArrow');
-            const toggle = document.querySelector('.sidebar-toggle');
-            const logoImg = document.querySelector('.navbar-brand img');
-            sidebar.classList.toggle('sidebar-collapsed');
-            const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
-            if (isCollapsed) {
-                logoImg.src = 'atieralogo2.png';
-                content.style.marginLeft = '120px';
-                arrow.classList.remove('fa-chevron-left');
-                arrow.classList.add('fa-chevron-right');
-                toggle.style.left = '110px';
-            } else {
-                logoImg.src = 'atieralogo.png';
-                content.style.marginLeft = '300px';
-                arrow.classList.remove('fa-chevron-right');
-                arrow.classList.add('fa-chevron-left');
-                toggle.style.left = '290px';
-            }
-        }
-
-
         // Roles & Permissions Functions
         function showRolesAlert(message, type) {
             const alert = `

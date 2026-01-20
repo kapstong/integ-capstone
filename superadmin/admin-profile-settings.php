@@ -329,13 +329,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background-color: #f8f9fa;
             color: #495057;
         }
-        .content {
-            margin-left: 120px;
-            padding: 20px;
-            transition: margin-left 0.3s ease;
-            position: relative;
-            z-index: 1;
-        }
         .nav-tabs {
             border-bottom: 2px solid #e9ecef;
             background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
