@@ -739,61 +739,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../includes/alert-modal.js"></script>
     <script src="../includes/privacy_mode.js?v=8"></script>
-    <script>
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('show');
-        }
-
-        function toggleSidebarDesktop() {
-            const sidebar = document.getElementById('sidebar');
-            const content = document.querySelector('.content');
-            const arrow = document.getElementById('sidebarArrow');
-            const toggle = document.querySelector('.sidebar-toggle');
-            const logoImg = document.querySelector('.navbar-brand img');
-            sidebar.classList.toggle('sidebar-collapsed');
-            const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
-            if (isCollapsed) {
-                logoImg.src = 'atieralogo2.png';
-                content.style.marginLeft = '120px';
-                arrow.classList.remove('fa-chevron-left');
-                arrow.classList.add('fa-chevron-right');
-                toggle.style.left = '110px';
-            } else {
-                logoImg.src = 'atieralogo.png';
-                content.style.marginLeft = '300px';
-                arrow.classList.remove('fa-chevron-right');
-                arrow.classList.add('fa-chevron-left');
-                toggle.style.left = '290px';
-            }
-        }
-
-        // Initialize sidebar state on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            const sidebar = document.getElementById('sidebar');
-            const content = document.querySelector('.content');
-            const arrow = document.getElementById('sidebarArrow');
-            const toggle = document.querySelector('.sidebar-toggle');
-            const logoImg = document.querySelector('.navbar-brand img');
-            // Default state is collapsed (consistent with other admin pages)
-            const isCollapsed = localStorage.getItem('sidebarCollapsed') !== 'false';
-            if (isCollapsed) {
-                sidebar.classList.add('sidebar-collapsed');
-                logoImg.src = 'atieralogo2.png';
-                content.style.marginLeft = '120px';
-                arrow.classList.remove('fa-chevron-left');
-                arrow.classList.add('fa-chevron-right');
-                toggle.style.left = '110px';
-            } else {
-                sidebar.classList.remove('sidebar-collapsed');
-                logoImg.src = 'atieralogo.png';
-                content.style.marginLeft = '300px';
-                arrow.classList.remove('fa-chevron-right');
-                arrow.classList.add('fa-chevron-left');
-                toggle.style.left = '290px';
-            }
-        });
-    </script>
 
     </div>
     <!-- End content div -->
