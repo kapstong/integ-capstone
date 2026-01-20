@@ -1516,7 +1516,7 @@ $departments = [
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <button type="button" class="btn btn-outline-info btn-sm" onclick="viewTrashItem(${item.id})">
+                                            <button type="button" class="btn btn-outline-info btn-sm" onclick="viewTrashItem(${item.id}, '${item.item_type}')">
                                                 <i class="fas fa-eye"></i> View
                                             </button>
                                             <button type="button" class="btn btn-outline-success btn-sm" onclick="restoreTrashItem(${item.id}, '${item.item_type}')">
@@ -1553,8 +1553,13 @@ $departments = [
                 });
         }
 
-        function viewTrashItem(itemId) {
-            fetch(`../api/trash.php?action=view_item&item_id=${itemId}`)
+        function viewTrashItem(itemId, itemType) {
+            const params = new URLSearchParams({
+                action: 'view_item',
+                item_id: itemId,
+                item_type: itemType || ''
+            });
+            fetch(`../api/trash.php?${params.toString()}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {

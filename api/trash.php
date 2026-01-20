@@ -121,14 +121,24 @@ try {
 
                 case 'view_item':
                     $itemId = $_GET['item_id'] ?? null;
+                    $itemType = $_GET['item_type'] ?? null;
                     if (!$itemId) {
                         http_response_code(400);
                         echo json_encode(['success' => false, 'error' => 'Item ID required']);
                         exit;
                     }
 
-                    $stmt = $db->query("SELECT * FROM deleted_items WHERE id = ?", [$itemId]);
-                    $item = $stmt->fetch();
+                    if ($itemType === 'soft_deleted_user') {
+                        $stmt = $db->query("
+                            SELECT id, username, email, full_name, role, status, deleted_at
+                            FROM users
+                            WHERE id = ? AND deleted_at IS NOT NULL
+                        ", [$itemId]);
+                        $item = $stmt->fetch();
+                    } else {
+                        $stmt = $db->query("SELECT * FROM deleted_items WHERE id = ?", [$itemId]);
+                        $item = $stmt->fetch();
+                    }
 
                     if (!$item) {
                         http_response_code(404);
