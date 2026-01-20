@@ -1220,12 +1220,15 @@ body {
         window.markHR3ClaimAsPaid = async function(claimId) {
             // This would call the HR3 API to update claim status to "Paid"
             // Implementation depends on HR3 API capabilities
-            const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=updateClaimStatus', {
+            const response = await fetch('../api/integrations.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: new URLSearchParams({
+                    action: 'execute',
+                    integration_name: 'hr3',
+                    action_name: 'updateClaimStatus',
                     claim_id: claimId,
                     status: 'Paid'
                 })
