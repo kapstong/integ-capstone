@@ -18,7 +18,8 @@ if (!empty($firstName) || !empty($lastName)) {
     $displayName = $userName;
 }
 
-$profileLink = $isUserArea ? 'profile.php' : 'admin-profile-settings.php';
+$isSuperAdminArea = strpos($scriptName, '/superadmin/') !== false;
+$profileLink = $isUserArea ? 'profile.php' : ($isSuperAdminArea ? 'superadmin-profile-settings.php' : 'admin-profile-settings.php');
 $settingsLink = $isUserArea ? 'settings.php' : 'settings.php';
 
 // Get user role for display
@@ -68,4 +69,3 @@ $userRoleDisplay = ucwords(str_replace('_', ' ', $userRoleDisplay));
         </div>
     </div>
 </nav>
-
