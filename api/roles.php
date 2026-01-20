@@ -210,13 +210,27 @@ try {
                     $currentRoles = $permManager->getUserRoles();
                     $currentRoleIds = array_column($currentRoles, 'role_id');
 
-                    // Determine which role to assign based on selected permissions
-                    $roleToAssign = null;
+                    // Get all available roles from database
                     $allRoles = $permManager->getAllRoles();
+                    $availableRoleNames = array_column($allRoles, 'name');
 
-                    // If no permissions selected, assign 'staff' role
+                    // Determine which role to assign based on selected permissions and available roles
+                    $roleToAssign = null;
+
+                    // If no permissions selected, find a basic role
                     if (empty($selectedPermissions)) {
-                        $roleToAssign = 'staff';
+                        // Look for roles like 'staff', 'user', or 'basic'
+                        $basicRoles = ['staff', 'user', 'basic', 'member'];
+                        foreach ($basicRoles as $basicRole) {
+                            if (in_array($basicRole, $availableRoleNames)) {
+                                $roleToAssign = $basicRole;
+                                break;
+                            }
+                        }
+                        // If no basic role found, use the first available role
+                        if (!$roleToAssign && !empty($availableRoleNames)) {
+                            $roleToAssign = $availableRoleNames[0];
+                        }
                     } else {
                         // Check if selected permissions match admin/super_admin level permissions
                         $adminPermissions = [
@@ -233,16 +247,42 @@ try {
                             }
                         }
 
-                        // Assign 'admin' role if admin permissions selected, otherwise 'staff'
-                        $roleToAssign = $hasAdminPermissions ? 'admin' : 'staff';
+                        // Look for admin/super admin roles in the available roles
+                        if ($hasAdminPermissions) {
+                            $adminRoleNames = ['super_admin', 'admin', 'administrator', 'super administrator', 'Super Administrator'];
+                            foreach ($adminRoleNames as $adminRole) {
+                                if (in_array($adminRole, $availableRoleNames)) {
+                                    $roleToAssign = $adminRole;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // If no admin role found or no admin permissions, use basic role
+                        if (!$roleToAssign) {
+                            $basicRoles = ['staff', 'user', 'basic', 'member'];
+                            foreach ($basicRoles as $basicRole) {
+                                if (in_array($basicRole, $availableRoleNames)) {
+                                    $roleToAssign = $basicRole;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // If still no role found, use the first available role
+                        if (!$roleToAssign && !empty($availableRoleNames)) {
+                            $roleToAssign = $availableRoleNames[0];
+                        }
                     }
 
                     // Find the role ID by name
                     $roleIdToAssign = null;
-                    foreach ($allRoles as $role) {
-                        if ($role['name'] === $roleToAssign) {
-                            $roleIdToAssign = $role['id'];
-                            break;
+                    if ($roleToAssign) {
+                        foreach ($allRoles as $role) {
+                            if ($role['name'] === $roleToAssign) {
+                                $roleIdToAssign = $role['id'];
+                                break;
+                            }
                         }
                     }
 
