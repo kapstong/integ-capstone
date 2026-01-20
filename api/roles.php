@@ -195,23 +195,48 @@ try {
                     $userId = $data['user_id'];
                     $selectedPermissions = $data['permissions'] ?? [];
 
-                    // NOTE: The current system uses role-based permissions.
-                    // Individual user permissions are not supported in this implementation.
-                    // Permissions are assigned to roles, and users get permissions through their roles.
-                    //
-                    // For now, we'll log the attempted permission update but not actually change anything.
-                    // In a future update, we could implement direct user-permission assignments.
+                    // Get current user roles
+                    $currentRoles = $permManager->getUserRoles();
+                    $currentRoleIds = array_column($currentRoles, 'role_id');
+
+                    // Find roles that contain the selected permissions
+                    $allRoles = $permManager->getAllRoles();
+                    $rolesToAssign = [];
+
+                    foreach ($allRoles as $role) {
+                        $rolePermissions = $permManager->getRolePermissions($role['id']);
+                        $rolePermissionNames = array_column($rolePermissions, 'name');
+
+                        // Check if this role contains all selected permissions
+                        if (!empty($selectedPermissions) && !array_diff($selectedPermissions, $rolePermissionNames)) {
+                            $rolesToAssign[] = $role['id'];
+                            break; // Take the first matching role
+                        }
+                    }
+
+                    // Remove current roles
+                    foreach ($currentRoleIds as $roleId) {
+                        $permManager->removeRole($userId, $roleId);
+                    }
+
+                    // Assign new roles
+                    $assignedRoles = [];
+                    foreach ($rolesToAssign as $roleId) {
+                        $result = $permManager->assignRole($userId, $roleId);
+                        if ($result['success']) {
+                            $assignedRoles[] = $roleId;
+                        }
+                    }
 
                     Logger::getInstance()->logUserAction(
-                        'Attempted to update user permissions (not implemented)',
+                        'Updated user permissions via role assignment',
                         'users',
                         $userId,
-                        null,
-                        ['selected_permissions' => $selectedPermissions, 'note' => 'Role-based permissions system - individual user permissions not supported']
+                        ['old_roles' => $currentRoleIds],
+                        ['new_roles' => $assignedRoles, 'selected_permissions' => $selectedPermissions]
                     );
 
-                    // Return success to prevent the user update from failing
-                    echo json_encode(['success' => true, 'message' => 'User permissions update logged (role-based system)']);
+                    echo json_encode(['success' => true, 'message' => 'User permissions updated successfully']);
                     break;
 
                 case 'initialize_defaults':
