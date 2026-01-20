@@ -1474,27 +1474,27 @@ $departments = [
                 'Delete User',
                 `Are you sure you want to delete user "${username}"? This action will soft delete the user.`,
                 async () => {
-                try {
-                    const response = await fetch('../superapi/users.php', {
-                        method: 'DELETE',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            action: 'delete_user',
-                            user_id: userId
-                        })
-                    });
-                    const data = await response.json();
-                    if (data.success) {
-                        showUsersAlert('User deleted successfully', 'success');
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        showUsersAlert(data.error || 'Failed to delete user', 'danger');
+                    try {
+                        const response = await fetch('../superapi/users.php', {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                action: 'delete_user',
+                                user_id: userId
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            showUsersAlert('User deleted successfully', 'success');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            showUsersAlert(data.error || 'Failed to delete user', 'danger');
+                        }
+                    } catch (error) {
+                        showUsersAlert('Error: ' + error.message, 'danger');
                     }
-                } catch (error) {
-                    showUsersAlert('Error: ' + error.message, 'danger');
-                }
                 }
             );
         }
