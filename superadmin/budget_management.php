@@ -1627,6 +1627,9 @@ $db = Database::getInstance()->getConnection();
                 });
 
                 if (!response.ok) {
+                    // Log the error response for debugging
+                    const errorText = await response.text();
+                    console.error('HR3 Claims Error Response:', response.status, errorText);
                     // HR3 claims integration not available - silently skip
                     return;
                 }
