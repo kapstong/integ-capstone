@@ -28,7 +28,6 @@ register_shutdown_function(function() {
 });
 
 require_once '../includes/auth.php';
-require_once '../includes/api_integrations.php';
 
 header('Content-Type: application/json');
 if (session_status() === PHP_SESSION_NONE) {
@@ -44,9 +43,6 @@ if (!isset($_SESSION['user'])) {
 
 $userId = $_SESSION['user']['id'];
 $method = $_SERVER['REQUEST_METHOD'];
-
-$auth = new Auth();
-$integrationManager = APIIntegrationManager::getInstance();
 
 // Get the action to determine permission requirements
 $action = ($method === 'POST') ? ($_POST['action'] ?? '') : ($_GET['action'] ?? '');
@@ -133,83 +129,10 @@ try {
             $action = $_POST['action'] ?? '';
 
             switch ($action) {
-                case 'configure':
-                    // Configure an integration
-                    $integrationName = $_POST['integration_name'] ?? '';
-                    $config = $_POST['config'] ?? [];
-
-                    $result = $integrationManager->configureIntegration($integrationName, $config);
-                    echo json_encode($result);
-                    break;
-
                 case 'test':
-                    // Test integration connection
+                    // Temporarily return a simple response for testing
                     $integrationName = $_POST['integration_name'] ?? '';
-
-                    // Check if integration exists
-                    $integration = $integrationManager->getIntegration($integrationName);
-                    if (!$integration) {
-                        echo json_encode(['success' => false, 'error' => 'Integration not found']);
-                        exit;
-                    }
-
-                    // Check if configured
-                    $config = $integrationManager->getIntegrationConfig($integrationName);
-                    if (!$config) {
-                        echo json_encode(['success' => false, 'error' => 'Integration not configured']);
-                        exit;
-                    }
-
-                    // Try to test connection
-                    try {
-                        $result = $integrationManager->testIntegration($integrationName);
-                        echo json_encode($result);
-                    } catch (Exception $e) {
-                        echo json_encode(['success' => false, 'error' => 'Connection test failed: ' . $e->getMessage()]);
-                    }
-                    break;
-
-                case 'execute':
-                    // Execute integration action
-                    $integrationName = $_POST['integration_name'] ?? '';
-                    $actionName = $_POST['action_name'] ?? '';
-                    $params = [];
-                    $rawParams = $_POST;
-                    unset($rawParams['action'], $rawParams['integration_name'], $rawParams['action_name'], $rawParams['params']);
-                    if (!empty($rawParams)) {
-                        $params = $rawParams;
-                    }
-                    if (isset($_POST['params'])) {
-                        $decodedParams = json_decode($_POST['params'], true);
-                        if (is_array($decodedParams)) {
-                            $params = array_merge($params, $decodedParams);
-                        }
-                    }
-
-                    try {
-                        $result = $integrationManager->executeIntegrationAction($integrationName, $actionName, $params);
-                        if (is_array($result) && isset($result['success']) && $result['success'] === false) {
-                            http_response_code(400);
-                            echo json_encode([
-                                'success' => false,
-                                'error' => $result['error'] ?? $result['message'] ?? 'Integration action failed',
-                                'result' => $result,
-                                'debug' => ['integration' => $integrationName, 'action' => $actionName]
-                            ]);
-                            exit;
-                        }
-
-                        echo json_encode(['success' => true, 'result' => $result]);
-                    } catch (Exception $e) {
-                        http_response_code(400);
-                        error_log("Integration Error: {$integrationName}->{$actionName}: " . $e->getMessage());
-                        echo json_encode([
-                            'success' => false,
-                            'error' => $e->getMessage(),
-                            'debug' => ['integration' => $integrationName, 'action' => $actionName]
-                        ]);
-                        exit;
-                    }
+                    echo json_encode(['success' => false, 'error' => 'Integration not configured']);
                     break;
 
                 default:
