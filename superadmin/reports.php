@@ -1492,6 +1492,11 @@ $db = Database::getInstance()->getConnection();
                     throw new Error('Invalid cash flow response format');
                 }
 
+                // Check if cash_flow data exists
+                if (!data.cash_flow) {
+                    throw new Error('Cash flow data is not available. Please ensure there are transactions in the system.');
+                }
+
                 // Store data globally for export
                 currentCashFlowData = data;
 
@@ -2325,7 +2330,22 @@ $db = Database::getInstance()->getConnection();
 
         function loadAnalyticsSummary() {
             fetch('../api/reports.php?type=analytics_summary')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        // Analytics summary endpoint not available, show placeholder
+                        const container = document.getElementById('analyticsSection');
+                        if (container) {
+                            container.innerHTML = `
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Analytics summary is not available. Please use the individual reports.
+                                </div>
+                            `;
+                        }
+                        throw new Error('Analytics endpoint not available');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.error) {
                         showAlert(data.error, 'danger');
@@ -2396,7 +2416,14 @@ $db = Database::getInstance()->getConnection();
                         }
                     });
                 })
-                .catch(error => showAlert('Error: ' + error.message, 'danger'));
+                .catch(error => {
+                    // Analytics endpoint not available - this is expected if endpoint doesn't exist
+                    if (error.message === 'Analytics endpoint not available') {
+                        console.log('Analytics summary endpoint not configured');
+                        return;
+                    }
+                    showAlert('Error loading analytics: ' + error.message, 'danger');
+                });
         }
 
         document.addEventListener('DOMContentLoaded', function() {
