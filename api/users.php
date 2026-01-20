@@ -269,7 +269,11 @@ try {
             // Log the action (disabled temporarily)
             // Logger::getInstance()->logUserAction('Updated user', 'users', $_GET['id'], $oldValues, $data);
 
-            if ($affected > 0) {
+            // Check if update was successful (affected > 0) or if no changes were made (affected = 0 but no error)
+            if ($affected >= 0) {
+                // affected = 0 means no changes were made (data was already correct)
+                // affected > 0 means rows were updated
+                // affected = -1 or other negative values would indicate error
                 echo json_encode(['success' => true, 'message' => 'User updated successfully']);
             } else {
                 echo json_encode(['success' => false, 'error' => 'Failed to update user']);
