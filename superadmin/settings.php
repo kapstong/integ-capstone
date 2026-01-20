@@ -1346,22 +1346,28 @@ $departments = [
                 console.log('Permissions API response ok:', permissionResponse.ok);
                 console.log('Permissions API response headers:', Object.fromEntries(permissionResponse.headers.entries()));
 
+                const clonedResponse = permissionResponse.clone();
                 let permissionResult;
                 try {
-                    // Clone the response BEFORE trying to parse JSON to avoid consuming the stream
-                    const clonedResponse = permissionResponse.clone();
                     permissionResult = await permissionResponse.json();
                     console.log('Permissions API response data:', permissionResult);
                 } catch (jsonError) {
                     console.error('Failed to parse permissions API JSON response:', jsonError);
+                    let textResponse = '';
                     try {
-                        // Use the cloned response to get raw text since original was consumed
-                        const textResponse = await clonedResponse.text();
+                        textResponse = await clonedResponse.text();
                         console.error('Raw permissions API response:', textResponse);
                     } catch (textError) {
                         console.error('Could not read response text either:', textError);
                     }
+                    if (!textResponse.trim()) {
+                        throw new Error(`Invalid JSON response from permissions API (empty body, status ${permissionResponse.status})`);
+                    }
                     throw new Error('Invalid JSON response from permissions API');
+                }
+
+                if (!permissionResponse.ok) {
+                    throw new Error(permissionResult.error || `Permissions API failed with status ${permissionResponse.status}`);
                 }
 
                 if (!permissionResult.success) {
