@@ -24,7 +24,7 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
 ?>
 
 <!-- Global Sidebar Navigation -->
-<div class="sidebar sidebar-collapsed" id="sidebar">
+<div class="sidebar" id="sidebar">
     <div class="p-3">
         <h5 class="navbar-brand"><img src="atieralogo.png" alt="Atiera Logo" style="height: 100px;"></h5>
     </div>

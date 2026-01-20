@@ -734,7 +734,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="../includes/alert-modal.js"></script>
     <script src="../includes/privacy_mode.js?v=8"></script>
 
-    </div>
     <!-- End content div -->
 
 </body>
