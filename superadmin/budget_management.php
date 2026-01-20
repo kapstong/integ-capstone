@@ -1532,7 +1532,7 @@ $db = Database::getInstance()->getConnection();
                 const trackingPeriodSelect = document.querySelector('#tracking select');
                 const period = trackingPeriodSelect ? trackingPeriodSelect.value : 'year_to_date';
                 const trackingParams = new URLSearchParams({ action: 'tracking', period });
-                const response = await fetch(`api/budgets.php?${trackingParams.toString()}`);
+                const response = await fetch(`../api/budgets.php?${trackingParams.toString()}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -1614,7 +1614,17 @@ $db = Database::getInstance()->getConnection();
             }
 
             try {
-                const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=getClaimsBreakdown');
+                const response = await fetch('../api/integrations.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        action: 'execute',
+                        integration_name: 'hr3',
+                        action_name: 'getClaimsBreakdown'
+                    })
+                });
                 const payload = await response.json();
 
                 if (!payload.success) {
@@ -1961,7 +1971,7 @@ $db = Database::getInstance()->getConnection();
 
         async function updateBudget(budgetId, formData) {
             try {
-                const response = await fetch(`api/budgets.php?id=${budgetId}`, {
+                const response = await fetch(`../api/budgets.php?id=${budgetId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2113,7 +2123,7 @@ $db = Database::getInstance()->getConnection();
 
         async function updateAdjustment(adjustmentId, formData) {
             try {
-                const response = await fetch(`api/budgets.php?id=${adjustmentId}`, {
+                const response = await fetch(`../api/budgets.php?id=${adjustmentId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2154,7 +2164,7 @@ $db = Database::getInstance()->getConnection();
                 'Are you sure you want to delete this adjustment? This action cannot be undone.',
                 async () => {
             try {
-                const response = await fetch(`api/budgets.php?action=adjustment&id=${adjustmentId}`, {
+                const response = await fetch(`../api/budgets.php?action=adjustment&id=${adjustmentId}`, {
                     method: 'DELETE'
                 });
 
@@ -2556,7 +2566,7 @@ $db = Database::getInstance()->getConnection();
                     'budget_categories',
                     'hr3_integrations'
                 ];
-                const response = await fetch(`api/audit.php?table_name=${encodeURIComponent(tables.join(','))}`);
+                const response = await fetch(`../api/audit.php?table_name=${encodeURIComponent(tables.join(','))}`);
                 const logs = await response.json();
 
                 if (!Array.isArray(logs) || logs.length === 0) {
