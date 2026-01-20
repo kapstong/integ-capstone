@@ -4,6 +4,10 @@
  * Framework for integrating with third-party services and APIs
  */
 
+// Required includes
+require_once __DIR__ . '/logger.php';
+require_once __DIR__ . '/database.php';
+
 class APIIntegrationManager {
     private static $instance = null;
     private $db;
