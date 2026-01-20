@@ -197,14 +197,19 @@ try {
                     break;
 
                 case 'update_user_permissions':
+                    // Start output buffering to ensure clean JSON output
+                    ob_start();
+
                     try {
                         if (empty($data['user_id'])) {
+                            ob_clean();
                             http_response_code(400);
                             echo json_encode(['success' => false, 'error' => 'User ID is required']);
+                            ob_end_flush();
                             exit;
                         }
 
-                        $userId = $data['user_id'];
+                        $userId = (int) $data['user_id'];
                         $selectedPermissions = $data['permissions'] ?? [];
 
                         // Ensure selectedPermissions is an array
@@ -214,22 +219,27 @@ try {
 
                         // Get all available permissions
                         $allPermissions = $permManager->getAllPermissions();
+                        if (!is_array($allPermissions)) {
+                            throw new Exception('Failed to load permissions list');
+                        }
+
                         $permissionMap = array_column($allPermissions, 'id', 'name');
 
-                        // Create user_permissions table if it doesn't exist
+                        // Create user_permissions table if it doesn't exist (simplified)
+                        $createTableSQL = "
+                            CREATE TABLE IF NOT EXISTS user_permissions (
+                                id INT AUTO_INCREMENT PRIMARY KEY,
+                                user_id INT NOT NULL,
+                                permission_id INT NOT NULL,
+                                assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        ";
+
                         try {
-                            $permManager->db->exec("
-                                CREATE TABLE IF NOT EXISTS user_permissions (
-                                    id INT AUTO_INCREMENT PRIMARY KEY,
-                                    user_id INT NOT NULL,
-                                    permission_id INT NOT NULL,
-                                    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                    INDEX idx_user_id (user_id),
-                                    INDEX idx_permission_id (permission_id)
-                                )
-                            ");
+                            $result = $permManager->db->exec($createTableSQL);
                         } catch (Exception $e) {
                             error_log("Table creation error: " . $e->getMessage());
+                            // Continue anyway
                         }
 
                         // Clear existing user permissions
@@ -238,49 +248,72 @@ try {
                             $stmt->execute([$userId]);
                         } catch (Exception $e) {
                             error_log("Failed to clear user permissions: " . $e->getMessage());
+                            // Continue anyway
                         }
 
                         // Assign selected permissions to user
                         $assignedPermissions = [];
+                        $errors = [];
+
                         foreach ($selectedPermissions as $permName) {
                             if (isset($permissionMap[$permName])) {
                                 try {
                                     $stmt = $permManager->db->prepare("
                                         INSERT INTO user_permissions (user_id, permission_id) VALUES (?, ?)
                                     ");
-                                    $stmt->execute([$userId, $permissionMap[$permName]]);
-                                    $assignedPermissions[] = $permName;
+                                    $result = $stmt->execute([$userId, $permissionMap[$permName]]);
+                                    if ($result) {
+                                        $assignedPermissions[] = $permName;
+                                    } else {
+                                        $errors[] = "Failed to assign $permName";
+                                    }
                                 } catch (Exception $e) {
                                     error_log("Failed to assign permission $permName to user $userId: " . $e->getMessage());
+                                    $errors[] = "Failed to assign $permName: " . $e->getMessage();
                                 }
                             } else {
-                                error_log("Permission '$permName' not found in permission map");
+                                $errors[] = "Permission '$permName' not found";
                             }
                         }
 
-                        Logger::getInstance()->logUserAction(
-                            'Updated user permissions directly',
-                            'users',
-                            $userId,
-                            null,
-                            ['assigned_permissions' => $assignedPermissions, 'selected_permissions' => $selectedPermissions]
-                        );
+                        // Log the action
+                        try {
+                            Logger::getInstance()->logUserAction(
+                                'Updated user permissions directly',
+                                'users',
+                                $userId,
+                                null,
+                                [
+                                    'assigned_permissions' => $assignedPermissions,
+                                    'selected_permissions' => $selectedPermissions,
+                                    'errors' => $errors
+                                ]
+                            );
+                        } catch (Exception $e) {
+                            error_log("Failed to log user action: " . $e->getMessage());
+                        }
 
+                        // Clear output buffer and send response
+                        ob_clean();
                         echo json_encode([
                             'success' => true,
                             'message' => 'User permissions updated successfully',
                             'assigned_count' => count($assignedPermissions),
-                            'selected_count' => count($selectedPermissions)
+                            'selected_count' => count($selectedPermissions),
+                            'errors' => $errors
                         ]);
 
                     } catch (Exception $e) {
                         error_log("update_user_permissions error: " . $e->getMessage());
+                        ob_clean();
                         http_response_code(500);
                         echo json_encode([
                             'success' => false,
                             'error' => 'Failed to update user permissions: ' . $e->getMessage()
                         ]);
                     }
+
+                    ob_end_flush();
                     break;
 
                 case 'initialize_defaults':
