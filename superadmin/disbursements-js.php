@@ -330,8 +330,8 @@ header('Content-Type: application/javascript');
         try {
             const method = disbursementData.disbursement_id ? 'PUT' : 'POST';
             const url = disbursementData.disbursement_id
-                ? `api/disbursements.php?id=${disbursementData.disbursement_id}`
-                : 'api/disbursements.php';
+                ? `../api/disbursements.php?id=${disbursementData.disbursement_id}`
+                : '../api/disbursements.php';
 
             const response = await fetch(url, {
                 method: method,
