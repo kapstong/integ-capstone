@@ -31,7 +31,7 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
         top: 0;
         width: 300px;
         height: 100vh;
-        background-color: #232c37;
+        background-color: #1f2936;
         z-index: 20000;
         overflow-y: auto;
         transition: all 0.3s ease;
@@ -487,7 +487,7 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
 </button>
 
 <!-- Global Sidebar Navigation -->
-<div class="sidebar" id="sidebar" style="display:block; left:0; width:300px; z-index:20000; background-color:#1e2936;">
+<div class="sidebar" id="sidebar" style="display:block; left:0; width:300px; z-index:20000; background-color:#1f2936;">
     <div class="sidebar-nav-logo">
         <img src="atieralogo.png" alt="Atiera Logo">
     </div>
@@ -575,4 +575,3 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
         }
     });
 </script>
-
