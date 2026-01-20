@@ -1277,8 +1277,8 @@ $departments = [
                 permissions: formData.getAll('permissions[]')
             };
 
-            fetch('../api/users.php', {
-                method: 'POST',
+            fetch(`../api/users.php?id=${userData.user_id}`, {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },

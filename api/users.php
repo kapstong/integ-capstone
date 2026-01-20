@@ -108,7 +108,11 @@ try {
                     [$userId]
                 );
                 $user = $stmt->fetch();
-                echo json_encode($user ? sanitizeUser($user) : ['error' => 'User not found']);
+                if ($user) {
+                    echo json_encode(['success' => true, 'user' => sanitizeUser($user)]);
+                } else {
+                    echo json_encode(['success' => false, 'error' => 'User not found']);
+                }
             } else {
                 // Get all users with optional filters (exclude soft-deleted users)
                 $where = ["deleted_at IS NULL"];
@@ -265,7 +269,11 @@ try {
             // Log the action (disabled temporarily)
             // Logger::getInstance()->logUserAction('Updated user', 'users', $_GET['id'], $oldValues, $data);
 
-            echo json_encode(['success' => $affected > 0]);
+            if ($affected > 0) {
+                echo json_encode(['success' => true, 'message' => 'User updated successfully']);
+            } else {
+                echo json_encode(['success' => false, 'error' => 'Failed to update user']);
+            }
             break;
 
         case 'DELETE':
