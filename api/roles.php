@@ -28,9 +28,12 @@ $permManager->loadUserPermissions($userId);
 
 // Check if user has permission to manage roles OR is super admin
 $userRole = $_SESSION['user']['role'] ?? '';
-if (!$permManager->hasPermission('roles.view') && $userRole !== 'super_admin') {
+$userHasRolesView = $permManager->hasPermission('roles.view');
+
+// Allow access if user has roles.view permission OR is super admin
+if (!$userHasRolesView && !in_array($userRole, ['super_admin', 'superadmin'])) {
     http_response_code(403);
-    echo json_encode(['error' => 'Access denied']);
+    echo json_encode(['error' => 'Access denied - user role: ' . $userRole . ', has roles.view: ' . ($userHasRolesView ? 'yes' : 'no')]);
     exit;
 }
 
