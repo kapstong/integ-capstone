@@ -55,10 +55,21 @@ try {
                     $permManager->loadUserPermissions($_GET['user_id']);
                     $roles = $permManager->getUserRoles();
                     $permissions = $permManager->getUserPermissions();
+
+                    // Debug information
+                    $debug = [
+                        'user_id' => $_GET['user_id'],
+                        'roles_assigned' => count($roles),
+                        'role_names' => array_column($roles, 'role_name'),
+                        'permissions_count' => count($permissions),
+                        'permissions_list' => $permissions
+                    ];
+
                     echo json_encode([
                         'success' => true,
                         'roles' => $roles,
-                        'permissions' => $permissions
+                        'permissions' => $permissions,
+                        'debug' => $debug
                     ]);
                     break;
 

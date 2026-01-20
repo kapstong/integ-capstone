@@ -1225,12 +1225,23 @@ $departments = [
                         fetch(`../api/roles.php?action=user_roles&user_id=${userId}`)
                             .then(response => response.json())
                             .then(userData => {
+                                console.log('User permissions API response:', userData);
+
+                                if (userData.debug) {
+                                    console.log('User roles debug info:', userData.debug);
+                                    console.log('User has roles:', userData.debug.role_names);
+                                    console.log('User permissions count:', userData.debug.permissions_count);
+                                    console.log('User permissions list:', userData.debug.permissions_list);
+                                }
+
                                 const userPermissions = userData.success ? userData.permissions : [];
 
                                 // Build permissions checkboxes
                                 let html = '<div class="row">';
                                 allPermissions.forEach(permission => {
                                     const isChecked = userPermissions.includes(permission.name);
+                                    console.log(`Permission "${permission.name}": ${isChecked ? 'CHECKED' : 'unchecked'}`);
+
                                     html += `
                                         <div class="col-md-6">
                                             <div class="form-check">
@@ -1250,6 +1261,7 @@ $departments = [
                                 container.innerHTML = html;
                             })
                             .catch(error => {
+                                console.error('Error loading user permissions:', error);
                                 container.innerHTML = '<div class="text-danger">Error loading user permissions: ' + error.message + '</div>';
                             });
                     } else {
@@ -1265,8 +1277,6 @@ $departments = [
         document.getElementById('editUserForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            console.log('=== Starting user update process ===');
-
             const formData = new FormData(this);
             const userId = formData.get('user_id');
             const userData = {
@@ -1279,12 +1289,7 @@ $departments = [
             };
             const selectedPermissions = formData.getAll('permissions[]');
 
-            console.log('User ID:', userId);
-            console.log('User data to send:', userData);
-            console.log('Selected permissions:', selectedPermissions);
-
             try {
-                console.log('=== Updating user data ===');
                 // Update basic user data first
                 const userResponse = await fetch(`../api/users.php?id=${userId}`, {
                     method: 'PUT',
@@ -1294,20 +1299,12 @@ $departments = [
                     body: JSON.stringify(userData)
                 });
 
-                console.log('User API response status:', userResponse.status);
-                console.log('User API response ok:', userResponse.ok);
-
                 const userResult = await userResponse.json();
-                console.log('User API response data:', userResult);
 
                 if (!userResult.success) {
-                    console.error('User update failed:', userResult.error);
                     throw new Error(userResult.error || 'Failed to update user data');
                 }
 
-                console.log('=== User data update successful ===');
-
-                console.log('=== Updating user permissions ===');
                 // Update user permissions separately
                 const permissionResponse = await fetch('../api/roles.php', {
                     method: 'POST',
@@ -1321,19 +1318,11 @@ $departments = [
                     })
                 });
 
-                console.log('Permissions API response status:', permissionResponse.status);
-                console.log('Permissions API response ok:', permissionResponse.ok);
-
                 const permissionResult = await permissionResponse.json();
-                console.log('Permissions API response data:', permissionResult);
 
                 if (!permissionResult.success) {
-                    console.error('Permissions update failed:', permissionResult.error);
                     throw new Error(permissionResult.error || 'Failed to update user permissions');
                 }
-
-                console.log('=== Permissions update successful ===');
-                console.log('=== User update process completed successfully ===');
 
                 showUsersAlert('User updated successfully', 'success');
                 const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
@@ -1341,10 +1330,6 @@ $departments = [
                 setTimeout(() => location.reload(), 1500);
 
             } catch (error) {
-                console.error('=== User update process failed ===');
-                console.error('Error details:', error);
-                console.error('Error message:', error.message);
-                console.error('Error stack:', error.stack);
                 showUsersAlert('Error: ' + error.message, 'danger');
             }
         });
