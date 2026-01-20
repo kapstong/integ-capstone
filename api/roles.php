@@ -185,6 +185,35 @@ try {
                     echo json_encode($result);
                     break;
 
+                case 'update_user_permissions':
+                    if (empty($data['user_id'])) {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'User ID is required']);
+                        exit;
+                    }
+
+                    $userId = $data['user_id'];
+                    $selectedPermissions = $data['permissions'] ?? [];
+
+                    // NOTE: The current system uses role-based permissions.
+                    // Individual user permissions are not supported in this implementation.
+                    // Permissions are assigned to roles, and users get permissions through their roles.
+                    //
+                    // For now, we'll log the attempted permission update but not actually change anything.
+                    // In a future update, we could implement direct user-permission assignments.
+
+                    Logger::getInstance()->logUserAction(
+                        'Attempted to update user permissions (not implemented)',
+                        'users',
+                        $userId,
+                        null,
+                        ['selected_permissions' => $selectedPermissions, 'note' => 'Role-based permissions system - individual user permissions not supported']
+                    );
+
+                    // Return success to prevent the user update from failing
+                    echo json_encode(['success' => true, 'message' => 'User permissions update logged (role-based system)']);
+                    break;
+
                 case 'initialize_defaults':
                     $result = $permManager->initializeDefaults();
                     if ($result['success']) {

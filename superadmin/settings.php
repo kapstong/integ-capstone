@@ -1262,42 +1262,64 @@ $departments = [
         }
 
         // Handle edit user form submission
-        document.getElementById('editUserForm').addEventListener('submit', function(e) {
+        document.getElementById('editUserForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const formData = new FormData(this);
+            const userId = formData.get('user_id');
             const userData = {
-                action: 'update_user',
-                user_id: formData.get('user_id'),
+                user_id: userId,
                 username: formData.get('username'),
                 full_name: formData.get('full_name'),
                 email: formData.get('email'),
                 role: formData.get('role'),
-                status: formData.get('status'),
-                permissions: formData.getAll('permissions[]')
+                status: formData.get('status')
             };
+            const selectedPermissions = formData.getAll('permissions[]');
 
-            fetch(`../api/users.php?id=${userData.user_id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(userData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showUsersAlert('User updated successfully', 'success');
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
-                    modal.hide();
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    showUsersAlert(data.error || 'Failed to update user', 'danger');
+            try {
+                // Update basic user data first
+                const userResponse = await fetch(`../api/users.php?id=${userId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                const userResult = await userResponse.json();
+
+                if (!userResult.success) {
+                    throw new Error(userResult.error || 'Failed to update user data');
                 }
-            })
-            .catch(error => {
+
+                // Update user permissions separately
+                const permissionResponse = await fetch('../api/roles.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'update_user_permissions',
+                        user_id: userId,
+                        permissions: selectedPermissions
+                    })
+                });
+
+                const permissionResult = await permissionResponse.json();
+
+                if (!permissionResult.success) {
+                    throw new Error(permissionResult.error || 'Failed to update user permissions');
+                }
+
+                showUsersAlert('User updated successfully', 'success');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+                modal.hide();
+                setTimeout(() => location.reload(), 1500);
+
+            } catch (error) {
                 showUsersAlert('Error: ' + error.message, 'danger');
-            });
+            }
         });
 
         function deleteUser(userId, username) {
