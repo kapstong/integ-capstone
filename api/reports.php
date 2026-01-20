@@ -335,17 +335,24 @@ function generateCashFlowStatement($db, $dateFrom, $dateTo, $format) {
         'report_type' => 'Cash Flow Statement',
         'date_from' => $dateFrom,
         'date_to' => $dateTo,
+        'start_date' => $dateFrom,
+        'end_date' => $dateTo,
         'generated_at' => date('Y-m-d H:i:s'),
-        'operating_activities' => [
-            'net_profit' => $netProfit,
-            'adjustments' => 0, // Simplified
-            'net_cash_operating' => $operatingCashFlow
-        ],
-        'investing_activities' => [
-            'net_cash_investing' => 0 // Simplified
-        ],
-        'financing_activities' => [
-            'net_cash_financing' => 0 // Simplified
+        'cash_flow' => [
+            'operating_activities' => [
+                'net_profit' => $netProfit,
+                'adjustments' => 0, // Simplified
+                'amount' => $operatingCashFlow,
+                'net_cash_operating' => $operatingCashFlow
+            ],
+            'investing_activities' => [
+                'amount' => 0, // Simplified
+                'net_cash_investing' => 0 // Simplified
+            ],
+            'financing_activities' => [
+                'amount' => 0, // Simplified
+                'net_cash_financing' => 0 // Simplified
+            ]
         ],
         'net_cash_flow' => $operatingCashFlow
     ];

@@ -1492,11 +1492,6 @@ $db = Database::getInstance()->getConnection();
                     throw new Error('Invalid cash flow response format');
                 }
 
-                // Check if cash_flow data exists
-                if (!data.cash_flow) {
-                    throw new Error('Cash flow data is not available. Please ensure there are transactions in the system.');
-                }
-
                 // Store data globally for export
                 currentCashFlowData = data;
 
