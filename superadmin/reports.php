@@ -835,19 +835,19 @@ $db = Database::getInstance()->getConnection();
                                       <div class="col-md-4">
                                           <div class="p-3 border rounded">
                                               <div class="text-muted">Month-to-Date Revenue</div>
-                                              <div class="fw-bold fs-4" id="analyticsMtdRevenue">ƒ,ñ0</div>
+                                              <div class="fw-bold fs-4" id="analyticsMtdRevenue">₱ 0.00</div>
                                           </div>
                                       </div>
                                       <div class="col-md-4">
                                           <div class="p-3 border rounded">
                                               <div class="text-muted">Month-to-Date Expenses</div>
-                                              <div class="fw-bold fs-4 text-danger" id="analyticsMtdExpenses">ƒ,ñ0</div>
+                                              <div class="fw-bold fs-4 text-danger" id="analyticsMtdExpenses">₱ 0.00</div>
                                           </div>
                                       </div>
                                       <div class="col-md-4">
                                           <div class="p-3 border rounded">
                                               <div class="text-muted">Net Operating Result</div>
-                                              <div class="fw-bold fs-4" id="analyticsNetResult">ƒ,ñ0</div>
+                                              <div class="fw-bold fs-4" id="analyticsNetResult">₱ 0.00</div>
                                           </div>
                                       </div>
                                   </div>
