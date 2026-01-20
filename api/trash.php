@@ -85,7 +85,7 @@ try {
                     $stmt = $db->query("
                         SELECT t.id, t.table_name, t.record_id, t.deleted_by, t.deleted_at, t.auto_delete_at,
                                u.full_name as deleted_by_name
-                        FROM trash t
+                        FROM deleted_items t
                         LEFT JOIN users u ON t.deleted_by = u.id
                         ORDER BY t.deleted_at DESC
                     ");
@@ -102,7 +102,7 @@ try {
                         exit;
                     }
 
-                    $stmt = $db->query("SELECT * FROM trash WHERE id = ?", [$itemId]);
+                    $stmt = $db->query("SELECT * FROM deleted_items WHERE id = ?", [$itemId]);
                     $item = $stmt->fetch();
 
                     if (!$item) {
@@ -139,7 +139,7 @@ try {
                     }
 
                     // Get trash item
-                    $stmt = $db->query("SELECT * FROM trash WHERE id = ?", [$itemId]);
+                    $stmt = $db->query("SELECT * FROM deleted_items WHERE id = ?", [$itemId]);
                     $trashItem = $stmt->fetch();
 
                     if (!$trashItem) {
@@ -152,7 +152,7 @@ try {
                     // For now, we'll just remove from trash
                     // In a full implementation, you'd restore the data to the original table
 
-                    $affected = $db->execute("DELETE FROM trash WHERE id = ?", [$itemId]);
+                    $affected = $db->execute("DELETE FROM deleted_items WHERE id = ?", [$itemId]);
 
                     // Log the action
                     Logger::getInstance()->logUserAction('Restored item from trash', 'trash', $itemId, $trashItem, null);
@@ -185,7 +185,7 @@ try {
                     }
 
                     // Get trash item for logging
-                    $stmt = $db->query("SELECT * FROM trash WHERE id = ?", [$itemId]);
+                    $stmt = $db->query("SELECT * FROM deleted_items WHERE id = ?", [$itemId]);
                     $trashItem = $stmt->fetch();
 
                     if (!$trashItem) {
@@ -194,7 +194,7 @@ try {
                         exit;
                     }
 
-                    $affected = $db->execute("DELETE FROM trash WHERE id = ?", [$itemId]);
+                    $affected = $db->execute("DELETE FROM deleted_items WHERE id = ?", [$itemId]);
 
                     // Log the action
                     Logger::getInstance()->logUserAction('Permanently deleted item from trash', 'trash', $itemId, $trashItem, null);
@@ -204,10 +204,10 @@ try {
 
                 case 'empty_trash':
                     // Get all items for logging
-                    $stmt = $db->query("SELECT COUNT(*) as count FROM trash");
+                    $stmt = $db->query("SELECT COUNT(*) as count FROM deleted_items");
                     $count = $stmt->fetch()['count'];
 
-                    $affected = $db->execute("DELETE FROM trash");
+                    $affected = $db->execute("DELETE FROM deleted_items");
 
                     // Log the action
                     Logger::getInstance()->logUserAction('Emptied trash', 'trash', null, ['items_deleted' => $count], null);

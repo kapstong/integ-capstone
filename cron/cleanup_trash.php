@@ -12,7 +12,7 @@ $db = Database::getInstance()->getConnection();
 try {
     // Get expired items that are past their auto-delete date
     $stmt = $db->prepare("
-        SELECT * FROM trash
+        SELECT * FROM deleted_items
         WHERE auto_delete_at <= NOW()
     ");
     $stmt->execute();
@@ -36,8 +36,8 @@ try {
                 $stmt->execute([$recordId]);
             }
 
-            // Remove from trash table
-            $stmt = $db->prepare("DELETE FROM trash WHERE id = ?");
+            // Remove from deleted_items table
+            $stmt = $db->prepare("DELETE FROM deleted_items WHERE id = ?");
             $stmt->execute([$item['id']]);
 
             $deletedCount++;
