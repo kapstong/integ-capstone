@@ -1066,7 +1066,8 @@ $departments = [
         }
 
         function syncDepartmentIntegrations() {
-            ['hr3', 'hr4', 'logistics1', 'logistics2'].forEach(checkDepartmentIntegrationStatus);
+            const departments = ['hr3', 'hr4', 'logistics1', 'logistics2'];
+            departments.forEach(checkDepartmentIntegrationStatus);
         }
 
         function testDepartmentIntegration(name) {
