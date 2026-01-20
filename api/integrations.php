@@ -23,8 +23,14 @@ $method = $_SERVER['REQUEST_METHOD'];
 $auth = new Auth();
 $integrationManager = APIIntegrationManager::getInstance();
 
-// Require settings edit permission for integrations
-if (!$auth->hasPermission('settings.edit')) {
+// Get the action to determine permission requirements
+$action = ($method === 'POST') ? ($_POST['action'] ?? '') : ($_GET['action'] ?? '');
+
+// Allow superadmin to execute integration actions without settings.edit permission
+$isSuperadmin = isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'admin';
+$canExecuteIntegrations = $auth->hasPermission('settings.edit') || ($isSuperadmin && $action === 'execute');
+
+if (!$canExecuteIntegrations && !$auth->hasPermission('settings.edit')) {
     http_response_code(403);
     echo json_encode(['error' => 'Access denied']);
     exit;
