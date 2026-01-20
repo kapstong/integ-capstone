@@ -117,7 +117,7 @@ class Auth {
         try {
             $stmt = $this->db->query(
                 "SELECT id, username, email, full_name, role, status, last_login, created_at
-                 FROM users WHERE id = ?",
+                 FROM users WHERE id = ? AND deleted_at IS NULL",
                 [$id]
             );
             return $stmt->fetch();
@@ -131,7 +131,7 @@ class Auth {
         try {
             return $this->db->select(
                 "SELECT id, username, email, full_name, role, status, last_login, created_at
-                 FROM users ORDER BY created_at DESC"
+                 FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC"
             );
         } catch (Exception $e) {
             error_log("Get all users error: " . $e->getMessage());
