@@ -159,8 +159,8 @@ header('Content-Type: application/javascript');
         async function loadVouchers(disbursementId = null) {
             try {
                 const url = disbursementId ?
-                    `api/disbursements.php?action=get_vouchers&disbursement_id=${disbursementId}` :
-                    'api/disbursements.php?action=get_vouchers';
+                    `../api/disbursements.php?action=get_vouchers&disbursement_id=${disbursementId}` :
+                    '../api/disbursements.php?action=get_vouchers';
 
                 const response = await fetch(url, {
                     credentials: 'include'

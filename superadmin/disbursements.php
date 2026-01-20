@@ -1009,8 +1009,16 @@ body {
             }
 
             try {
-                const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=getApprovedClaims', {
-                    method: 'GET',
+                const response = await fetch('../api/integrations.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'execute',
+                        integration_name: 'hr3',
+                        action_name: 'getApprovedClaims'
+                    }),
                     credentials: 'include' // Include cookies for session
                 });
 
@@ -1019,25 +1027,12 @@ body {
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
 
-                let responseText = await response.text();
+                const result = await response.json();
 
-                // Handle PHP warnings/errors that appear before JSON
-                if (responseText.includes('{"success":') || responseText.includes('{"error":')) {
-                    // Extract JSON from mixed HTML/JSON response
-                    const jsonStart = responseText.indexOf('{"success":') !== -1 ?
-                        responseText.indexOf('{"success":') :
-                        responseText.indexOf('{"error":');
-                    if (jsonStart !== -1) {
-                        responseText = responseText.substring(jsonStart);
-                    }
-                }
-
-                const result = JSON.parse(responseText);
-
-                if (Array.isArray(result) && result.length > 0) {
+                if (result.success && result.result) {
+                    window.displayHR3Claims(result.result);
+                } else if (Array.isArray(result) && result.length > 0) {
                     window.displayHR3Claims(result);
-                } else if (result.success || result.result) {
-                    window.displayHR3Claims(result.result || result);
                 } else {
                     window.showAlert('Error loading claims: ' + (result.error || 'No claims found'), 'danger');
                 }
