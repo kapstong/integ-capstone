@@ -186,6 +186,12 @@ $pageTitle = 'Backup & Recovery';
 include 'legacy_header.php';
 ?>
 
+    <?php include '../includes/superadmin_navigation.php'; ?>
+
+    <div class="content">
+        <!-- Top Navbar -->
+        <?php include '../includes/global_navbar.php'; ?>
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
@@ -629,6 +635,8 @@ function formatFrequency(minutes) {
     return `${Math.round(minutes / 10080)} weeks`;
 }
 </script>
+    </div>
+    <!-- End content div -->
 
 <?php include 'legacy_footer.php'; ?>
 

@@ -124,6 +124,12 @@ $pageTitle = 'Two-Factor Authentication';
 include 'legacy_header.php';
 ?>
 
+    <?php include '../includes/superadmin_navigation.php'; ?>
+
+    <div class="content">
+        <!-- Top Navbar -->
+        <?php include '../includes/global_navbar.php'; ?>
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
@@ -491,6 +497,8 @@ setInterval(() => {
     // Could refresh the failed attempts data if needed
 }, 300000);
 </script>
+    </div>
+    <!-- End content div -->
 
 <?php include 'legacy_footer.php'; ?>
 

@@ -100,6 +100,12 @@ $pageTitle = 'Dashboard Customization';
 include 'legacy_header.php';
 ?>
 
+    <?php include '../includes/superadmin_navigation.php'; ?>
+
+    <div class="content">
+        <!-- Top Navbar -->
+        <?php include '../includes/global_navbar.php'; ?>
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
@@ -536,6 +542,9 @@ function showWidgetLibrary() {
     height: 100%;
 }
 </style>
+
+    </div>
+    <!-- End content div -->
 
 <?php include 'legacy_footer.php'; ?>
 

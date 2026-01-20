@@ -15,8 +15,23 @@ if (!isset($_SESSION['user'])) {
 }
 
 $pageTitle = 'External API Documentation';
-require_once 'templates/header.php';
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>External API Documentation - ATIERA Financial Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="../includes/enhanced-ui.css" rel="stylesheet">
+</head>
+<body>
+    <?php include '../includes/superadmin_navigation.php'; ?>
+
+    <div class="content">
+        <!-- Top Navbar -->
+        <?php include '../includes/global_navbar.php'; ?>
 
 <div class="container-fluid">
     <div class="row">
@@ -407,7 +422,15 @@ code {
 }
 </style>
 
-<?php require_once 'templates/footer.php'; ?>
+    </div>
+    <!-- End content div -->
+
+    <?php include '../includes/footer.php'; ?>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../includes/inactivity_timeout.js"></script>
+</body>
+</html>
 
 
 
