@@ -1133,18 +1133,17 @@ body {
 
                 // Step 2: Create disbursement record
                 const disbursementData = {
-                    disbursement_date: new Date().toISOString().split('T')[0],
+                    payment_date: new Date().toISOString().split('T')[0],
                     amount: amount,
                     payment_method: 'bank_transfer', // Default payment method
                     reference_number: `HR3-CLAIM-${claimId}`,
                     payee: employeeName,
-                    purpose: `HR3 Claim Payment: ${description}`,
-                    notes: `Processed from HR3 claim ${claimId} - Status changed to "Paid"`
+                    description: `HR3 Claim Payment: ${description}`
                 };
 
                 // Log HR3 claim processing to audit trail
                 try {
-                    await fetch('../api/audit.php', {
+                    const auditResponse = await fetch('../api/audit.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         credentials: 'include',
@@ -1153,7 +1152,6 @@ body {
                             table_name: 'hr3_claims',
                             record_id: claimId,
                             action_type: 'processed_payment',
-                            description: `Processed HR3 claim payment for ${employeeName} (₱${amount}) - Claim ID: ${claimId}`,
                             old_values: JSON.stringify({ status: 'Approved' }),
                             new_values: JSON.stringify({
                                 status: 'Paid',
@@ -1164,6 +1162,11 @@ body {
                             })
                         })
                     });
+                    
+                    const auditResult = await auditResponse.json();
+                    if (!auditResult.success) {
+                        console.warn('HR3 claim audit logging returned:', auditResult);
+                    }
                 } catch (auditError) {
                     console.warn('HR3 claim audit logging failed:', auditError);
                     // Don't fail the main operation if audit logging fails
@@ -1172,9 +1175,13 @@ body {
                 const response = await fetch('../api/disbursements.php', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Content-Type': 'application/json',
                     },
-                    body: new URLSearchParams(disbursementData)
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        action: 'process_payment',
+                        ...disbursementData
+                    })
                 });
 
                 const result = await response.json();
