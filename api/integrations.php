@@ -4,6 +4,29 @@
  * Handles external API integration operations
  */
 
+// Set error handling
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Server error: ' . $errstr,
+        'debug' => ['file' => $errfile, 'line' => $errline]
+    ]);
+    exit;
+});
+
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== null) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Fatal error: ' . $error['message'],
+            'debug' => ['file' => $error['file'], 'line' => $error['line']]
+        ]);
+    }
+});
+
 require_once '../includes/auth.php';
 require_once '../includes/api_integrations.php';
 
