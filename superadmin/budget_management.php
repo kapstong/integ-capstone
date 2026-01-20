@@ -1607,10 +1607,10 @@ $db = Database::getInstance()->getConnection();
             const trackingBody = document.getElementById('claimsBudgetBody');
             const alertsBody = document.getElementById('claimsOverBudgetBody');
             if (trackingBody) {
-                trackingBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading claims...</td></tr>';
+                trackingBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No claims data available.</td></tr>';
             }
             if (alertsBody) {
-                alertsBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading claims...</td></tr>';
+                alertsBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No claims data available.</td></tr>';
             }
 
             try {
@@ -1627,30 +1627,35 @@ $db = Database::getInstance()->getConnection();
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: Failed to fetch HR3 claims`);
+                    // HR3 claims integration not available - silently skip
+                    return;
                 }
 
                 const text = await response.text();
                 
                 // Check if response is valid JSON
-                if (!text.startsWith('{') && !text.startsWith('[')) {
-                    throw new Error('Invalid response from HR3 integration API');
+                if (!text || (!text.startsWith('{') && !text.startsWith('['))) {
+                    // Invalid response - silently skip
+                    return;
                 }
 
                 const payload = JSON.parse(text);
 
                 if (!payload.success) {
-                    throw new Error(payload.error || 'Failed to load HR3 claims');
+                    // Integration error - silently skip
+                    return;
                 }
 
                 const result = payload.result || {};
                 if (result.success === false) {
-                    throw new Error(result.error || 'Failed to load HR3 claims');
+                    // Integration error - silently skip
+                    return;
                 }
 
                 const breakdown = result.data || result;
                 if (!breakdown || !breakdown.summary) {
-                    throw new Error('No HR3 claims data available');
+                    // No claims data - silently skip
+                    return;
                 }
 
                 currentHr3ClaimsBreakdown = breakdown;
@@ -1658,13 +1663,7 @@ $db = Database::getInstance()->getConnection();
                 renderClaimsOverBudget();
 
             } catch (error) {
-                console.error('Error loading HR3 claims:', error);
-                if (trackingBody) {
-                    trackingBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No claims data available.</td></tr>';
-                }
-                if (alertsBody) {
-                    alertsBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No claims data available.</td></tr>';
-                }
+                // Silently handle any errors - HR3 claims is optional
             }
         }
 
@@ -2443,28 +2442,29 @@ $db = Database::getInstance()->getConnection();
                 const response = await fetch('../api/financials/departments.php');
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    currentDepartments = [];
+                    return;
                 }
                 
                 const text = await response.text();
                 
                 // Check if response is valid JSON
-                if (!text.startsWith('{') && !text.startsWith('[')) {
-                    throw new Error('Invalid response from departments API');
+                if (!text || (!text.startsWith('{') && !text.startsWith('['))) {
+                    currentDepartments = [];
+                    return;
                 }
                 
                 const data = JSON.parse(text);
 
-                if (!data.success) {
-                    throw new Error(data.error || 'Failed to load departments');
+                if (data && data.success && data.departments) {
+                    currentDepartments = data.departments;
+                    populateDepartmentDropdowns(currentDepartments);
+                } else {
+                    currentDepartments = [];
                 }
 
-                currentDepartments = data.departments || [];
-                populateDepartmentDropdowns(currentDepartments);
-
             } catch (error) {
-                console.error('Error loading departments:', error);
-                // Don't show alert - departments is optional
+                // Silently fail - departments is optional
                 currentDepartments = [];
             }
         }
