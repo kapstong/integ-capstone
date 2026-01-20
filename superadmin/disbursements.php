@@ -459,14 +459,14 @@ body {
                     <div class="card-body">
                         <div class="row mb-3">
                             <div class="col-md-12">
-                                <label class="form-label">Search Reference #</label>
-                                <input type="text" class="form-control" id="filterReferenceSearch" placeholder="Enter Reference # or part of it...">
+                                <label class="form-label">Search Reference # <small class="text-muted">(updates as you type)</small></label>
+                                <input type="text" class="form-control" id="filterReferenceSearch" placeholder="Enter Reference # or part of it..." oninput="applyFilters()">
                             </div>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-3">
                                 <label class="form-label">Status</label>
-                                <select class="form-select" id="filterStatus">
+                                <select class="form-select" id="filterStatus" onchange="applyFilters()">
                                     <option value="">All Status</option>
                                     <option value="completed">Completed</option>
                                     <option value="pending">Pending</option>
@@ -475,21 +475,21 @@ body {
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Date From</label>
-                                <input type="date" class="form-control" id="filterDateFrom">
+                                <input type="date" class="form-control" id="filterDateFrom" onchange="applyFilters()">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Date To</label>
-                                <input type="date" class="form-control" id="filterDateTo">
+                                <input type="date" class="form-control" id="filterDateTo" onchange="applyFilters()">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Payee Name</label>
-                                <input type="text" class="form-control" id="filterPayeeName" placeholder="Search by name...">
+                                <label class="form-label">Payee Name <small class="text-muted">(live)</small></label>
+                                <input type="text" class="form-control" id="filterPayeeName" placeholder="Search by name..." oninput="applyFilters()">
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-4">
                                 <label class="form-label">Department/Source</label>
-                                <select class="form-select" id="filterDepartment">
+                                <select class="form-select" id="filterDepartment" onchange="applyFilters()">
                                     <option value="">All Departments</option>
                                     <option value="Payroll">Payroll</option>
                                     <option value="Claims">HR3 Claims</option>
@@ -499,8 +499,7 @@ body {
                             <div class="col-md-8">
                                 <label class="form-label">&nbsp;</label>
                                 <div>
-                                    <button class="btn btn-primary me-2" onclick="applyFilters()">Apply</button>
-                                    <button class="btn btn-outline-secondary" onclick="clearFilters()">Clear</button>
+                                    <button class="btn btn-outline-secondary" onclick="clearFilters()"><i class="fas fa-redo me-1"></i>Clear All Filters</button>
                                 </div>
                             </div>
                         </div>
