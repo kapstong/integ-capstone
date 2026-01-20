@@ -1513,7 +1513,6 @@ try {
                 }
             );
         }
-        }
 
         // Invoice Functions
         async function loadInvoices() {
