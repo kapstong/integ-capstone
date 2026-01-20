@@ -225,7 +225,7 @@ header('Content-Type: application/javascript');
     // View disbursement details
     async function viewDisbursement(id) {
         try {
-            const response = await fetch(`api/disbursements.php?id=${id}`, {
+            const response = await fetch(`../api/disbursements.php?id=${id}`, {
                 credentials: 'include'
             });
             const data = await response.json();
@@ -244,7 +244,7 @@ header('Content-Type: application/javascript');
     // Edit disbursement
     async function editDisbursement(id) {
         try {
-            const response = await fetch(`api/disbursements.php?id=${id}`, {
+            const response = await fetch(`../api/disbursements.php?id=${id}`, {
                 credentials: 'include'
             });
             const data = await response.json();
@@ -283,7 +283,7 @@ header('Content-Type: application/javascript');
             'Are you sure you want to delete this disbursement?',
             async () => {
         try {
-            const response = await fetch(`api/disbursements.php?id=${id}`, {
+            const response = await fetch(`../api/disbursements.php?id=${id}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
@@ -409,7 +409,7 @@ header('Content-Type: application/javascript');
         async function loadDisbursements() {
             try {
                 const params = new URLSearchParams(currentFilters);
-                const response = await fetch(`api/disbursements.php?${params}`, {
+                const response = await fetch(`../api/disbursements.php?${params}`, {
                     credentials: 'include'
                 });
 
@@ -810,7 +810,7 @@ header('Content-Type: application/javascript');
                 // Delete each selected disbursement
                 for (const id of selectedDisbursements) {
                     try {
-                        const response = await fetch(`api/disbursements.php?id=${id}`, {
+                        const response = await fetch(`../api/disbursements.php?id=${id}`, {
                             method: 'DELETE',
                             credentials: 'include'
                         });

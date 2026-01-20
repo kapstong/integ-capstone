@@ -1065,8 +1065,12 @@ $db = Database::getInstance()->getConnection();
                     throw new Error(data.error || `HTTP error! status: ${response.status}`);
                 }
 
-                if (!data.success || data.error) {
-                    throw new Error(data.error || 'Failed to generate income statement');
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                if (!data.report_type) {
+                    throw new Error('Invalid report response format');
                 }
 
                 // Store data globally for export

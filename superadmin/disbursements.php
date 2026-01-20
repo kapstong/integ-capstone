@@ -1383,6 +1383,19 @@ body {
                     credentials: 'include'
                 });
 
+                if (!response.ok) {
+                    // Try to get error details from response
+                    const responseText = await response.text();
+                    let errorMessage = `HTTP ${response.status}`;
+                    try {
+                        const errorData = JSON.parse(responseText);
+                        errorMessage = errorData.error || errorData.message || errorMessage;
+                    } catch (e) {
+                        errorMessage = responseText || errorMessage;
+                    }
+                    throw new Error(errorMessage);
+                }
+
                 const result = await response.json();
 
                 if (result.success && result.result) {
