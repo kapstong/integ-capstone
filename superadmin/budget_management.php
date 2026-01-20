@@ -1359,7 +1359,7 @@ $db = Database::getInstance()->getConnection();
             loadCategories();
             loadAccounts();
             loadVendors();
-            // loadClaimsData(); // HR3 claims integration not implemented
+            loadClaimsData();
             loadAuditTrail();
         });
 
