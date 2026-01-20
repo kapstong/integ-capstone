@@ -23,8 +23,12 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 $permManager = PermissionManager::getInstance();
 
-// Check if user has permission to manage roles
-if (!$permManager->hasPermission('roles.view')) {
+// Load user permissions and roles
+$permManager->loadUserPermissions($userId);
+
+// Check if user has permission to manage roles OR is super admin
+$userRole = $_SESSION['user']['role'] ?? '';
+if (!$permManager->hasPermission('roles.view') && $userRole !== 'super_admin') {
     http_response_code(403);
     echo json_encode(['error' => 'Access denied']);
     exit;
@@ -97,8 +101,8 @@ try {
 
             $action = $data['action'] ?? '';
 
-            // Check if user has manage permission for write operations
-            if (!$permManager->hasPermission('roles.manage')) {
+            // Check if user has manage permission for write operations OR is super admin
+            if (!$permManager->hasPermission('roles.manage') && $userRole !== 'super_admin') {
                 http_response_code(403);
                 echo json_encode(['error' => 'Access denied - manage permission required']);
                 exit;
@@ -207,8 +211,8 @@ try {
             break;
 
         case 'DELETE':
-            // Check if user has manage permission
-            if (!$permManager->hasPermission('roles.manage')) {
+            // Check if user has manage permission OR is super admin
+            if (!$permManager->hasPermission('roles.manage') && $userRole !== 'super_admin') {
                 http_response_code(403);
                 echo json_encode(['error' => 'Access denied - manage permission required']);
                 exit;
@@ -275,4 +279,3 @@ try {
     echo json_encode(['success' => false, 'error' => 'Internal server error']);
 }
 ?>
-
