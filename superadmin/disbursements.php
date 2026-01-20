@@ -457,7 +457,13 @@ body {
                 <!-- Filters Section -->
                 <div id="filtersSection" class="card mb-3" style="display: none;">
                     <div class="card-body">
-                        <div class="row">
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Search Reference #</label>
+                                <input type="text" class="form-control" id="filterReferenceSearch" placeholder="Enter Reference # or part of it...">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
                             <div class="col-md-3">
                                 <label class="form-label">Status</label>
                                 <select class="form-select" id="filterStatus">
@@ -476,6 +482,21 @@ body {
                                 <input type="date" class="form-control" id="filterDateTo">
                             </div>
                             <div class="col-md-3">
+                                <label class="form-label">Payee Name</label>
+                                <input type="text" class="form-control" id="filterPayeeName" placeholder="Search by name...">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label">Department/Source</label>
+                                <select class="form-select" id="filterDepartment">
+                                    <option value="">All Departments</option>
+                                    <option value="Payroll">Payroll</option>
+                                    <option value="Claims">HR3 Claims</option>
+                                    <option value="Manual">Manual Entry</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
                                 <label class="form-label">&nbsp;</label>
                                 <div>
                                     <button class="btn btn-primary me-2" onclick="applyFilters()">Apply</button>
@@ -497,12 +518,13 @@ body {
                                 <th>Date</th>
                                 <th>Amount</th>
                                 <th>Status</th>
+                                <th>Source</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="disbursementsTableBody">
                             <tr>
-                                <td colspan="8" class="text-center">
+                                <td colspan="9" class="text-center">
                                     <div class="loading">Loading disbursements...</div>
                                 </td>
                             </tr>

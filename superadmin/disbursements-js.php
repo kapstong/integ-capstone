@@ -192,7 +192,10 @@ header('Content-Type: application/javascript');
         currentFilters = {
             status: document.getElementById('filterStatus').value,
             date_from: document.getElementById('filterDateFrom').value,
-            date_to: document.getElementById('filterDateTo').value
+            date_to: document.getElementById('filterDateTo').value,
+            reference_search: document.getElementById('filterReferenceSearch').value,
+            payee_name: document.getElementById('filterPayeeName').value,
+            department: document.getElementById('filterDepartment').value
         };
 
         Object.keys(currentFilters).forEach(key => {
@@ -208,8 +211,16 @@ header('Content-Type: application/javascript');
         document.getElementById('filterStatus').value = '';
         document.getElementById('filterDateFrom').value = '';
         document.getElementById('filterDateTo').value = '';
+        document.getElementById('filterReferenceSearch').value = '';
+        document.getElementById('filterPayeeName').value = '';
+        document.getElementById('filterDepartment').value = '';
         currentFilters = {};
         loadDisbursements();
+    }
+
+    function showFilters() {
+        const filtersSection = document.getElementById('filtersSection');
+        filtersSection.style.display = filtersSection.style.display === 'none' ? 'block' : 'none';
     }
 
     function showAddDisbursementModal() {
@@ -435,7 +446,7 @@ header('Content-Type: application/javascript');
                 } else {
                     if (data.error) {
                         const tbody = document.getElementById('disbursementsTableBody');
-                        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Error loading disbursements. Please try again.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Error loading disbursements. Please try again.</td></tr>';
                         showAlert('Error loading disbursements: ' + data.error, 'danger');
                     } else {
                         throw new Error('API returned an error');
@@ -444,7 +455,7 @@ header('Content-Type: application/javascript');
             } catch (error) {
                 console.error('Error loading disbursements:', error);
                 const tbody = document.getElementById('disbursementsTableBody');
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Error loading disbursements. Please try again.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Error loading disbursements. Please try again.</td></tr>';
                 showAlert('Error loading disbursements. Please try again.', 'warning');
             }
         }
@@ -711,11 +722,51 @@ header('Content-Type: application/javascript');
             const tbody = document.getElementById('disbursementsTableBody');
 
             if (disbursements.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No disbursements found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center">No disbursements found</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = disbursements.map(d => {
+            // Apply client-side filters for reference and payee name (since API may not support all filters)
+            let filteredDisbursements = disbursements;
+            
+            const refSearch = document.getElementById('filterReferenceSearch')?.value?.toLowerCase() || '';
+            const payeeName = document.getElementById('filterPayeeName')?.value?.toLowerCase() || '';
+            const department = document.getElementById('filterDepartment')?.value || '';
+
+            if (refSearch || payeeName || department) {
+                filteredDisbursements = disbursements.filter(d => {
+                    const refMatch = !refSearch || (d.disbursement_number || d.reference_number || '').toLowerCase().includes(refSearch) || (d.id + '').includes(refSearch);
+                    const payeeMatch = !payeeName || (d.payee || '').toLowerCase().includes(payeeName);
+                    
+                    // Determine department based on reference_number prefix
+                    let disbursementDept = 'Manual';
+                    if (d.reference_number && d.reference_number.startsWith('HR3-CLAIM-')) {
+                        disbursementDept = 'Claims';
+                    } else if (d.reference_number && d.reference_number.startsWith('PAYROLL-')) {
+                        disbursementDept = 'Payroll';
+                    }
+                    
+                    const deptMatch = !department || disbursementDept === department;
+                    
+                    return refMatch && payeeMatch && deptMatch;
+                });
+            }
+
+            tbody.innerHTML = filteredDisbursements.map(d => {
+                // Determine source/department based on reference number
+                let source = 'Manual';
+                let sourceBadge = '<span class="badge bg-secondary">Manual</span>';
+                
+                if (d.reference_number) {
+                    if (d.reference_number.startsWith('HR3-CLAIM-')) {
+                        source = 'Claims';
+                        sourceBadge = '<span class="badge bg-info">HR3 Claims</span>';
+                    } else if (d.reference_number.startsWith('PAYROLL-')) {
+                        source = 'Payroll';
+                        sourceBadge = '<span class="badge bg-primary">Payroll</span>';
+                    }
+                }
+
                 // Build action buttons based on user permissions
                 let actions = '<button class="btn btn-sm btn-outline-primary me-1" onclick="viewDisbursement(' + d.id + ')"><i class="fas fa-eye"></i></button>';
 
@@ -732,7 +783,7 @@ header('Content-Type: application/javascript');
                     '<input type="checkbox" class="disbursement-checkbox" value="' + d.id + '" onchange="toggleSelection(this)">' :
                     '<input type="checkbox" disabled title="You do not have delete permissions">';
 
-                return '<tr><td>' + checkbox + '</td><td>' + (d.disbursement_number || d.id) + '</td><td>' + (d.payee || 'N/A') + '</td><td><span class="badge bg-secondary">' + (d.payment_method || 'N/A') + '</span></td><td>' + formatDate(d.disbursement_date) + '</td><td>₱' + parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td><td>' + getStatusBadge(d.status || 'pending') + '</td><td>' + actions + '</td></tr>';
+                return '<tr><td>' + checkbox + '</td><td>' + (d.disbursement_number || d.reference_number || d.id) + '</td><td>' + (d.payee || 'N/A') + '</td><td><span class="badge bg-secondary">' + (d.payment_method || 'N/A') + '</span></td><td>' + formatDate(d.disbursement_date) + '</td><td>₱' + parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td><td>' + getStatusBadge(d.status || 'pending') + '</td><td>' + sourceBadge + '</td><td>' + actions + '</td></tr>';
             }).join('');
 
             // Update header checkbox
