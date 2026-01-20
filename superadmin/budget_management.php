@@ -1625,7 +1625,19 @@ $db = Database::getInstance()->getConnection();
                         action_name: 'getClaimsBreakdown'
                     })
                 });
-                const payload = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: Failed to fetch HR3 claims`);
+                }
+
+                const text = await response.text();
+                
+                // Check if response is valid JSON
+                if (!text.startsWith('{') && !text.startsWith('[')) {
+                    throw new Error('Invalid response from HR3 integration API');
+                }
+
+                const payload = JSON.parse(text);
 
                 if (!payload.success) {
                     throw new Error(payload.error || 'Failed to load HR3 claims');
@@ -2429,7 +2441,19 @@ $db = Database::getInstance()->getConnection();
         async function loadDepartments() {
             try {
                 const response = await fetch('../api/financials/departments.php');
-                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const text = await response.text();
+                
+                // Check if response is valid JSON
+                if (!text.startsWith('{') && !text.startsWith('[')) {
+                    throw new Error('Invalid response from departments API');
+                }
+                
+                const data = JSON.parse(text);
 
                 if (!data.success) {
                     throw new Error(data.error || 'Failed to load departments');
@@ -2440,7 +2464,8 @@ $db = Database::getInstance()->getConnection();
 
             } catch (error) {
                 console.error('Error loading departments:', error);
-                showAlert('Error loading departments: ' + error.message, 'danger');
+                // Don't show alert - departments is optional
+                currentDepartments = [];
             }
         }
 
