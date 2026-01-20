@@ -37,22 +37,36 @@ class PermissionManager {
 
         // Get all permissions for user's roles
         $roleIds = array_column($this->userRoles, 'role_id');
-        if (empty($roleIds)) {
-            $this->userPermissions = [];
-            return;
+        $rolePermissions = [];
+        if (!empty($roleIds)) {
+            $placeholders = str_repeat('?,', count($roleIds) - 1) . '?';
+            $stmt = $this->db->prepare("
+                SELECT DISTINCT p.name as permission_name
+                FROM role_permissions rp
+                JOIN permissions p ON rp.permission_id = p.id
+                WHERE rp.role_id IN ($placeholders)
+            ");
+            $stmt->execute($roleIds);
+            $rolePermissions = array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'permission_name');
         }
 
-        $placeholders = str_repeat('?,', count($roleIds) - 1) . '?';
-        $stmt = $this->db->prepare("
-            SELECT DISTINCT p.name as permission_name
-            FROM role_permissions rp
-            JOIN permissions p ON rp.permission_id = p.id
-            WHERE rp.role_id IN ($placeholders)
-        ");
-        $stmt->execute($roleIds);
-        $permissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Get user-specific permissions (if table exists)
+        $userPermissions = [];
+        try {
+            $stmt = $this->db->prepare("
+                SELECT p.name as permission_name
+                FROM user_permissions up
+                JOIN permissions p ON up.permission_id = p.id
+                WHERE up.user_id = ?
+            ");
+            $stmt->execute([$userId]);
+            $userPermissions = array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'permission_name');
+        } catch (Exception $e) {
+            // user_permissions table might not exist, ignore
+        }
 
-        $this->userPermissions = array_column($permissions, 'permission_name');
+        // Combine role permissions and user permissions
+        $this->userPermissions = array_unique(array_merge($rolePermissions, $userPermissions));
     }
 
     /**
@@ -446,4 +460,3 @@ class PermissionManager {
     }
 }
 ?>
-

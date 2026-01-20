@@ -206,106 +206,58 @@ try {
                     $userId = $data['user_id'];
                     $selectedPermissions = $data['permissions'] ?? [];
 
-                    // Get current user roles
-                    $currentRoles = $permManager->getUserRoles();
-                    $currentRoleIds = array_column($currentRoles, 'role_id');
+                    // Get all available permissions
+                    $allPermissions = $permManager->getAllPermissions();
+                    $permissionMap = array_column($allPermissions, 'id', 'name');
 
-                    // Get all available roles from database
-                    $allRoles = $permManager->getAllRoles();
-                    $availableRoleNames = array_column($allRoles, 'name');
-
-                    // Determine which role to assign based on selected permissions and available roles
-                    $roleToAssign = null;
-
-                    // If no permissions selected, find a basic role
-                    if (empty($selectedPermissions)) {
-                        // Look for roles like 'staff', 'user', or 'basic'
-                        $basicRoles = ['staff', 'user', 'basic', 'member'];
-                        foreach ($basicRoles as $basicRole) {
-                            if (in_array($basicRole, $availableRoleNames)) {
-                                $roleToAssign = $basicRole;
-                                break;
-                            }
-                        }
-                        // If no basic role found, use the first available role
-                        if (!$roleToAssign && !empty($availableRoleNames)) {
-                            $roleToAssign = $availableRoleNames[0];
-                        }
-                    } else {
-                        // Check if selected permissions match admin/super_admin level permissions
-                        $adminPermissions = [
-                            'users.view', 'users.create', 'users.edit', 'users.delete',
-                            'settings.view', 'settings.edit',
-                            'roles.view', 'roles.manage'
-                        ];
-
-                        $hasAdminPermissions = false;
-                        foreach ($selectedPermissions as $perm) {
-                            if (in_array($perm, $adminPermissions)) {
-                                $hasAdminPermissions = true;
-                                break;
-                            }
-                        }
-
-                        // Look for admin/super admin roles in the available roles
-                        if ($hasAdminPermissions) {
-                            $adminRoleNames = ['super_admin', 'admin', 'administrator', 'super administrator', 'Super Administrator'];
-                            foreach ($adminRoleNames as $adminRole) {
-                                if (in_array($adminRole, $availableRoleNames)) {
-                                    $roleToAssign = $adminRole;
-                                    break;
-                                }
-                            }
-                        }
-
-                        // If no admin role found or no admin permissions, use basic role
-                        if (!$roleToAssign) {
-                            $basicRoles = ['staff', 'user', 'basic', 'member'];
-                            foreach ($basicRoles as $basicRole) {
-                                if (in_array($basicRole, $availableRoleNames)) {
-                                    $roleToAssign = $basicRole;
-                                    break;
-                                }
-                            }
-                        }
-
-                        // If still no role found, use the first available role
-                        if (!$roleToAssign && !empty($availableRoleNames)) {
-                            $roleToAssign = $availableRoleNames[0];
+                    // Clear existing user permissions
+                    try {
+                        $stmt = $permManager->db->prepare("DELETE FROM user_permissions WHERE user_id = ?");
+                        $stmt->execute([$userId]);
+                    } catch (Exception $e) {
+                        // user_permissions table might not exist, create it
+                        try {
+                            $permManager->db->exec("
+                                CREATE TABLE IF NOT EXISTS user_permissions (
+                                    id INT AUTO_INCREMENT PRIMARY KEY,
+                                    user_id INT NOT NULL,
+                                    permission_id INT NOT NULL,
+                                    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                                    FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE,
+                                    UNIQUE KEY unique_user_permission (user_id, permission_id)
+                                )
+                            ");
+                            // Try to clear again
+                            $stmt = $permManager->db->prepare("DELETE FROM user_permissions WHERE user_id = ?");
+                            $stmt->execute([$userId]);
+                        } catch (Exception $e2) {
+                            error_log("Failed to create or clear user_permissions table: " . $e2->getMessage());
                         }
                     }
 
-                    // Find the role ID by name
-                    $roleIdToAssign = null;
-                    if ($roleToAssign) {
-                        foreach ($allRoles as $role) {
-                            if ($role['name'] === $roleToAssign) {
-                                $roleIdToAssign = $role['id'];
-                                break;
+                    // Assign selected permissions to user
+                    $assignedPermissions = [];
+                    foreach ($selectedPermissions as $permName) {
+                        if (isset($permissionMap[$permName])) {
+                            try {
+                                $stmt = $permManager->db->prepare("
+                                    INSERT INTO user_permissions (user_id, permission_id) VALUES (?, ?)
+                                ");
+                                $stmt->execute([$userId, $permissionMap[$permName]]);
+                                $assignedPermissions[] = $permName;
+                            } catch (Exception $e) {
+                                error_log("Failed to assign permission $permName to user $userId: " . $e->getMessage());
                             }
-                        }
-                    }
-
-                    // Remove current roles
-                    foreach ($currentRoleIds as $roleId) {
-                        $permManager->removeRole($userId, $roleId);
-                    }
-
-                    // Assign new role
-                    $assignedRoles = [];
-                    if ($roleIdToAssign) {
-                        $result = $permManager->assignRole($userId, $roleIdToAssign);
-                        if ($result['success']) {
-                            $assignedRoles[] = $roleIdToAssign;
                         }
                     }
 
                     Logger::getInstance()->logUserAction(
-                        'Updated user permissions via role assignment',
+                        'Updated user permissions directly',
                         'users',
                         $userId,
-                        ['old_roles' => $currentRoleIds],
-                        ['new_roles' => $assignedRoles, 'selected_permissions' => $selectedPermissions, 'assigned_role' => $roleToAssign]
+                        null,
+                        ['assigned_permissions' => $assignedPermissions, 'selected_permissions' => $selectedPermissions]
                     );
 
                     echo json_encode(['success' => true, 'message' => 'User permissions updated successfully']);
