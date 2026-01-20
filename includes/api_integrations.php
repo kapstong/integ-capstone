@@ -301,6 +301,7 @@ class APIIntegrationManager {
             return ['total_integrations' => 0, 'active_integrations' => 0, 'recently_used' => 0];
         }
     }
+
 }
 
 /**
@@ -2412,4 +2413,3 @@ class Logistics2Integration extends BaseIntegration {
     }
 }
 ?>
-

@@ -1105,7 +1105,7 @@ $departments = [
         }
 
         function viewRolePermissions(roleId) {
-            fetch(`api/roles.php?action=role_permissions&role_id=${roleId}`)
+            fetch(`../api/roles.php?action=role_permissions&role_id=${roleId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1121,7 +1121,7 @@ $departments = [
         }
 
         function viewRoleUsers(roleId) {
-            fetch(`api/roles.php?action=role_users&role_id=${roleId}`)
+            fetch(`../api/roles.php?action=role_users&role_id=${roleId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1137,7 +1137,7 @@ $departments = [
         }
 
         function viewUserPermissions(userId) {
-            fetch(`api/roles.php?action=user_roles&user_id=${userId}`)
+            fetch(`../api/roles.php?action=user_roles&user_id=${userId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1181,7 +1181,7 @@ $departments = [
 
         function editUser(userId) {
             // Fetch user data
-            fetch(`api/users.php?action=get_user&user_id=${userId}`)
+            fetch(`../api/users.php?action=get_user&user_id=${userId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1222,7 +1222,7 @@ $departments = [
                         const allPermissions = data.permissions;
 
                         // Fetch user's current permissions
-                        fetch(`api/roles.php?action=user_roles&user_id=${userId}`)
+                        fetch(`../api/roles.php?action=user_roles&user_id=${userId}`)
                             .then(response => response.json())
                             .then(userData => {
                                 const userPermissions = userData.success ? userData.permissions : [];
@@ -1461,7 +1461,7 @@ $departments = [
         }
 
         function viewTrashItem(itemId) {
-            fetch(`api/trash.php?action=view_item&item_id=${itemId}`)
+            fetch(`../api/trash.php?action=view_item&item_id=${itemId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {

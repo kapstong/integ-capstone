@@ -100,17 +100,17 @@ try {
     switch ($method) {
         case 'GET':
             if (isset($_GET['id'])) {
-                // Get single user
+                // Get single user (exclude soft-deleted)
                 $stmt = $db->query(
                     "SELECT id, username, email, full_name, role, status, last_login, created_at, department, phone
-                     FROM users WHERE id = ?",
+                     FROM users WHERE id = ? AND deleted_at IS NULL",
                     [$_GET['id']]
                 );
                 $user = $stmt->fetch();
                 echo json_encode($user ? sanitizeUser($user) : ['error' => 'User not found']);
             } else {
-                // Get all users with optional filters
-                $where = [];
+                // Get all users with optional filters (exclude soft-deleted users)
+                $where = ["deleted_at IS NULL"];
                 $params = [];
 
                 if (isset($_GET['status'])) {
@@ -123,7 +123,7 @@ try {
                     $params[] = $_GET['role'];
                 }
 
-                $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
+                $whereClause = "WHERE " . implode(" AND ", $where);
 
                 $users = $db->select(
                     "SELECT id, username, email, full_name, role, status, last_login, created_at, department, phone
@@ -268,22 +268,29 @@ try {
             break;
 
         case 'DELETE':
-            // Delete user
-            if (!isset($_GET['id'])) {
+            // Handle soft delete via POST data (for compatibility with frontend)
+            $data = json_decode(file_get_contents('php://input'), true);
+            if (!$data) {
+                $data = $_POST;
+            }
+
+            $userId = $data['user_id'] ?? $_GET['id'] ?? null;
+
+            if (!$userId) {
                 http_response_code(400);
                 echo json_encode(['success' => false, 'error' => 'User ID required']);
                 exit;
             }
 
             // Prevent deletion of current user
-            if ($_GET['id'] == $_SESSION['user']['id']) {
+            if ($userId == $_SESSION['user']['id']) {
                 http_response_code(400);
                 echo json_encode(['success' => false, 'error' => 'Cannot delete your own account']);
                 exit;
             }
 
             // Get old values for audit
-            $oldUser = $db->select("SELECT * FROM users WHERE id = ?", [$_GET['id']]);
+            $oldUser = $db->select("SELECT * FROM users WHERE id = ?", [$userId]);
             $oldValues = $oldUser[0] ?? null;
 
             if (!$oldValues) {
@@ -292,10 +299,14 @@ try {
                 exit;
             }
 
-            $affected = $db->execute("DELETE FROM users WHERE id = ?", [$_GET['id']]);
+            // Soft delete: set deleted_at timestamp and change status to inactive
+            $affected = $db->execute(
+                "UPDATE users SET deleted_at = NOW(), status = 'inactive', updated_at = NOW() WHERE id = ?",
+                [$userId]
+            );
 
-            // Log the action (disabled temporarily)
-            // Logger::getInstance()->logUserAction('Deleted user', 'users', $_GET['id'], $oldValues, null);
+            // Log the action
+            Logger::getInstance()->logUserAction('Soft deleted user', 'users', $userId, $oldValues, ['deleted_at' => date('Y-m-d H:i:s'), 'status' => 'inactive']);
 
             echo json_encode(['success' => $affected > 0]);
             break;
@@ -313,4 +324,3 @@ try {
 
 ob_end_flush();
 ?>
-
