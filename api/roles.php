@@ -199,18 +199,39 @@ try {
                     $currentRoles = $permManager->getUserRoles();
                     $currentRoleIds = array_column($currentRoles, 'role_id');
 
-                    // Find roles that contain the selected permissions
+                    // Determine which role to assign based on selected permissions
+                    $roleToAssign = null;
                     $allRoles = $permManager->getAllRoles();
-                    $rolesToAssign = [];
 
+                    // If no permissions selected, assign 'staff' role
+                    if (empty($selectedPermissions)) {
+                        $roleToAssign = 'staff';
+                    } else {
+                        // Check if selected permissions match admin/super_admin level permissions
+                        $adminPermissions = [
+                            'users.view', 'users.create', 'users.edit', 'users.delete',
+                            'settings.view', 'settings.edit',
+                            'roles.view', 'roles.manage'
+                        ];
+
+                        $hasAdminPermissions = false;
+                        foreach ($selectedPermissions as $perm) {
+                            if (in_array($perm, $adminPermissions)) {
+                                $hasAdminPermissions = true;
+                                break;
+                            }
+                        }
+
+                        // Assign 'admin' role if admin permissions selected, otherwise 'staff'
+                        $roleToAssign = $hasAdminPermissions ? 'admin' : 'staff';
+                    }
+
+                    // Find the role ID by name
+                    $roleIdToAssign = null;
                     foreach ($allRoles as $role) {
-                        $rolePermissions = $permManager->getRolePermissions($role['id']);
-                        $rolePermissionNames = array_column($rolePermissions, 'name');
-
-                        // Check if this role contains all selected permissions
-                        if (!empty($selectedPermissions) && !array_diff($selectedPermissions, $rolePermissionNames)) {
-                            $rolesToAssign[] = $role['id'];
-                            break; // Take the first matching role
+                        if ($role['name'] === $roleToAssign) {
+                            $roleIdToAssign = $role['id'];
+                            break;
                         }
                     }
 
@@ -219,12 +240,12 @@ try {
                         $permManager->removeRole($userId, $roleId);
                     }
 
-                    // Assign new roles
+                    // Assign new role
                     $assignedRoles = [];
-                    foreach ($rolesToAssign as $roleId) {
-                        $result = $permManager->assignRole($userId, $roleId);
+                    if ($roleIdToAssign) {
+                        $result = $permManager->assignRole($userId, $roleIdToAssign);
                         if ($result['success']) {
-                            $assignedRoles[] = $roleId;
+                            $assignedRoles[] = $roleIdToAssign;
                         }
                     }
 
@@ -233,7 +254,7 @@ try {
                         'users',
                         $userId,
                         ['old_roles' => $currentRoleIds],
-                        ['new_roles' => $assignedRoles, 'selected_permissions' => $selectedPermissions]
+                        ['new_roles' => $assignedRoles, 'selected_permissions' => $selectedPermissions, 'assigned_role' => $roleToAssign]
                     );
 
                     echo json_encode(['success' => true, 'message' => 'User permissions updated successfully']);
