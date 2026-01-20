@@ -158,12 +158,71 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
     .sidebar.sidebar-collapsed .sidebar-nav-submenu {
         display: none;
     }
+
+    .sidebar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sidebar-collapse-btn {
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.7);
+        cursor: pointer;
+        font-size: 1.2em;
+        padding: 0.5rem;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 6px;
+    }
+
+    .sidebar-collapse-btn:hover {
+        background-color: rgba(255, 255, 255, 0.12);
+        color: white;
+    }
+
+    .sidebar-collapse-btn i {
+        transition: transform 0.3s ease;
+    }
+
+    .sidebar.sidebar-collapsed .sidebar-collapse-btn i {
+        transform: rotate(180deg);
+    }
+
+    .sidebar-logo {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .sidebar-logo img {
+        height: 50px;
+        width: auto;
+        max-width: 100%;
+    }
+
+    .sidebar.sidebar-collapsed .sidebar-logo img {
+        height: 35px;
+    }
 </style>
 
 <!-- Global Sidebar Navigation -->
 <div class="sidebar" id="sidebar" style="display:block; left:0; width:300px; z-index:20000; background-color:#1e2936;">
-    <div class="sidebar-nav-logo">
-        <img src="atieralogo.png" alt="Atiera Logo">
+    <div class="sidebar-header">
+        <div class="sidebar-logo">
+            <img src="atieralogo.png" alt="Atiera Logo">
+        </div>
+        <button class="sidebar-collapse-btn" onclick="toggleSidebarDesktop()" title="Collapse sidebar">
+            <i class="fas fa-chevron-left"></i>
+        </button>
     </div>
     <nav class="sidebar-nav-menu">
         <!-- Dashboard -->
