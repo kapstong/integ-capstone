@@ -779,7 +779,7 @@ header('Content-Type: application/javascript');
                 if (d.reference_number) {
                     if (d.reference_number.startsWith('HR3-CLAIM-')) {
                         source = 'Claims';
-                        sourceBadge = '<span class="badge bg-info">HR3 Claims</span>';
+                        sourceBadge = '<span class="badge bg-info">Claims</span>';
                     } else if (d.reference_number.startsWith('PAYROLL-')) {
                         source = 'Payroll';
                         sourceBadge = '<span class="badge bg-primary">Payroll</span>';
