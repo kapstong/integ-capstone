@@ -24,7 +24,7 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
 ?>
 
 <!-- Global Sidebar Navigation -->
-<div class="sidebar" id="sidebar">
+<div class="sidebar" id="sidebar" style="display:block; left:0; width:300px; z-index:20000; background-color:#1e2936;">
     <div class="p-3">
         <h5 class="navbar-brand"><img src="atieralogo.png" alt="Atiera Logo" style="height: 100px;"></h5>
     </div>
@@ -112,6 +112,7 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
         const toggle = document.querySelector('.sidebar-toggle');
         const logoImg = document.querySelector('.navbar-brand img');
         const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        console.log('sidebar init — found:', !!sidebar, 'collapsed:', isCollapsed);
         if (isCollapsed) {
             sidebar.classList.add('sidebar-collapsed');
             logoImg.src = 'atieralogo2.png';
