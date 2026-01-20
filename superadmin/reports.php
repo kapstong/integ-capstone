@@ -1339,8 +1339,12 @@ $db = Database::getInstance()->getConnection();
                     throw new Error('Invalid JSON response from server');
                 }
 
-                if (!data.success || data.error) {
-                    throw new Error(data.error || 'Failed to generate balance sheet');
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                if (!data.report_type || data.report_type !== 'Balance Sheet') {
+                    throw new Error('Invalid balance sheet response format');
                 }
 
                 // Store data globally for export
@@ -1480,13 +1484,12 @@ $db = Database::getInstance()->getConnection();
                     throw new Error('Invalid JSON response from server');
                 }
 
-                if (!data.success || data.error) {
-                    throw new Error(data.error || 'Failed to generate cash flow statement');
+                if (data.error) {
+                    throw new Error(data.error);
                 }
 
-                // Check if cash_flow data exists
-                if (!data.cash_flow) {
-                    throw new Error('Invalid response format: missing cash_flow data');
+                if (!data.report_type || data.report_type !== 'Cash Flow Statement') {
+                    throw new Error('Invalid cash flow response format');
                 }
 
                 // Store data globally for export
@@ -2324,8 +2327,13 @@ $db = Database::getInstance()->getConnection();
             fetch('../api/reports.php?type=analytics_summary')
                 .then(response => response.json())
                 .then(data => {
-                    if (!data.success) {
-                        showAlert(data.error || 'Failed to load analytics', 'danger');
+                    if (data.error) {
+                        showAlert(data.error, 'danger');
+                        return;
+                    }
+
+                    if (!data.mtd || !data.trend) {
+                        showAlert('Invalid analytics response format', 'danger');
                         return;
                     }
 
