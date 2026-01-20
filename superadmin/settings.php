@@ -1534,7 +1534,6 @@ $departments = [
                 }
             );
         }
-        });
 
         // Initialize trash on page load when trash tab is active
         document.addEventListener('DOMContentLoaded', function() {
