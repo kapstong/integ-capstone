@@ -8,11 +8,9 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
-// Initialize database connection
 $db = Database::getInstance()->getConnection();
 $user_id = $_SESSION['user']['id'];
 
-// Fetch current user data
 try {
     $stmt = $db->prepare("SELECT * FROM users WHERE id = ?");
     $stmt->execute([$user_id]);
@@ -22,7 +20,6 @@ try {
     $user = $_SESSION['user'];
 }
 
-// Handle form submission for profile update
 $message = '';
 $messageType = '';
 
@@ -35,12 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $phone = trim($_POST['phone'] ?? '');
             $department = trim($_POST['department'] ?? '');
 
-            // Validate email
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 throw new Exception('Invalid email address');
             }
 
-            // Update user profile
             $stmt = $db->prepare("
                 UPDATE users SET
                     first_name = ?,
@@ -53,7 +48,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             $stmt->execute([$first_name, $last_name, $email, $phone, $department, $user_id]);
 
-            // Update session data
             $_SESSION['user']['first_name'] = $first_name;
             $_SESSION['user']['last_name'] = $last_name;
             $_SESSION['user']['email'] = $email;
@@ -63,7 +57,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Profile updated successfully';
             $messageType = 'success';
 
-            // Refresh user data
             $stmt = $db->prepare("SELECT * FROM users WHERE id = ?");
             $stmt->execute([$user_id]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -92,7 +85,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('New password must be at least 8 characters long');
             }
 
-            // Verify current password
             $stmt = $db->prepare("SELECT password_hash FROM users WHERE id = ?");
             $stmt->execute([$user_id]);
             $passwordHash = $stmt->fetchColumn();
@@ -101,7 +93,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Current password is incorrect');
             }
 
-            // Update password
             $new_password_hash = password_hash($new_password, PASSWORD_DEFAULT);
             $stmt = $db->prepare("UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?");
             $stmt->execute([$new_password_hash, $user_id]);
@@ -132,6 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin: 0;
             padding: 0;
         }
+
         .sidebar {
             height: 100vh;
             max-height: 100vh;
@@ -139,23 +131,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             overscroll-behavior: contain;
             -webkit-overflow-scrolling: touch;
             padding-bottom: 2rem;
-            background: linear-gradient(180deg, #1e2936 0%, #2a3f54 100%);
+            background-color: #1e2936;
             color: white;
             min-height: 100vh;
             position: fixed;
             top: 0;
             left: 0;
-            width: 280px;
+            width: 300px;
             z-index: 1000;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2);
-            padding-top: 0;
-            padding-left: 0;
-            padding-right: 0;
+            transition: transform 0.3s ease, width 0.3s ease;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
         }
 
         .sidebar.sidebar-collapsed {
-            width: 100px;
+            width: 120px;
         }
 
         .sidebar.sidebar-collapsed span {
@@ -163,12 +152,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .sidebar.sidebar-collapsed .nav-link {
-            padding: 0.875rem;
-            justify-content: center;
+            padding: 10px;
+            text-align: center;
         }
 
         .sidebar.sidebar-collapsed .navbar-brand {
-            padding: 1rem 0.5rem;
+            text-align: center;
         }
 
         .sidebar.sidebar-collapsed .nav-item i[data-bs-toggle="collapse"] {
@@ -178,68 +167,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .sidebar.sidebar-collapsed .submenu {
             display: none;
         }
-        .sidebar .navbar-brand {
-            color: white !important;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 1rem;
-            padding-bottom: 1rem;
-        }
-
-        .sidebar .navbar-brand img {
-            height: 60px;
-            width: auto;
-            max-width: 100%;
-            transition: height 0.3s ease;
-        }
-
-        .sidebar.sidebar-collapsed .navbar-brand img {
-            height: 50px;
-        }
-
-        .sidebar nav {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            padding: 0 0.75rem;
-        }
 
         .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.85);
-            padding: 0.875rem 1rem;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            white-space: nowrap;
-            text-decoration: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-size: 1.1em;
         }
 
         .sidebar .nav-link i {
-            font-size: 1.1em;
-            min-width: 24px;
-            text-align: center;
-            flex-shrink: 0;
+            font-size: 1.4em;
         }
 
         .sidebar .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.12);
+            background-color: rgba(255, 255, 255, 0.1);
             color: white;
-            transform: translateX(4px);
         }
 
         .sidebar .nav-link.active {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
-            color: white;
-            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
-            border-left: 3px solid #20c997;
-            padding-left: calc(1rem - 3px);
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .sidebar .submenu {
+            padding-left: 20px;
+        }
+
+        .sidebar .submenu .nav-link {
+            padding: 5px 20px;
+            font-size: 0.9em;
         }
 
         .sidebar .nav-item {
@@ -248,112 +204,103 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .sidebar .nav-item i[data-bs-toggle="collapse"] {
             position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
+            right: 20px;
+            top: 10px;
             transition: transform 0.3s ease;
-            cursor: pointer;
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.9em;
         }
 
         .sidebar .nav-item i[aria-expanded="true"] {
-            transform: translateY(-50%) rotate(90deg);
+            transform: rotate(90deg);
         }
 
         .sidebar .nav-item i[aria-expanded="false"] {
-            transform: translateY(-50%) rotate(0deg);
+            transform: rotate(0deg);
         }
 
-        .sidebar .submenu {
-            padding: 0.5rem 0.5rem 0.5rem 2.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
+        .sidebar .navbar-brand {
+            color: white !important;
+            font-weight: bold;
         }
 
-        .sidebar .submenu .nav-link {
-            padding: 0.625rem 0.75rem;
-            font-size: 0.85rem;
+        .sidebar .navbar-brand img {
+            height: 50px;
+            width: auto;
+            max-width: 100%;
+            transition: height 0.3s ease;
         }
 
-        .sidebar .submenu .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.08);
+        .sidebar.sidebar-collapsed .navbar-brand img {
+            height: 80px;
         }
 
-        .sidebar .submenu .nav-link.active {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
         .content {
-            margin-left: 280px;
-            padding: 0;
-            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-left: 120px;
+            padding: 20px;
+            transition: margin-left 0.3s ease;
             position: relative;
             z-index: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
         }
 
-        .content.sidebar-collapsed {
-            margin-left: 100px;
-        }
         .sidebar-toggle {
             position: fixed;
-            left: 270px;
+            left: 10px;
             top: 50%;
             transform: translateY(-50%);
             cursor: pointer;
             color: white;
-            font-size: 1.2em;
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, #1e2936 0%, #2a3f54 100%);
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            font-size: 1.5em;
+            width: 40px;
+            height: 40px;
+            background-color: #1e2936;
+            border: 2px solid white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 999;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: left 0.3s ease, background-color 0.3s ease;
+            z-index: 1001;
         }
 
         .sidebar-toggle:hover {
-            background: linear-gradient(135deg, #2a3f54 0%, #1e2936 100%);
-            border-color: rgba(255, 255, 255, 0.6);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+            background-color: rgba(255, 255, 255, 0.1);
         }
+
         .toggle-btn {
             display: none;
         }
+
         .navbar {
             background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            padding: 1.25rem 2rem;
-            border-bottom: 2px solid #e9ecef;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            flex-shrink: 0;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e3e6ea;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
         }
+
         .navbar-brand {
             font-weight: 700;
             color: #2c3e50 !important;
             font-size: 1.4rem;
             letter-spacing: -0.02em;
         }
+
         .navbar .dropdown-toggle {
             border-radius: 8px;
             padding: 0.5rem 0.75rem;
             transition: all 0.2s ease;
         }
+
         .navbar .dropdown-toggle:hover {
             background-color: rgba(0,0,0,0.05);
         }
+
         .navbar .btn-link {
             text-decoration: none !important;
         }
+
         .navbar .btn-link:focus {
             box-shadow: none;
         }
+
         .nav-tabs {
             border-bottom: 2px solid #e9ecef;
             background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
@@ -362,6 +309,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             margin-bottom: 2rem;
         }
+
         .nav-tabs .nav-link {
             border: none;
             color: #6c757d;
@@ -371,15 +319,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-radius: 6px;
             transition: all 0.3s ease;
         }
+
         .nav-tabs .nav-link:hover {
             background-color: rgba(30, 41, 54, 0.05);
             color: #1e2936;
         }
+
         .nav-tabs .nav-link.active {
             background: linear-gradient(135deg, #1e2936 0%, #2c3e50 100%);
             color: white;
             box-shadow: 0 4px 8px rgba(30, 41, 54, 0.2);
         }
+
         .card {
             border: none;
             border-radius: 12px;
@@ -388,30 +339,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
             margin-bottom: 2rem;
         }
+
         .card:hover {
             box-shadow: 0 8px 30px rgba(0,0,0,0.12);
             transform: translateY(-2px);
         }
+
         .card-header {
             background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
             border-bottom: 1px solid #e9ecef;
             border-radius: 12px 12px 0 0 !important;
             padding: 1.5rem;
         }
+
         .card-header h5 {
             color: #1e2936;
             font-weight: 700;
             margin: 0;
             font-size: 1.25rem;
         }
+
         .card-body {
             padding: 2rem;
         }
+
         .form-label {
             font-weight: 600;
             color: #1e2936;
-            margin-bottom: 0.5rem;
         }
+
         .form-control,
         .form-select {
             border: 2px solid #e9ecef;
@@ -420,157 +376,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             transition: all 0.3s ease;
             background: white;
         }
+
         .form-control:focus,
         .form-select:focus {
             border-color: #1e2936;
             box-shadow: 0 0 0 0.2rem rgba(30, 41, 54, 0.1);
         }
+
         .btn {
             border-radius: 8px;
             font-weight: 600;
             padding: 0.5rem 1.5rem;
             transition: all 0.3s ease;
             border: none;
-            margin-right: 0.5rem;
         }
+
         .btn:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
+
         .btn-primary {
             background: linear-gradient(135deg, #1e2936 0%, #2c3e50 100%);
             color: white;
         }
-        .btn-primary:hover {
-            background: linear-gradient(135deg, #1a2330 0%, #243844 100%);
-            color: white;
-        }
+
         .btn-warning {
             background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
             color: #212529;
         }
-        .btn-warning:hover {
-            background: linear-gradient(135deg, #ffb300 0%, #fc6800 100%);
-            color: #212529;
-        }
+
         .btn-outline-primary {
             border: 2px solid #1e2936;
             color: #1e2936;
             background: white;
         }
+
         .btn-outline-primary:hover {
             background: #1e2936;
             color: white;
         }
+
         .form-check {
             margin-bottom: 1rem;
             padding: 1rem;
             background: #f8f9fa;
             border-radius: 8px;
             border: 1px solid #e9ecef;
-            transition: all 0.3s ease;
         }
+
         .form-check:hover {
             background: #f1f3f5;
             border-color: #1e2936;
         }
+
         .form-check-input {
             accent-color: #1e2936;
-            width: 1.25em;
-            height: 1.25em;
-            border: 2px solid #1e2936;
         }
-        .form-check-label {
-            color: #1e2936;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-            cursor: pointer;
-        }
+
         .alert {
             border: none;
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             margin-bottom: 2rem;
         }
-        .alert-success {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-            color: #155724;
-            border-left: 4px solid #28a745;
-        }
-        .alert-danger {
-            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-            color: #721c24;
-            border-left: 4px solid #dc3545;
-        }
-        .text-muted {
-            color: #6c757d !important;
-            font-size: 0.875rem;
-        }
-        .container-fluid {
-            padding: 2rem;
-            flex: 1;
-            overflow-y: auto;
-        }
 
         @media (max-width: 768px) {
             .sidebar {
-                width: 280px;
                 transform: translateX(-100%);
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                transition: transform 0.3s ease;
             }
-
             .sidebar.show {
                 transform: translateX(0);
             }
-
             .content {
                 margin-left: 0;
+                padding: 1rem;
             }
-
             .toggle-btn {
                 display: block;
             }
-
             .nav-tabs {
                 flex-direction: column;
                 padding: 0.25rem;
             }
-
             .nav-tabs .nav-link {
                 margin-right: 0;
                 margin-bottom: 0.25rem;
                 text-align: center;
             }
-
             .card-body {
-                padding: 1.5rem;
-            }
-
-            .container-fluid {
                 padding: 1rem;
-            }
-
-            .navbar {
-                padding: 1rem 1.5rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .sidebar {
-                width: 250px;
-            }
-
-            .sidebar .nav-link {
-                padding: 0.75rem 0.75rem;
-                font-size: 0.85rem;
-            }
-
-            .navbar {
-                padding: 0.75rem 1rem;
-            }
-
-            .container-fluid {
-                padding: 0.75rem;
             }
         }
     </style>
@@ -590,7 +486,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             <?php endif; ?>
 
-            <!-- Navigation Tabs -->
             <ul class="nav nav-tabs" id="profileTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab" aria-controls="profile" aria-selected="true">
@@ -609,9 +504,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </li>
             </ul>
 
-            <!-- Tab Content -->
             <div class="tab-content" id="profileTabContent">
-                <!-- Profile Information Tab -->
                 <div class="tab-pane fade show active" id="profile" role="tabpanel" aria-labelledby="profile-tab">
                     <div class="card">
                         <div class="card-header">
@@ -672,7 +565,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
 
-                <!-- Security Tab -->
                 <div class="tab-pane fade" id="security" role="tabpanel" aria-labelledby="security-tab">
                     <div class="card">
                         <div class="card-header">
@@ -680,7 +572,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                         <div class="card-body">
                             <form method="POST" action="">
-                                <h6 class="text-primary fw-bold mb-3" style="color: #1b2f73 !important;">Change Password</h6>
+                                <h6 class="text-primary fw-bold mb-3">Change Password</h6>
                                 <div class="mb-3">
                                     <label for="current_password" class="form-label">Current Password</label>
                                     <input type="password" class="form-control" id="current_password" name="current_password" required>
@@ -703,7 +595,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             <hr class="my-4">
 
-                            <h6 class="text-primary fw-bold mb-3" style="color: #1b2f73 !important;">Two-Factor Authentication</h6>
+                            <h6 class="text-primary fw-bold mb-3">Two-Factor Authentication</h6>
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle me-2"></i>
                                 Two-factor authentication adds an extra layer of security to your account.
@@ -729,7 +621,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
 
-                <!-- Preferences Tab -->
                 <div class="tab-pane fade" id="preferences" role="tabpanel" aria-labelledby="preferences-tab">
                     <div class="card">
                         <div class="card-header">
