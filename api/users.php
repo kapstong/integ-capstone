@@ -299,14 +299,14 @@ try {
                 exit;
             }
 
-            // Soft delete: set deleted_at timestamp and change status to inactive
+            // Soft delete: set deleted_at timestamp (keep original status)
             $affected = $db->execute(
-                "UPDATE users SET deleted_at = NOW(), status = 'inactive', updated_at = NOW() WHERE id = ?",
+                "UPDATE users SET deleted_at = NOW(), updated_at = NOW() WHERE id = ?",
                 [$userId]
             );
 
             // Log the action
-            Logger::getInstance()->logUserAction('Soft deleted user', 'users', $userId, $oldValues, ['deleted_at' => date('Y-m-d H:i:s'), 'status' => 'inactive']);
+            Logger::getInstance()->logUserAction('Soft deleted user', 'users', $userId, $oldValues, ['deleted_at' => date('Y-m-d H:i:s')]);
 
             echo json_encode(['success' => $affected > 0]);
             break;
