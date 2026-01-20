@@ -173,7 +173,8 @@ try {
                             echo json_encode([
                                 'success' => false,
                                 'error' => $result['error'] ?? $result['message'] ?? 'Integration action failed',
-                                'result' => $result
+                                'result' => $result,
+                                'debug' => ['integration' => $integrationName, 'action' => $actionName]
                             ]);
                             exit;
                         }

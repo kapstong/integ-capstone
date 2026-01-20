@@ -1024,17 +1024,22 @@ body {
 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                    console.error('HR3 Claims API Error:', response.status, response.statusText, errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
                 }
 
                 const result = await response.json();
+
+                console.log('HR3 Claims Response:', result);
 
                 if (result.success && result.result) {
                     window.displayHR3Claims(result.result);
                 } else if (Array.isArray(result) && result.length > 0) {
                     window.displayHR3Claims(result);
                 } else {
-                    window.showAlert('Error loading claims: ' + (result.error || 'No claims found'), 'danger');
+                    const errorMsg = result.error || 'No claims found';
+                    console.error('HR3 Claims Error:', result);
+                    window.showAlert('Error loading claims: ' + errorMsg, 'danger');
                 }
             } catch (error) {
                 console.error('HR3 Claims loading error:', error);
