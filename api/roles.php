@@ -9,33 +9,26 @@ require_once '../includes/permissions.php';
 require_once '../includes/logger.php';
 
 header('Content-Type: application/json');
-session_start();
 
-// Check if user is logged in
-if (!isset($_SESSION['user'])) {
+// Check if user is logged in and has required permissions (same as users API)
+$auth = new Auth();
+if (!$auth->isLoggedIn()) {
     http_response_code(401);
     echo json_encode(['error' => 'Unauthorized']);
     exit;
 }
 
-$userId = $_SESSION['user']['id'];
+// Check if user has admin role or permission to manage roles (same logic as users API)
+if (!$auth->hasRole('admin') && !$auth->hasRole('super_admin') && !$auth->hasPermission('roles.view')) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Access denied - insufficient privileges']);
+    exit;
+}
+
+$userId = $auth->getCurrentUser()['id'];
 $method = $_SERVER['REQUEST_METHOD'];
 
 $permManager = PermissionManager::getInstance();
-
-// Load user permissions and roles
-$permManager->loadUserPermissions($userId);
-
-// Check if user has permission to manage roles OR is super admin
-$userRole = $_SESSION['user']['role'] ?? '';
-$userHasRolesView = $permManager->hasPermission('roles.view');
-
-// Allow access if user has roles.view permission OR is super admin
-if (!$userHasRolesView && !in_array($userRole, ['super_admin', 'superadmin'])) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Access denied - user role: ' . $userRole . ', has roles.view: ' . ($userHasRolesView ? 'yes' : 'no')]);
-    exit;
-}
 
 try {
     switch ($method) {
@@ -104,8 +97,8 @@ try {
 
             $action = $data['action'] ?? '';
 
-            // Check if user has manage permission for write operations OR is super admin
-            if (!$permManager->hasPermission('roles.manage') && $userRole !== 'super_admin') {
+            // Check if user has manage permission for write operations (same as users API)
+            if (!$auth->hasRole('admin') && !$auth->hasRole('super_admin') && !$auth->hasPermission('roles.manage')) {
                 http_response_code(403);
                 echo json_encode(['error' => 'Access denied - manage permission required']);
                 exit;
@@ -214,8 +207,8 @@ try {
             break;
 
         case 'DELETE':
-            // Check if user has manage permission OR is super admin
-            if (!$permManager->hasPermission('roles.manage') && $userRole !== 'super_admin') {
+            // Check if user has manage permission (same as users API)
+            if (!$auth->hasRole('admin') && !$auth->hasRole('super_admin') && !$auth->hasPermission('roles.manage')) {
                 http_response_code(403);
                 echo json_encode(['error' => 'Access denied - manage permission required']);
                 exit;
