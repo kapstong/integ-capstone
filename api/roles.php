@@ -207,6 +207,7 @@ try {
                             $responseCode = 400;
                         } else {
                             $userId = (int) $data['user_id'];
+                            $db = Database::getInstance()->getConnection();
                             $selectedPermissions = $data['permissions'] ?? [];
 
                             // Ensure selectedPermissions is an array
@@ -232,14 +233,14 @@ try {
                                             assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                                         )
                                     ";
-                                    $permManager->db->exec($createTableSQL);
+                                    $db->exec($createTableSQL);
                                 } catch (Exception $e) {
                                     error_log("Table creation error: " . $e->getMessage());
                                 }
 
                                 // Clear existing user permissions
                                 try {
-                                    $stmt = $permManager->db->prepare("DELETE FROM user_permissions WHERE user_id = ?");
+                                    $stmt = $db->prepare("DELETE FROM user_permissions WHERE user_id = ?");
                                     $stmt->execute([$userId]);
                                 } catch (Exception $e) {
                                     error_log("Failed to clear user permissions: " . $e->getMessage());
@@ -252,7 +253,7 @@ try {
                                 foreach ($selectedPermissions as $permName) {
                                     if (isset($permissionMap[$permName])) {
                                         try {
-                                            $stmt = $permManager->db->prepare("
+                                            $stmt = $db->prepare("
                                                 INSERT INTO user_permissions (user_id, permission_id) VALUES (?, ?)
                                             ");
                                             $result = $stmt->execute([$userId, $permissionMap[$permName]]);
