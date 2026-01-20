@@ -159,45 +159,53 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
         display: none;
     }
 
-    .sidebar-nav-collapse-btn {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        background: none;
+    .sidebar-collapse-btn {
+        position: fixed;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.1);
         border: none;
-        color: rgba(255, 255, 255, 0.6);
+        color: rgba(255, 255, 255, 0.7);
         cursor: pointer;
-        font-size: 1.1em;
-        padding: 0.5rem;
+        font-size: 1.2em;
+        padding: 0.75rem 0.5rem;
         transition: all 0.2s ease;
-        width: 35px;
-        height: 35px;
+        width: 36px;
+        height: 50px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 6px;
+        border-radius: 0 8px 8px 0;
+        z-index: 20001;
     }
 
-    .sidebar-nav-collapse-btn:hover {
-        background-color: rgba(255, 255, 255, 0.12);
+    .sidebar-collapse-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
         color: white;
     }
 
-    .sidebar-nav-collapse-btn i {
+    .sidebar-collapse-btn i {
         transition: transform 0.3s ease;
     }
 
-    .sidebar.sidebar-collapsed .sidebar-nav-collapse-btn i {
+    .sidebar.sidebar-collapsed ~ .sidebar-collapse-btn {
+        left: auto;
+    }
+
+    .sidebar.sidebar-collapsed .sidebar-collapse-btn i {
         transform: rotate(180deg);
     }
 </style>
 
+<!-- Sidebar Collapse Button -->
+<button class="sidebar-collapse-btn" id="sidebarCollapseBtn" onclick="toggleSidebarDesktop()" title="Collapse sidebar">
+    <i class="fas fa-chevron-left"></i>
+</button>
+
 <!-- Global Sidebar Navigation -->
 <div class="sidebar" id="sidebar" style="display:block; left:0; width:300px; z-index:20000; background-color:#1e2936;">
     <div class="sidebar-nav-logo">
-        <button class="sidebar-nav-collapse-btn" onclick="toggleSidebarDesktop()" title="Collapse sidebar">
-            <i class="fas fa-chevron-left"></i>
-        </button>
         <img src="atieralogo.png" alt="Atiera Logo">
     </div>
     <nav class="sidebar-nav-menu">
