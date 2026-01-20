@@ -1426,10 +1426,10 @@ $departments = [
                                             <button type="button" class="btn btn-outline-info btn-sm" onclick="viewTrashItem(${item.id})">
                                                 <i class="fas fa-eye"></i> View
                                             </button>
-                                            <button type="button" class="btn btn-outline-success btn-sm" onclick="restoreTrashItem(${item.id})">
+                                            <button type="button" class="btn btn-outline-success btn-sm" onclick="restoreTrashItem(${item.id}, '${item.item_type}')">
                                                 <i class="fas fa-undo"></i> Restore
                                             </button>
-                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="permanentDelete(${item.id})">
+                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="permanentDelete(${item.id}, '${item.item_type}')">
                                                 <i class="fas fa-trash-alt"></i> Delete
                                             </button>
                                         </div>
@@ -1475,7 +1475,7 @@ $departments = [
                 });
         }
 
-        function restoreTrashItem(itemId) {
+        function restoreTrashItem(itemId, itemType) {
             showConfirmDialog(
                 'Restore Item',
                 'Are you sure you want to restore this item?',
@@ -1488,7 +1488,8 @@ $departments = [
                             },
                             body: JSON.stringify({
                                 action: 'restore_item',
-                                item_id: itemId
+                                item_id: itemId,
+                                item_type: itemType
                             })
                         });
                         const data = await response.json();
@@ -1505,7 +1506,7 @@ $departments = [
             );
         }
 
-        function permanentDelete(itemId) {
+        function permanentDelete(itemId, itemType) {
             showConfirmDialog(
                 'Permanent Delete',
                 'Are you sure you want to permanently delete this item? This action cannot be undone.',
@@ -1518,7 +1519,8 @@ $departments = [
                             },
                             body: JSON.stringify({
                                 action: 'permanent_delete',
-                                item_id: itemId
+                                item_id: itemId,
+                                item_type: itemType
                             })
                         });
                         const data = await response.json();
