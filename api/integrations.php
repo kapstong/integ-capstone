@@ -145,8 +145,28 @@ try {
                 case 'test':
                     // Test integration connection
                     $integrationName = $_POST['integration_name'] ?? '';
-                    $result = $integrationManager->testIntegration($integrationName);
-                    echo json_encode($result);
+
+                    // Check if integration exists
+                    $integration = $integrationManager->getIntegration($integrationName);
+                    if (!$integration) {
+                        echo json_encode(['success' => false, 'error' => 'Integration not found']);
+                        exit;
+                    }
+
+                    // Check if configured
+                    $config = $integrationManager->getIntegrationConfig($integrationName);
+                    if (!$config) {
+                        echo json_encode(['success' => false, 'error' => 'Integration not configured']);
+                        exit;
+                    }
+
+                    // Try to test connection
+                    try {
+                        $result = $integrationManager->testIntegration($integrationName);
+                        echo json_encode($result);
+                    } catch (Exception $e) {
+                        echo json_encode(['success' => false, 'error' => 'Connection test failed: ' . $e->getMessage()]);
+                    }
                     break;
 
                 case 'execute':
