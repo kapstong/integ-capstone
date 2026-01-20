@@ -1001,6 +1001,24 @@ $departments = [
         </div>
     </div>
 
+    <!-- View Trash Item Modal -->
+    <div class="modal fade" id="viewTrashModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Deleted Item Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="trashViewContent"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
 
     <!-- Footer -->
@@ -1563,7 +1581,38 @@ $departments = [
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Item data:\n' + JSON.stringify(data.item, null, 2));
+                        const content = document.getElementById('trashViewContent');
+                        const item = data.item || {};
+                        let html = '';
+
+                        if (itemType === 'soft_deleted_user') {
+                            html = `
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="mb-2"><strong>Type:</strong> Soft Deleted User</div>
+                                        <div class="mb-2"><strong>Username:</strong> ${item.username || '-'}</div>
+                                        <div class="mb-2"><strong>Full Name:</strong> ${item.full_name || '-'}</div>
+                                        <div class="mb-2"><strong>Email:</strong> ${item.email || '-'}</div>
+                                        <div class="mb-2"><strong>Role:</strong> ${item.role || '-'}</div>
+                                        <div class="mb-2"><strong>Status:</strong> ${item.status || '-'}</div>
+                                        <div class="mb-2"><strong>Deleted At:</strong> ${item.deleted_at || '-'}</div>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            html = `
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="mb-2"><strong>Type:</strong> Deleted Record</div>
+                                        <pre class="mb-0" style="white-space: pre-wrap; color: #495057;">${JSON.stringify(item, null, 2)}</pre>
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        content.innerHTML = html;
+                        const modal = new bootstrap.Modal(document.getElementById('viewTrashModal'));
+                        modal.show();
                     } else {
                         showTrashAlert(data.error || 'Failed to load item', 'danger');
                     }
