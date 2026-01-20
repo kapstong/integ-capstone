@@ -2327,23 +2327,13 @@ $db = Database::getInstance()->getConnection();
             fetch('../api/reports.php?type=analytics_summary')
                 .then(response => {
                     if (!response.ok) {
-                        // Analytics summary endpoint not available, show placeholder
-                        const container = document.getElementById('analyticsSection');
-                        if (container) {
-                            container.innerHTML = `
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    Analytics summary is not available. Please use the individual reports.
-                                </div>
-                            `;
-                        }
-                        throw new Error('Analytics endpoint not available');
+                        throw new Error('HTTP ' + response.status);
                     }
                     return response.json();
                 })
                 .then(data => {
-                    if (data.error) {
-                        showAlert(data.error, 'danger');
+                    if (!data.success) {
+                        showAlert(data.error || 'Failed to load analytics', 'danger');
                         return;
                     }
 
@@ -2412,11 +2402,7 @@ $db = Database::getInstance()->getConnection();
                     });
                 })
                 .catch(error => {
-                    // Analytics endpoint not available - this is expected if endpoint doesn't exist
-                    if (error.message === 'Analytics endpoint not available') {
-                        console.log('Analytics summary endpoint not configured');
-                        return;
-                    }
+                    console.error('Error loading analytics:', error);
                     showAlert('Error loading analytics: ' + error.message, 'danger');
                 });
         }

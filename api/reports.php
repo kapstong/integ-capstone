@@ -125,6 +125,9 @@ function handleGet($db, $logger) {
             case 'customer_summary':
                 generateCustomerSummary($db, $dateFrom, $dateTo, $format);
                 break;
+            case 'analytics_summary':
+                generateAnalyticsSummary($db, $dateFrom, $dateTo, $format);
+                break;
             default:
                 http_response_code(400);
                 echo json_encode(['error' => 'Invalid report type']);
@@ -312,6 +315,78 @@ function generateIncomeStatement($db, $dateFrom, $dateTo, $format) {
 
         outputReport($report, $format, 'income_statement');
     }
+}
+
+function generateAnalyticsSummary($db, $dateFrom, $dateTo, $format) {
+    try {
+        // Get MTD (Month-to-Date) data
+        $mtdFrom = date('Y-m-01'); // First day of current month
+        $mtdTo = date('Y-m-t'); // Last day of current month
+        
+        $mtdRevenue = calculateRevenue($db, $mtdFrom, $mtdTo);
+        $mtdExpenses = calculateExpenses($db, $mtdFrom, $mtdTo);
+        $mtdNet = $mtdRevenue - $mtdExpenses;
+        
+        // Get trend data for last 12 months
+        $trendLabels = [];
+        $trendRevenue = [];
+        $trendExpenses = [];
+        
+        for ($i = 11; $i >= 0; $i--) {
+            $monthStart = date('Y-m-01', strtotime("-$i months"));
+            $monthEnd = date('Y-m-t', strtotime("-$i months"));
+            $monthLabel = date('M Y', strtotime("-$i months"));
+            
+            $trendLabels[] = $monthLabel;
+            $trendRevenue[] = calculateRevenue($db, $monthStart, $monthEnd);
+            $trendExpenses[] = calculateExpenses($db, $monthStart, $monthEnd);
+        }
+        
+        $report = [
+            'success' => true,
+            'mtd' => [
+                'revenue' => $mtdRevenue,
+                'expenses' => $mtdExpenses,
+                'net' => $mtdNet
+            ],
+            'trend' => [
+                'labels' => $trendLabels,
+                'revenue' => $trendRevenue,
+                'expenses' => $trendExpenses
+            ]
+        ];
+        
+        outputReport($report, $format, 'analytics_summary');
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to generate analytics summary: ' . $e->getMessage()]);
+    }
+}
+
+function calculateRevenue($db, $dateFrom, $dateTo) {
+    $stmt = $db->prepare("
+        SELECT COALESCE(SUM(jel.credit - jel.debit), 0) as total
+        FROM journal_entry_lines jel
+        JOIN journal_entries je ON jel.journal_entry_id = je.id
+        JOIN chart_of_accounts coa ON jel.account_id = coa.id
+        WHERE coa.account_type = 'revenue'
+        AND je.entry_date BETWEEN ? AND ?
+    ");
+    $stmt->execute([$dateFrom, $dateTo]);
+    return (float)($stmt->fetch()['total'] ?? 0);
+}
+
+function calculateExpenses($db, $dateFrom, $dateTo) {
+    $stmt = $db->prepare("
+        SELECT COALESCE(SUM(jel.debit - jel.credit), 0) as total
+        FROM journal_entry_lines jel
+        JOIN journal_entries je ON jel.journal_entry_id = je.id
+        JOIN chart_of_accounts coa ON jel.account_id = coa.id
+        WHERE coa.account_type = 'expense'
+        AND je.entry_date BETWEEN ? AND ?
+    ");
+    $stmt->execute([$dateFrom, $dateTo]);
+    return (float)($stmt->fetch()['total'] ?? 0);
 }
 
 function generateCashFlowStatement($db, $dateFrom, $dateTo, $format) {
