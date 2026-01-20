@@ -31,7 +31,9 @@ require_once '../includes/auth.php';
 require_once '../includes/api_integrations.php';
 
 header('Content-Type: application/json');
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Check if user is logged in
 if (!isset($_SESSION['user'])) {
