@@ -726,30 +726,49 @@ header('Content-Type: application/javascript');
                 return;
             }
 
-            // Apply client-side filters for reference and payee name (since API may not support all filters)
+            // Apply client-side filters for reference and payee name
             let filteredDisbursements = disbursements;
             
-            const refSearch = document.getElementById('filterReferenceSearch')?.value?.toLowerCase() || '';
-            const payeeName = document.getElementById('filterPayeeName')?.value?.toLowerCase() || '';
+            const refSearch = (document.getElementById('filterReferenceSearch')?.value || '').trim().toLowerCase();
+            const payeeName = (document.getElementById('filterPayeeName')?.value || '').trim().toLowerCase();
             const department = document.getElementById('filterDepartment')?.value || '';
 
             if (refSearch || payeeName || department) {
                 filteredDisbursements = disbursements.filter(d => {
-                    const refMatch = !refSearch || (d.disbursement_number || d.reference_number || '').toLowerCase().includes(refSearch) || (d.id + '').includes(refSearch);
-                    const payeeMatch = !payeeName || (d.payee || '').toLowerCase().includes(payeeName);
-                    
-                    // Determine department based on reference_number prefix
-                    let disbursementDept = 'Manual';
-                    if (d.reference_number && d.reference_number.startsWith('HR3-CLAIM-')) {
-                        disbursementDept = 'Claims';
-                    } else if (d.reference_number && d.reference_number.startsWith('PAYROLL-')) {
-                        disbursementDept = 'Payroll';
+                    // Reference number search - checks both disbursement_number and reference_number fields
+                    // Supports partial/substring matching
+                    let refMatch = true;
+                    if (refSearch) {
+                        const refNum = (d.disbursement_number || d.reference_number || '').toLowerCase();
+                        const idStr = (d.id || '').toString();
+                        refMatch = refNum.includes(refSearch) || idStr.includes(refSearch);
                     }
                     
-                    const deptMatch = !department || disbursementDept === department;
+                    // Payee name search - supports partial/substring matching
+                    let payeeMatch = true;
+                    if (payeeName) {
+                        payeeMatch = (d.payee || '').toLowerCase().includes(payeeName);
+                    }
+                    
+                    // Determine department based on reference_number prefix
+                    let deptMatch = true;
+                    if (department) {
+                        let disbursementDept = 'Manual';
+                        if (d.reference_number && d.reference_number.startsWith('HR3-CLAIM-')) {
+                            disbursementDept = 'Claims';
+                        } else if (d.reference_number && d.reference_number.startsWith('PAYROLL-')) {
+                            disbursementDept = 'Payroll';
+                        }
+                        deptMatch = disbursementDept === department;
+                    }
                     
                     return refMatch && payeeMatch && deptMatch;
                 });
+            }
+
+            if (filteredDisbursements.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No matching disbursements found</td></tr>';
+                return;
             }
 
             tbody.innerHTML = filteredDisbursements.map(d => {
