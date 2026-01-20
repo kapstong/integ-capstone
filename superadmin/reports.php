@@ -2346,9 +2346,9 @@ $db = Database::getInstance()->getConnection();
                     const mtdExpenses = data.mtd.expenses || 0;
                     const mtdNet = data.mtd.net || 0;
 
-                    document.getElementById('analyticsMtdRevenue').textContent = 'ƒ,ñ' + mtdRevenue.toLocaleString();
-                    document.getElementById('analyticsMtdExpenses').textContent = 'ƒ,ñ' + mtdExpenses.toLocaleString();
-                    document.getElementById('analyticsNetResult').textContent = 'ƒ,ñ' + mtdNet.toLocaleString();
+                    document.getElementById('analyticsMtdRevenue').textContent = '₱ ' + mtdRevenue.toLocaleString();
+                    document.getElementById('analyticsMtdExpenses').textContent = '₱ ' + mtdExpenses.toLocaleString();
+                    document.getElementById('analyticsNetResult').textContent = '₱ ' + mtdNet.toLocaleString();
                     document.getElementById('analyticsNetResult').className = 'fw-bold fs-4 ' + (mtdNet >= 0 ? 'text-success' : 'text-danger');
 
                     const ctx = document.getElementById('reportTrendsChart');
@@ -2393,7 +2393,7 @@ $db = Database::getInstance()->getConnection();
                                     beginAtZero: true,
                                     ticks: {
                                         callback: function(value) {
-                                            return 'ƒ,ñ' + value.toLocaleString();
+                                            return '₱' + value.toLocaleString();
                                         }
                                     }
                                 }

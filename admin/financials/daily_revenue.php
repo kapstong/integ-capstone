@@ -256,11 +256,11 @@ function renderRevenueTable() {
         <tr>
             <td data-label="Date">${escapeHtml(entry.business_date)}</td>
             <td data-label="Outlet">${escapeHtml(entry.outlet_name)}</td>
-            <td data-label="Gross">ƒ,ñ${formatAmount(entry.gross_sales)}</td>
-            <td data-label="Discounts">ƒ,ñ${formatAmount(entry.discounts)}</td>
-            <td data-label="Service Charge">ƒ,ñ${formatAmount(entry.service_charge)}</td>
-            <td data-label="Taxes">ƒ,ñ${formatAmount(entry.taxes)}</td>
-            <td data-label="Net">ƒ,ñ${formatAmount(entry.net_sales)}</td>
+            <td data-label="Gross">₱${formatAmount(entry.gross_sales)}</td>
+            <td data-label="Discounts">₱${formatAmount(entry.discounts)}</td>
+            <td data-label="Service Charge">₱${formatAmount(entry.service_charge)}</td>
+            <td data-label="Taxes">₱${formatAmount(entry.taxes)}</td>
+            <td data-label="Net">₱${formatAmount(entry.net_sales)}</td>
             <td data-label="Covers" class="d-mobile-none">${entry.covers ?? '-'}</td>
             <td data-label="Room Nights" class="d-mobile-none">${entry.room_nights ?? '-'}</td>
             <td data-label="Actions">

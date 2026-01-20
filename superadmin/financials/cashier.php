@@ -207,8 +207,8 @@ function renderShiftTable() {
             <td data-label="Cashier">${escapeHtml(shift.cashier_name || 'N/A')}</td>
             <td data-label="Opened">${escapeHtml(shift.opened_at)}</td>
             <td data-label="Closed">${escapeHtml(shift.closed_at || 'Open')}</td>
-            <td data-label="Opening Cash">ƒ,ñ${formatAmount(shift.opening_cash)}</td>
-            <td data-label="Closing Cash">${shift.closing_cash !== null ? 'ƒ,ñ' + formatAmount(shift.closing_cash) : '-'}</td>
+            <td data-label="Opening Cash">₱${formatAmount(shift.opening_cash)}</td>
+            <td data-label="Closing Cash">${shift.closing_cash !== null ? '₱' + formatAmount(shift.closing_cash) : '-'}</td>
             <td data-label="Variance">${formatVariance(shift.variance)}</td>
             <td data-label="Status">${formatStatus(shift.status)}</td>
             <td data-label="Actions">
@@ -286,7 +286,7 @@ function formatVariance(value) {
     const amount = Number(value || 0);
     const klass = amount === 0 ? 'text-muted' : (amount > 0 ? 'text-success' : 'text-danger');
     const sign = amount > 0 ? '+' : '';
-    return `<span class="${klass}">${sign}ƒ,ñ${formatAmount(amount)}</span>`;
+    return `<span class="${klass}">${sign}₱${formatAmount(amount)}</span>`;
 }
 
 function formatStatus(status) {
