@@ -159,70 +159,46 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
         display: none;
     }
 
-    .sidebar-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 1rem;
-        border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .sidebar-collapse-btn {
+    .sidebar-nav-collapse-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
         background: none;
         border: none;
-        color: rgba(255, 255, 255, 0.7);
+        color: rgba(255, 255, 255, 0.6);
         cursor: pointer;
-        font-size: 1.2em;
+        font-size: 1.1em;
         padding: 0.5rem;
         transition: all 0.2s ease;
+        width: 35px;
+        height: 35px;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 40px;
-        height: 40px;
         border-radius: 6px;
     }
 
-    .sidebar-collapse-btn:hover {
+    .sidebar-nav-collapse-btn:hover {
         background-color: rgba(255, 255, 255, 0.12);
         color: white;
     }
 
-    .sidebar-collapse-btn i {
+    .sidebar-nav-collapse-btn i {
         transition: transform 0.3s ease;
     }
 
-    .sidebar.sidebar-collapsed .sidebar-collapse-btn i {
+    .sidebar.sidebar-collapsed .sidebar-nav-collapse-btn i {
         transform: rotate(180deg);
-    }
-
-    .sidebar-logo {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .sidebar-logo img {
-        height: 50px;
-        width: auto;
-        max-width: 100%;
-    }
-
-    .sidebar.sidebar-collapsed .sidebar-logo img {
-        height: 35px;
     }
 </style>
 
 <!-- Global Sidebar Navigation -->
 <div class="sidebar" id="sidebar" style="display:block; left:0; width:300px; z-index:20000; background-color:#1e2936;">
-    <div class="sidebar-header">
-        <div class="sidebar-logo">
-            <img src="atieralogo.png" alt="Atiera Logo">
-        </div>
-        <button class="sidebar-collapse-btn" onclick="toggleSidebarDesktop()" title="Collapse sidebar">
+    <div class="sidebar-nav-logo">
+        <button class="sidebar-nav-collapse-btn" onclick="toggleSidebarDesktop()" title="Collapse sidebar">
             <i class="fas fa-chevron-left"></i>
         </button>
+        <img src="atieralogo.png" alt="Atiera Logo">
     </div>
     <nav class="sidebar-nav-menu">
         <!-- Dashboard -->
