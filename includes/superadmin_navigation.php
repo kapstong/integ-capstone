@@ -31,7 +31,7 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
         top: 0;
         width: 300px;
         height: 100vh;
-        background-color: #1e2936;
+        background-color: #232c37;
         z-index: 20000;
         overflow-y: auto;
         transition: all 0.3s ease;
