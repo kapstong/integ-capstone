@@ -490,7 +490,7 @@ body {
                                     <option value="">All Departments</option>
                                     <option value="Payroll">Payroll</option>
                                     <option value="Claims">HR3 Claims</option>
-                                    <option value="Manual">Manual Entry</option>
+                                    <option value="Payroll">Payroll</option>
                                 </select>
                             </div>
                             <div class="col-md-8">

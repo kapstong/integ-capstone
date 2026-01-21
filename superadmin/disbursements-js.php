@@ -785,7 +785,7 @@ header('Content-Type: application/javascript');
                     // Determine department based on reference_number prefix
                     let deptMatch = true;
                     if (department) {
-                        let disbursementDept = 'Manual';
+                        let disbursementDept = 'Payroll';
                         if (d.reference_number && d.reference_number.startsWith('HR3-CLAIM-')) {
                             disbursementDept = 'Claims';
                         } else if (d.reference_number && d.reference_number.startsWith('PAYROLL-')) {
@@ -805,8 +805,8 @@ header('Content-Type: application/javascript');
 
             tbody.innerHTML = filteredDisbursements.map(d => {
                 // Determine source/department based on reference number
-                let source = 'Manual';
-                let sourceBadge = '<span class="badge bg-secondary">Manual</span>';
+                let source = 'Payroll';
+                let sourceBadge = '<span class="badge bg-secondary">Payroll</span>';
                 
                 if (d.reference_number) {
                     if (d.reference_number.startsWith('HR3-CLAIM-')) {
