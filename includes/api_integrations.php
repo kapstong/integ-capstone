@@ -1078,6 +1078,7 @@ class HR4Integration extends BaseIntegration {
         $parsedData = [];
 
         foreach ($apiResponse['data'] as $entry) {
+            $payrollId = $entry['payroll_id'] ?? $entry['payrollId'] ?? $entry['id'] ?? null;
             $totalAmount = floatval($entry['total_amount'] ?? 0);
             $rawStatus = $entry['status'] ?? '';
             $normalizedStatus = strtolower(trim((string)$rawStatus));
@@ -1090,7 +1091,7 @@ class HR4Integration extends BaseIntegration {
             $canApproveStatuses = ['processed', 'success', 'pending', 'pending approval', 'for approval'];
 
             $parsedData[] = [
-                'payroll_id' => $entry['id'] ?? null,
+                'payroll_id' => $payrollId,
                 'payroll_period' => $entry['payroll_period'] ?? '',
                 'period_display' => $entry['period_display'] ?? '',
                 'total_amount' => $totalAmount,
@@ -1123,7 +1124,7 @@ class HR4Integration extends BaseIntegration {
      * Update payroll approval status in HR4
      */
     public function updatePayrollStatus($config, $params = []) {
-        $payrollId = $params['id'] ?? null;
+        $payrollId = $params['id'] ?? $params['payroll_id'] ?? $params['payrollId'] ?? null;
         $action = strtolower($params['approval_action'] ?? $params['action'] ?? '');
 
         if (!$payrollId || !in_array($action, ['approve', 'reject'], true)) {

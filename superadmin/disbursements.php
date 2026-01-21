@@ -1460,6 +1460,7 @@ body {
             tbody.innerHTML = '';
 
             payrollData.forEach(payroll => {
+                const payrollId = payroll.payroll_id || payroll.payrollId || payroll.id || '';
                 const totalAmount = parseFloat(payroll.total_amount || payroll.net_pay || 0);
                 const submittedAt = payroll.submitted_at ? new Date(payroll.submitted_at).toLocaleString() : 'N/A';
                 const rawStatus = payroll.status || '';
@@ -1471,7 +1472,7 @@ body {
                 const canApprove = Boolean(payroll.can_approve) || ['processed', 'success', 'pending', 'pending approval', 'for approval'].includes(statusKey);
 
                 const row = document.createElement('tr');
-                row.dataset.payrollId = payroll.payroll_id || '';
+                row.dataset.payrollId = payrollId;
                 row.dataset.period = payroll.period_display || payroll.payroll_period || '';
                 row.dataset.amount = totalAmount;
                 row.dataset.submittedBy = payroll.submitted_by || '';
@@ -1481,17 +1482,17 @@ body {
                 // Show approve/reject buttons only for payroll that can be approved
                 if (canApprove) {
                     actionsHtml = `
-                        <button class="btn btn-success btn-sm me-2" onclick="updatePayrollApproval(this, '${payroll.payroll_id}', 'approve')">
+                        <button class="btn btn-success btn-sm me-2" onclick="updatePayrollApproval(this, '${payrollId}', 'approve')">
                             <i class="fas fa-check me-1"></i>Approve
                         </button>
-                        <button class="btn btn-danger btn-sm" onclick="updatePayrollApproval(this, '${payroll.payroll_id}', 'reject')">
+                        <button class="btn btn-danger btn-sm" onclick="updatePayrollApproval(this, '${payrollId}', 'reject')">
                             <i class="fas fa-times me-1"></i>Reject
                         </button>
                     `;
                 } else {
                     // For already processed payroll, show view details button
                     actionsHtml = `
-                        <button class="btn btn-info btn-sm" onclick="viewPayrollDetails(this, '${payroll.payroll_id}')">
+                        <button class="btn btn-info btn-sm" onclick="viewPayrollDetails(this, '${payrollId}')">
                             <i class="fas fa-eye me-1"></i>View Details
                         </button>
                     `;
@@ -1565,6 +1566,7 @@ body {
             const btn = buttonEl && buttonEl.closest ? buttonEl.closest('button') : null;
             const originalText = btn ? btn.innerHTML : '';
             const row = buttonEl && buttonEl.closest ? buttonEl.closest('tr') : null;
+            const resolvedPayrollId = payrollId || (row && row.dataset ? row.dataset.payrollId : '');
 
             if (btn) {
                 btn.disabled = true;
@@ -1572,6 +1574,9 @@ body {
             }
 
             try {
+                if (!resolvedPayrollId) {
+                    throw new Error('Payroll ID is missing for this record.');
+                }
                 let rejectionReason = '';
                 if (action === 'reject') {
                     rejectionReason = prompt('Provide rejection reason (required for reject):', '');
@@ -1593,11 +1598,11 @@ body {
                         action: 'execute',
                         integration_name: 'hr4',
                         action_name: 'updatePayrollStatus',
-                        id: payrollId,
+                        id: resolvedPayrollId,
                         approval_action: action,
                         rejection_reason: rejectionReason,
                         params: JSON.stringify({
-                            id: payrollId,
+                            id: resolvedPayrollId,
                             action: action,
                             rejection_reason: rejectionReason
                         })
@@ -1620,7 +1625,8 @@ body {
 
                 const result = await response.json();
 
-                if (result.success) {
+                const actionResult = result.result || result;
+                if (result.success && (actionResult.success === undefined || actionResult.success)) {
                     if (action === 'approve') {
                         try {
                             await createPayrollDisbursement(row);
@@ -1630,7 +1636,8 @@ body {
                     }
                     window.loadPayroll();
                 } else {
-                    window.showAlert('Error updating payroll: ' + (result.error || 'Unknown error'), 'danger');
+                    const message = actionResult.error || actionResult.message || result.error || 'Unknown error';
+                    window.showAlert('Error updating payroll: ' + message, 'danger');
                 }
             } catch (error) {
                 window.showAlert('Error: ' + error.message, 'danger');
