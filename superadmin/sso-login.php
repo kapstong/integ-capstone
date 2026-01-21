@@ -1,13 +1,15 @@
 <?php
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+
 require "connections.php";
+require_once '../includes/permissions.php';
 session_start();
 
 if (!isset($_GET['token'])) die("Token missing");
 
 // decode token
-$decoded = base64_decode($_GET['token']);
+$decoded = base64_decode($_GET['token'], true);
 if (!$decoded) die("Invalid token");
 
 $data = json_decode($decoded, true);
@@ -43,7 +45,7 @@ $stmt = $conn->prepare("
     ORDER BY id DESC LIMIT 1
 ");
 $stmt->execute();
-$res = $stmt->get_result()->fetch_assoc();
+$res = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$res) die("Secret not found");
 
@@ -65,11 +67,41 @@ if ($payload['dept'] !== 'FIN1') {
     die("Invalid department access");
 }
 
-// auto login
-$_SESSION['hr_user'] = [
-    "email" => $payload['email'],
-    "role"  => $payload['role']
+// load user for session population
+if (empty($payload['email'])) {
+    die("Email missing");
+}
+
+$stmt = $conn->prepare("
+    SELECT id, username, email, full_name, role, department, phone, status
+    FROM users
+    WHERE email = ? AND status = 'active'
+    LIMIT 1
+");
+$stmt->execute([$payload['email']]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$user) {
+    die("User not found or inactive");
+}
+
+$_SESSION['user'] = [
+    'id' => $user['id'],
+    'username' => $user['username'],
+    'role_name' => $user['role'],
+    'name' => $user['full_name'],
+    'email' => $user['email'],
+    'department' => $user['department'] ?? '',
+    'phone' => $user['phone'] ?? ''
 ];
+
+$permManager = PermissionManager::getInstance();
+$permManager->loadUserPermissions($user['id']);
+$_SESSION['user']['permissions'] = $permManager->getUserPermissions();
+$_SESSION['user']['roles'] = $permManager->getUserRoles();
+
+$stmt = $conn->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+$stmt->execute([$user['id']]);
 
 header("Location: index.php");
 exit;
