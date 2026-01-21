@@ -63,6 +63,7 @@ header('Content-Type: application/javascript');
 
                 if (auditLogs.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" class="text-center">No audit logs found</td></tr>';
+                    updateTabBadge('audit-tab', 0);
                     return;
                 }
 
@@ -70,12 +71,14 @@ header('Content-Type: application/javascript');
                     const actionLabel = log.action_label || log.action;
                     return '<tr><td>' + log.formatted_date + '</td><td>' + (log.full_name || log.username || 'Unknown') + '</td><td><span class="badge bg-info">' + actionLabel + '</span></td><td>' + (log.disbursement_number || log.record_id || 'N/A') + '</td><td>' + log.action_description + '</td></tr>';
                 }).join('');
+                updateTabBadge('audit-tab', auditLogs.length);
 
             } catch (error) {
                 const tbody = document.getElementById('auditTableBody');
                 if (tbody) {
                     tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Error loading audit trail</td></tr>';
                 }
+                updateTabBadge('audit-tab', 0);
             }
         }
 
@@ -447,6 +450,31 @@ header('Content-Type: application/javascript');
         // Global variables
         let currentFilters = {};
 
+        function updateTabBadge(tabId, count) {
+            const tabButton = document.getElementById(tabId);
+            if (!tabButton) return;
+            const badge = tabButton.querySelector('[data-tab-badge]');
+            if (!badge) return;
+
+            if (tabButton.classList.contains('active')) {
+                badge.textContent = '0';
+                badge.classList.add('d-none');
+                tabButton.classList.remove('tab-attention');
+                return;
+            }
+
+            if (count > 0) {
+                badge.textContent = count;
+                badge.classList.remove('d-none');
+                tabButton.classList.add('tab-attention');
+            } else {
+                badge.textContent = '0';
+                badge.classList.add('d-none');
+                tabButton.classList.remove('tab-attention');
+            }
+        }
+        window.updateTabBadge = updateTabBadge;
+
         // Load disbursements from API
         async function loadDisbursements() {
             try {
@@ -608,7 +636,7 @@ header('Content-Type: application/javascript');
                 const requiredPerm = tabPermissions[tabId];
                 const tabElement = document.getElementById(tabId);
 
-                if (tabElement) {
+            if (tabElement) {
                     // Show tab if user has permission OR is admin OR session is empty (dev mode)
                     if (userPerms.includes(requiredPerm) || hasAdminRole) {
                         tabElement.style.display = ''; // Default display
@@ -619,8 +647,8 @@ header('Content-Type: application/javascript');
                         }
                         // If session is empty, show all tabs (development mode)
                     }
-                }
-            });
+            }
+        });
 
             // Hide buttons based on permissions
             // Bulk delete button - requires delete permission
@@ -664,8 +692,15 @@ header('Content-Type: application/javascript');
             tab.addEventListener('shown.bs.tab', function(e) {
                 const target = e.target.getAttribute('data-bs-target');
                 switch(target) {
+                    case '#claims':
+                        updateTabBadge('claims-tab', 0);
+                        break;
+                    case '#payroll':
+                        updateTabBadge('payroll-tab', 0);
+                        break;
                     case '#audit':
                         loadAuditTrail();
+                        updateTabBadge('audit-tab', 0);
                         break;
                     case '#reports':
                         loadDisbursementReports();

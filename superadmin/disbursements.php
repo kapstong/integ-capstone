@@ -296,6 +296,9 @@ body {
             color: white;
             box-shadow: 0 4px 8px rgba(30, 41, 54, 0.2);
         }
+        .nav-tabs .nav-link.tab-attention {
+            box-shadow: 0 0 0 2px rgba(25, 135, 84, 0.35);
+        }
         .card {
             border: none;
             border-radius: 12px;
@@ -414,11 +417,13 @@ body {
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="claims-tab" data-bs-toggle="tab" data-bs-target="#claims" type="button" role="tab">
                     <i class="fas fa-receipt me-2"></i>Claims Processing
+                    <span class="badge bg-success ms-2 d-none" data-tab-badge="claims">0</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="payroll-tab" data-bs-toggle="tab" data-bs-target="#payroll" type="button" role="tab">
                     <i class="fas fa-money-check-alt me-2"></i>Payroll Processing
+                    <span class="badge bg-success ms-2 d-none" data-tab-badge="payroll">0</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -435,6 +440,7 @@ body {
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit" type="button" role="tab">
                     <i class="fas fa-history me-2"></i>Audit Trail
+                    <span class="badge bg-success ms-2 d-none" data-tab-badge="audit">0</span>
                 </button>
             </li>
         </ul>
@@ -1099,6 +1105,9 @@ body {
 
             if (!normalizedClaims || normalizedClaims.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No claims available</td></tr>';
+                if (window.updateTabBadge) {
+                    window.updateTabBadge('claims-tab', 0);
+                }
                 return;
             }
 
@@ -1130,6 +1139,10 @@ body {
                 `;
                 tbody.appendChild(row);
             });
+
+            if (window.updateTabBadge) {
+                window.updateTabBadge('claims-tab', sortedClaims.length);
+            }
         };
 
         window.processHR3Claim = async function(claimId, employeeName, amount, description, currency) {
@@ -1454,6 +1467,9 @@ body {
 
             if (!payrollData || payrollData.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No payroll data found in HR4 system</td></tr>';
+                if (window.updateTabBadge) {
+                    window.updateTabBadge('payroll-tab', 0);
+                }
                 return;
             }
 
@@ -1509,6 +1525,10 @@ body {
                 `;
                 tbody.appendChild(row);
             });
+
+            if (window.updateTabBadge) {
+                window.updateTabBadge('payroll-tab', payrollData.length);
+            }
         };
 
         async function createPayrollDisbursement(row) {
