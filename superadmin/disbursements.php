@@ -1069,8 +1069,6 @@ body {
 
                 const result = await response.json();
 
-                console.log('HR3 Claims Response:', result);
-
                 if (result.success && result.result) {
                     window.displayHR3Claims(result.result);
                 } else if (Array.isArray(result) && result.length > 0) {
@@ -1115,8 +1113,6 @@ body {
         window.displayHR3Claims = function(claims) {
             const tbody = document.getElementById('claimsTableBody');
             const normalizedClaims = normalizeClaimsPayload(claims);
-
-            console.log('displayHR3Claims received:', normalizedClaims);
 
             if (!normalizedClaims || normalizedClaims.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No claims available</td></tr>';
