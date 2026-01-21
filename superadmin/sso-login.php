@@ -75,9 +75,17 @@ if (!hash_equals($check, $signature)) {
     die("Invalid or tampered token");
 }
 
-// expiry check
-if ($payload['exp'] < time()) {
-    die("Token expired");
+// expiry check (allow lifetime tokens when exp is missing or zero)
+if (isset($payload['exp']) && is_numeric($payload['exp']) && (int)$payload['exp'] > 0) {
+    $exp = (int)$payload['exp'];
+    // Normalize millisecond timestamps to seconds.
+    if ($exp > 9999999999) {
+        $exp = (int)floor($exp / 1000);
+    }
+    $payload['exp'] = $exp;
+    if ($exp < time()) {
+        die("Token expired");
+    }
 }
 
 // department validation
