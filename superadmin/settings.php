@@ -747,7 +747,7 @@ $departments = [
                                         <label for="maintenanceMessage" class="form-label">Maintenance Banner Message</label>
                                         <textarea class="form-control" id="maintenanceMessage" rows="3" placeholder="Enter message to display during maintenance"></textarea>
                                     </div>
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Save Changes</button>
                                 </form>
                             </div>
                             <div class="tab-pane fade" id="user" role="tabpanel" aria-labelledby="user-tab">
