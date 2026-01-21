@@ -1143,13 +1143,15 @@ class HR4Integration extends BaseIntegration {
 
         try {
             $url = $config['api_url'];
-            $query = http_build_query($payload);
-            $separator = strpos($url, '?') === false ? '?' : '&';
-            $ch = curl_init($url . $separator . $query);
+            $payloadEncoded = http_build_query($payload);
+            $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 15);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $payloadEncoded);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -1161,7 +1163,7 @@ class HR4Integration extends BaseIntegration {
 
             $result = json_decode($response, true);
             if ($result === null && json_last_error() !== JSON_ERROR_NONE) {
-                return ['success' => false, 'error' => 'HR4 API returned invalid JSON'];
+                return ['success' => false, 'error' => 'HR4 API returned invalid JSON', 'raw' => $response];
             }
 
             if ((isset($result['status']) && strtolower($result['status']) === 'success') ||
