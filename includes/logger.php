@@ -130,6 +130,9 @@ class Logger {
             return;
         }
         $userId = isset($_SESSION['user']['id']) ? $_SESSION['user']['id'] : null;
+        if (empty($userId)) {
+            return;
+        }
         $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
 
@@ -202,6 +205,9 @@ class Logger {
         try {
             $where = [];
             $params = [];
+            if (empty($filters['include_system'])) {
+                $where[] = "al.user_id IS NOT NULL";
+            }
 
             if (!empty($filters['user_id'])) {
                 $where[] = "al.user_id = ?";
@@ -268,6 +274,7 @@ class Logger {
                     COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL ? DAY) THEN 1 END) as recent_logs,
                     MAX(created_at) as last_activity
                 FROM audit_log
+                WHERE user_id IS NOT NULL
             ");
             $stmt->execute([$days]);
             return $stmt->fetch(PDO::FETCH_ASSOC);

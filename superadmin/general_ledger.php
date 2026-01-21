@@ -114,6 +114,8 @@ try {
         $auditTrail = $db->query("
             SELECT created_at as date_time, user_id as user, action, table_name as details, record_id
             FROM audit_log
+            WHERE user_id IS NOT NULL
+              AND table_name IN ('journal_entries', 'journal_entry_lines', 'chart_of_accounts')
             ORDER BY created_at DESC
             LIMIT 10
         ")->fetchAll() ?? [];

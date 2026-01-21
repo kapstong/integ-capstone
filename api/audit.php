@@ -61,7 +61,7 @@ function getAuditTrail($db, $filters = []) {
         $where = [];
         $params = [];
         $allowedTables = ['disbursements', 'hr3_claims', 'payroll'];
-        $allowedActions = ['created', 'updated', 'deleted', 'approved', 'rejected', 'processed_payment'];
+        $allowedActions = ['created', 'updated', 'deleted', 'approved', 'rejected', 'processed_payment', 'viewed'];
         $scope = $filters['scope'] ?? '';
 
         // Filter by table
@@ -92,6 +92,9 @@ function getAuditTrail($db, $filters = []) {
                 $params = array_merge($params, $allowedActions);
             }
         }
+
+        // Only user-driven actions
+        $where[] = "a.user_id IS NOT NULL";
 
         // Filter by user
         if (isset($filters['user_id'])) {

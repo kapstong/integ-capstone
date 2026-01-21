@@ -1,8 +1,32 @@
 <?php
 require_once __DIR__ . '/database.php';
 require_once __DIR__ . '/permissions.php';
+require_once __DIR__ . '/logger.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+}
+
+// Log page views for authenticated users (non-API, non-AJAX requests)
+if (!empty($_SESSION['user']['id'])) {
+    $scriptPath = $_SERVER['PHP_SELF'] ?? '';
+    $isApi = strpos($scriptPath, '/api/') !== false || strpos($scriptPath, '\\api\\') !== false;
+    $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+    if (!$isApi && !$isAjax && stripos($scriptPath, '.php') !== false) {
+        $scriptName = pathinfo($scriptPath, PATHINFO_FILENAME);
+        $moduleMap = [
+            'accounts_receivable' => 'invoices',
+            'accounts_payable' => 'bills',
+            'disbursements' => 'disbursements',
+            'budget_management' => 'budgets',
+            'general_ledger' => 'journal_entries'
+        ];
+        $tableName = $moduleMap[$scriptName] ?? $scriptName;
+
+        Logger::getInstance()->logUserAction('viewed', $tableName, null, null, [
+            'path' => $scriptPath
+        ]);
+    }
 }
 
 class Auth {
