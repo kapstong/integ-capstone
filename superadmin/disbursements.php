@@ -1000,7 +1000,7 @@ body {
     <script>
         // Wait for DOM to be fully loaded before defining functions
     window.addEventListener('DOMContentLoaded', function() {
-        const payrollApproverName = "<?php echo htmlspecialchars($_SESSION['user']['full_name'] ?? $_SESSION['user']['username'] ?? 'Finance Department', ENT_QUOTES); ?>";
+        window.payrollApproverName = "<?php echo htmlspecialchars($_SESSION['user']['full_name'] ?? $_SESSION['user']['username'] ?? 'Finance Department', ENT_QUOTES); ?>";
         // Auto-load HR3 claims when Claims Processing tab is activated
         const claimsTab = document.getElementById('claims-tab');
         if (claimsTab) {
@@ -1603,7 +1603,7 @@ body {
                         id: resolvedPayrollId,
                         approval_id: resolvedPayrollId,
                         approval_action: action,
-                        approver: payrollApproverName,
+                        approver: window.payrollApproverName || 'Finance Department',
                         rejection_reason: rejectionReason,
                         params: JSON.stringify({
                             id: resolvedPayrollId,
