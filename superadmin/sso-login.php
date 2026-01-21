@@ -41,10 +41,10 @@ if (!$payload) die("Invalid payload");
 $stmt = $conn->prepare("
     SELECT secret_key 
     FROM department_secrets 
-    WHERE department='FIN1' AND is_active=1 
+    WHERE department = ? AND is_active = 1 
     ORDER BY id DESC LIMIT 1
 ");
-$stmt->execute();
+$stmt->execute(['FIN1']);
 $res = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$res) die("Secret not found");
@@ -67,15 +67,19 @@ if ($payload['dept'] !== 'FIN1') {
     die("Invalid department access");
 }
 
+// create normal session (match login flow)
+session_regenerate_id(true);
+
 // load user for session population
 if (empty($payload['email'])) {
     die("Email missing");
 }
 
 $stmt = $conn->prepare("
-    SELECT id, username, email, full_name, role, department, phone, status
-    FROM users
-    WHERE email = ? AND status = 'active'
+    SELECT u.id, u.username, u.email, u.full_name, u.role,
+           u.department, u.phone, u.status
+    FROM users u
+    WHERE u.email = ? AND u.status = 'active'
     LIMIT 1
 ");
 $stmt->execute([$payload['email']]);
