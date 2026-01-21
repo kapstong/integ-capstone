@@ -109,7 +109,7 @@ function processPayment($db, $data) {
                 disbursement_number, disbursement_date, payee, amount,
                 payment_method, reference_number, purpose, account_id,
                 approved_by, recorded_by, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
         $stmt->execute([
@@ -122,7 +122,8 @@ function processPayment($db, $data) {
             $data['description'] ?? 'Payment processed',
             1, // Default account ID (Cash on Hand)
             $_SESSION['user']['id'] ?? 1,
-            $_SESSION['user']['id'] ?? 1
+            $_SESSION['user']['id'] ?? 1,
+            'paid' // Status for processed payment
         ]);
 
         $disbursementId = $db->lastInsertId();
@@ -394,7 +395,7 @@ function handlePost($db) {
                 disbursement_number, disbursement_date, payee, amount,
                 payment_method, reference_number, purpose, account_id,
                 approved_by, recorded_by, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
         $stmt->execute([
@@ -407,7 +408,8 @@ function handlePost($db) {
             $data['purpose'] ?? $data['notes'] ?? null,
             1, // Default account ID (Cash on Hand)
             $_SESSION['user']['id'] ?? 1, // approved_by
-            $_SESSION['user']['id'] ?? 1  // recorded_by
+            $_SESSION['user']['id'] ?? 1,  // recorded_by
+            'paid' // Status for created disbursement
         ]);
 
         $disbursementId = $db->lastInsertId();
@@ -502,7 +504,7 @@ function handlePut($db) {
             'reference_number' => $data['reference_number'] ?? null,
             'purpose' => $data['purpose'] ?? $data['notes'] ?? null,
             'disbursement_date' => $data['disbursement_date'],
-            'status' => $data['status'] ?? 'completed'
+            'status' => $data['status'] ?? 'paid'
         ]);
 
         $db->commit();
@@ -696,4 +698,3 @@ function updateBillPaymentStatus($db, $billId, $paymentAmount) {
 
 ob_end_flush();
 ?>
-
