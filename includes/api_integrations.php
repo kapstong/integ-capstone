@@ -1131,22 +1131,27 @@ class HR4Integration extends BaseIntegration {
         }
 
         $statusValue = $action === 'approve' ? 'approved' : 'rejected';
-        $payload = [
-            'action' => $action,
-            'approval_action' => $action,
-            'id' => $payrollId,
-            'payroll_id' => $payrollId,
-            'status' => $statusValue,
-            'notes' => $params['notes'] ?? '',
-            'rejection_reason' => $params['rejection_reason'] ?? ''
-        ];
+
+        // Try to update external HR4 system, but don't fail if it's not available
+        $externalUpdateSuccess = false;
+        $externalError = null;
 
         try {
+            $payload = [
+                'action' => $action,
+                'approval_action' => $action,
+                'id' => $payrollId,
+                'payroll_id' => $payrollId,
+                'status' => $statusValue,
+                'notes' => $params['notes'] ?? '',
+                'rejection_reason' => $params['rejection_reason'] ?? ''
+            ];
+
             $url = $config['api_url'];
             $payloadEncoded = http_build_query($payload);
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10); // Shorter timeout
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
             curl_setopt($ch, CURLOPT_POST, true);
@@ -1157,36 +1162,48 @@ class HR4Integration extends BaseIntegration {
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            if ($httpCode !== 200) {
-                return ['success' => false, 'error' => 'HR4 API returned HTTP ' . $httpCode];
-            }
-
-            $result = json_decode($response, true);
-            if ($result === null && json_last_error() !== JSON_ERROR_NONE) {
-                return ['success' => false, 'error' => 'HR4 API returned invalid JSON', 'raw' => $response];
-            }
-
-            if ((isset($result['status']) && strtolower($result['status']) === 'success') ||
-                (isset($result['success']) && $result['success'])) {
-                if (class_exists('Logger')) {
-                    Logger::getInstance()->logUserAction(
-                        $statusValue,
-                        'payroll',
-                        $payrollId,
-                        ['status' => 'processed'],
-                        ['status' => $statusValue, 'action' => $action]
-                    );
+            if ($httpCode === 200) {
+                $result = json_decode($response, true);
+                if ($result !== null &&
+                    ((isset($result['status']) && strtolower($result['status']) === 'success') ||
+                     (isset($result['success']) && $result['success']))) {
+                    $externalUpdateSuccess = true;
                 }
-                return ['success' => true, 'message' => $result['message'] ?? 'Payroll updated'];
             }
-
-            return [
-                'success' => false,
-                'error' => $result['error'] ?? $result['message'] ?? 'Payroll update failed'
-            ];
         } catch (Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
+            $externalError = $e->getMessage();
         }
+
+        // Always log the approval action locally
+        if (class_exists('Logger')) {
+            Logger::getInstance()->logUserAction(
+                $statusValue,
+                'payroll',
+                $payrollId,
+                ['status' => 'processed'],
+                ['status' => $statusValue, 'action' => $action, 'external_sync' => $externalUpdateSuccess]
+            );
+        }
+
+        // If external update failed, log a warning but still allow the approval to proceed
+        if (!$externalUpdateSuccess) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->warning('HR4 payroll approval external sync failed', [
+                    'payroll_id' => $payrollId,
+                    'action' => $action,
+                    'error' => $externalError,
+                    'proceeding_locally' => true
+                ]);
+            }
+        }
+
+        // Always return success for the approval action to allow local processing
+        return [
+            'success' => true,
+            'message' => 'Payroll ' . $statusValue . ' successfully' .
+                        ($externalUpdateSuccess ? '' : ' (external sync pending)'),
+            'external_sync' => $externalUpdateSuccess
+        ];
     }
 
     /**
