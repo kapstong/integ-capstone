@@ -762,7 +762,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </div>
                                 </div>
                                 <button type="submit" name="update_preferences" class="btn btn-primary">
-                                    <i class="fas fa-save me-2"></i>Save Preferences
+                                    <i class="fas fa-save me-2"></i>Save Changes
                                 </button>
                             </form>
                         </div>
@@ -835,6 +835,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </body>
 </html>
 </html>
-
-
-
