@@ -1139,6 +1139,7 @@ class HR4Integration extends BaseIntegration {
         $externalError = null;
 
         try {
+            $approver = $params['approver'] ?? $params['approved_by'] ?? $params['user_name'] ?? '';
             $payload = [
                 'action' => $action,
                 'approval_action' => $action,
@@ -1146,20 +1147,25 @@ class HR4Integration extends BaseIntegration {
                 'approval_id' => $payrollId,
                 'payroll_id' => $payrollId,
                 'status' => $statusValue,
+                'approver' => $approver,
                 'notes' => $params['notes'] ?? '',
-                'rejection_reason' => $params['rejection_reason'] ?? ''
+                'reason' => $params['rejection_reason'] ?? ''
             ];
 
-            $url = $config['api_url'];
-            $payloadEncoded = http_build_query($payload);
-            $ch = curl_init($url);
+            $baseUrl = rtrim($config['api_url'], '/');
+            $endpoint = $baseUrl;
+            if (stripos($baseUrl, 'payroll_approval_api.php') !== false) {
+                $endpoint .= $action === 'approve' ? '/approve' : '/reject';
+            }
+
+            $ch = curl_init($endpoint);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 10); // Shorter timeout
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
             curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $payloadEncoded);
-            $headers = ['Content-Type: application/x-www-form-urlencoded'];
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            $headers = ['Content-Type: application/json'];
             if (!empty($config['api_key'])) {
                 $headers[] = 'Authorization: Bearer ' . $this->generateAuthToken($config);
             }
