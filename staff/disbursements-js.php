@@ -22,7 +22,7 @@ header('Content-Type: application/javascript');
             }
 
             try {
-                const response = await fetch('../api/disbursements.php', {
+                const response = await fetch('../../api/disbursements.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ header('Content-Type: application/javascript');
         async function loadDisbursementReports() {
             try {
                 // Load disbursement summary
-                const response = await fetch('../api/disbursements.php', {
+                const response = await fetch('../../api/disbursements.php', {
                     credentials: 'include'
                 });
                 const disbursements = await response.json();
@@ -159,8 +159,8 @@ header('Content-Type: application/javascript');
         async function loadVouchers(disbursementId = null) {
             try {
                 const url = disbursementId ?
-                    `api/disbursements.php?action=get_vouchers&disbursement_id=${disbursementId}` :
-                    'api/disbursements.php?action=get_vouchers';
+                    `../api/disbursements.php?action=get_vouchers&disbursement_id=${disbursementId}` :
+                    '../api/disbursements.php?action=get_vouchers';
 
                 const response = await fetch(url, {
                     credentials: 'include'
@@ -225,7 +225,7 @@ header('Content-Type: application/javascript');
     // View disbursement details
     async function viewDisbursement(id) {
         try {
-            const response = await fetch(`api/disbursements.php?id=${id}`, {
+            const response = await fetch(`../api/disbursements.php?id=${id}`, {
                 credentials: 'include'
             });
             const data = await response.json();
@@ -244,7 +244,7 @@ header('Content-Type: application/javascript');
     // Edit disbursement
     async function editDisbursement(id) {
         try {
-            const response = await fetch(`api/disbursements.php?id=${id}`, {
+            const response = await fetch(`../api/disbursements.php?id=${id}`, {
                 credentials: 'include'
             });
             const data = await response.json();
@@ -283,7 +283,7 @@ header('Content-Type: application/javascript');
             'Are you sure you want to delete this disbursement?',
             async () => {
         try {
-            const response = await fetch(`api/disbursements.php?id=${id}`, {
+            const response = await fetch(`../api/disbursements.php?id=${id}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
@@ -330,8 +330,8 @@ header('Content-Type: application/javascript');
         try {
             const method = disbursementData.disbursement_id ? 'PUT' : 'POST';
             const url = disbursementData.disbursement_id
-                ? `api/disbursements.php?id=${disbursementData.disbursement_id}`
-                : 'api/disbursements.php';
+                ? `../api/disbursements.php?id=${disbursementData.disbursement_id}`
+                : '../api/disbursements.php';
 
             const response = await fetch(url, {
                 method: method,
@@ -409,7 +409,7 @@ header('Content-Type: application/javascript');
         async function loadDisbursements() {
             try {
                 const params = new URLSearchParams(currentFilters);
-                const response = await fetch(`api/disbursements.php?${params}`, {
+                const response = await fetch(`../api/disbursements.php?${params}`, {
                     credentials: 'include'
                 });
 
@@ -775,6 +775,10 @@ header('Content-Type: application/javascript');
             const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
             const selectedCountSpan = document.getElementById('selectedCount');
 
+            if (!bulkDeleteBtn || !selectedCountSpan) {
+                return;
+            }
+
             if (selectedDisbursements.size > 0) {
                 bulkDeleteBtn.style.display = 'inline-block';
                 selectedCountSpan.textContent = selectedDisbursements.size;
@@ -810,7 +814,7 @@ header('Content-Type: application/javascript');
                 // Delete each selected disbursement
                 for (const id of selectedDisbursements) {
                     try {
-                        const response = await fetch(`api/disbursements.php?id=${id}`, {
+                        const response = await fetch(`../api/disbursements.php?id=${id}`, {
                             method: 'DELETE',
                             credentials: 'include'
                         });

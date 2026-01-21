@@ -536,6 +536,16 @@ function handleDelete($db) {
 
         $db->beginTransaction();
 
+        // Delete journal entry lines first to avoid foreign key constraint errors
+        $stmt = $db->prepare("
+            DELETE FROM journal_entry_lines
+            WHERE journal_entry_id IN (
+                SELECT id FROM journal_entries
+                WHERE reference_type = 'disbursement' AND reference_id = ?
+            )
+        ");
+        $stmt->execute([$id]);
+
         // Delete journal entries first
         $stmt = $db->prepare("DELETE FROM journal_entries WHERE reference_type = 'disbursement' AND reference_id = ?");
         $stmt->execute([$id]);

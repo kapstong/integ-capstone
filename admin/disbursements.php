@@ -1424,6 +1424,11 @@ body {
                 const canApprove = Boolean(payroll.can_approve) || ['processed', 'success', 'pending', 'pending approval', 'for approval'].includes(statusKey);
 
                 const row = document.createElement('tr');
+                row.dataset.payrollId = payroll.payroll_id || '';
+                row.dataset.period = payroll.period_display || payroll.payroll_period || '';
+                row.dataset.amount = totalAmount;
+                row.dataset.submittedBy = payroll.submitted_by || '';
+                row.dataset.employeeCount = payroll.employee_count || '';
                 row.innerHTML = `
                     <td><strong>${payroll.period_display || payroll.payroll_period || 'N/A'}</strong></td>
                     <td><strong class="text-success">PHP ${totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
@@ -1446,9 +1451,43 @@ body {
             });
         };
 
+        async function createPayrollDisbursement(row) {
+            const payrollId = row?.dataset?.payrollId || '';
+            const period = row?.dataset?.period || 'Payroll';
+            const amount = parseFloat(row?.dataset?.amount || 0);
+
+            if (!payrollId || !amount) {
+                return;
+            }
+
+            const disbursementData = {
+                payee: `HR4 Payroll - ${period}`,
+                disbursement_date: new Date().toISOString().split('T')[0],
+                amount: amount,
+                payment_method: 'bank_transfer',
+                reference_number: payrollId,
+                purpose: `Payroll approval for ${period}`
+            };
+
+            const response = await fetch('../api/disbursements.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify(disbursementData)
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                loadDisbursements();
+            }
+        }
+
         window.updatePayrollApproval = async function(buttonEl, payrollId, action) {
             const btn = buttonEl && buttonEl.closest ? buttonEl.closest('button') : null;
             const originalText = btn ? btn.innerHTML : '';
+            const row = buttonEl && buttonEl.closest ? buttonEl.closest('tr') : null;
 
             if (btn) {
                 btn.disabled = true;
@@ -1492,6 +1531,13 @@ body {
 
                 if (result.success) {
                     // No success notifications.
+                    if (action === 'approve') {
+                        try {
+                            await createPayrollDisbursement(row);
+                        } catch (error) {
+                            window.showAlert('Payroll approved, but failed to record disbursement.', 'warning');
+                        }
+                    }
                     window.loadPayroll();
                 } else {
                     window.showAlert('Error updating payroll: ' + (result.error || 'Unknown error'), 'danger');
