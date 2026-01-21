@@ -543,14 +543,14 @@ function handleDelete($db) {
             DELETE FROM journal_entry_lines
             WHERE journal_entry_id IN (
                 SELECT id FROM journal_entries
-                WHERE reference_type = 'disbursement' AND reference_id = ?
+                WHERE reference = ?
             )
         ");
-        $stmt->execute([$id]);
+        $stmt->execute(['DISB-' . $id]);
 
         // Delete journal entries first
-        $stmt = $db->prepare("DELETE FROM journal_entries WHERE reference_type = 'disbursement' AND reference_id = ?");
-        $stmt->execute([$id]);
+        $stmt = $db->prepare("DELETE FROM journal_entries WHERE reference = ?");
+        $stmt->execute(['DISB-' . $id]);
 
         // Delete disbursement
         $stmt = $db->prepare("DELETE FROM disbursements WHERE id = ?");
@@ -613,16 +613,16 @@ function createDisbursementJournalEntry($db, $disbursementId, $data) {
     // Insert journal entry header
     $stmt = $db->prepare("
         INSERT INTO journal_entries (
-            entry_number, entry_date, description, reference_type, reference_id,
+            entry_number, entry_date, description, reference,
             total_debit, total_credit, created_by
-        ) VALUES (?, ?, ?, 'disbursement', ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
     ");
 
     $stmt->execute([
         $entryNumber,
         $entryDate,
         $description,
-        $disbursementId,
+        'DISB-' . $disbursementId,
         $data['amount'],
         $data['amount'],
         $_SESSION['user']['id'] ?? 1
@@ -648,9 +648,9 @@ function createDisbursementJournalEntry($db, $disbursementId, $data) {
 }
 
 function updateDisbursementJournalEntry($db, $disbursementId, $data) {
-    // Find existing journal entry
-    $stmt = $db->prepare("SELECT id FROM journal_entries WHERE reference_type = 'disbursement' AND reference_id = ?");
-    $stmt->execute([$disbursementId]);
+    // Find existing journal entry by reference
+    $stmt = $db->prepare("SELECT id FROM journal_entries WHERE reference = ?");
+    $stmt->execute(['DISB-' . $disbursementId]);
     $entryId = $stmt->fetch()['id'] ?? null;
 
     if ($entryId) {
