@@ -347,7 +347,7 @@ function handleGet($db) {
                 FROM disbursements d
                 LEFT JOIN users u ON d.recorded_by = u.id
                 $whereClause
-                ORDER BY d.disbursement_date DESC, d.created_at DESC
+                ORDER BY d.disbursement_date DESC, d.id DESC
             ");
             $stmt->execute($params);
             $disbursements = $stmt->fetchAll(PDO::FETCH_ASSOC);
