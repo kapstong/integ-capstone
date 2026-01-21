@@ -1481,14 +1481,22 @@ body {
                 })
             });
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || `HTTP ${response.status}`);
+            const rawText = await response.text();
+            let result = null;
+            try {
+                result = rawText ? JSON.parse(rawText) : null;
+            } catch (parseError) {
+                // Keep rawText for diagnostics.
             }
 
-            const result = await response.json();
-            if (!result.success) {
-                throw new Error(result.error || 'Failed to record payroll disbursement');
+            if (!response.ok) {
+                const errorMessage = result?.error || rawText || `HTTP ${response.status}`;
+                throw new Error(errorMessage);
+            }
+
+            if (!result?.success) {
+                const errorMessage = result?.error || rawText || 'Failed to record payroll disbursement';
+                throw new Error(errorMessage);
             }
 
             loadDisbursements();
