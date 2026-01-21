@@ -916,25 +916,25 @@ body {
     <script src="../includes/alert-modal.js"></script>
     <script src="disbursements-js.php"></script>
 
-    <!-- Helper functions that need to be available immediately -->
+    <!-- Helper functions that need to be available immediately - defined at global scope -->
     <script>
         // Helper function to show loading in table - defined inline to be available before external scripts load
-        function showTableLoading(tbodyId, loadingText) {
+        window.showTableLoading = function(tbodyId, loadingText) {
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
             const table = tbody.closest('table');
             const thCount = table ? table.querySelectorAll('thead th').length : 1;
             tbody.innerHTML = `<tr><td colspan="${thCount}" class="text-center"><div class="loading"><i class="fas fa-spinner fa-spin me-2"></i>${loadingText}</div></td></tr>`;
-        }
+        };
 
         // Helper function to show error in table
-        function showTableError(tbodyId, errorText) {
+        window.showTableError = function(tbodyId, errorText) {
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
             const table = tbody.closest('table');
             const thCount = table ? table.querySelectorAll('thead th').length : 1;
             tbody.innerHTML = `<tr><td colspan="${thCount}" class="text-center text-muted">${errorText}</td></tr>`;
-        }
+        };
     </script>
     <script>
         // Initialize sidebar state
