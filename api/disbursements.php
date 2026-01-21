@@ -633,7 +633,7 @@ function createDisbursementJournalEntry($db, $disbursementId, $data) {
     // Insert debit line (cash/bank account)
     $stmt = $db->prepare("
         INSERT INTO journal_entry_lines (
-            journal_entry_id, account_id, debit_amount, credit_amount, description
+            journal_entry_id, account_id, debit, credit, description
         ) VALUES (?, ?, ?, 0, ?)
     ");
     $stmt->execute([$entryId, $debitAccountId, $data['amount'], $description]);
@@ -641,7 +641,7 @@ function createDisbursementJournalEntry($db, $disbursementId, $data) {
     // Insert credit line (accounts payable)
     $stmt = $db->prepare("
         INSERT INTO journal_entry_lines (
-            journal_entry_id, account_id, debit_amount, credit_amount, description
+            journal_entry_id, account_id, debit, credit, description
         ) VALUES (?, ?, 0, ?, ?)
     ");
     $stmt->execute([$entryId, $creditAccountId, $data['amount'], $description]);
@@ -667,8 +667,8 @@ function updateDisbursementJournalEntry($db, $disbursementId, $data) {
         // Update journal entry lines
         $stmt = $db->prepare("
             UPDATE journal_entry_lines SET
-                debit_amount = CASE WHEN debit_amount > 0 THEN ? ELSE 0 END,
-                credit_amount = CASE WHEN credit_amount > 0 THEN ? ELSE 0 END
+                debit = CASE WHEN debit > 0 THEN ? ELSE 0 END,
+                credit = CASE WHEN credit > 0 THEN ? ELSE 0 END
             WHERE journal_entry_id = ?
         ");
         $stmt->execute([$data['amount'], $data['amount'], $entryId]);
