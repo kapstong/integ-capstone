@@ -32,12 +32,28 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+require_once __DIR__ . '/../includes/api_integrations.php';
+
 // Temporarily disable auth checks to isolate the issue
 $userId = $_SESSION['user']['id'] ?? 1;
 $method = $_SERVER['REQUEST_METHOD'];
 
 // Get the action to determine permission requirements
-$action = ($method === 'POST') ? ($_POST['action'] ?? '') : ($_GET['action'] ?? '');
+$action = ($method === 'POST') ? ($_POST['action'] ?? ($_GET['action'] ?? '')) : ($_GET['action'] ?? '');
+
+function buildIntegrationParams(array $source) {
+    $params = $source;
+    unset($params['action'], $params['integration_name'], $params['action_name'], $params['params']);
+
+    if (isset($source['params'])) {
+        $decoded = json_decode($source['params'], true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            $params = array_merge($decoded, $params);
+        }
+    }
+
+    return $params;
+}
 
 try {
     switch ($method) {
@@ -45,6 +61,21 @@ try {
             $action = $_GET['action'] ?? '';
 
             switch ($action) {
+                case 'execute':
+                    $integrationName = $_GET['integration_name'] ?? '';
+                    $actionName = $_GET['action_name'] ?? '';
+
+                    if ($integrationName === '' || $actionName === '') {
+                        http_response_code(400);
+                        echo json_encode(['success' => false, 'error' => 'Missing integration_name or action_name']);
+                        exit;
+                    }
+
+                    $manager = APIIntegrationManager::getInstance();
+                    $params = buildIntegrationParams($_GET);
+                    $result = $manager->executeIntegrationAction($integrationName, $actionName, $params);
+                    echo json_encode(['success' => true, 'result' => $result]);
+                    break;
                 default:
                     http_response_code(400);
                     echo json_encode(['error' => 'Invalid action']);
@@ -53,13 +84,35 @@ try {
             break;
 
         case 'POST':
-            $action = $_POST['action'] ?? '';
+            $action = $_POST['action'] ?? ($_GET['action'] ?? '');
 
             switch ($action) {
                 case 'test':
-                    // Temporarily return a simple response for testing
                     $integrationName = $_POST['integration_name'] ?? '';
-                    echo json_encode(['success' => false, 'error' => 'Integration not configured']);
+                    if ($integrationName === '') {
+                        http_response_code(400);
+                        echo json_encode(['success' => false, 'error' => 'Missing integration_name']);
+                        exit;
+                    }
+
+                    $manager = APIIntegrationManager::getInstance();
+                    $result = $manager->testIntegration($integrationName);
+                    echo json_encode($result);
+                    break;
+                case 'execute':
+                    $integrationName = $_POST['integration_name'] ?? ($_GET['integration_name'] ?? '');
+                    $actionName = $_POST['action_name'] ?? ($_GET['action_name'] ?? '');
+
+                    if ($integrationName === '' || $actionName === '') {
+                        http_response_code(400);
+                        echo json_encode(['success' => false, 'error' => 'Missing integration_name or action_name']);
+                        exit;
+                    }
+
+                    $manager = APIIntegrationManager::getInstance();
+                    $params = buildIntegrationParams($_POST);
+                    $result = $manager->executeIntegrationAction($integrationName, $actionName, $params);
+                    echo json_encode(['success' => true, 'result' => $result]);
                     break;
 
                 default:
