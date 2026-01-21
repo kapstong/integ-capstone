@@ -8,8 +8,21 @@ session_start();
 
 if (!isset($_GET['token'])) die("Token missing");
 
+// Normalize token for URL/base64 variants.
+$token = rawurldecode($_GET['token']);
+$token = str_replace(' ', '+', $token);
+
 // decode token
-$decoded = base64_decode($_GET['token'], true);
+$decoded = base64_decode($token, true);
+if (!$decoded) {
+    // Support base64url tokens (-_ instead of +/).
+    $token = strtr($token, '-_', '+/');
+    $padding = strlen($token) % 4;
+    if ($padding) {
+        $token .= str_repeat('=', 4 - $padding);
+    }
+    $decoded = base64_decode($token, true);
+}
 if (!$decoded) die("Invalid token");
 
 $data = json_decode($decoded, true);
