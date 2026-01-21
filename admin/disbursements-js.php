@@ -405,8 +405,28 @@ header('Content-Type: application/javascript');
         // Global variables
         let currentFilters = {};
 
+        // Helper function to show loading in table
+        function showTableLoading(tbodyId, loadingText) {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            const table = tbody.closest('table');
+            const thCount = table ? table.querySelectorAll('thead th').length : 1;
+            tbody.innerHTML = `<tr><td colspan="${thCount}" class="text-center"><div class="loading"><i class="fas fa-spinner fa-spin me-2"></i>${loadingText}</div></td></tr>`;
+        }
+
+        // Helper function to show error in table
+        function showTableError(tbodyId, errorText) {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            const table = tbody.closest('table');
+            const thCount = table ? table.querySelectorAll('thead th').length : 1;
+            tbody.innerHTML = `<tr><td colspan="${thCount}" class="text-center text-muted">${errorText}</td></tr>`;
+        }
+
         // Load disbursements from API
         async function loadDisbursements() {
+            showTableLoading('disbursementsTableBody', 'Loading disbursements...');
+
             try {
                 const params = new URLSearchParams(currentFilters);
                 const response = await fetch(`../api/disbursements.php?${params}`, {
@@ -434,8 +454,7 @@ header('Content-Type: application/javascript');
                     renderDisbursementsTable(data);
                 } else {
                     if (data.error) {
-                        const tbody = document.getElementById('disbursementsTableBody');
-                        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Error loading disbursements. Please try again.</td></tr>';
+                        showTableError('disbursementsTableBody', 'Error loading disbursements. Please try again.');
                         showAlert('Error loading disbursements: ' + data.error, 'danger');
                     } else {
                         throw new Error('API returned an error');
@@ -443,8 +462,7 @@ header('Content-Type: application/javascript');
                 }
             } catch (error) {
                 console.error('Error loading disbursements:', error);
-                const tbody = document.getElementById('disbursementsTableBody');
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Error loading disbursements. Please try again.</td></tr>';
+                showTableError('disbursementsTableBody', 'Error loading disbursements. Please try again.');
                 showAlert('Error loading disbursements. Please try again.', 'warning');
             }
         }
@@ -711,7 +729,9 @@ header('Content-Type: application/javascript');
             const tbody = document.getElementById('disbursementsTableBody');
 
             if (disbursements.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No disbursements found</td></tr>';
+                const table = tbody.closest('table');
+                const thCount = table ? table.querySelectorAll('thead th').length : 8;
+                tbody.innerHTML = `<tr><td colspan="${thCount}" class="text-center">No disbursements found</td></tr>`;
                 return;
             }
 
@@ -860,5 +880,3 @@ header('Content-Type: application/javascript');
             }
         );
         }
-
-

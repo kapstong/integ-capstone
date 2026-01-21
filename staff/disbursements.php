@@ -501,11 +501,6 @@ body {
                             </tr>
                         </thead>
                         <tbody id="disbursementsTableBody">
-                            <tr>
-                                <td colspan="8" class="text-center">
-                                    <div class="loading">Loading disbursements...</div>
-                                </td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -999,6 +994,8 @@ body {
             });
         }
         window.loadClaims = async function() {
+            showTableLoading('claimsTableBody', 'Loading claims...');
+
             const btn = (typeof event !== 'undefined' && event.target)
                 ? event.target.closest('button')
                 : document.querySelector('button[onclick="loadClaims()"]');
@@ -1361,6 +1358,8 @@ body {
     window.addEventListener('DOMContentLoaded', function() {
 
         window.loadPayroll = async function(buttonEl) {
+            showTableLoading('payrollTableBody', 'Loading payroll...');
+
             const btn = buttonEl && buttonEl.closest ? buttonEl.closest('button') : null;
             const originalText = btn ? btn.innerHTML : '';
 
@@ -1591,5 +1590,3 @@ body {
 </html>
     <script src="../includes/inactivity_timeout.js?v=3"></script>
 <script src="../includes/navbar_datetime.js"></script>
-
-

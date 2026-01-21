@@ -524,11 +524,6 @@ body {
                             </tr>
                         </thead>
                         <tbody id="disbursementsTableBody">
-                            <tr>
-                                <td colspan="9" class="text-center">
-                                    <div class="loading">Loading disbursements...</div>
-                                </td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -1400,6 +1395,8 @@ body {
     window.addEventListener('DOMContentLoaded', function() {
 
         window.loadPayroll = async function(buttonEl) {
+            showTableLoading('payrollTableBody', 'Loading payroll...');
+
             const btn = buttonEl && buttonEl.closest ? buttonEl.closest('button') : null;
             const originalText = btn ? btn.innerHTML : '';
 
