@@ -4,8 +4,16 @@ $dept = 'FIN1';
 $role = 'super_admin';
 $exp = time() + 3600; // 1 hour
 
-// Use the SHA2 secret stored in department_secrets
-$secret = hash('sha256', 'fin1_secret_key_2026');
+// Use the exact secret stored in department_secrets (SHA2 hex string).
+// Replace with the value from:
+// SELECT secret_key FROM department_secrets WHERE department='FIN1' AND is_active=1 ORDER BY id DESC LIMIT 1;
+$secret = 'fin1_secret_key_2026';
+
+// If you want to use the raw secret instead, set $useRawSecret = true.
+$useRawSecret = false;
+if ($useRawSecret) {
+    $secret = hash('sha256', $secret);
+}
 
 $payload = [
     'email' => $email,
