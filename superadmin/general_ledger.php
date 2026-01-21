@@ -723,7 +723,7 @@ try {
                                 <a class="nav-link active" id="coa-tab" data-bs-toggle="tab" href="#coa" role="tab" aria-controls="coa" aria-selected="true" data-bs-toggle="tooltip" title="Master list of all accounts"><i class="fas fa-list me-1"></i>Chart of Accounts</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" id="journal-tab" data-bs-toggle="tab" href="#journal" role="tab" aria-controls="journal" aria-selected="false" data-bs-toggle="tooltip" title="Record financial transactions"><i class="fas fa-edit me-1"></i>Journal Entries</a>
+                                <a class="nav-link" id="journal-tab" data-bs-toggle="tab" href="#journal" role="tab" aria-controls="journal" aria-selected="false" data-bs-toggle="tooltip" title="View journal entries"><i class="fas fa-book me-1"></i>Journal Entries</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" id="trial-tab" data-bs-toggle="tab" href="#trial" role="tab" aria-controls="trial" aria-selected="false" data-bs-toggle="tooltip" title="Check that debits equal credits"><i class="fas fa-balance-scale me-1"></i>Trial Balance</a>
@@ -780,8 +780,7 @@ try {
                             <!-- Journal Entries Tab -->
                             <div class="tab-pane fade" id="journal" role="tabpanel" aria-labelledby="journal-tab">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="mb-0">Record Financial Transactions</h6>
-                                    <button class="btn btn-secondary" disabled title="Journal entries are posted from source modules only"><i class="fas fa-lock me-2"></i>Journal Entries Read-Only</button>
+                                    <h6 class="mb-0">Journal Entries</h6>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-striped">
@@ -793,13 +792,12 @@ try {
                                                 <th>Description</th>
                                                 <th>Debit</th>
                                                 <th>Credit</th>
-                                                <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <?php if (empty($journalEntries)): ?>
                                                 <tr>
-                                                    <td colspan="7" class="text-center text-muted py-4">
+                                                    <td colspan="6" class="text-center text-muted py-4">
                                                         <i class="fas fa-info-circle me-2"></i>No journal entries found. Entries are posted automatically from source modules.
                                                     </td>
                                                 </tr>
@@ -812,14 +810,6 @@ try {
                                                         <td><?php echo htmlspecialchars($entry['description']); ?></td>
                                                         <td><?php echo $entry['debit'] > 0 ? '₱' . number_format($entry['debit'], 2) : '-'; ?></td>
                                                         <td><?php echo $entry['credit'] > 0 ? '₱' . number_format($entry['credit'], 2) : '-'; ?></td>
-                <td>
-                    <?php if ($entry['status'] === 'draft'): ?>
-                        <button class="btn btn-sm btn-outline-primary" onclick="editEntry('<?php echo htmlspecialchars($entry['reference']); ?>')">Edit</button>
-                        <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteEntry('<?php echo htmlspecialchars($entry['reference']); ?>')">Delete</button>
-                    <?php else: ?>
-                        <span class="text-muted small"><?php echo ucfirst($entry['status']); ?> - Read-only</span>
-                    <?php endif; ?>
-                </td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                             <?php endif; ?>
