@@ -1157,7 +1157,11 @@ class HR4Integration extends BaseIntegration {
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $payloadEncoded);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
+            $headers = ['Content-Type: application/x-www-form-urlencoded'];
+            if (!empty($config['api_key'])) {
+                $headers[] = 'Authorization: Bearer ' . $this->generateAuthToken($config);
+            }
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
