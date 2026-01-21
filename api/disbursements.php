@@ -86,6 +86,46 @@ function logAuditEntry($db, $action, $table, $recordId, $oldValues = null, $newV
     }
 }
 
+function getActiveBudgetItem($db, $accountId) {
+    $stmt = $db->prepare("
+        SELECT bi.id, bi.budgeted_amount, bi.actual_amount
+        FROM budget_items bi
+        INNER JOIN budgets b ON bi.budget_id = b.id
+        WHERE bi.account_id = ? AND b.status = 'active' AND YEAR(b.budget_year) = YEAR(CURDATE())
+        LIMIT 1
+    ");
+    $stmt->execute([$accountId]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+function enforceBudgetLimit($db, $accountId, $amount) {
+    $budget = getActiveBudgetItem($db, $accountId);
+    if (!$budget) {
+        return;
+    }
+
+    $remaining = floatval($budget['budgeted_amount']) - floatval($budget['actual_amount']);
+    if ($amount > $remaining) {
+        throw new Exception('Disbursement exceeds available budget for the selected account.');
+    }
+}
+
+function applyBudgetActual($db, $accountId, $amount) {
+    $budget = getActiveBudgetItem($db, $accountId);
+    if (!$budget) {
+        return;
+    }
+
+    $stmt = $db->prepare("
+        UPDATE budget_items
+        SET actual_amount = actual_amount + ?,
+            variance = budgeted_amount - (actual_amount + ?),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    ");
+    $stmt->execute([$amount, $amount, $budget['id']]);
+}
+
 function processPayment($db, $data) {
     try {
         // Validate required fields
@@ -94,6 +134,10 @@ function processPayment($db, $data) {
             if (!isset($data[$field]) || empty($data[$field])) {
                 throw new Exception("Missing required field: $field");
             }
+        }
+
+        if (empty($data['bill_id']) && !empty($data['account_id'])) {
+            enforceBudgetLimit($db, $data['account_id'], $data['amount']);
         }
 
         $db->beginTransaction();
@@ -120,7 +164,7 @@ function processPayment($db, $data) {
             $data['payment_method'],
             $data['reference_number'] ?? null,
             $data['description'] ?? 'Payment processed',
-            1, // Default account ID (Cash on Hand)
+            $data['account_id'] ?? 1, // Default account ID (Cash)
             $_SESSION['user']['id'] ?? 1,
             $_SESSION['user']['id'] ?? 1,
             'paid' // Status for processed payment
@@ -164,6 +208,10 @@ function createVoucher($db, $data) {
             if (!isset($data[$field]) || empty($data[$field])) {
                 throw new Exception("Missing required field: $field");
             }
+        }
+
+        if (empty($data['bill_id']) && !empty($data['account_id'])) {
+            enforceBudgetLimit($db, $data['account_id'], $data['amount']);
         }
 
         $db->beginTransaction();
@@ -406,7 +454,7 @@ function handlePost($db) {
             $data['payment_method'],
             $data['reference_number'] ?? null,
             $data['purpose'] ?? $data['notes'] ?? null,
-            1, // Default account ID (Cash on Hand)
+            $data['account_id'] ?? 1, // Default account ID (Cash)
             $_SESSION['user']['id'] ?? 1, // approved_by
             $_SESSION['user']['id'] ?? 1,  // recorded_by
             'paid' // Status for created disbursement
@@ -582,33 +630,37 @@ function createDisbursementJournalEntry($db, $disbursementId, $data) {
     $entryDate = $data['disbursement_date'] ?? $data['payment_date'];
     $description = "Disbursement: Payment to " . ($data['payee'] ?? 'vendor') . " - " . ($data['reference_number'] ?? 'N/A');
 
-    // Determine account codes based on payment method
-    switch ($data['payment_method']) {
-        case 'cash':
-            $debitAccount = 'CASH-ON-HAND';
-            break;
-        case 'check':
-            $debitAccount = 'CASH-IN-BANK';
-            break;
-        case 'bank_transfer':
-            $debitAccount = 'CASH-IN-BANK';
-            break;
-        case 'ewallet':
-            $debitAccount = 'CASH-IN-BANK';
-            break;
-        default:
-            $debitAccount = 'CASH-IN-BANK';
-    }
-
-    $creditAccount = 'ACCOUNTS-PAYABLE'; // Vendor payment reduces accounts payable
-
-    // Get account IDs
+    // Use numeric account codes from chart_of_accounts
     $stmt = $db->prepare("SELECT id FROM chart_of_accounts WHERE account_code = ?");
-    $stmt->execute([$debitAccount]);
-    $debitAccountId = $stmt->fetch()['id'] ?? 1; // Default to cash if not found
+    $stmt->execute(['1001']);
+    $cashAccountId = $stmt->fetch()['id'] ?? 1;
 
-    $stmt->execute([$creditAccount]);
-    $creditAccountId = $stmt->fetch()['id'] ?? 2; // Default if not found
+    $isApPayment = !empty($data['bill_id']);
+    if ($isApPayment) {
+        $stmt->execute(['2001']);
+        $debitAccountId = $stmt->fetch()['id'] ?? 2;
+        $creditAccountId = $cashAccountId;
+        $debitDescription = 'Accounts Payable - Disbursement';
+        $creditDescription = 'Cash - Disbursement';
+    } else {
+        $debitAccountId = $data['account_id'] ?? null;
+
+        if (!$debitAccountId) {
+            $stmtAccount = $db->prepare("SELECT account_id FROM disbursements WHERE id = ?");
+            $stmtAccount->execute([$disbursementId]);
+            $debitAccountId = $stmtAccount->fetch()['account_id'] ?? null;
+        }
+
+        if (!$debitAccountId) {
+            $fallbackExpense = $db->prepare("SELECT id FROM chart_of_accounts WHERE account_type = 'expense' ORDER BY account_code LIMIT 1");
+            $fallbackExpense->execute();
+            $debitAccountId = $fallbackExpense->fetch()['id'] ?? $cashAccountId;
+        }
+
+        $creditAccountId = $cashAccountId;
+        $debitDescription = 'Expense - Disbursement';
+        $creditDescription = 'Cash - Disbursement';
+    }
 
     // Insert journal entry header
     $stmt = $db->prepare("
@@ -630,21 +682,24 @@ function createDisbursementJournalEntry($db, $disbursementId, $data) {
 
     $entryId = $db->lastInsertId();
 
-    // Insert debit line (cash/bank account)
+    // Insert debit line (expense/AP)
     $stmt = $db->prepare("
         INSERT INTO journal_entry_lines (
             journal_entry_id, account_id, debit, credit, description
         ) VALUES (?, ?, ?, 0, ?)
     ");
-    $stmt->execute([$entryId, $debitAccountId, $data['amount'], $description]);
+    $stmt->execute([$entryId, $debitAccountId, $data['amount'], $debitDescription . ' - ' . $description]);
+    if (!$isApPayment) {
+        applyBudgetActual($db, $debitAccountId, $data['amount']);
+    }
 
-    // Insert credit line (accounts payable)
+    // Insert credit line (cash)
     $stmt = $db->prepare("
         INSERT INTO journal_entry_lines (
             journal_entry_id, account_id, debit, credit, description
         ) VALUES (?, ?, 0, ?, ?)
     ");
-    $stmt->execute([$entryId, $creditAccountId, $data['amount'], $description]);
+    $stmt->execute([$entryId, $creditAccountId, $data['amount'], $creditDescription . ' - ' . $description]);
 }
 
 function updateDisbursementJournalEntry($db, $disbursementId, $data) {

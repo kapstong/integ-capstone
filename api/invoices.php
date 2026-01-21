@@ -358,7 +358,7 @@ function postInvoiceJournalEntry($db, $invoiceId, $subtotal, $taxAmount, $custom
     if ($taxAmount > 0) {
         $db->insert(
             "INSERT INTO journal_entry_lines (journal_entry_id, account_id, credit, description)
-             VALUES (?, (SELECT id FROM chart_of_accounts WHERE account_code = '2001'), ?, 'Tax Payable')",
+             VALUES (?, (SELECT id FROM chart_of_accounts WHERE account_code = '2108'), ?, 'Sales Tax Payable')",
             [$entryId, $taxAmount]
         );
     }

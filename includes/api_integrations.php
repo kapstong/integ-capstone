@@ -580,7 +580,10 @@ class HR3Integration extends BaseIntegration {
             $db = Database::getInstance()->getConnection();
             $importedCount = 0;
             $errors = [];
-            $claimsExpenseAccount = $this->getAccountId('5300'); // Employee Claims/Reimbursements Expense
+            $claimsExpenseAccount = $this->getAccountId('5300'); // Employee Claims/Reimbursements Expense (preferred)
+            if (!$claimsExpenseAccount) {
+                $claimsExpenseAccount = $this->getAccountId('5403'); // Office Supplies (fallback)
+            }
 
             foreach ($approvedClaims as $claim) {
                 try {
@@ -647,7 +650,7 @@ class HR3Integration extends BaseIntegration {
                     } else {
                         // CREATE JOURNAL ENTRY for proper double-entry bookkeeping
                         // Debit: Employee Claims Expense, Credit: Accounts Payable
-                        $accountsPayableAccount = $this->getAccountId('2100'); // Accounts Payable
+                        $accountsPayableAccount = $this->getAccountId('2001'); // Accounts Payable
 
                         if ($claimsExpenseAccount && $accountsPayableAccount) {
                             $this->createJournalEntry([
@@ -1277,14 +1280,15 @@ class HR4Integration extends BaseIntegration {
     private function getPayrollExpenseAccount($payroll = []) {
         // Base payroll expense accounts by department
         $departmentAccounts = [
-            1 => 5401, // Administrative Salaries (Department 1)
-            2 => 5402, // Kitchen/F&B Salaries (Department 2)
-            3 => 5403, // Front Desk/Service Salaries (Department 3)
+            1 => '5401', // Administrative Salaries (Department 1)
+            2 => '5402', // Kitchen/F&B Salaries (Department 2)
+            3 => '5403', // Front Desk/Service Salaries (Department 3)
             // Add more department mappings as needed
         ];
 
         $departmentId = $payroll['department_id'] ?? 1;
-        return $departmentAccounts[$departmentId] ?? 5401; // Default to Administrative Salaries
+        $accountCode = $departmentAccounts[$departmentId] ?? '5401';
+        return $this->getAccountId($accountCode) ?: $this->getAccountId('5401');
     }
 
     /**
@@ -1292,7 +1296,7 @@ class HR4Integration extends BaseIntegration {
      * Returns the account id to use for accrued wages payable
      */
     private function getPayrollLiabilityAccount() {
-        return 2107; // Accrued Salaries Payable - this should exist in chart_of_accounts
+        return $this->getAccountId('2107'); // Accrued Salaries Payable
     }
 
     /**
@@ -1354,7 +1358,7 @@ class HR4Integration extends BaseIntegration {
 
                 // CREATE JOURNAL ENTRY for proper double-entry bookkeeping
                 // Debit: Salaries Expense, Credit: Accrued Salaries Payable
-                $salariesExpenseAccount = $this->getAccountId('5100'); // Salaries Expense
+                $salariesExpenseAccount = $this->getPayrollExpenseAccount($payroll);
                 $accruedSalariesAccount = $this->getAccountId('2107'); // Accrued Salaries Payable
 
                 if ($salariesExpenseAccount && $accruedSalariesAccount) {
@@ -2021,8 +2025,8 @@ class Logistics1Integration extends BaseIntegration {
 
                     // CREATE JOURNAL ENTRY for proper double-entry bookkeeping
                     // Debit: Supplies/Materials Expense, Credit: Accounts Payable
-                    $suppliesExpenseAccount = $this->getAccountId('5200'); // Supplies & Materials Expense
-                    $accountsPayableAccount = $this->getAccountId('2100'); // Accounts Payable
+                    $suppliesExpenseAccount = $this->getAccountId('5403'); // Office Supplies
+                    $accountsPayableAccount = $this->getAccountId('2001'); // Accounts Payable
 
                     if ($suppliesExpenseAccount && $accountsPayableAccount) {
                         $this->createJournalEntry([
@@ -2358,8 +2362,8 @@ class Logistics2Integration extends BaseIntegration {
 
                         // CREATE JOURNAL ENTRY for fuel costs
                         // Debit: Fuel Expense, Credit: Accounts Payable
-                        $fuelExpenseAccount = $this->getAccountId('5400'); // Fuel & Transportation Expense
-                        $accountsPayableAccount = $this->getAccountId('2100'); // Accounts Payable
+                        $fuelExpenseAccount = $this->getAccountId('5255'); // F&B - Kitchen Fuel
+                        $accountsPayableAccount = $this->getAccountId('2001'); // Accounts Payable
 
                         if ($fuelExpenseAccount && $accountsPayableAccount) {
                             $this->createJournalEntry([
@@ -2388,8 +2392,8 @@ class Logistics2Integration extends BaseIntegration {
 
                         // CREATE JOURNAL ENTRY for other transportation costs
                         // Debit: Transportation Expense, Credit: Accounts Payable
-                        $transportExpenseAccount = $this->getAccountId('5410'); // Transportation & Delivery Expense
-                        $accountsPayableAccount = $this->getAccountId('2100'); // Accounts Payable
+                        $transportExpenseAccount = $this->getAccountId('5403'); // Office Supplies (fallback for transport)
+                        $accountsPayableAccount = $this->getAccountId('2001'); // Accounts Payable
 
                         if ($transportExpenseAccount && $accountsPayableAccount) {
                             $this->createJournalEntry([

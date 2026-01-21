@@ -224,6 +224,8 @@ function handlePost($db) {
             $_SESSION['user']['id'] ?? 1
         ]);
 
+        applyAdjustmentToSource($db, $data, $isPayable, false);
+
         // Create journal entry for the adjustment
         createAdjustmentJournalEntry($db, $adjustmentId, $data, $isPayable);
 
@@ -277,6 +279,17 @@ function handlePut($db) {
 
         $db->beginTransaction();
 
+        // Get existing adjustment to reverse effects
+        $existing = $db->select("SELECT * FROM adjustments WHERE id = ?", [$id]);
+        if (empty($existing)) {
+            throw new Exception('Adjustment not found');
+        }
+        $existing = $existing[0];
+        $existingIsPayable = !empty($existing['vendor_id']);
+
+        // Reverse previous impact
+        applyAdjustmentToSource($db, $existing, $existingIsPayable, true);
+
         // Update adjustment
         $affected = $db->execute("
             UPDATE adjustments SET
@@ -297,8 +310,16 @@ function handlePut($db) {
             throw new Exception('Failed to update adjustment');
         }
 
-        // Update journal entry - DISABLED UNTIL FIXED
-        // updateAdjustmentJournalEntry($db, $id, $data);
+        $isPayable = !empty($existing['vendor_id']);
+        $data['vendor_id'] = $existing['vendor_id'];
+        $data['customer_id'] = $existing['customer_id'];
+        $data['bill_id'] = $existing['bill_id'];
+        $data['invoice_id'] = $existing['invoice_id'];
+
+        applyAdjustmentToSource($db, $data, $isPayable, false);
+
+        // Update journal entry
+        updateAdjustmentJournalEntry($db, $id, $data, $isPayable);
 
         $db->commit();
 
@@ -328,8 +349,19 @@ function handleDelete($db) {
 
         $db->beginTransaction();
 
+        $existing = $db->select("SELECT * FROM adjustments WHERE id = ?", [$id]);
+        if (empty($existing)) {
+            throw new Exception('Adjustment not found or already deleted');
+        }
+        $existing = $existing[0];
+        $isPayable = !empty($existing['vendor_id']);
+
+        // Reverse adjustment effects
+        applyAdjustmentToSource($db, $existing, $isPayable, true);
+
         // Delete journal entries first
-        $db->execute("DELETE FROM journal_entries WHERE reference = ?", [$id]);
+        $db->execute("DELETE FROM journal_entry_lines WHERE journal_entry_id IN (SELECT id FROM journal_entries WHERE reference = ?)", ['ADJ-' . $id]);
+        $db->execute("DELETE FROM journal_entries WHERE reference = ?", ['ADJ-' . $id]);
 
         // Delete adjustment
         $affected = $db->execute("DELETE FROM adjustments WHERE id = ?", [$id]);
@@ -353,14 +385,270 @@ function handleDelete($db) {
 }
 
 function createAdjustmentJournalEntry($db, $adjustmentId, $data, $isPayable) {
-    // Journal entry creation disabled for now to prevent errors
-    // This functionality can be implemented later when GL integration is properly set up
-    error_log("Journal entry creation skipped for adjustment $adjustmentId");
+    $amount = floatval($data['amount']);
+    if ($amount <= 0) {
+        return;
+    }
+
+    $entryDate = $data['adjustment_date'] ?? date('Y-m-d');
+    $description = "Adjustment {$data['adjustment_type']} #" . $adjustmentId;
+
+    $stmt = $db->query("SELECT COUNT(*) as count FROM journal_entries WHERE YEAR(created_at) = YEAR(CURDATE())");
+    $count = $stmt->fetch()['count'] + 1;
+    $entryNumber = 'JE-' . date('Y') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+
+    $db->execute(
+        "INSERT INTO journal_entries (entry_number, entry_date, description, reference, total_debit, total_credit, status, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, 'posted', ?)",
+        [
+            $entryNumber,
+            $entryDate,
+            $description,
+            'ADJ-' . $adjustmentId,
+            $amount,
+            $amount,
+            $_SESSION['user']['id'] ?? 1
+        ]
+    );
+
+    $entryId = $db->select("SELECT id FROM journal_entries WHERE reference = ?", ['ADJ-' . $adjustmentId])[0]['id'] ?? null;
+    if (!$entryId) {
+        return;
+    }
+
+    $lines = buildAdjustmentJournalLines($db, $data, $isPayable);
+    foreach ($lines as $line) {
+        $db->insert(
+            "INSERT INTO journal_entry_lines (journal_entry_id, account_id, debit, credit, description)
+             VALUES (?, ?, ?, ?, ?)",
+            [$entryId, $line['account_id'], $line['debit'], $line['credit'], $line['description']]
+        );
+    }
 }
 
-function updateAdjustmentJournalEntry($db, $adjustmentId, $data) {
-    // Journal entry updates disabled for now to prevent errors
-    error_log("Journal entry update skipped for adjustment $adjustmentId");
+function updateAdjustmentJournalEntry($db, $adjustmentId, $data, $isPayable) {
+    $db->execute("DELETE FROM journal_entry_lines WHERE journal_entry_id IN (SELECT id FROM journal_entries WHERE reference = ?)", ['ADJ-' . $adjustmentId]);
+    $db->execute("DELETE FROM journal_entries WHERE reference = ?", ['ADJ-' . $adjustmentId]);
+    createAdjustmentJournalEntry($db, $adjustmentId, $data, $isPayable);
+}
+
+function getAccountIdByCode($db, $accountCode) {
+    $stmt = $db->prepare("SELECT id FROM chart_of_accounts WHERE account_code = ? LIMIT 1");
+    $stmt->execute([$accountCode]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row['id'] ?? null;
+}
+
+function getExpenseLinesFromItems($db, $table, $parentColumn, $parentId, $amount, $fallbackAccountId) {
+    $items = $db->select("SELECT account_id, line_total FROM {$table} WHERE {$parentColumn} = ?", [$parentId]);
+    if (empty($items)) {
+        return [['account_id' => $fallbackAccountId, 'amount' => $amount]];
+    }
+
+    $subtotal = 0;
+    foreach ($items as $item) {
+        $subtotal += floatval($item['line_total']);
+    }
+
+    if ($subtotal <= 0) {
+        return [['account_id' => $fallbackAccountId, 'amount' => $amount]];
+    }
+
+    $factor = $amount / $subtotal;
+    $lines = [];
+    $runningTotal = 0;
+    $count = count($items);
+
+    foreach ($items as $index => $item) {
+        $lineAmount = round(floatval($item['line_total']) * $factor, 2);
+        if ($index === $count - 1) {
+            $lineAmount = $amount - $runningTotal;
+        }
+        $runningTotal += $lineAmount;
+        $lines[] = [
+            'account_id' => $item['account_id'] ?: $fallbackAccountId,
+            'amount' => $lineAmount
+        ];
+    }
+
+    return $lines;
+}
+
+function buildAdjustmentJournalLines($db, $data, $isPayable) {
+    $amount = floatval($data['amount']);
+    $type = $data['adjustment_type'];
+    $lines = [];
+
+    $arAccountId = getAccountIdByCode($db, '1002') ?? 1;
+    $apAccountId = getAccountIdByCode($db, '2001') ?? 1;
+    $badDebtAccountId = getAccountIdByCode($db, '5409') ?? 1;
+    $revenueFallbackId = getAccountIdByCode($db, '4001') ?? 1;
+    $incomeFallbackId = getAccountIdByCode($db, '4309') ?? $revenueFallbackId;
+    $expenseFallbackId = getAccountIdByCode($db, '5403') ?? 1;
+
+    if ($isPayable) {
+        $billId = $data['bill_id'] ?? null;
+        $expenseLines = $billId ? getExpenseLinesFromItems($db, 'bill_items', 'bill_id', $billId, $amount, $expenseFallbackId)
+            : [['account_id' => $expenseFallbackId, 'amount' => $amount]];
+
+        switch ($type) {
+            case 'debit_memo':
+                foreach ($expenseLines as $line) {
+                    $lines[] = [
+                        'account_id' => $line['account_id'],
+                        'debit' => $line['amount'],
+                        'credit' => 0,
+                        'description' => 'Payable Debit Memo'
+                    ];
+                }
+                $lines[] = [
+                    'account_id' => $apAccountId,
+                    'debit' => 0,
+                    'credit' => $amount,
+                    'description' => 'Accounts Payable - Debit Memo'
+                ];
+                break;
+            case 'credit_memo':
+            case 'discount':
+                $lines[] = [
+                    'account_id' => $apAccountId,
+                    'debit' => $amount,
+                    'credit' => 0,
+                    'description' => 'Accounts Payable - Credit Memo'
+                ];
+                foreach ($expenseLines as $line) {
+                    $lines[] = [
+                        'account_id' => $line['account_id'],
+                        'debit' => 0,
+                        'credit' => $line['amount'],
+                        'description' => 'Expense Reversal'
+                    ];
+                }
+                break;
+            case 'write_off':
+                $lines[] = [
+                    'account_id' => $apAccountId,
+                    'debit' => $amount,
+                    'credit' => 0,
+                    'description' => 'Accounts Payable - Write Off'
+                ];
+                $lines[] = [
+                    'account_id' => $incomeFallbackId,
+                    'debit' => 0,
+                    'credit' => $amount,
+                    'description' => 'Payable Write Off Income'
+                ];
+                break;
+        }
+    } else {
+        $invoiceId = $data['invoice_id'] ?? null;
+        $revenueLines = $invoiceId ? getExpenseLinesFromItems($db, 'invoice_items', 'invoice_id', $invoiceId, $amount, $revenueFallbackId)
+            : [['account_id' => $revenueFallbackId, 'amount' => $amount]];
+
+        switch ($type) {
+            case 'debit_memo':
+                $lines[] = [
+                    'account_id' => $arAccountId,
+                    'debit' => $amount,
+                    'credit' => 0,
+                    'description' => 'Accounts Receivable - Debit Memo'
+                ];
+                foreach ($revenueLines as $line) {
+                    $lines[] = [
+                        'account_id' => $line['account_id'],
+                        'debit' => 0,
+                        'credit' => $line['amount'],
+                        'description' => 'Revenue - Debit Memo'
+                    ];
+                }
+                break;
+            case 'credit_memo':
+                foreach ($revenueLines as $line) {
+                    $lines[] = [
+                        'account_id' => $line['account_id'],
+                        'debit' => $line['amount'],
+                        'credit' => 0,
+                        'description' => 'Revenue Reversal'
+                    ];
+                }
+                $lines[] = [
+                    'account_id' => $arAccountId,
+                    'debit' => 0,
+                    'credit' => $amount,
+                    'description' => 'Accounts Receivable - Credit Memo'
+                ];
+                break;
+            case 'discount':
+            case 'write_off':
+                $lines[] = [
+                    'account_id' => $badDebtAccountId,
+                    'debit' => $amount,
+                    'credit' => 0,
+                    'description' => 'Discount/Write Off Expense'
+                ];
+                $lines[] = [
+                    'account_id' => $arAccountId,
+                    'debit' => 0,
+                    'credit' => $amount,
+                    'description' => 'Accounts Receivable - Adjustment'
+                ];
+                break;
+        }
+    }
+
+    return $lines;
+}
+
+function applyAdjustmentToSource($db, $data, $isPayable, $reverse) {
+    $amount = floatval($data['amount']);
+    if ($amount <= 0) {
+        return;
+    }
+    $direction = $reverse ? -1 : 1;
+
+    if ($isPayable) {
+        $billId = $data['bill_id'] ?? null;
+        if (!$billId) {
+            return;
+        }
+
+        $delta = 0;
+        if ($data['adjustment_type'] === 'debit_memo') {
+            $delta = $amount;
+        } else {
+            $delta = -$amount;
+        }
+        $delta *= $direction;
+
+        $db->execute("UPDATE bills SET balance = balance + ? WHERE id = ?", [$delta, $billId]);
+        $bill = $db->select("SELECT balance, status FROM bills WHERE id = ?", [$billId]);
+        if (!empty($bill)) {
+            $balance = floatval($bill[0]['balance']);
+            $status = $balance <= 0 ? 'paid' : ($bill[0]['status'] === 'paid' ? 'partial' : $bill[0]['status']);
+            $db->execute("UPDATE bills SET status = ? WHERE id = ?", [$status, $billId]);
+        }
+    } else {
+        $invoiceId = $data['invoice_id'] ?? null;
+        if (!$invoiceId) {
+            return;
+        }
+
+        $delta = 0;
+        if ($data['adjustment_type'] === 'debit_memo') {
+            $delta = $amount;
+        } else {
+            $delta = -$amount;
+        }
+        $delta *= $direction;
+
+        $db->execute("UPDATE invoices SET balance = balance + ? WHERE id = ?", [$delta, $invoiceId]);
+        $invoice = $db->select("SELECT balance, status FROM invoices WHERE id = ?", [$invoiceId]);
+        if (!empty($invoice)) {
+            $balance = floatval($invoice[0]['balance']);
+            $status = $balance <= 0 ? 'paid' : ($invoice[0]['status'] === 'paid' ? 'sent' : $invoice[0]['status']);
+            $db->execute("UPDATE invoices SET status = ? WHERE id = ?", [$status, $invoiceId]);
+        }
+    }
 }
 ?>
 

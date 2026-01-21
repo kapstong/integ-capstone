@@ -703,8 +703,8 @@ try {
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="collections-tab" data-bs-toggle="tab" data-bs-target="#collections" type="button" role="tab">
-                    <i class="fas fa-hand-holding-usd me-2"></i>Collections
+                <button class="nav-link disabled" id="collections-tab" type="button" role="tab" aria-disabled="true" title="Collections removed from AP">
+                    <i class="fas fa-lock me-2"></i>Collections (Removed)
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -884,11 +884,14 @@ try {
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Collections (Supplier Refunds / Credits)</h5>
-                        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addCollectionModal">
-                            <i class="fas fa-plus me-1"></i>Record Collection
+                        <button class="btn btn-secondary btn-sm" disabled>
+                            <i class="fas fa-lock me-1"></i>Collections Disabled
                         </button>
                     </div>
                     <div class="card-body">
+                        <div class="alert alert-info">
+                            Collections are not recorded in Accounts Payable. Use the Collection module for cash inflows.
+                        </div>
                         <div class="table-responsive">
                             <table class="table table-striped" id="collectionsTable">
                                 <thead>
@@ -1749,6 +1752,8 @@ try {
 
         document.getElementById('addCollectionForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            showAlert('Collections are disabled in AP. Use the Collection module instead.', 'warning');
+            return;
 
             const formData = new FormData(this);
             const collectionData = {
@@ -2053,6 +2058,11 @@ try {
 
         // Load collections from payments_made table
         async function loadCollections() {
+            const tbody = document.querySelector('#collectionsTable tbody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Collections are disabled.</td></tr>';
+            }
+            return;
             try {
                 const response = await fetch(`${apiBase}payments.php?type=made`);
                 const data = await response.json();

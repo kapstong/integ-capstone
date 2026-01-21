@@ -88,20 +88,9 @@ try {
                     $joins = "LEFT JOIN customers c ON pr.customer_id = c.id
                              LEFT JOIN users u ON pr.recorded_by = u.id";
 
-                    if ($db->columnExists('payments_received', 'vendor_id')) {
-                        $selectFields .= ", v.company_name as vendor_name";
-                        $selectFields .= ", CASE WHEN pr.customer_id IS NOT NULL THEN 'customer' WHEN pr.vendor_id IS NOT NULL THEN 'vendor' ELSE 'unknown' END as source_type";
-                        $joins .= " LEFT JOIN vendors v ON pr.vendor_id = v.id";
-                    }
-
                     if ($db->columnExists('payments_received', 'invoice_id')) {
                         $selectFields .= ", i.invoice_number";
                         $joins .= " LEFT JOIN invoices i ON pr.invoice_id = i.id";
-                    }
-
-                    if ($db->columnExists('payments_received', 'bill_id')) {
-                        $selectFields .= ", b.bill_number";
-                        $joins .= " LEFT JOIN bills b ON pr.bill_id = b.id";
                     }
 
                     $received = $db->select(
@@ -151,15 +140,20 @@ try {
                 exit;
             }
 
-            if ($paymentType === 'received' && empty($data['customer_id']) && empty($data['vendor_id'])) {
+            if ($paymentType === 'received' && (empty($data['customer_id']) || empty($data['invoice_id']))) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'Either Customer ID or Vendor ID required for payments received']);
+                echo json_encode(['success' => false, 'error' => 'Customer ID and Invoice ID are required for payments received']);
+                exit;
+            }
+            if ($paymentType === 'received' && !empty($data['vendor_id'])) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Vendor payments are not allowed in collections']);
                 exit;
             }
 
-            if ($paymentType === 'made' && empty($data['vendor_id'])) {
+            if ($paymentType === 'made' && (empty($data['vendor_id']) || empty($data['bill_id']))) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'Vendor ID required for payments made']);
+                echo json_encode(['success' => false, 'error' => 'Vendor ID and Bill ID required for payments made']);
                 exit;
             }
 
@@ -177,16 +171,6 @@ try {
                     $values = [$paymentNumber, $data['customer_id'] ?? null, $data['payment_date'], $data['amount'], $data['payment_method'], $data['reference_number'] ?? null, $data['notes'] ?? null, $userId];
                     $placeholders = ['?', '?', '?', '?', '?', '?', '?', '?'];
 
-                    // Add vendor_id and bill_id if they exist in the database (after migration)
-                    if ($db->columnExists('payments_received', 'vendor_id')) {
-                        $columns[] = 'vendor_id';
-                        $columns[] = 'bill_id';
-                        $values[] = $data['vendor_id'] ?? null;
-                        $values[] = $data['bill_id'] ?? null;
-                        $placeholders[] = '?';
-                        $placeholders[] = '?';
-                    }
-
                     if ($db->columnExists('payments_received', 'invoice_id')) {
                         $columns[] = 'invoice_id';
                         $values[] = $data['invoice_id'] ?? null;
@@ -196,23 +180,37 @@ try {
                     $columnsStr = implode(', ', $columns);
                     $placeholdersStr = implode(', ', $placeholders);
 
+                    // Validate invoice ownership and balance
+                    $invoice = $db->select(
+                        "SELECT id, customer_id, balance FROM invoices WHERE id = ?",
+                        [$data['invoice_id']]
+                    );
+                    if (empty($invoice)) {
+                        throw new Exception('Invoice not found');
+                    }
+                    $invoice = $invoice[0];
+                    if ((int)$invoice['customer_id'] !== (int)$data['customer_id']) {
+                        throw new Exception('Invoice does not belong to the specified customer');
+                    }
+                    if (floatval($data['amount']) > floatval($invoice['balance'])) {
+                        throw new Exception('Payment amount exceeds outstanding invoice balance');
+                    }
+
                     $paymentId = $db->insert(
                         "INSERT INTO payments_received ($columnsStr) VALUES ($placeholdersStr)",
                         $values
                     );
 
-                    // Update invoice balance if linked to invoice
-                    if (!empty($data['invoice_id'])) {
-                        $db->execute(
-                            "UPDATE invoices SET paid_amount = paid_amount + ?, balance = balance - ? WHERE id = ?",
-                            [$data['amount'], $data['amount'], $data['invoice_id']]
-                        );
+                    // Update invoice balance
+                    $db->execute(
+                        "UPDATE invoices SET paid_amount = paid_amount + ?, balance = balance - ? WHERE id = ?",
+                        [$data['amount'], $data['amount'], $data['invoice_id']]
+                    );
 
-                        // Update invoice status if fully paid
-                        $invoice = $db->select("SELECT balance FROM invoices WHERE id = ?", [$data['invoice_id']]);
-                        if (!empty($invoice) && $invoice[0]['balance'] <= 0) {
-                            $db->execute("UPDATE invoices SET status = 'paid' WHERE id = ?", [$data['invoice_id']]);
-                        }
+                    // Update invoice status if fully paid
+                    $invoiceAfter = $db->select("SELECT balance FROM invoices WHERE id = ?", [$data['invoice_id']]);
+                    if (!empty($invoiceAfter) && $invoiceAfter[0]['balance'] <= 0) {
+                        $db->execute("UPDATE invoices SET status = 'paid' WHERE id = ?", [$data['invoice_id']]);
                     }
 
                     // Post journal entry for payment received
@@ -223,6 +221,22 @@ try {
                     $stmt = $db->query("SELECT COUNT(*) as count FROM payments_made WHERE YEAR(created_at) = YEAR(CURDATE())");
                     $count = $stmt->fetch()['count'] + 1;
                     $paymentNumber = 'PMT-' . date('Y') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+
+                    // Validate bill ownership and balance
+                    $bill = $db->select(
+                        "SELECT id, vendor_id, balance FROM bills WHERE id = ?",
+                        [$data['bill_id']]
+                    );
+                    if (empty($bill)) {
+                        throw new Exception('Bill not found');
+                    }
+                    $bill = $bill[0];
+                    if ((int)$bill['vendor_id'] !== (int)$data['vendor_id']) {
+                        throw new Exception('Bill does not belong to the specified vendor');
+                    }
+                    if (floatval($data['amount']) > floatval($bill['balance'])) {
+                        throw new Exception('Payment amount exceeds outstanding bill balance');
+                    }
 
                     $paymentId = $db->insert(
                         "INSERT INTO payments_made (payment_number, vendor_id, bill_id, payment_date,

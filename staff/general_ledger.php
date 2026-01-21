@@ -781,7 +781,7 @@ try {
                             <div class="tab-pane fade" id="journal" role="tabpanel" aria-labelledby="journal-tab">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h6 class="mb-0">Record Financial Transactions</h6>
-                                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addJournalModal"><i class="fas fa-plus me-2"></i>Add Journal Entry</button>
+                                    <button class="btn btn-secondary" disabled title="Journal entries are posted from source modules only"><i class="fas fa-lock me-2"></i>Journal Entries Read-Only</button>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-striped">
@@ -800,7 +800,7 @@ try {
                                             <?php if (empty($journalEntries)): ?>
                                                 <tr>
                                                     <td colspan="7" class="text-center text-muted py-4">
-                                                        <i class="fas fa-info-circle me-2"></i>No journal entries found. Click "Add Journal Entry" to record your first transaction.
+                                                        <i class="fas fa-info-circle me-2"></i>No journal entries found. Entries are posted automatically from source modules.
                                                     </td>
                                                 </tr>
                                             <?php else: ?>
@@ -1593,6 +1593,8 @@ try {
         }
 
         function deleteEntry(entryReference) {
+            showAlert('error', 'Journal entries are read-only. Use source modules to post entries.');
+            return;
             showConfirmDialog(
                 'Delete Journal Entry',
                 'Are you sure you want to delete this journal entry? This action cannot be undone.',
@@ -1816,6 +1818,8 @@ try {
         }
 
         function saveJournalEntry() {
+            showAlert('error', 'Journal entries are read-only. Use source modules to post entries.');
+            return;
             const form = document.getElementById('journalEntryForm');
             if (!form.checkValidity()) {
                 form.reportValidity();
@@ -1898,6 +1902,8 @@ try {
         }
 
         function editEntry(entryReference) {
+            showAlert('error', 'Journal entries are read-only. Use source modules to post entries.');
+            return;
             // Fetch journal entry data
             fetch(`api/journal_entries.php?reference=${encodeURIComponent(entryReference)}`, {
                 method: 'GET'
@@ -2025,6 +2031,8 @@ try {
         }
 
         function updateJournalEntry() {
+            showAlert('error', 'Journal entries are read-only. Use source modules to post entries.');
+            return;
             const form = document.getElementById('editJournalEntryForm');
             if (!form.checkValidity()) {
                 form.reportValidity();

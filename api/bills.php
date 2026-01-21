@@ -473,6 +473,47 @@ function generateAgingReport($db) {
     }
 }
 
+function getActiveBudgetItem($db, $accountId) {
+    $budget = $db->select(
+        "SELECT bi.id, bi.budgeted_amount, bi.actual_amount
+         FROM budget_items bi
+         INNER JOIN budgets b ON bi.budget_id = b.id
+         WHERE bi.account_id = ? AND b.status = 'active' AND YEAR(b.budget_year) = YEAR(CURDATE())
+         LIMIT 1",
+        [$accountId]
+    );
+
+    return $budget[0] ?? null;
+}
+
+function enforceBudgetLimit($db, $accountId, $amount) {
+    $budget = getActiveBudgetItem($db, $accountId);
+    if (!$budget) {
+        return;
+    }
+
+    $remaining = floatval($budget['budgeted_amount']) - floatval($budget['actual_amount']);
+    if ($amount > $remaining) {
+        throw new Exception('Bill exceeds available budget for the selected account.');
+    }
+}
+
+function applyBudgetActual($db, $accountId, $amount) {
+    $budget = getActiveBudgetItem($db, $accountId);
+    if (!$budget) {
+        return;
+    }
+
+    $db->execute(
+        "UPDATE budget_items
+         SET actual_amount = actual_amount + ?,
+             variance = budgeted_amount - (actual_amount + ?),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?",
+        [$amount, $amount, $budget['id']]
+    );
+}
+
 /**
  * Post journal entry for bill
  */
@@ -495,27 +536,67 @@ function postBillJournalEntry($db, $billId, $subtotal, $taxAmount) {
         ]
     );
 
-    // Debit: Expense accounts (or appropriate expense account)
-    $db->insert(
-        "INSERT INTO journal_entry_lines (journal_entry_id, account_id, debit, description)
-         VALUES (?, (SELECT id FROM chart_of_accounts WHERE account_code = '5001'), ?, 'Cost of Goods Sold - Bill')",
-        [$entryId, $subtotal]
+    $totalAmount = $subtotal + $taxAmount;
+    $items = $db->select(
+        "SELECT account_id, line_total FROM bill_items WHERE bill_id = ?",
+        [$billId]
     );
 
-    // Debit: Tax expense (if applicable)
-    if ($taxAmount > 0) {
+    // Fallback expense account (Office Supplies) if bill items are missing accounts
+    $fallbackExpenseId = $db->select("SELECT id FROM chart_of_accounts WHERE account_code = '5403'");
+    if (empty($fallbackExpenseId)) {
+        $fallbackExpenseId = $db->select("SELECT id FROM chart_of_accounts WHERE account_type = 'expense' ORDER BY account_code LIMIT 1");
+    }
+    $fallbackExpenseId = $fallbackExpenseId[0]['id'] ?? 1;
+
+    $expenseLines = [];
+
+    if (!empty($items)) {
+        $factor = $subtotal > 0 ? ($totalAmount / $subtotal) : 1;
+        $lineCount = count($items);
+        $runningTotal = 0;
+
+        foreach ($items as $index => $item) {
+            $accountId = $item['account_id'] ?: $fallbackExpenseId;
+            $lineAmount = round(floatval($item['line_total']) * $factor, 2);
+
+            // Adjust last line for rounding differences
+            if ($index === $lineCount - 1) {
+                $lineAmount = $totalAmount - $runningTotal;
+            }
+
+            $runningTotal += $lineAmount;
+            $expenseLines[] = ['account_id' => $accountId, 'amount' => $lineAmount];
+        }
+    } else {
+        $expenseLines[] = ['account_id' => $fallbackExpenseId, 'amount' => $totalAmount];
+    }
+
+    // Budget checks (by account)
+    $budgetTotals = [];
+    foreach ($expenseLines as $line) {
+        $budgetTotals[$line['account_id']] = ($budgetTotals[$line['account_id']] ?? 0) + $line['amount'];
+    }
+    foreach ($budgetTotals as $accountId => $amount) {
+        enforceBudgetLimit($db, $accountId, $amount);
+    }
+
+    // Insert expense lines and apply budget actuals
+    foreach ($expenseLines as $line) {
         $db->insert(
             "INSERT INTO journal_entry_lines (journal_entry_id, account_id, debit, description)
-             VALUES (?, (SELECT id FROM chart_of_accounts WHERE account_code = '5002'), ?, 'Tax Expense')",
-            [$entryId, $taxAmount]
+             VALUES (?, ?, ?, 'Expense - Bill')",
+            [$entryId, $line['account_id'], $line['amount']]
         );
+
+        applyBudgetActual($db, $line['account_id'], $line['amount']);
     }
 
     // Credit: Accounts Payable
     $db->insert(
         "INSERT INTO journal_entry_lines (journal_entry_id, account_id, credit, description)
          VALUES (?, (SELECT id FROM chart_of_accounts WHERE account_code = '2001'), ?, 'Accounts Payable - Bill')",
-        [$entryId, $subtotal + $taxAmount]
+        [$entryId, $totalAmount]
     );
 }
 

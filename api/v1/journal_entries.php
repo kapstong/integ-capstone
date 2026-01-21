@@ -33,6 +33,11 @@ try {
 $method = $_SERVER['REQUEST_METHOD'];
 
 try {
+    if ($method !== 'GET') {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Journal entries are read-only. Use source modules to post entries.']);
+        exit;
+    }
     switch ($method) {
         case 'GET':
             if (isset($_GET['id'])) {
