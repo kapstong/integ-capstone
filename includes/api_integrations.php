@@ -155,15 +155,6 @@ class APIIntegrationManager {
         try {
             $result = $integration->$action($config, $params);
 
-            // Log the action
-            Logger::getInstance()->logUserAction(
-                'Executed integration action',
-                'api_integrations',
-                null,
-                null,
-                ['integration' => $name, 'action' => $action, 'params' => $params]
-            );
-
             return $result;
         } catch (Exception $e) {
             Logger::getInstance()->error("Integration action failed: $name->$action", [
