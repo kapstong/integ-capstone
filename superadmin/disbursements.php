@@ -1600,6 +1600,7 @@ body {
                         integration_name: 'hr4',
                         action_name: 'updatePayrollStatus',
                         id: resolvedPayrollId,
+                        approval_id: resolvedPayrollId,
                         approval_action: action,
                         rejection_reason: rejectionReason,
                         params: JSON.stringify({

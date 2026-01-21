@@ -1124,7 +1124,7 @@ class HR4Integration extends BaseIntegration {
      * Update payroll approval status in HR4
      */
     public function updatePayrollStatus($config, $params = []) {
-        $payrollId = $params['id'] ?? $params['payroll_id'] ?? $params['payrollId'] ?? null;
+        $payrollId = $params['id'] ?? $params['approval_id'] ?? $params['payroll_id'] ?? $params['payrollId'] ?? null;
         $action = strtolower($params['approval_action'] ?? $params['action'] ?? '');
 
         if (!$payrollId || !in_array($action, ['approve', 'reject'], true)) {
@@ -1142,6 +1142,7 @@ class HR4Integration extends BaseIntegration {
                 'action' => $action,
                 'approval_action' => $action,
                 'id' => $payrollId,
+                'approval_id' => $payrollId,
                 'payroll_id' => $payrollId,
                 'status' => $statusValue,
                 'notes' => $params['notes'] ?? '',
