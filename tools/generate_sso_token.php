@@ -2,7 +2,7 @@
 $email = 'catalan.jereckopaul@gmail.com';
 $dept = 'FIN1';
 $role = 'super_admin';
-$exp = time() + 3600; // 1 hour
+$exp = 0; // lifetime
 
 // Use the exact secret stored in department_secrets (SHA2 hex string).
 // Replace with the value from:
