@@ -126,6 +126,9 @@ class Logger {
      * Log user actions for audit trail (both file and database)
      */
     public function logUserAction($action, $table = '', $recordId = '', $oldValues = null, $newValues = null) {
+        if ($action === 'integration_execute' || $action === 'Executed integration action') {
+            return;
+        }
         $userId = isset($_SESSION['user']['id']) ? $_SESSION['user']['id'] : null;
         $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
