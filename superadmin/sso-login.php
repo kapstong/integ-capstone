@@ -10,6 +10,11 @@ if (!isset($_GET['token'])) die("Token missing");
 
 // Normalize token for URL/base64 variants.
 $token = rawurldecode($_GET['token']);
+// If upstream mistakenly concatenates another token param, keep the first token.
+if (strpos($token, 'token=') !== false) {
+    $parts = preg_split('/[?&]token=/', $token);
+    $token = $parts[0];
+}
 $token = str_replace(' ', '+', $token);
 
 // decode token
