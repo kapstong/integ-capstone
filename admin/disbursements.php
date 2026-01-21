@@ -1413,6 +1413,7 @@ body {
             tbody.innerHTML = '';
 
             payrollData.forEach(payroll => {
+                const payrollId = payroll.approval_id || payroll.payroll_id || payroll.payrollId || payroll.id || '';
                 const totalAmount = parseFloat(payroll.total_amount || payroll.net_pay || 0);
                 const submittedAt = payroll.submitted_at ? new Date(payroll.submitted_at).toLocaleString() : 'N/A';
                 const rawStatus = payroll.status || '';
@@ -1424,7 +1425,7 @@ body {
                 const canApprove = Boolean(payroll.can_approve) || ['processed', 'success', 'pending', 'pending approval', 'for approval'].includes(statusKey);
 
                 const row = document.createElement('tr');
-                row.dataset.payrollId = payroll.payroll_id || '';
+                row.dataset.payrollId = payrollId;
                 row.dataset.period = payroll.period_display || payroll.payroll_period || '';
                 row.dataset.amount = totalAmount;
                 row.dataset.submittedBy = payroll.submitted_by || '';
@@ -1438,10 +1439,10 @@ body {
                     <td><span class="badge ${canApprove ? 'bg-info' : 'bg-secondary'}">${statusText}</span></td>
                     <td>
                         ${canApprove ? `
-                            <button class="btn btn-success btn-sm me-2" onclick="updatePayrollApproval(this, '${payroll.payroll_id}', 'approve')">
+                            <button class="btn btn-success btn-sm me-2" onclick="updatePayrollApproval(this, '${payrollId}', 'approve')">
                                 <i class="fas fa-check me-1"></i>Approve
                             </button>
-                            <button class="btn btn-danger btn-sm" onclick="updatePayrollApproval(this, '${payroll.payroll_id}', 'reject')">
+                            <button class="btn btn-danger btn-sm" onclick="updatePayrollApproval(this, '${payrollId}', 'reject')">
                                 <i class="fas fa-times me-1"></i>Reject
                             </button>
                         ` : '<span class="text-muted">N/A</span>'}
@@ -1530,11 +1531,13 @@ body {
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
+                    credentials: 'include',
                     body: new URLSearchParams({
                         action: 'execute',
                         integration_name: 'hr4',
                         action_name: 'updatePayrollStatus',
                         id: payrollId,
+                        approval_id: payrollId,
                         approval_action: action,
                         rejection_reason: rejectionReason,
                         params: JSON.stringify({

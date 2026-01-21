@@ -1078,7 +1078,7 @@ class HR4Integration extends BaseIntegration {
         $parsedData = [];
 
         foreach ($apiResponse['data'] as $entry) {
-            $payrollId = $entry['payroll_id'] ?? $entry['payrollId'] ?? $entry['id'] ?? null;
+            $payrollId = $entry['approval_id'] ?? $entry['payroll_id'] ?? $entry['payrollId'] ?? $entry['id'] ?? null;
             $totalAmount = floatval($entry['total_amount'] ?? 0);
             $rawStatus = $entry['status'] ?? '';
             $normalizedStatus = strtolower(trim((string)$rawStatus));
@@ -1092,6 +1092,7 @@ class HR4Integration extends BaseIntegration {
 
             $parsedData[] = [
                 'payroll_id' => $payrollId,
+                'approval_id' => $entry['approval_id'] ?? null,
                 'payroll_period' => $entry['payroll_period'] ?? '',
                 'period_display' => $entry['period_display'] ?? '',
                 'total_amount' => $totalAmount,

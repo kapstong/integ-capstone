@@ -1460,7 +1460,7 @@ body {
             tbody.innerHTML = '';
 
             payrollData.forEach(payroll => {
-                const payrollId = payroll.payroll_id || payroll.payrollId || payroll.id || '';
+                const payrollId = payroll.approval_id || payroll.payroll_id || payroll.payrollId || payroll.id || '';
                 const totalAmount = parseFloat(payroll.total_amount || payroll.net_pay || 0);
                 const submittedAt = payroll.submitted_at ? new Date(payroll.submitted_at).toLocaleString() : 'N/A';
                 const rawStatus = payroll.status || '';
