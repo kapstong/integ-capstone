@@ -2,7 +2,7 @@
 $email = 'catalan.jereckopaul@gmail.com';
 $dept = 'FIN1';
 $role = 'super_admin';
-$exp = 0; // lifetime
+$exp = null; // lifetime (omit exp)
 
 // Use the exact secret stored in department_secrets (SHA2 hex string).
 // Replace with the value from:
@@ -18,9 +18,11 @@ if ($useRawSecret) {
 $payload = [
     'email' => $email,
     'dept'  => $dept,
-    'role'  => $role,
-    'exp'   => $exp
+    'role'  => $role
 ];
+if ($exp !== null) {
+    $payload['exp'] = $exp;
+}
 
 $payloadJson = json_encode($payload, JSON_UNESCAPED_SLASHES);
 $signature = hash_hmac('sha256', $payloadJson, $secret);
