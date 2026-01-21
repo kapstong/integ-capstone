@@ -806,7 +806,7 @@ header('Content-Type: application/javascript');
             tbody.innerHTML = filteredDisbursements.map(d => {
                 // Determine source/department based on reference number
                 let source = 'Payroll';
-                let sourceBadge = '<span class="badge bg-secondary">Payroll</span>';
+                let sourceBadge = '<span class="badge bg-success">Payroll</span>';
                 
                 if (d.reference_number) {
                     if (d.reference_number.startsWith('HR3-CLAIM-')) {
@@ -814,7 +814,7 @@ header('Content-Type: application/javascript');
                         sourceBadge = '<span class="badge bg-info">Claims</span>';
                     } else if (d.reference_number.startsWith('PAYROLL-')) {
                         source = 'Payroll';
-                        sourceBadge = '<span class="badge bg-primary">Payroll</span>';
+                        sourceBadge = '<span class="badge bg-success">Payroll</span>';
                     }
                 }
 
