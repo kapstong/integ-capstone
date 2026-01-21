@@ -94,11 +94,10 @@ function handleSendCode($user) {
         
         // Send code via email
         $email = $user['email'] ?? '';
-        if ($email && function_exists('sendEmail')) {
-            $subject = 'Privacy Mode Verification Code';
-            $body = "Your verification code is: <strong>{$code}</strong>\n\nThis code will expire in 5 minutes.";
-            
-            sendEmail($email, $subject, $body);
+        if ($email) {
+            $mailer = Mailer::getInstance();
+            $firstName = $user['first_name'] ?? '';
+            $mailer->sendVerificationCode($email, $code, $firstName);
         }
         
         // Return masked email
@@ -214,4 +213,3 @@ function maskEmail($email) {
 
 ob_end_flush();
 ?>
-
