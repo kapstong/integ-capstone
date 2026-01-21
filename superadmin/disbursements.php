@@ -1566,6 +1566,8 @@ body {
             const originalText = btn ? btn.innerHTML : '';
             const row = buttonEl && buttonEl.closest ? buttonEl.closest('tr') : null;
 
+            console.log('Starting payroll approval for ID:', payrollId, 'Action:', action);
+
             if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Updating...';
@@ -1584,6 +1586,7 @@ body {
                     }
                 }
 
+                console.log('Calling integrations API...');
                 const response = await fetch('../api/integrations.php', {
                     method: 'POST',
                     headers: {
@@ -1604,8 +1607,11 @@ body {
                     })
                 });
 
+                console.log('API Response status:', response.status);
+
                 if (!response.ok) {
                     const responseText = await response.text();
+                    console.error('API Error response:', responseText);
                     let errorMessage = `HTTP ${response.status}`;
                     if (responseText) {
                         try {
@@ -1619,21 +1625,27 @@ body {
                 }
 
                 const result = await response.json();
+                console.log('API Result:', result);
 
                 if (result.success) {
-                    // No success notifications.
+                    console.log('Payroll update successful, action:', action);
                     if (action === 'approve') {
+                        console.log('Creating payroll disbursement...');
                         try {
                             await createPayrollDisbursement(row);
+                            console.log('Disbursement created successfully');
                         } catch (error) {
-                            window.showAlert('Payroll approved, but failed to record disbursement.', 'warning');
+                            console.error('Disbursement creation failed:', error);
+                            window.showAlert('Payroll approved, but failed to record disbursement: ' + error.message, 'warning');
                         }
                     }
                     window.loadPayroll();
                 } else {
+                    console.error('API returned success=false:', result);
                     window.showAlert('Error updating payroll: ' + (result.error || 'Unknown error'), 'danger');
                 }
             } catch (error) {
+                console.error('Payroll approval error:', error);
                 window.showAlert('Error: ' + error.message, 'danger');
             } finally {
                 if (btn) {
@@ -1666,6 +1678,3 @@ body {
 </html>
     <script src="../includes/inactivity_timeout.js?v=3"></script>
 <script src="../includes/navbar_datetime.js"></script>
-
-
-
