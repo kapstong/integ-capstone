@@ -1521,11 +1521,11 @@ body {
 
             const disbursementData = {
                 payee: `HR4 Payroll - ${period}`,
-                disbursement_date: new Date().toISOString().split('T')[0],
+                payment_date: new Date().toISOString().split('T')[0],
                 amount: amount,
                 payment_method: 'bank_transfer',
                 reference_number: payrollId,
-                purpose: `Payroll approval for ${period}`
+                description: `Payroll approval for ${period}`
             };
 
             const response = await fetch('../api/disbursements.php', {
@@ -1534,13 +1534,23 @@ body {
                     'Content-Type': 'application/json',
                 },
                 credentials: 'include',
-                body: JSON.stringify(disbursementData)
+                body: JSON.stringify({
+                    action: 'process_payment',
+                    ...disbursementData
+                })
             });
 
-            const result = await response.json();
-            if (result.success) {
-                loadDisbursements();
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || `HTTP ${response.status}`);
             }
+
+            const result = await response.json();
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to record payroll disbursement');
+            }
+
+            loadDisbursements();
         }
 
         window.updatePayrollApproval = async function(buttonEl, payrollId, action) {
