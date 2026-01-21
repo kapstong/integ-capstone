@@ -1015,7 +1015,7 @@ body {
             });
         }
         window.loadClaims = async function() {
-            showTableLoading('claimsTableBody', 'Loading claims...');
+            window.showTableLoading('claimsTableBody', 'Loading claims...');
 
             const btn = (typeof event !== 'undefined' && event.target)
                 ? event.target.closest('button')
@@ -1379,7 +1379,7 @@ body {
     window.addEventListener('DOMContentLoaded', function() {
 
         window.loadPayroll = async function(buttonEl) {
-            showTableLoading('payrollTableBody', 'Loading payroll...');
+            window.showTableLoading('payrollTableBody', 'Loading payroll...');
 
             const btn = buttonEl && buttonEl.closest ? buttonEl.closest('button') : null;
             const originalText = btn ? btn.innerHTML : '';
