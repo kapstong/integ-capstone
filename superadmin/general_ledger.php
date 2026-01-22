@@ -744,7 +744,43 @@ try {
                             <div class="tab-pane fade show active" id="coa" role="tabpanel" aria-labelledby="coa-tab">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h6 class="mb-0">Master List of Accounts</h6>
-                                    <button class="btn btn-primary" onclick="showAddAccountModal()"><i class="fas fa-plus me-2"></i>Add Account</button>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-outline-secondary" id="exportCoaBtn" onclick="exportChartOfAccounts()">
+                                            <i class="fas fa-download me-2"></i>Export
+                                        </button>
+                                        <button class="btn btn-primary" onclick="showAddAccountModal()"><i class="fas fa-plus me-2"></i>Add Account</button>
+                                    </div>
+                                </div>
+                                <?php
+                                $coaCategories = [];
+                                foreach ($chartOfAccounts as $account) {
+                                    $category = trim($account['category'] ?? '');
+                                    if ($category === '') {
+                                        $category = 'Uncategorized';
+                                    }
+                                    $coaCategories[$category] = true;
+                                }
+                                $coaCategoryList = array_keys($coaCategories);
+                                sort($coaCategoryList, SORT_NATURAL | SORT_FLAG_CASE);
+                                ?>
+                                <div class="row g-2 align-items-center mb-3">
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                            <input type="text" class="form-control" id="coaSearchInput" placeholder="Search by code, name, type, description, or category">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select class="form-select" id="coaCategoryFilter">
+                                            <option value="">All Categories</option>
+                                            <?php foreach ($coaCategoryList as $category): ?>
+                                                <option value="<?php echo htmlspecialchars($category); ?>"><?php echo htmlspecialchars($category); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button class="btn btn-outline-secondary w-100" type="button" id="coaClearFilters">Clear</button>
+                                    </div>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-striped">
@@ -753,6 +789,7 @@ try {
                                                 <th>Account Code</th>
                                                 <th>Account Name</th>
                                                 <th>Type</th>
+                                                <th>Category</th>
                                                 <th>Description</th>
                                                 <th>Actions</th>
                                             </tr>
@@ -760,20 +797,37 @@ try {
                                         <tbody>
                                             <?php if (empty($chartOfAccounts)): ?>
                                                 <tr>
-                                                    <td colspan="5" class="text-center text-muted py-4">
+                                                    <td colspan="6" class="text-center text-muted py-4">
                                                         <i class="fas fa-info-circle me-2"></i>No accounts found. Click "Add Account" to create the first account.
                                                     </td>
                                                 </tr>
                                             <?php else: ?>
-                                                <?php foreach ($chartOfAccounts as $account): ?>
-                                                    <tr>
+                                                <?php foreach ($chartOfAccounts as $account):
+                                                    $categoryLabel = trim($account['category'] ?? '');
+                                                    if ($categoryLabel === '') {
+                                                        $categoryLabel = 'Uncategorized';
+                                                    }
+                                                ?>
+                                                    <tr
+                                                        data-account-code="<?php echo htmlspecialchars($account['account_code']); ?>"
+                                                        data-account-name="<?php echo htmlspecialchars($account['account_name']); ?>"
+                                                        data-account-type="<?php echo htmlspecialchars($account['account_type']); ?>"
+                                                        data-account-category="<?php echo htmlspecialchars($categoryLabel); ?>"
+                                                        data-account-desc="<?php echo htmlspecialchars($account['description'] ?? ''); ?>"
+                                                    >
                                                         <td data-account-id="<?php echo htmlspecialchars($account['id']); ?>"><?php echo htmlspecialchars($account['account_code']); ?></td>
                                                         <td><?php echo htmlspecialchars($account['account_name']); ?></td>
                                                         <td><span class="account-type <?php echo $account['account_type']; ?>"><?php echo ucfirst($account['account_type']); ?></span></td>
+                                                        <td><?php echo htmlspecialchars($categoryLabel); ?></td>
                                                         <td><?php echo htmlspecialchars($account['description'] ?? 'No description'); ?></td>
                                                         <td><button class="btn btn-sm btn-outline-primary" onclick="editAccount()">Edit</button></td>
                                                     </tr>
                                                 <?php endforeach; ?>
+                                                <tr id="coaEmptyState" style="display: none;">
+                                                    <td colspan="6" class="text-center text-muted py-4">
+                                                        <i class="fas fa-info-circle me-2"></i>No matching accounts. Try adjusting your filters.
+                                                    </td>
+                                                </tr>
                                             <?php endif; ?>
                                         </tbody>
                                     </table>
@@ -1250,6 +1304,63 @@ try {
             })
             .finally(() => {
                 // Restore button state
+                exportBtn.innerHTML = originalText;
+                exportBtn.disabled = false;
+            });
+        }
+
+        function exportChartOfAccounts() {
+            const exportBtn = document.getElementById('exportCoaBtn');
+            if (!exportBtn) {
+                return;
+            }
+            const originalText = exportBtn.innerHTML;
+            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Exporting...';
+            exportBtn.disabled = true;
+
+            const currentDate = new Date().toISOString().split('T')[0];
+            const params = new URLSearchParams({
+                type: 'chart_of_accounts',
+                format: 'csv'
+            });
+            const searchValue = (document.getElementById('coaSearchInput')?.value || '').trim();
+            const categoryValue = (document.getElementById('coaCategoryFilter')?.value || '').trim();
+            if (searchValue) {
+                params.set('search', searchValue);
+            }
+            if (categoryValue) {
+                params.set('category', categoryValue);
+            }
+
+            fetch(`api/reports.php?${params.toString()}`, {
+                method: 'GET'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to export chart of accounts');
+                }
+                return response.text();
+            })
+            .then(csvContent => {
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+
+                link.setAttribute('href', url);
+                link.setAttribute('download', `chart_of_accounts_${currentDate}.csv`);
+                link.style.visibility = 'hidden';
+
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                showAlert('success', 'Chart of Accounts exported successfully!');
+            })
+            .catch(error => {
+                console.error('Error exporting chart of accounts:', error);
+                showAlert('error', error.message || 'Failed to export chart of accounts. Please try again.');
+            })
+            .finally(() => {
                 exportBtn.innerHTML = originalText;
                 exportBtn.disabled = false;
             });
@@ -2168,6 +2279,41 @@ try {
             return { valid: true };
         }
 
+        function applyCoaFilters() {
+            const searchInput = document.getElementById('coaSearchInput');
+            const categoryFilter = document.getElementById('coaCategoryFilter');
+            if (!searchInput || !categoryFilter) {
+                return;
+            }
+
+            const searchValue = searchInput.value.trim().toLowerCase();
+            const categoryValue = categoryFilter.value.trim().toLowerCase();
+            const rows = document.querySelectorAll('#coa tbody tr[data-account-code]');
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const code = (row.dataset.accountCode || '').toLowerCase();
+                const name = (row.dataset.accountName || '').toLowerCase();
+                const type = (row.dataset.accountType || '').toLowerCase();
+                const category = (row.dataset.accountCategory || '').toLowerCase();
+                const desc = (row.dataset.accountDesc || '').toLowerCase();
+
+                const matchesSearch = !searchValue || [code, name, type, category, desc].some(value => value.includes(searchValue));
+                const matchesCategory = !categoryValue || category === categoryValue;
+                const isVisible = matchesSearch && matchesCategory;
+
+                row.style.display = isVisible ? '' : 'none';
+                if (isVisible) {
+                    visibleCount += 1;
+                }
+            });
+
+            const emptyRow = document.getElementById('coaEmptyState');
+            if (emptyRow) {
+                emptyRow.style.display = visibleCount === 0 ? '' : 'none';
+            }
+        }
+
         // Add event listener for journal modal when opened
         document.getElementById('addJournalModal').addEventListener('shown.bs.modal', function() {
             loadAccountsForModal();
@@ -2234,6 +2380,24 @@ try {
                     };
                 }
             });
+
+            const coaSearchInput = document.getElementById('coaSearchInput');
+            const coaCategoryFilter = document.getElementById('coaCategoryFilter');
+            const coaClearFilters = document.getElementById('coaClearFilters');
+
+            if (coaSearchInput && coaCategoryFilter) {
+                coaSearchInput.addEventListener('input', applyCoaFilters);
+                coaCategoryFilter.addEventListener('change', applyCoaFilters);
+                if (coaClearFilters) {
+                    coaClearFilters.addEventListener('click', function() {
+                        coaSearchInput.value = '';
+                        coaCategoryFilter.value = '';
+                        applyCoaFilters();
+                    });
+                }
+
+                applyCoaFilters();
+            }
         });
 
         // Initialize sidebar state on page load

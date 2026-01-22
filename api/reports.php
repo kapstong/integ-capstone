@@ -128,6 +128,11 @@ function handleGet($db, $logger) {
             case 'analytics_summary':
                 generateAnalyticsSummary($db, $dateFrom, $dateTo, $format);
                 break;
+            case 'chart_of_accounts':
+                $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+                $category = isset($_GET['category']) ? trim($_GET['category']) : '';
+                generateChartOfAccounts($db, $format, $search, $category);
+                break;
             default:
                 http_response_code(400);
                 echo json_encode(['error' => 'Invalid report type']);
@@ -474,6 +479,67 @@ function generateTrialBalance($db, $dateFrom, $dateTo, $format) {
     outputReport($report, $format, 'trial_balance');
 }
 
+function generateChartOfAccounts($db, $format, $search = '', $category = '') {
+    $conditions = ['is_active = 1'];
+    $params = [];
+
+    if ($search !== '') {
+        $conditions[] = "(
+            LOWER(account_code) LIKE ?
+            OR LOWER(account_name) LIKE ?
+            OR LOWER(account_type) LIKE ?
+            OR LOWER(COALESCE(category, '')) LIKE ?
+            OR LOWER(COALESCE(description, '')) LIKE ?
+        )";
+        $like = '%' . strtolower($search) . '%';
+        $params = array_merge($params, [$like, $like, $like, $like, $like]);
+    }
+
+    if ($category !== '') {
+        $categoryValue = strtolower($category);
+        if ($categoryValue === 'uncategorized') {
+            $conditions[] = "(category IS NULL OR TRIM(category) = '')";
+        } else {
+            $conditions[] = "LOWER(category) = ?";
+            $params[] = $categoryValue;
+        }
+    }
+
+    $whereClause = implode(' AND ', $conditions);
+    $stmt = $db->prepare("
+        SELECT
+            account_code,
+            account_name,
+            account_type,
+            category,
+            description
+        FROM chart_of_accounts
+        WHERE $whereClause
+        ORDER BY account_code ASC
+    ");
+    $stmt->execute($params);
+    $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($accounts as &$account) {
+        $category = trim($account['category'] ?? '');
+        if ($category === '') {
+            $category = 'Uncategorized';
+        }
+        $account['category'] = $category;
+        $account['description'] = $account['description'] ?? '';
+    }
+    unset($account);
+
+    $report = [
+        'report_type' => 'Chart of Accounts',
+        'generated_at' => date('Y-m-d H:i:s'),
+        'total_accounts' => count($accounts),
+        'accounts' => $accounts
+    ];
+
+    outputReport($report, $format, 'chart_of_accounts');
+}
+
 function generateAgingReceivable($db, $format) {
     $stmt = $db->prepare("
         SELECT
@@ -739,6 +805,20 @@ function outputCSV($report, $filename) {
             fputcsv($output, ['Total Debits', $report['totals']['debit']]);
             fputcsv($output, ['Total Credits', $report['totals']['credit']]);
             fputcsv($output, ['Difference', $report['totals']['difference']]);
+            break;
+        case 'chart_of_accounts':
+            fputcsv($output, ['Account Code', 'Account Name', 'Type', 'Category', 'Description']);
+            foreach ($report['accounts'] as $account) {
+                fputcsv($output, [
+                    $account['account_code'],
+                    $account['account_name'],
+                    $account['account_type'],
+                    $account['category'],
+                    $account['description']
+                ]);
+            }
+            fputcsv($output, []);
+            fputcsv($output, ['Total Accounts', $report['total_accounts']]);
             break;
 
         // Add more cases for other report types as needed
