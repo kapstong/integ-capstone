@@ -7,6 +7,7 @@
 require_once '../../includes/database.php';
 require_once '../../includes/api_auth.php';
 require_once '../../includes/logger.php';
+require_once '../../includes/coa_validation.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -304,15 +305,54 @@ function createInvoice($db, $client) {
         $count = $stmt->fetch()['count'] + 1;
         $invoiceNumber = 'INV-' . date('Y') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
 
-        // Calculate totals
-        $subtotal = 0;
-        $taxRate = $data['tax_rate'] ?? 12.00;
-        $items = $data['items'];
+    // Calculate totals
+    $subtotal = 0;
+    $taxRate = $data['tax_rate'] ?? 12.00;
+    $items = $data['items'];
 
-        foreach ($items as $item) {
-            if (!isset($item['description']) || !isset($item['unit_price'])) {
-                throw new Exception('Each item must have description and unit_price');
-            }
+    if (empty($items)) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Invoice items are required'
+        ]);
+        return;
+    }
+
+    $missingItems = [];
+    $accountIds = [];
+    foreach ($items as $index => $item) {
+        $accountId = $item['account_id'] ?? null;
+        if ($accountId === null || (is_string($accountId) && trim($accountId) === '')) {
+            $missingItems[] = $index + 1;
+        } else {
+            $accountIds[] = $accountId;
+        }
+    }
+    if (!empty($missingItems)) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Each invoice item must have an account selected.',
+            'missing_items' => $missingItems
+        ]);
+        return;
+    }
+    $invalidAccounts = findInvalidChartOfAccountsIds($db->getConnection(), $accountIds);
+    if (!empty($invalidAccounts)) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => 'One or more selected accounts are invalid or inactive.',
+            'invalid_account_ids' => $invalidAccounts
+        ]);
+        return;
+    }
+
+    foreach ($items as $item) {
+        if (!isset($item['description']) || !isset($item['unit_price'])) {
+            throw new Exception('Each item must have description and unit_price');
+        }
             $quantity = $item['quantity'] ?? 1;
             $subtotal += $quantity * $item['unit_price'];
         }
@@ -438,6 +478,45 @@ function updateInvoice($db, $invoiceId, $client) {
             $subtotal = 0;
             $taxRate = $data['tax_rate'] ?? 12.00;
             $items = $data['items'];
+
+            if (empty($items)) {
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Invoice items are required'
+                ]);
+                return;
+            }
+
+            $missingItems = [];
+            $accountIds = [];
+            foreach ($items as $index => $item) {
+                $accountId = $item['account_id'] ?? null;
+                if ($accountId === null || (is_string($accountId) && trim($accountId) === '')) {
+                    $missingItems[] = $index + 1;
+                } else {
+                    $accountIds[] = $accountId;
+                }
+            }
+            if (!empty($missingItems)) {
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Each invoice item must have an account selected.',
+                    'missing_items' => $missingItems
+                ]);
+                return;
+            }
+            $invalidAccounts = findInvalidChartOfAccountsIds($db->getConnection(), $accountIds);
+            if (!empty($invalidAccounts)) {
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'One or more selected accounts are invalid or inactive.',
+                    'invalid_account_ids' => $invalidAccounts
+                ]);
+                return;
+            }
 
             foreach ($items as $item) {
                 $quantity = $item['quantity'] ?? 1;

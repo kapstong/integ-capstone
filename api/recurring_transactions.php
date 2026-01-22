@@ -2,6 +2,7 @@
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
 require_once '../includes/logger.php';
+require_once '../includes/coa_validation.php';
 
 header('Content-Type: application/json');
 
@@ -397,6 +398,27 @@ function processInvoice($db, $template, $description) {
 
     // Add invoice items
     if (isset($template['items'])) {
+        if (empty($template['items'])) {
+            throw new Exception('Recurring invoice items are required');
+        }
+        $missingItems = [];
+        $accountIds = [];
+        foreach ($template['items'] as $index => $item) {
+            $accountId = $item['account_id'] ?? null;
+            if ($accountId === null || (is_string($accountId) && trim($accountId) === '')) {
+                $missingItems[] = $index + 1;
+            } else {
+                $accountIds[] = $accountId;
+            }
+        }
+        if (!empty($missingItems)) {
+            throw new Exception('Each recurring invoice item must have an account selected.');
+        }
+        $invalidAccounts = findInvalidChartOfAccountsIds($db->getConnection(), $accountIds);
+        if (!empty($invalidAccounts)) {
+            throw new Exception('One or more selected accounts are invalid or inactive.');
+        }
+
         foreach ($template['items'] as $item) {
             $db->insert(
                 "INSERT INTO invoice_items (invoice_id, description, quantity, unit_price, line_total, account_id)
@@ -447,6 +469,27 @@ function processBill($db, $template, $description) {
 
     // Add bill items
     if (isset($template['items'])) {
+        if (empty($template['items'])) {
+            throw new Exception('Recurring bill items are required');
+        }
+        $missingItems = [];
+        $accountIds = [];
+        foreach ($template['items'] as $index => $item) {
+            $accountId = $item['account_id'] ?? null;
+            if ($accountId === null || (is_string($accountId) && trim($accountId) === '')) {
+                $missingItems[] = $index + 1;
+            } else {
+                $accountIds[] = $accountId;
+            }
+        }
+        if (!empty($missingItems)) {
+            throw new Exception('Each recurring bill item must have an account selected.');
+        }
+        $invalidAccounts = findInvalidChartOfAccountsIds($db->getConnection(), $accountIds);
+        if (!empty($invalidAccounts)) {
+            throw new Exception('One or more selected accounts are invalid or inactive.');
+        }
+
         foreach ($template['items'] as $item) {
             $db->insert(
                 "INSERT INTO bill_items (bill_id, description, quantity, unit_price, line_total, account_id)

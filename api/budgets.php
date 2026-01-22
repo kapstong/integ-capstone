@@ -3,6 +3,7 @@
 // So we'll handle authentication differently
 require_once '../includes/database.php';
 require_once '../includes/logger.php';
+require_once '../includes/coa_validation.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -538,13 +539,23 @@ function handleDelete($db, $logger) {
 }
 
 function createBudgetItem($db, $logger, $data) {
-    $required = ['budget_id', 'category_id', 'budgeted_amount'];
+    $required = ['budget_id', 'category_id', 'budgeted_amount', 'account_id'];
     foreach ($required as $field) {
         if (!isset($data[$field]) || $data[$field] === '') {
             http_response_code(400);
             echo json_encode(['error' => "Missing required field: $field"]);
             return;
         }
+    }
+
+    $invalidAccounts = findInvalidChartOfAccountsIds($db, [$data['account_id']]);
+    if (!empty($invalidAccounts)) {
+        http_response_code(400);
+        echo json_encode([
+            'error' => 'Selected account is invalid or inactive.',
+            'invalid_account_ids' => $invalidAccounts
+        ]);
+        return;
     }
 
     $db->beginTransaction();

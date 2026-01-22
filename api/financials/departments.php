@@ -7,6 +7,7 @@
 require_once '../../../includes/auth.php';
 require_once '../../../includes/database.php';
 require_once '../../../includes/logger.php';
+require_once '../../../includes/coa_validation.php';
 
 header('Content-Type: application/json');
 session_start();
@@ -225,6 +226,25 @@ function handlePost($auth, $db) {
                 echo json_encode(['success' => false, 'error' => 'Missing required fields']);
                 return;
             }
+            if (empty($data['revenue_account_id']) || empty($data['expense_account_id'])) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Revenue and expense accounts are required']);
+                return;
+            }
+
+            $invalidAccounts = findInvalidChartOfAccountsIds($db, [
+                $data['revenue_account_id'],
+                $data['expense_account_id']
+            ]);
+            if (!empty($invalidAccounts)) {
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Selected accounts are invalid or inactive.',
+                    'invalid_account_ids' => $invalidAccounts
+                ]);
+                return;
+            }
 
             // Check for duplicate code
             $stmt = $db->prepare("SELECT id FROM departments WHERE dept_code = ?");
@@ -273,6 +293,17 @@ function handlePost($auth, $db) {
             if (empty($data['center_code']) || empty($data['center_name']) || empty($data['department_id']) || empty($data['revenue_account_id'])) {
                 http_response_code(400);
                 echo json_encode(['success' => false, 'error' => 'Missing required fields']);
+                return;
+            }
+
+            $invalidAccounts = findInvalidChartOfAccountsIds($db, [$data['revenue_account_id']]);
+            if (!empty($invalidAccounts)) {
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Selected account is invalid or inactive.',
+                    'invalid_account_ids' => $invalidAccounts
+                ]);
                 return;
             }
 
@@ -331,6 +362,26 @@ function handlePut($auth, $db) {
     if (!$id) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Department ID required']);
+        return;
+    }
+
+    if (empty($data['revenue_account_id']) || empty($data['expense_account_id'])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Revenue and expense accounts are required']);
+        return;
+    }
+
+    $invalidAccounts = findInvalidChartOfAccountsIds($db, [
+        $data['revenue_account_id'],
+        $data['expense_account_id']
+    ]);
+    if (!empty($invalidAccounts)) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Selected accounts are invalid or inactive.',
+            'invalid_account_ids' => $invalidAccounts
+        ]);
         return;
     }
 

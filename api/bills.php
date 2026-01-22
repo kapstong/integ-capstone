@@ -22,6 +22,7 @@ try {
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
 require_once '../includes/logger.php';
+require_once '../includes/coa_validation.php';
 
     // Session is already started in auth.php
 
@@ -159,14 +160,72 @@ try {
 
             if (isset($data['amount'])) {
                 // Simple bill creation from frontend - use amount directly
+                $accountId = $data['account_id'] ?? null;
+                if ($accountId === null || (is_string($accountId) && trim($accountId) === '')) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'error' => 'Account is required for bill amount']);
+                    exit;
+                }
+                $invalidAccounts = findInvalidChartOfAccountsIds($db->getConnection(), [$accountId]);
+                if (!empty($invalidAccounts)) {
+                    http_response_code(400);
+                    echo json_encode([
+                        'success' => false,
+                        'error' => 'Selected account is invalid or inactive.',
+                        'invalid_account_ids' => $invalidAccounts
+                    ]);
+                    exit;
+                }
+
                 $totalAmount = (float)$data['amount'];
                 $subtotal = $totalAmount / (1 + ($taxRate / 100));
                 $taxAmount = $totalAmount - $subtotal;
-                $items = []; // No items for simple bills
+                $items = [[
+                    'description' => $data['description'] ?? 'Bill amount',
+                    'quantity' => 1,
+                    'unit_price' => $subtotal,
+                    'account_id' => $accountId
+                ]];
             } else {
                 // Detailed bill creation with items
                 $subtotal = 0;
                 $items = $data['items'] ?? [];
+
+                if (empty($items)) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'error' => 'Bill items are required']);
+                    exit;
+                }
+
+                $missingItems = [];
+                $accountIds = [];
+                foreach ($items as $index => $item) {
+                    $itemAccountId = $item['account_id'] ?? null;
+                    if ($itemAccountId === null || (is_string($itemAccountId) && trim($itemAccountId) === '')) {
+                        $missingItems[] = $index + 1;
+                    } else {
+                        $accountIds[] = $itemAccountId;
+                    }
+                }
+                if (!empty($missingItems)) {
+                    http_response_code(400);
+                    echo json_encode([
+                        'success' => false,
+                        'error' => 'Each bill item must have an account selected.',
+                        'missing_items' => $missingItems
+                    ]);
+                    exit;
+                }
+                $invalidAccounts = findInvalidChartOfAccountsIds($db->getConnection(), $accountIds);
+                if (!empty($invalidAccounts)) {
+                    http_response_code(400);
+                    echo json_encode([
+                        'success' => false,
+                        'error' => 'One or more selected accounts are invalid or inactive.',
+                        'invalid_account_ids' => $invalidAccounts
+                    ]);
+                    exit;
+                }
 
                 foreach ($items as $item) {
                     $subtotal += ($item['quantity'] ?? 1) * ($item['unit_price'] ?? 0);
@@ -276,8 +335,48 @@ try {
                 }
                 if (isset($data['amount'])) {
                     // Update total_amount directly (frontend sends simple amount field)
+                    $accountId = $data['account_id'] ?? null;
+                    if ($accountId === null || (is_string($accountId) && trim($accountId) === '')) {
+                        http_response_code(400);
+                        echo json_encode(['success' => false, 'error' => 'Account is required for bill amount']);
+                        exit;
+                    }
+                    $invalidAccounts = findInvalidChartOfAccountsIds($db->getConnection(), [$accountId]);
+                    if (!empty($invalidAccounts)) {
+                        http_response_code(400);
+                        echo json_encode([
+                            'success' => false,
+                            'error' => 'Selected account is invalid or inactive.',
+                            'invalid_account_ids' => $invalidAccounts
+                        ]);
+                        exit;
+                    }
+
+                    $taxRate = $data['tax_rate'] ?? ($oldValues['tax_rate'] ?? 12.00);
+                    $totalAmount = (float)$data['amount'];
+                    $subtotal = $totalAmount / (1 + ($taxRate / 100));
+                    $taxAmount = $totalAmount - $subtotal;
+
+                    $fields[] = "subtotal = ?"; $params[] = $subtotal;
+                    $fields[] = "tax_rate = ?"; $params[] = $taxRate;
+                    $fields[] = "tax_amount = ?"; $params[] = $taxAmount;
                     $fields[] = "total_amount = ?";
-                    $params[] = $data['amount'];
+                    $params[] = $totalAmount;
+                    $fields[] = "balance = ?"; $params[] = $totalAmount - ($oldValues['paid_amount'] ?? 0);
+
+                    $db->execute("DELETE FROM bill_items WHERE bill_id = ?", [$_GET['id']]);
+                    $db->insert(
+                        "INSERT INTO bill_items (bill_id, description, quantity, unit_price, line_total, account_id)
+                         VALUES (?, ?, ?, ?, ?, ?)",
+                        [
+                            $_GET['id'],
+                            $data['description'] ?? 'Bill amount',
+                            1,
+                            $subtotal,
+                            $subtotal,
+                            $accountId
+                        ]
+                    );
                 }
                 if (isset($data['description'])) {
                     // Update notes from description
@@ -303,6 +402,42 @@ try {
                     $subtotal = 0;
                     $taxRate = $data['tax_rate'] ?? 12.00;
                     $items = $data['items'];
+
+                    if (empty($items)) {
+                        http_response_code(400);
+                        echo json_encode(['success' => false, 'error' => 'Bill items are required']);
+                        exit;
+                    }
+
+                    $missingItems = [];
+                    $accountIds = [];
+                    foreach ($items as $index => $item) {
+                        $itemAccountId = $item['account_id'] ?? null;
+                        if ($itemAccountId === null || (is_string($itemAccountId) && trim($itemAccountId) === '')) {
+                            $missingItems[] = $index + 1;
+                        } else {
+                            $accountIds[] = $itemAccountId;
+                        }
+                    }
+                    if (!empty($missingItems)) {
+                        http_response_code(400);
+                        echo json_encode([
+                            'success' => false,
+                            'error' => 'Each bill item must have an account selected.',
+                            'missing_items' => $missingItems
+                        ]);
+                        exit;
+                    }
+                    $invalidAccounts = findInvalidChartOfAccountsIds($db->getConnection(), $accountIds);
+                    if (!empty($invalidAccounts)) {
+                        http_response_code(400);
+                        echo json_encode([
+                            'success' => false,
+                            'error' => 'One or more selected accounts are invalid or inactive.',
+                            'invalid_account_ids' => $invalidAccounts
+                        ]);
+                        exit;
+                    }
 
                     foreach ($items as $item) {
                         $subtotal += ($item['quantity'] ?? 1) * ($item['unit_price'] ?? 0);

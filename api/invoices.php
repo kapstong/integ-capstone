@@ -2,6 +2,7 @@
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
 require_once '../includes/logger.php';
+require_once '../includes/coa_validation.php';
 
 header('Content-Type: application/json');
 
@@ -89,6 +90,42 @@ try {
             $subtotal = 0;
             $taxRate = $data['tax_rate'] ?? 12.00;
             $items = $data['items'] ?? [];
+
+            if (empty($items)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Invoice items are required']);
+                exit;
+            }
+
+            $missingItems = [];
+            $accountIds = [];
+            foreach ($items as $index => $item) {
+                $accountId = $item['account_id'] ?? null;
+                if ($accountId === null || (is_string($accountId) && trim($accountId) === '')) {
+                    $missingItems[] = $index + 1;
+                } else {
+                    $accountIds[] = $accountId;
+                }
+            }
+            if (!empty($missingItems)) {
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Each invoice item must have an account selected.',
+                    'missing_items' => $missingItems
+                ]);
+                exit;
+            }
+            $invalidAccounts = findInvalidChartOfAccountsIds($db->getConnection(), $accountIds);
+            if (!empty($invalidAccounts)) {
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'One or more selected accounts are invalid or inactive.',
+                    'invalid_account_ids' => $invalidAccounts
+                ]);
+                exit;
+            }
 
             foreach ($items as $item) {
                 $subtotal += ($item['quantity'] ?? 1) * ($item['unit_price'] ?? 0);
@@ -209,6 +246,42 @@ try {
                     $subtotal = 0;
                     $taxRate = $data['tax_rate'] ?? 12.00;
                     $items = $data['items'];
+
+                    if (empty($items)) {
+                        http_response_code(400);
+                        echo json_encode(['success' => false, 'error' => 'Invoice items are required']);
+                        exit;
+                    }
+
+                    $missingItems = [];
+                    $accountIds = [];
+                    foreach ($items as $index => $item) {
+                        $accountId = $item['account_id'] ?? null;
+                        if ($accountId === null || (is_string($accountId) && trim($accountId) === '')) {
+                            $missingItems[] = $index + 1;
+                        } else {
+                            $accountIds[] = $accountId;
+                        }
+                    }
+                    if (!empty($missingItems)) {
+                        http_response_code(400);
+                        echo json_encode([
+                            'success' => false,
+                            'error' => 'Each invoice item must have an account selected.',
+                            'missing_items' => $missingItems
+                        ]);
+                        exit;
+                    }
+                    $invalidAccounts = findInvalidChartOfAccountsIds($db->getConnection(), $accountIds);
+                    if (!empty($invalidAccounts)) {
+                        http_response_code(400);
+                        echo json_encode([
+                            'success' => false,
+                            'error' => 'One or more selected accounts are invalid or inactive.',
+                            'invalid_account_ids' => $invalidAccounts
+                        ]);
+                        exit;
+                    }
 
                     foreach ($items as $item) {
                         $subtotal += ($item['quantity'] ?? 1) * ($item['unit_price'] ?? 0);

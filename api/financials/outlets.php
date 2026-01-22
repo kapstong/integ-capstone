@@ -6,6 +6,7 @@
 require_once '../../../includes/auth.php';
 require_once '../../../includes/database.php';
 require_once '../../../includes/logger.php';
+require_once '../../../includes/coa_validation.php';
 
 header('Content-Type: application/json');
 session_start();
@@ -115,6 +116,22 @@ function handlePost($auth, $db) {
         echo json_encode(['success' => false, 'error' => 'Missing required fields']);
         return;
     }
+    if (empty($data['revenue_account_id'])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Revenue account is required']);
+        return;
+    }
+
+    $invalidAccounts = findInvalidChartOfAccountsIds($db, [$data['revenue_account_id']]);
+    if (!empty($invalidAccounts)) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Selected account is invalid or inactive.',
+            'invalid_account_ids' => $invalidAccounts
+        ]);
+        return;
+    }
 
     $stmt = $db->prepare("SELECT id FROM outlets WHERE outlet_code = ?");
     $stmt->execute([$data['outlet_code']]);
@@ -168,6 +185,23 @@ function handlePut($auth, $db) {
     if (!$id) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Outlet ID required']);
+        return;
+    }
+
+    if (empty($data['revenue_account_id'])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Revenue account is required']);
+        return;
+    }
+
+    $invalidAccounts = findInvalidChartOfAccountsIds($db, [$data['revenue_account_id']]);
+    if (!empty($invalidAccounts)) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Selected account is invalid or inactive.',
+            'invalid_account_ids' => $invalidAccounts
+        ]);
         return;
     }
 

@@ -32,6 +32,7 @@ try {
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
 require_once '../includes/logger.php';
+require_once '../includes/coa_validation.php';
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Failed to load required files: ' . $e->getMessage()]);
@@ -136,6 +137,14 @@ function processPayment($db, $data) {
             }
         }
 
+        if (empty($data['account_id'])) {
+            throw new Exception('Account is required for disbursements.');
+        }
+        $invalidAccounts = findInvalidChartOfAccountsIds($db, [$data['account_id']]);
+        if (!empty($invalidAccounts)) {
+            throw new Exception('Selected account is invalid or inactive.');
+        }
+
         if (empty($data['bill_id']) && !empty($data['account_id'])) {
             enforceBudgetLimit($db, $data['account_id'], $data['amount']);
         }
@@ -164,7 +173,7 @@ function processPayment($db, $data) {
             $data['payment_method'],
             $data['reference_number'] ?? null,
             $data['description'] ?? 'Payment processed',
-            $data['account_id'] ?? 1, // Default account ID (Cash)
+            $data['account_id'],
             $_SESSION['user']['id'] ?? 1,
             $_SESSION['user']['id'] ?? 1,
             'paid' // Status for processed payment
@@ -429,6 +438,20 @@ function handlePost($db) {
                 return;
             }
         }
+        if (empty($data['account_id'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Account is required for disbursements']);
+            return;
+        }
+        $invalidAccounts = findInvalidChartOfAccountsIds($db, [$data['account_id']]);
+        if (!empty($invalidAccounts)) {
+            http_response_code(400);
+            echo json_encode([
+                'error' => 'Selected account is invalid or inactive.',
+                'invalid_account_ids' => $invalidAccounts
+            ]);
+            return;
+        }
 
         // Generate disbursement number
         $stmt = $db->query("SELECT COUNT(*) as count FROM disbursements WHERE DATE(disbursement_date) = CURDATE()");
@@ -454,7 +477,7 @@ function handlePost($db) {
             $data['payment_method'],
             $data['reference_number'] ?? null,
             $data['purpose'] ?? $data['notes'] ?? null,
-            $data['account_id'] ?? 1, // Default account ID (Cash)
+            $data['account_id'],
             $_SESSION['user']['id'] ?? 1, // approved_by
             $_SESSION['user']['id'] ?? 1,  // recorded_by
             'paid' // Status for created disbursement
