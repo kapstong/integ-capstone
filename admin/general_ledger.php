@@ -744,12 +744,7 @@ try {
                             <div class="tab-pane fade show active" id="coa" role="tabpanel" aria-labelledby="coa-tab">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h6 class="mb-0">Master List of Accounts</h6>
-                                    <div class="d-flex gap-2">
-                                        <button class="btn btn-outline-secondary" id="exportCoaBtn" onclick="exportChartOfAccounts()">
-                                            <i class="fas fa-download me-2"></i>Export
-                                        </button>
-                                        <button class="btn btn-primary" onclick="showAddAccountModal()"><i class="fas fa-plus me-2"></i>Add Account</button>
-                                    </div>
+                                    <button class="btn btn-primary" onclick="showAddAccountModal()"><i class="fas fa-plus me-2"></i>Add Account</button>
                                 </div>
                                 <?php
                                 $coaCategories = [];
@@ -1304,63 +1299,6 @@ try {
             })
             .finally(() => {
                 // Restore button state
-                exportBtn.innerHTML = originalText;
-                exportBtn.disabled = false;
-            });
-        }
-
-        function exportChartOfAccounts() {
-            const exportBtn = document.getElementById('exportCoaBtn');
-            if (!exportBtn) {
-                return;
-            }
-            const originalText = exportBtn.innerHTML;
-            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Exporting...';
-            exportBtn.disabled = true;
-
-            const currentDate = new Date().toISOString().split('T')[0];
-            const params = new URLSearchParams({
-                type: 'chart_of_accounts',
-                format: 'csv'
-            });
-            const searchValue = (document.getElementById('coaSearchInput')?.value || '').trim();
-            const categoryValue = (document.getElementById('coaCategoryFilter')?.value || '').trim();
-            if (searchValue) {
-                params.set('search', searchValue);
-            }
-            if (categoryValue) {
-                params.set('category', categoryValue);
-            }
-
-            fetch(`../api/reports.php?${params.toString()}`, {
-                method: 'GET'
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Failed to export chart of accounts');
-                }
-                return response.text();
-            })
-            .then(csvContent => {
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-
-                link.setAttribute('href', url);
-                link.setAttribute('download', `chart_of_accounts_${currentDate}.csv`);
-                link.style.visibility = 'hidden';
-
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-
-                showAlert('success', 'Chart of Accounts exported successfully!');
-            })
-            .catch(error => {
-                console.error('Error exporting chart of accounts:', error);
-                showAlert('error', error.message || 'Failed to export chart of accounts. Please try again.');
-            })
-            .finally(() => {
                 exportBtn.innerHTML = originalText;
                 exportBtn.disabled = false;
             });
