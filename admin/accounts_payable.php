@@ -12,9 +12,6 @@ $db = Database::getInstance()->getConnection();
 
 // Fetch summary data
 try {
-    // Total vendors
-    $totalVendors = $db->query("SELECT COUNT(*) as count FROM vendors WHERE status = 'active'")->fetch()['count'];
-
     // Outstanding bills
     $outstandingBills = $db->query("SELECT COALESCE(SUM(balance), 0) as total FROM bills WHERE status IN ('draft', 'approved', 'overdue')")->fetch()['total'];
 
@@ -42,7 +39,6 @@ try {
     $avgPaymentPeriod = round($avgPaymentPeriodStmt->fetch()['avg_days']);
 
 } catch (Exception $e) {
-    $totalVendors = 0;
     $outstandingBills = 0;
     $overdueAmount = 0;
     $paidThisMonth = 0;
@@ -642,16 +638,7 @@ try {
 
         <!-- Overview Cards -->
         <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <i class="fas fa-users fa-2x text-primary mb-2"></i>
-                        <h5 class="card-title">Total Vendors</h5>
-                        <p class="card-text display-6"><?php echo number_format($totalVendors); ?></p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-file-invoice-dollar fa-2x text-warning mb-2"></i>
@@ -660,7 +647,7 @@ try {
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-clock fa-2x text-danger mb-2"></i>
@@ -669,7 +656,7 @@ try {
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
@@ -683,12 +670,7 @@ try {
         <!-- Navigation Tabs -->
         <ul class="nav nav-tabs mb-4" id="apTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="vendor-tab" data-bs-toggle="tab" data-bs-target="#vendor" type="button" role="tab">
-                    <i class="fas fa-users me-2"></i>Vendor Records
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="bills-tab" data-bs-toggle="tab" data-bs-target="#bills" type="button" role="tab">
+                <button class="nav-link active" id="bills-tab" data-bs-toggle="tab" data-bs-target="#bills" type="button" role="tab">
                     <i class="fas fa-file-invoice me-2"></i>Bills Management
                 </button>
             </li>
@@ -721,41 +703,8 @@ try {
 
         <!-- Tab Content -->
         <div class="tab-content" id="apTabContent">
-            <!-- Vendor Records Tab -->
-            <div class="tab-pane fade show active" id="vendor" role="tabpanel">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Vendor Records</h5>
-                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addVendorModal">
-                            <i class="fas fa-plus me-1"></i>Add Vendor
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped" id="vendorsTable">
-                                <thead>
-                                    <tr>
-                                        <th range="col">Vendor ID</th>
-                                        <th range="col">Name</th>
-                                        <th range="col">Contact</th>
-                                        <th range="col">Email</th>
-                                        <th range="col">Account ID</th>
-                                        <th range="col">Terms</th>
-                                        <th range="col">Status</th>
-                                        <th range="col" style="width: 120px;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Vendor data will be loaded here -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Bills Management Tab -->
-            <div class="tab-pane fade" id="bills" role="tabpanel">
+            <div class="tab-pane fade show active" id="bills" role="tabpanel">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Bills / Payables Management</h5>
@@ -1035,81 +984,6 @@ try {
     </div>
 
     <!-- Footer -->
-
-    <!-- Add Vendor Modal -->
-    <div class="modal fade" id="addVendorModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addVendorModalTitle">Add New Vendor</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="addVendorForm">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="companyName" class="form-label">Company Name *</label>
-                                    <input type="text" class="form-control" id="companyName" name="companyName" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="contactPerson" class="form-label">Contact Person *</label>
-                                    <input type="text" class="form-control" id="contactPerson" name="contactPerson" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="vendorEmail" class="form-label">Email</label>
-                                    <input type="email" class="form-control" id="vendorEmail" name="vendorEmail">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="vendorPhone" class="form-label">Phone</label>
-                                    <input type="tel" class="form-control" id="vendorPhone" name="vendorPhone">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="vendorAddress" class="form-label">Address</label>
-                            <textarea class="form-control" id="vendorAddress" name="vendorAddress" rows="3"></textarea>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="paymentTerms" class="form-label">Payment Terms</label>
-                                    <select class="form-select" id="paymentTerms" name="paymentTerms">
-                                        <option value="Net 30">Net 30</option>
-                                        <option value="Net 60">Net 60</option>
-                                        <option value="Net 90">Net 90</option>
-                                        <option value="Cash on Delivery">Cash on Delivery</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="vendorStatus" class="form-label">Status</label>
-                                    <select class="form-select" id="vendorStatus" name="vendorStatus">
-                                        <option value="active">Active</option>
-                                        <option value="inactive">Inactive</option>
-                                        <option value="suspended">Suspended</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" form="addVendorForm">Add Vendor</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Add Bill Modal -->
     <div class="modal fade" id="addBillModal" tabindex="-1">
@@ -1508,7 +1382,7 @@ try {
             }
 
         // Set default active tab
-            currentTab = 'vendor';
+            currentTab = 'bills';
 
             // Set up event listeners
             setupEventListeners();
@@ -1523,82 +1397,6 @@ try {
             loadPayments();
             loadCollections();
             loadAdjustments();
-        });
-
-        // Handle vendor form submission
-        document.getElementById('addVendorForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            // Check if we're in edit mode BEFORE accessing form data
-            const isEditMode = !!this.dataset.vendorId;
-            const vendorId = this.dataset.vendorId;
-
-            // Ensure all form fields are captured, including potential readonly fields
-            const companyName = document.getElementById('companyName').value?.trim();
-            const contactPerson = document.getElementById('contactPerson').value?.trim();
-            const vendorEmail = document.getElementById('vendorEmail').value?.trim();
-            const vendorPhone = document.getElementById('vendorPhone').value?.trim();
-            const vendorAddress = document.getElementById('vendorAddress').value?.trim();
-            const paymentTerms = document.getElementById('paymentTerms').value?.trim();
-            const vendorStatus = document.getElementById('vendorStatus').value?.trim();
-
-            // Validate required fields
-            if (!companyName || !contactPerson) {
-                showAlert('Please fill in all required fields (Company Name and Contact Person)', 'danger');
-                return;
-            }
-
-            const vendorData = {
-                companyName: companyName,
-                contactPerson: contactPerson,
-                vendorEmail: vendorEmail || null,
-                vendorPhone: vendorPhone || null,
-                vendorAddress: vendorAddress || null,
-                paymentTerms: paymentTerms || 'Net 30',
-                vendorStatus: vendorStatus || 'active'
-            };
-
-            const method = isEditMode ? 'PUT' : 'POST';
-            const apiUrl = isEditMode ? `api/vendors.php?id=${vendorId}` : 'api/vendors.php';
-
-            try {
-                const response = await fetch(apiUrl, {
-                    method: method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(vendorData)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const result = await response.json();
-
-                if (result.success !== undefined && result.success !== null) {
-                    const action = isEditMode ? 'updated' : 'created';
-                    const vendorPreview = result.vendor_code ? ` (Code: ${result.vendor_code})` : '';
-                    showAlert(`Vendor ${action} successfully${vendorPreview}`, 'success');
-
-                    const modalEl = document.getElementById('addVendorModal');
-                    if (modalEl) {
-                        const modal = bootstrap.Modal.getInstance(modalEl);
-                        if (modal) modal.hide();
-                    }
-
-                    // Reset form back to add mode
-                    resetVendorForm();
-                    this.reset();
-
-                    loadVendors(); // Refresh the vendors table
-                } else {
-                    throw new Error(result.error || `Failed to ${isEditMode ? 'update' : 'create'} vendor`);
-                }
-            } catch (error) {
-                console.error(`Error ${isEditMode ? 'updating' : 'creating'} vendor:`, error);
-                showAlert(`Error ${isEditMode ? 'updating' : 'creating'} vendor: ` + error.message, 'danger');
-            }
         });
 
         // Handle bill form submission
@@ -1873,47 +1671,13 @@ try {
                     throw new Error(data.error);
                 }
 
-                renderVendorsTable(data);
+                populateVendorDropdowns(data);
                 // Update localStorage with last update timestamp for cross-module sync
                 localStorage.setItem('vendorsLastUpdate', Date.now());
             } catch (error) {
                 console.error('Error loading vendors:', error);
                 showAlert('Error loading vendors: ' + error.message, 'danger');
             }
-        }
-
-        // Render vendors table
-        function renderVendorsTable(vendors) {
-            const tbody = document.querySelector('#vendorsTable tbody');
-            tbody.innerHTML = '';
-
-            if (!vendors || vendors.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No vendors found</td></tr>';
-                return;
-            }
-
-            vendors.forEach(vendor => {
-                const statusBadge = getStatusBadge(vendor.status || 'active');
-                const row = `
-                    <tr>
-                        <td>${vendor.vendor_id || vendor.id}</td>
-                        <td>${vendor.company_name}</td>
-                        <td>${vendor.contact_person || ''}</td>
-                        <td>${vendor.email || ''}</td>
-                        <td>${formatAccountId(vendor.account_id)}</td>
-                        <td>${vendor.payment_terms || 'Net 30'}</td>
-                        <td>${statusBadge}</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick="editVendor(${vendor.id})">Edit</button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteVendor(${vendor.id})">Delete</button>
-                        </td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
-
-            // Populate vendor dropdowns in forms
-            populateVendorDropdowns(vendors);
         }
 
         // Load bills
@@ -2202,85 +1966,6 @@ try {
                     });
                 }
             });
-        }
-
-        // Edit vendor
-        async function editVendor(vendorId) {
-            try {
-                const response = await fetch(`api/vendors.php?id=${vendorId}`);
-                const data = await response.json();
-
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                // Check if we got a single object or an array
-                let vendor = data;
-                if (Array.isArray(data)) {
-                    vendor = data[0];
-                }
-
-                if (!vendor || !vendor.id) {
-                    throw new Error('Vendor not found');
-                }
-
-                // Pre-populate the add vendor modal for editing
-                const form = document.getElementById('addVendorForm');
-
-                document.getElementById('companyName').value = vendor.company_name || '';
-                document.getElementById('contactPerson').value = vendor.contact_person || '';
-                document.getElementById('vendorEmail').value = vendor.email || '';
-                document.getElementById('vendorPhone').value = vendor.phone || '';
-                document.getElementById('vendorAddress').value = vendor.address || '';
-                document.getElementById('paymentTerms').value = vendor.payment_terms || 'Net 30';
-                document.getElementById('vendorStatus').value = vendor.status || 'active';
-
-                // Change modal title and submit button
-                document.getElementById('addVendorModalTitle').textContent = 'Edit Vendor';
-                document.getElementById('addVendorModal').querySelector('.btn-primary').textContent = 'Update Vendor';
-
-                // Store vendor ID for edit mode
-                form.dataset.vendorId = vendor.id;
-                form.dataset.editMode = 'true';
-
-                // Show the modal
-                const modalEl = document.getElementById('addVendorModal');
-                if (modalEl) {
-                    const modal = new bootstrap.Modal(modalEl);
-                    modal.show();
-                }
-
-            } catch (error) {
-                console.error('Error loading vendor for edit:', error);
-                showAlert('Error loading vendor: ' + error.message, 'danger');
-            }
-        }
-
-        // Delete vendor
-        async function deleteVendor(vendorId) {
-            showConfirmDialog(
-                'Delete Vendor',
-                'Are you sure you want to delete this vendor?',
-                async () => {
-            try {
-                const response = await fetch(`api/vendors.php?id=${vendorId}`, {
-                    method: 'DELETE'
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showAlert('Vendor deleted successfully', 'success');
-                    loadVendors();
-                } else {
-                    throw new Error(data.error || 'Failed to delete vendor');
-                }
-            } catch (error) {
-                console.error('Error deleting vendor:', error);
-                showAlert('Error deleting vendor: ' + error.message, 'danger');
-            }
-                }
-            );
         }
 
         // Filter bills
@@ -2658,13 +2343,7 @@ try {
             tabs.forEach(tab => {
                 tab.addEventListener('click', function() {
                     const targetId = this.getAttribute('data-bs-target').replace('#', '');
-                    if (targetId === 'payments') {
-                        currentTab = 'payments';
-                    } else if (targetId === 'bills') {
-                        currentTab = 'bills';
-                    } else {
-                        currentTab = 'vendor';
-                    }
+                    currentTab = targetId;
                 });
             });
 
@@ -3314,20 +2993,6 @@ try {
             // Reset modal title and button
             document.getElementById('addAdjustmentModalTitle').textContent = 'Add Adjustment';
             document.getElementById('addAdjustmentModalSubmitBtn').textContent = 'Add Adjustment';
-        }
-
-        // Reset vendor form back to add mode
-        function resetVendorForm() {
-            const form = document.getElementById('addVendorForm');
-            form.reset();
-            delete form.dataset.vendorId;
-
-            // Reset modal title and button
-            document.getElementById('addVendorModalTitle').textContent = 'Add New Vendor';
-            const submitBtn = document.querySelector('#addVendorModal .btn-primary');
-            if (submitBtn) {
-                submitBtn.textContent = 'Add Vendor';
-            }
         }
 
         // Reset bill form back to add mode
