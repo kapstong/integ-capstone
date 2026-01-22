@@ -1272,7 +1272,7 @@ try {
 
             // Make API call to get trial balance data
             const currentDate = new Date().toISOString().split('T')[0];
-            fetch(`api/reports.php?type=trial_balance&date_to=${currentDate}&format=csv`, {
+            fetch(`../api/reports.php?type=trial_balance&date_to=${currentDate}&format=csv`, {
                 method: 'GET'
             })
             .then(response => {
@@ -1332,7 +1332,7 @@ try {
                 params.set('category', categoryValue);
             }
 
-            fetch(`api/reports.php?${params.toString()}`, {
+            fetch(`../api/reports.php?${params.toString()}`, {
                 method: 'GET'
             })
             .then(response => {
