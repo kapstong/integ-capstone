@@ -69,12 +69,33 @@ header('Content-Type: application/javascript');
 
                 tbody.innerHTML = auditLogs.map(log => {
                     const actionLabel = log.action_label || log.action;
-                    // Derive a concise disbursement ref for the column. Prefer explicit number, fallback to parsing description.
-                    let disbRef = log.disbursement_number || log.record_id || '';
-                    if (!disbRef && log.action_description) {
-                        const m = String(log.action_description).match(/DISB-\d{8}-\d{3}|\d+/i);
-                        if (m) disbRef = m[0];
+                    // Derive a concise disbursement ref for the column. Prefer explicit number, then record id,
+                    // then try to read from serialized old/new values, then parse description for common patterns.
+                    let disbRef = '';
+                    if (log.disbursement_number) disbRef = log.disbursement_number;
+                    if (!disbRef && log.record_id) disbRef = log.record_id;
+
+                    // Try parsing JSON fields returned by the API (old_values/new_values)
+                    if (!disbRef) {
+                        try {
+                            const nv = log.new_values ? JSON.parse(log.new_values) : null;
+                            const ov = log.old_values ? JSON.parse(log.old_values) : null;
+                            disbRef = nv?.disbursement_number || ov?.disbursement_number || nv?.disbursement_no || ov?.disbursement_no || '';
+                        } catch (e) {
+                            // ignore malformed JSON
+                        }
                     }
+
+                    // Fallback: parse common textual patterns in the description
+                    if (!disbRef && log.action_description) {
+                        const m = String(log.action_description).match(/DISB-\d{8}-\d{3}|DISB-\d+|\bID\s*(\d+)\b|(\d{1,6})/i);
+                        if (m) {
+                            // prefer the full DISB token if present, otherwise numeric capture
+                            disbRef = m[0];
+                            if (/^ID\s*/i.test(disbRef) && m[1]) disbRef = m[1];
+                        }
+                    }
+
                     if (!disbRef) disbRef = 'N/A';
                     return '<tr><td>' + log.formatted_date + '</td><td>' + (log.full_name || log.username || 'Unknown') + '</td><td><span class="badge bg-info">' + actionLabel + '</span></td><td>' + disbRef + '</td><td>' + (log.action_description || '') + '</td></tr>';
                 }).join('');
