@@ -1,93 +1,7 @@
 <?php
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
-
-if (!isset($_SESSION['user'])) {
-    header('Location: ../index.php');
-    exit;
-}
-
-// Initialize database connection
-$db = Database::getInstance()->getConnection();
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Management System - Reports</title>
-    <link rel="icon" type="image/png" href="../logo2.png">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            background-color: #F1F7EE;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-        .sidebar {
-            height: 100vh;
-            max-height: 100vh;
-            overflow-y: auto;
-            overscroll-behavior: contain;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 2rem;
-            background-color: #1e2936;
-            color: white;
-            min-height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 300px;
-            z-index: 1000;
-            transition: transform 0.3s ease, width 0.3s ease;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .sidebar.sidebar-collapsed {
-            width: 120px;
-        }
-        .sidebar.sidebar-collapsed span {
-            display: none;
-        }
-        .sidebar.sidebar-collapsed .nav-link {
-            padding: 10px;
-            text-align: center;
-        }
-        .sidebar.sidebar-collapsed .navbar-brand {
-            text-align: center;
-        }
-        .sidebar.sidebar-collapsed .nav-item i[data-bs-toggle="collapse"] {
-            display: none;
-        }
-        .sidebar.sidebar-collapsed .submenu {
-            display: none;
-        }
-        .sidebar .nav-link {
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-        .sidebar .nav-link i {
-            font-size: 1.4em;
-        }
-        .sidebar .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-        .sidebar .nav-link.active {
-            background-color: rgba(255, 255, 255, 0.2);
-        }
-        .sidebar .submenu {
-            padding-left: 20px;
-        }
-        .sidebar .submenu .nav-link {
-            padding: 5px 20px;
-            font-size: 0.9em;
-        }
+        // Analytics removed: UI and handlers deleted
         .sidebar .nav-item {
             position: relative;
         }
@@ -695,11 +609,7 @@ $db = Database::getInstance()->getConnection();
                     <i class="fas fa-money-bill-wave me-2"></i>Cash Flow
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics" type="button" role="tab">
-                    <i class="fas fa-chart-bar me-2"></i>Analytics & Export
-                </button>
-            </li>
+            <!-- Analytics tab removed -->
 
         </ul>
 
@@ -818,96 +728,7 @@ $db = Database::getInstance()->getConnection();
                 </div>
             </div>
 
-            <!-- Analytics & Export Tab -->
-            <div class="tab-pane fade" id="analytics" role="tabpanel" aria-labelledby="analytics-tab">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">Analytics & Export Features</h6>
-                    <div>
-                        <button class="btn btn-outline-secondary me-2" onclick="viewCharts()"><i class="fas fa-chart-line me-2"></i>View Charts</button>
-                        <button class="btn btn-primary" onclick="exportAllReports()"><i class="fas fa-download me-2"></i>Export All</button>
-                    </div>
-                </div>
-                  <div class="row mb-4">
-                      <div class="col-md-12">
-                          <div class="card">
-                              <div class="card-body">
-                                  <div class="row text-center g-3">
-                                      <div class="col-md-4">
-                                          <div class="p-3 border rounded">
-                                              <div class="text-muted">Month-to-Date Revenue</div>
-                                              <div class="fw-bold fs-4" id="analyticsMtdRevenue">₱0</div>
-                                          </div>
-                                      </div>
-                                      <div class="col-md-4">
-                                          <div class="p-3 border rounded">
-                                              <div class="text-muted">Month-to-Date Expenses</div>
-                                              <div class="fw-bold fs-4 text-danger" id="analyticsMtdExpenses">₱0</div>
-                                          </div>
-                                      </div>
-                                      <div class="col-md-4">
-                                          <div class="p-3 border rounded">
-                                              <div class="text-muted">Net Operating Result</div>
-                                              <div class="fw-bold fs-4" id="analyticsNetResult">₱0</div>
-                                          </div>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-                <div class="row">
-                    <div class="col-md-8">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Report Generation Trends</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="chart-container">
-                                    <canvas id="reportTrendsChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Export Options</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-grid gap-2">
-                                    <button class="btn btn-outline-danger" onclick="exportCurrentReportPDF()">
-                                        <i class="fas fa-file-pdf me-2"></i>Export as PDF
-                                    </button>
-                                    <button class="btn btn-outline-success" onclick="exportCurrentReportExcel()">
-                                        <i class="fas fa-file-excel me-2"></i>Export as Excel
-                                    </button>
-                                    <button class="btn btn-outline-info" onclick="printCurrentReport()">
-                                        <i class="fas fa-print me-2"></i>Print Report
-                                    </button>
-                                    <button class="btn btn-outline-secondary" onclick="emailCurrentReport()">
-                                        <i class="fas fa-envelope me-2"></i>Email Report
-                                    </button>
-                                </div>
-                                <hr>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="includeCharts">
-                                    <label class="form-check-label" for="includeCharts">
-                                        Include charts in export
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="includeDetails">
-                                    <label class="form-check-label" for="includeDetails">
-                                        Include detailed breakdowns
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
+            <!-- Analytics & Export removed -->
         </div>
     </div>
 
