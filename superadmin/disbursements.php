@@ -971,6 +971,35 @@ body {
         };
     </script>
     <script>
+        // Ensure global handler exists to avoid ReferenceError if external JS fails to load
+        if (typeof window.showDisbursementFilterModal !== 'function') {
+            window.showDisbursementFilterModal = function() {
+                // Attempt to call implementation from external script if available
+                if (typeof showDisbursementFilterModal === 'function') {
+                    return showDisbursementFilterModal();
+                }
+                // Fallback: simple modal to prompt user that filters are unavailable
+                const fallback = document.createElement('div');
+                    fallback.className = 'modal fade';
+                    fallback.id = 'disbFilterModalFallback';
+                    fallback.innerHTML = `
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Filter Audit Trail</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">Filter functionality is temporarily unavailable.</div>
+                                <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+                            </div>
+                        </div>`;
+                document.body.appendChild(fallback);
+                const m = new bootstrap.Modal(fallback);
+                m.show();
+            };
+        }
+    </script>
+    <script>
         // Initialize sidebar state
         document.addEventListener('DOMContentLoaded', function() {
             const sidebar = document.getElementById('sidebar');
