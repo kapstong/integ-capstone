@@ -11,6 +11,7 @@
     let isHidden = true;
     let eyeButton = null;
     const STORAGE_KEY = 'privacyModeVisible';
+    const SERVER_REFRESH_KEY = 'privacyModeRefreshPending';
 
     const AMOUNT_REGEX = /(?:[₱$€£¥]\s*-?[\d,]+\.?\d*)|(?:PHP\s*-?[\d,]+\.?\d*)|(?:P\s*-?[\d,]+\.?\d*)|(?:\(\s*(?:[₱$€£¥P])?\s*-?[\d,]+\.?\d*\s*\))/g;
     const MASKED_CLASS = 'privacy-mask';
@@ -71,6 +72,7 @@
         persistVisibility();
         setDownloadButtonsDisabled(false);
         syncPrivacyVisibility(true);
+        refreshIfServerMasked();
     }
 
     /**
@@ -723,6 +725,49 @@
             }
         `;
         document.head.appendChild(style);
+    }
+
+    function refreshIfServerMasked() {
+        if (isHidden) {
+            return;
+        }
+        if (!isServerMasked()) {
+            clearRefreshFlag();
+            return;
+        }
+        if (getRefreshFlag() === '1') {
+            return;
+        }
+        setRefreshFlag('1');
+        window.location.reload();
+    }
+
+    function isServerMasked() {
+        if (document.querySelectorAll('.' + MASKED_CLASS).length > 0) {
+            return true;
+        }
+        const text = document.body ? document.body.textContent || '' : '';
+        return /(?:PHP|P|₱)\s*\*{5,}/.test(text);
+    }
+
+    function setRefreshFlag(value) {
+        try {
+            localStorage.setItem(SERVER_REFRESH_KEY, value);
+        } catch (error) {
+            // Ignore storage errors
+        }
+    }
+
+    function getRefreshFlag() {
+        try {
+            return localStorage.getItem(SERVER_REFRESH_KEY);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function clearRefreshFlag() {
+        setRefreshFlag('0');
     }
 
     function syncPrivacyVisibility(visible) {
