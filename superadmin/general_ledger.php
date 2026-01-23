@@ -1034,9 +1034,46 @@ try {
                             <div class="tab-pane fade" id="journal" role="tabpanel" aria-labelledby="journal-tab">
                                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                                     <h6 class="mb-0">Journal Entries</h6>
-                                    <div class="input-group" style="max-width: 360px;">
-                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                        <input type="text" class="form-control" id="journalSearchInput" placeholder="Search journal entries">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="toggleJournalFilters()">
+                                        <i class="fas fa-filter me-2"></i>Filter
+                                    </button>
+                                </div>
+                                <div id="journalFiltersSection" class="card mb-3" style="display: none;">
+                                    <div class="card-body">
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Search <small class="text-muted">(updates as you type)</small></label>
+                                                <input type="text" class="form-control" id="journalSearchInput" placeholder="Search by date, reference, account, description..." oninput="applyJournalFilters()">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">Date From <small class="text-muted">(optional)</small></label>
+                                                <input type="date" class="form-control" id="journalDateFrom" onchange="applyJournalFilters()">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">Date To <small class="text-muted">(optional)</small></label>
+                                                <input type="date" class="form-control" id="journalDateTo" onchange="applyJournalFilters()">
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <label class="form-label">Periodical Filter</label>
+                                                <select class="form-select" id="journalPeriodFilter" onchange="applyJournalFilters()">
+                                                    <option value="">All Periods</option>
+                                                    <option value="daily">Daily</option>
+                                                    <option value="weekly">Weekly</option>
+                                                    <option value="monthly">Monthly</option>
+                                                    <option value="quarterly">Quarterly</option>
+                                                    <option value="semi-annually">Semi-Annually</option>
+                                                    <option value="annually">Annually</option>
+                                                    <option value="yearly">Yearly</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-8 d-flex align-items-end justify-content-end">
+                                                <button class="btn btn-outline-secondary" type="button" onclick="clearJournalFilters()">
+                                                    <i class="fas fa-redo me-1"></i>Clear Filters
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="table-responsive">
@@ -1086,7 +1123,7 @@ try {
                                                 <?php endforeach; ?>
                                                 <tr id="journalEmptyState" style="display: none;">
                                                     <td colspan="6" class="text-center text-muted py-4">
-                                                        <i class="fas fa-info-circle me-2"></i>No matching journal entries. Try adjusting your search.
+                                                        <i class="fas fa-info-circle me-2"></i>No matching journal entries. Try adjusting your filters.
                                                     </td>
                                                 </tr>
                                             <?php endif; ?>
@@ -2626,6 +2663,83 @@ try {
         }
 
 
+        function toggleJournalFilters() {
+            const section = document.getElementById('journalFiltersSection');
+            if (!section) {
+                return;
+            }
+            section.style.display = section.style.display === 'none' ? '' : 'none';
+        }
+
+        function clearJournalFilters() {
+            const searchInput = document.getElementById('journalSearchInput');
+            const dateFromInput = document.getElementById('journalDateFrom');
+            const dateToInput = document.getElementById('journalDateTo');
+            const periodSelect = document.getElementById('journalPeriodFilter');
+
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            if (dateFromInput) {
+                dateFromInput.value = '';
+            }
+            if (dateToInput) {
+                dateToInput.value = '';
+            }
+            if (periodSelect) {
+                periodSelect.value = '';
+            }
+
+            applyJournalFilters();
+        }
+
+        function getJournalPeriodRange(period) {
+            if (!period) {
+                return null;
+            }
+
+            const now = new Date();
+            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            let start = null;
+
+            switch (period) {
+                case 'daily': {
+                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    break;
+                }
+                case 'weekly': {
+                    const dayOfWeek = now.getDay();
+                    const diff = (dayOfWeek + 6) % 7; // Monday as start of week
+                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff);
+                    break;
+                }
+                case 'monthly': {
+                    start = new Date(now.getFullYear(), now.getMonth(), 1);
+                    break;
+                }
+                case 'quarterly': {
+                    const quarter = Math.floor(now.getMonth() / 3);
+                    start = new Date(now.getFullYear(), quarter * 3, 1);
+                    break;
+                }
+                case 'semi-annually':
+                case 'semiannually': {
+                    const half = now.getMonth() < 6 ? 0 : 6;
+                    start = new Date(now.getFullYear(), half, 1);
+                    break;
+                }
+                case 'annually':
+                case 'yearly': {
+                    start = new Date(now.getFullYear(), 0, 1);
+                    break;
+                }
+                default:
+                    return null;
+            }
+
+            return { start, end };
+        }
+
         function applyJournalFilters() {
             const searchInput = document.getElementById('journalSearchInput');
             if (!searchInput) {
@@ -2633,7 +2747,24 @@ try {
             }
 
             const searchValue = searchInput.value.trim().toLowerCase();
+            const dateFromValue = document.getElementById('journalDateFrom')?.value || '';
+            const dateToValue = document.getElementById('journalDateTo')?.value || '';
+            const periodValue = document.getElementById('journalPeriodFilter')?.value || '';
             const rows = document.querySelectorAll('#journal tbody tr[data-journal-reference]');
+            const periodRange = getJournalPeriodRange(periodValue);
+
+            let fromDate = dateFromValue ? new Date(`${dateFromValue}T00:00:00`) : null;
+            let toDate = dateToValue ? new Date(`${dateToValue}T23:59:59`) : null;
+
+            if (periodRange) {
+                if (!fromDate || periodRange.start > fromDate) {
+                    fromDate = periodRange.start;
+                }
+                if (!toDate || periodRange.end < toDate) {
+                    toDate = periodRange.end;
+                }
+            }
+
             let visibleCount = 0;
 
             rows.forEach(row => {
@@ -2645,8 +2776,25 @@ try {
                 const credit = (row.dataset.journalCredit || '').toLowerCase();
 
                 const matchesSearch = !searchValue || [date, reference, account, description, debit, credit].some(value => value.includes(searchValue));
-                row.style.display = matchesSearch ? '' : 'none';
-                if (matchesSearch) {
+
+                let matchesDate = true;
+                if (fromDate || toDate) {
+                    if (!row.dataset.journalDate) {
+                        matchesDate = false;
+                    } else {
+                        const rowDate = new Date(`${row.dataset.journalDate}T00:00:00`);
+                        if (fromDate && rowDate < fromDate) {
+                            matchesDate = false;
+                        }
+                        if (toDate && rowDate > toDate) {
+                            matchesDate = false;
+                        }
+                    }
+                }
+
+                const isVisible = matchesSearch && matchesDate;
+                row.style.display = isVisible ? '' : 'none';
+                if (isVisible) {
                     visibleCount += 1;
                 }
             });
@@ -2763,6 +2911,9 @@ try {
             const coaCategoryFilter = document.getElementById('coaCategoryFilter');
             const coaClearFilters = document.getElementById('coaClearFilters');
             const journalSearchInput = document.getElementById('journalSearchInput');
+            const journalDateFrom = document.getElementById('journalDateFrom');
+            const journalDateTo = document.getElementById('journalDateTo');
+            const journalPeriodFilter = document.getElementById('journalPeriodFilter');
             const trialModals = document.querySelectorAll('.trial-modal');
 
             trialModals.forEach(modal => {
@@ -2785,6 +2936,17 @@ try {
 
             if (journalSearchInput) {
                 journalSearchInput.addEventListener('input', applyJournalFilters);
+            }
+            if (journalDateFrom) {
+                journalDateFrom.addEventListener('change', applyJournalFilters);
+            }
+            if (journalDateTo) {
+                journalDateTo.addEventListener('change', applyJournalFilters);
+            }
+            if (journalPeriodFilter) {
+                journalPeriodFilter.addEventListener('change', applyJournalFilters);
+            }
+            if (journalSearchInput || journalDateFrom || journalDateTo || journalPeriodFilter) {
                 applyJournalFilters();
             }
 
