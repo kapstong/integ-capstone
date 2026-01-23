@@ -1077,6 +1077,7 @@ try {
                                                     $modalLabelId = $modalId . '-label';
                                                     $searchId = $detailId . '-search';
                                                     $tableId = $detailId . '-table';
+                                                    $payrollTableId = $detailId . '-payroll';
                                                     $accountId = $account['account_id'] ?? 0;
                                                     $hasDetails = !empty($trialBreakdown[$accountId]) || !empty($salaryDisbursements[$accountId]);
                                                     ?>
@@ -1114,6 +1115,7 @@ try {
                                         $detailId = 'trial-details-' . intval($accountId);
                                         $searchId = $detailId . '-search';
                                         $tableId = $detailId . '-table';
+                                        $payrollTableId = $detailId . '-payroll';
                                         $hasDetails = !empty($trialBreakdown[$accountId ?? 0]) || !empty($salaryDisbursements[$accountId ?? 0]);
                                         ?>
                                         <?php if ($hasDetails): ?>
@@ -1125,17 +1127,17 @@ try {
                                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                         </div>
                                                         <div class="modal-body trial-modal-body">
-                                                            <?php if (!empty($trialBreakdown[$accountId ?? 0])): ?>
+                                                            <?php if (!empty($trialBreakdown[$accountId ?? 0]) || !empty($salaryDisbursements[$accountId ?? 0])): ?>
                                                                 <div class="input-group mb-3">
                                                                     <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                                                    <input type="search" class="form-control trial-search-input" id="<?php echo $searchId; ?>" data-target="<?php echo $tableId; ?>" placeholder="Search transactions">
+                                                                    <input type="search" class="form-control trial-search-input" id="<?php echo $searchId; ?>" data-target="<?php echo $tableId; ?>,<?php echo $payrollTableId; ?>" placeholder="Search transactions">
                                                                 </div>
                                                             <?php endif; ?>
                                                             <?php if (!empty($salaryDisbursements[$accountId ?? 0])): ?>
                                                                 <div class="mb-4">
                                                                     <h6 class="mb-2">Payroll Disbursements</h6>
                                                                     <div class="table-responsive">
-                                                                        <table class="table table-sm mb-0">
+                                                                        <table class="table table-sm mb-0" id="<?php echo $payrollTableId; ?>">
                                                                             <thead>
                                                                                 <tr>
                                                                                     <th>Date</th>
@@ -2588,16 +2590,18 @@ try {
                 return;
             }
 
-            const table = document.getElementById(targetId);
-            if (!table) {
-                return;
-            }
-
             const searchValue = input.value.trim().toLowerCase();
-            const rows = table.querySelectorAll('tbody tr');
-            rows.forEach(row => {
-                const rowText = row.textContent.toLowerCase();
-                row.style.display = !searchValue || rowText.includes(searchValue) ? '' : 'none';
+            const targetIds = targetId.split(',').map(id => id.trim()).filter(id => id.length > 0);
+            targetIds.forEach(id => {
+                const table = document.getElementById(id);
+                if (!table) {
+                    return;
+                }
+                const rows = table.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    const rowText = row.textContent.toLowerCase();
+                    row.style.display = !searchValue || rowText.includes(searchValue) ? '' : 'none';
+                });
             });
         }
 
