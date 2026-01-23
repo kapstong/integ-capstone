@@ -848,7 +848,6 @@ try {
             border: none;
             padding: 0 1.1rem;
             font-weight: 600;
-            color: var(--atiera-white);
         }
         .financial-statements .financial-subtabs {
             gap: 0.5rem;
@@ -1607,14 +1606,14 @@ try {
                                     <div class="col-12">
                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                             <div>
-                                                <h5 class="mb-1 fw-bold" style="color: var(--atiera-blue-700);">
+                                                <h5 class="mb-1 fw-bold text-primary">
                                                     <i class="fas fa-chart-line me-2"></i>Financial Statements
                                                 </h5>
-                                                <p class="text-muted mb-0 small" style="color: var(--atiera-gray-600) !important;">Comprehensive financial position and performance analysis</p>
+                                                <p class="text-muted mb-0 small">Comprehensive financial position and performance analysis</p>
                                             </div>
                                             <div class="text-end">
-                                                <small class="text-muted d-block" style="color: var(--atiera-gray-600);">As of: <?php echo date('M j, Y', strtotime($financialDateTo)); ?></small>
-                                                <small class="text-muted d-block" style="color: var(--atiera-gray-600);"><?php echo ucfirst($financialPeriod); ?> Period</small>
+                                                <small class="text-muted d-block">As of: <?php echo date('M j, Y', strtotime($financialDateTo)); ?></small>
+                                                <small class="text-muted d-block"><?php echo ucfirst($financialPeriod); ?> Period</small>
                                             </div>
                                         </div>
                                     </div>
@@ -1623,32 +1622,34 @@ try {
                                 <!-- Controls Section -->
                                 <div class="row mb-4">
                                     <div class="col-12">
-                                        <div class="card border-0 shadow-sm financial-controls" style="border: 1px solid var(--atiera-gray-200); background: var(--atiera-white);">
+                                        <div class="card border-0 shadow-sm financial-controls">
                                             <div class="card-body p-4">
-                                                <div class="row align-items-center g-3">
-                                                    <div class="col-lg-6">
-                                                        <div class="control-group">
-                                                            <label class="form-label fw-semibold mb-2 small" style="letter-spacing: 0.08em; color: var(--atiera-gray-600);">VIEW MODE</label>
-                                                            <div class="btn-group btn-group-sm d-flex gap-2" role="group" aria-label="View mode">
-                                                                <input type="radio" class="btn-check" name="financialView" id="summaryView" autocomplete="off" checked>
-                                                                <label class="btn btn-outline-primary flex-fill" for="summaryView" style="border-color: var(--atiera-blue-200); color: var(--atiera-blue-600);">
-                                                                    <i class="fas fa-list me-1"></i>Summary
-                                                                </label>
-                                                                <input type="radio" class="btn-check" name="financialView" id="breakdownView" autocomplete="off">
-                                                                <label class="btn btn-outline-primary flex-fill" for="breakdownView" style="border-color: var(--atiera-blue-200); color: var(--atiera-blue-600);">
-                                                                    <i class="fas fa-stream me-1"></i>Breakdown
-                                                                </label>
+                                                <div class="row align-items-center">
+                                                    <div class="col-lg-6 mb-3 mb-lg-0">
+                                                        <div class="d-flex align-items-center gap-3">
+                                                            <div class="control-group">
+                                                                <label class="form-label fw-semibold text-muted mb-2 small">VIEW MODE</label>
+                                                                <div class="btn-group btn-group-sm" role="group" aria-label="View mode">
+                                                                    <input type="radio" class="btn-check" name="financialView" id="summaryView" autocomplete="off" checked>
+                                                                    <label class="btn btn-outline-primary" for="summaryView">
+                                                                        <i class="fas fa-list me-1"></i>Summary
+                                                                    </label>
+                                                                    <input type="radio" class="btn-check" name="financialView" id="breakdownView" autocomplete="off">
+                                                                    <label class="btn btn-outline-primary" for="breakdownView">
+                                                                        <i class="fas fa-stream me-1"></i>Breakdown
+                                                                    </label>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
                                                     <div class="col-lg-6">
                                                         <div class="control-group">
-                                                            <label class="form-label fw-semibold mb-2 small" style="letter-spacing: 0.08em; color: var(--atiera-gray-600);">PERIOD & DATE FILTERS</label>
-                                                            <form class="financial-filters d-flex flex-wrap align-items-end gap-2" method="get" id="financialPeriodForm">
+                                                            <label class="form-label fw-semibold text-muted mb-2 small">PERIOD & DATE FILTERS</label>
+                                                            <form class="financial-filters" method="get" id="financialPeriodForm">
                                                                 <input type="hidden" name="tab" value="financial">
-                                                                <div class="input-group input-group-sm flex-fill" style="min-width: 160px;">
-                                                                    <span class="input-group-text" style="background: var(--atiera-gray-50); border-color: var(--atiera-gray-300); color: var(--atiera-gray-700);"><i class="fas fa-calendar-alt"></i></span>
-                                                                    <select class="form-select" name="financial_period" id="financialPeriod" style="border-color: var(--atiera-gray-300); height: 36px;">
+                                                                <div class="input-group input-group-sm">
+                                                                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                                                    <select class="form-select" name="financial_period" id="financialPeriod">
                                                                         <option value="daily" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'daily') ? 'selected' : ''; ?>>Daily</option>
                                                                         <option value="weekly" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'weekly') ? 'selected' : ''; ?>>Weekly</option>
                                                                         <option value="monthly" <?php echo (!isset($_GET['financial_period']) || $_GET['financial_period'] === 'monthly') ? 'selected' : ''; ?>>Monthly</option>
@@ -1658,11 +1659,11 @@ try {
                                                                         <option value="yearly" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'yearly') ? 'selected' : ''; ?>>Yearly</option>
                                                                     </select>
                                                                 </div>
-                                                                <div class="input-group input-group-sm flex-fill" style="min-width: 140px;">
-                                                                    <span class="input-group-text" style="background: var(--atiera-gray-50); border-color: var(--atiera-gray-300); color: var(--atiera-gray-700);"><i class="fas fa-calendar-day"></i></span>
-                                                                    <input type="date" class="form-control" name="financial_date" id="financialDate" value="<?php echo isset($_GET['financial_date']) ? htmlspecialchars($_GET['financial_date']) : date('Y-m-d'); ?>" style="border-color: var(--atiera-gray-300); height: 36px;">
+                                                                <div class="input-group input-group-sm">
+                                                                    <span class="input-group-text"><i class="fas fa-calendar-day"></i></span>
+                                                                    <input type="date" class="form-control" name="financial_date" id="financialDate" value="<?php echo isset($_GET['financial_date']) ? htmlspecialchars($_GET['financial_date']) : date('Y-m-d'); ?>">
                                                                 </div>
-                                                                <button class="btn btn-primary btn-sm" type="submit" style="background: linear-gradient(135deg, var(--atiera-blue-600) 0%, var(--atiera-blue-700) 100%); border: none; padding: 0 1rem; font-weight: 600; height: 36px;">
+                                                                <button class="btn btn-primary btn-sm" type="submit">
                                                                     <i class="fas fa-sync-alt me-1"></i>Update
                                                                 </button>
                                                             </form>
@@ -1674,257 +1675,90 @@ try {
                                     </div>
                                 </div>
 
-                                <ul class="nav nav-pills mb-4 financial-subtabs d-flex justify-content-center gap-2" id="financialSubTabs" role="tablist" style="gap: 0.5rem;">
+                                <ul class="nav nav-pills mb-4 financial-subtabs" id="financialSubTabs" role="tablist">
                                     <li class="nav-item">
-                                        <a class="nav-link active d-flex align-items-center" id="balance-sheet-tab" data-bs-toggle="pill" href="#balance-sheet" role="tab" style="border-radius: 999px; border: 1px solid var(--atiera-gray-200); background: var(--atiera-white); color: var(--atiera-gray-700); font-weight: 600; padding: 0.5rem 1.5rem;">
-                                            <i class="fas fa-balance-scale me-2" style="color: var(--atiera-gold);"></i>Balance Sheet
+                                        <a class="nav-link active" id="balance-sheet-tab" data-bs-toggle="pill" href="#balance-sheet" role="tab">
+                                            <i class="fas fa-balance-scale me-2"></i>Balance Sheet
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center" id="income-statement-tab" data-bs-toggle="pill" href="#income-statement" role="tab" style="border-radius: 999px; border: 1px solid var(--atiera-gray-200); background: var(--atiera-white); color: var(--atiera-gray-700); font-weight: 600; padding: 0.5rem 1.5rem;">
-                                            <i class="fas fa-chart-bar me-2" style="color: var(--atiera-gold);"></i>Income Statement
+                                        <a class="nav-link" id="income-statement-tab" data-bs-toggle="pill" href="#income-statement" role="tab">
+                                            <i class="fas fa-chart-bar me-2"></i>Income Statement
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center" id="cash-flow-tab" data-bs-toggle="pill" href="#cash-flow" role="tab" style="border-radius: 999px; border: 1px solid var(--atiera-gray-200); background: var(--atiera-white); color: var(--atiera-gray-700); font-weight: 600; padding: 0.5rem 1.5rem;">
-                                            <i class="fas fa-money-bill-wave me-2" style="color: var(--atiera-gold);"></i>Cash Flow
+                                        <a class="nav-link" id="cash-flow-tab" data-bs-toggle="pill" href="#cash-flow" role="tab">
+                                            <i class="fas fa-money-bill-wave me-2"></i>Cash Flow
                                         </a>
                                     </li>
                                 </ul>
                                 <div class="tab-content">
                                     <div class="tab-pane fade show active" id="balance-sheet" role="tabpanel">
-                                        <div class="card border-0 shadow-sm mb-4" style="border: 1px solid var(--atiera-gray-200); background: var(--atiera-white);">
-                                            <div class="card-body p-4">
-                                                <h6 class="financial-statement-title mb-4" style="color: var(--atiera-gray-900); font-weight: 700;">Balance Sheet - As of <?php echo date('F j, Y', strtotime($financialDateTo)); ?> (<?php echo ucfirst($financialPeriod); ?> period)</h6>
-                                                <div class="table-responsive">
-                                                    <table class="table financial-table mb-0" style="border: 1px solid var(--atiera-gray-200); border-radius: 12px; overflow: hidden; border-collapse: separate; border-spacing: 0; background: var(--atiera-white);">
-                                                        <thead>
-                                                            <tr style="background-color: var(--atiera-blue-50);">
-                                                                <th style="color: var(--atiera-blue-700); font-weight: 700; border-top: none; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100);">Account</th>
-                                                                <th style="color: var(--atiera-blue-700); font-weight: 700; border-top: none; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100); width: 20%;">Type</th>
-                                                                <th style="color: var(--atiera-blue-700); font-weight: 700; border-top: none; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100); text-align: right; width: 25%;">Amount</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            <!-- Assets Section -->
-                                                            <tr style="background-color: var(--atiera-gray-50);">
-                                                                <th colspan="3" style="color: var(--atiera-blue-700); font-weight: 700; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100);">Assets</th>
-                                                            </tr>
-                                                            <?php
-                                                            $assetAccounts = array_filter($chartOfAccounts, function($account) {
-                                                                return $account['account_type'] === 'asset' && ($account['balance'] ?? 0) != 0;
-                                                            });
-                                                            foreach ($assetAccounts as $asset):
-                                                            ?>
-                                                                <tr>
-                                                                    <td style="padding: 12px 16px; color: var(--atiera-gray-700);"><?php echo htmlspecialchars($asset['account_name']); ?></td>
-                                                                    <td style="padding: 12px 16px; color: var(--atiera-gray-700);">Asset</td>
-                                                                    <td style="padding: 12px 16px; color: var(--atiera-gray-700); text-align: right;">&#8369;<?php echo number_format($asset['balance'] ?? 0, 2); ?></td>
-                                                                </tr>
-                                                            <?php endforeach; ?>
-                                                            <tr style="background-color: var(--atiera-gray-50); font-weight: 700;">
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);">Total Assets</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);"></td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700); text-align: right;">&#8369;<?php echo number_format($totalAssets, 2); ?></td>
-                                                            </tr>
-
-                                                            <!-- Liabilities Section -->
-                                                            <tr style="background-color: var(--atiera-gray-50);">
-                                                                <th colspan="3" style="color: var(--atiera-blue-700); font-weight: 700; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100);">Liabilities</th>
-                                                            </tr>
-                                                            <?php
-                                                            $liabilityAccounts = array_filter($chartOfAccounts, function($account) {
-                                                                return $account['account_type'] === 'liability' && ($account['balance'] ?? 0) != 0;
-                                                            });
-                                                            foreach ($liabilityAccounts as $liability):
-                                                            ?>
-                                                                <tr>
-                                                                    <td style="padding: 12px 16px; color: var(--atiera-gray-700);"><?php echo htmlspecialchars($liability['account_name']); ?></td>
-                                                                    <td style="padding: 12px 16px; color: var(--atiera-gray-700);">Liability</td>
-                                                                    <td style="padding: 12px 16px; color: var(--atiera-gray-700); text-align: right;">&#8369;<?php echo number_format($liability['balance'] ?? 0, 2); ?></td>
-                                                                </tr>
-                                                            <?php endforeach; ?>
-                                                            <tr style="background-color: var(--atiera-gray-50); font-weight: 700;">
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);">Total Liabilities</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);"></td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700); text-align: right;">&#8369;<?php echo number_format($totalLiabilities, 2); ?></td>
-                                                            </tr>
-
-                                                            <!-- Equity Section -->
-                                                            <tr style="background-color: var(--atiera-gray-50);">
-                                                                <th colspan="3" style="color: var(--atiera-blue-700); font-weight: 700; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100);">Equity</th>
-                                                            </tr>
-                                                            <?php
-                                                            $equityAccounts = array_filter($chartOfAccounts, function($account) {
-                                                                return $account['account_type'] === 'equity' && ($account['balance'] ?? 0) != 0;
-                                                            });
-                                                            foreach ($equityAccounts as $equity):
-                                                            ?>
-                                                                <tr>
-                                                                    <td style="padding: 12px 16px; color: var(--atiera-gray-700);"><?php echo htmlspecialchars($equity['account_name']); ?></td>
-                                                                    <td style="padding: 12px 16px; color: var(--atiera-gray-700);">Equity</td>
-                                                                    <td style="padding: 12px 16px; color: var(--atiera-gray-700); text-align: right;">&#8369;<?php echo number_format($equity['balance'] ?? 0, 2); ?></td>
-                                                                </tr>
-                                                            <?php endforeach; ?>
-                                                            <tr>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-gray-700);">Retained Earnings</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-gray-700);">Equity</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-gray-700); text-align: right;">&#8369;<?php echo number_format($netProfit, 2); ?></td>
-                                                            </tr>
-                                                            <tr style="background-color: var(--atiera-gray-50); font-weight: 700;">
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);">Total Equity</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);"></td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700); text-align: right;">&#8369;<?php echo number_format(($totalAssets - $totalLiabilities), 2); ?></td>
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <h6 class="financial-statement-title">Balance Sheet - As of <?php echo date('F j, Y'); ?></h6>
+                                        <table class="table financial-table">
+                                            <tr><th>Assets</th><th></th><th>&#8369;<?php echo number_format($totalAssets, 2); ?></th></tr>
+                                            <?php
+                                            // Get asset accounts for breakdown
+                                            $assetAccounts = array_filter($chartOfAccounts, function($account) {
+                                                return $account['account_type'] === 'asset';
+                                            });
+                                            foreach ($assetAccounts as $asset):
+                                            ?>
+                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($asset['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($asset['balance'] ?? 0, 2); ?></td></tr>
+                                            <?php endforeach; ?>
+                                            <tr><th>Liabilities</th><th></th><th>&#8369;<?php echo number_format($totalLiabilities, 2); ?></th></tr>
+                                            <tr><th>Equity</th><th></th><th>&#8369;<?php echo number_format($totalAssets - $totalLiabilities, 2); ?></th></tr>
+                                            <?php
+                                            // Get equity accounts for breakdown
+                                            $equityAccounts = array_filter($chartOfAccounts, function($account) {
+                                                return $account['account_type'] === 'equity';
+                                            });
+                                            foreach ($equityAccounts as $equity):
+                                            ?>
+                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($equity['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($equity['balance'] ?? 0, 2); ?></td></tr>
+                                            <?php endforeach; ?>
+                                            <tr class="total-row"><td>&nbsp;&nbsp;Retained Earnings</td><td></td><td>&#8369;<?php echo number_format($netProfit, 2); ?></td></tr>
+                                        </table>
                                     </div>
                                     <div class="tab-pane fade" id="income-statement" role="tabpanel">
-                                        <div class="card border-0 shadow-sm mb-4" style="border: 1px solid var(--atiera-gray-200); background: var(--atiera-white);">
-                                            <div class="card-body p-4">
-                                                <h6 class="financial-statement-title mb-4" style="color: var(--atiera-gray-900); font-weight: 700;">Income Statement - For the period ending <?php echo date('F j, Y', strtotime($financialDateTo)); ?> (<?php echo ucfirst($financialPeriod); ?> period)</h6>
-                                                <div class="table-responsive">
-                                                    <table class="table financial-table mb-0" style="border: 1px solid var(--atiera-gray-200); border-radius: 12px; overflow: hidden; border-collapse: separate; border-spacing: 0; background: var(--atiera-white);">
-                                                        <thead>
-                                                            <tr style="background-color: var(--atiera-blue-50);">
-                                                                <th style="color: var(--atiera-blue-700); font-weight: 700; border-top: none; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100);">Account</th>
-                                                                <th style="color: var(--atiera-blue-700); font-weight: 700; border-top: none; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100); width: 20%;">Type</th>
-                                                                <th style="color: var(--atiera-blue-700); font-weight: 700; border-top: none; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100); text-align: right; width: 25%;">Amount</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            <!-- Revenue Section -->
-                                                            <tr style="background-color: var(--atiera-gray-50);">
-                                                                <th colspan="3" style="color: var(--atiera-blue-700); font-weight: 700; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100);">Revenue</th>
-                                                            </tr>
-                                                            <?php
-                                                            $revenueAccounts = array_filter($chartOfAccounts, function($account) {
-                                                                return $account['account_type'] === 'revenue' && ($account['balance'] ?? 0) != 0;
-                                                            });
-                                                            foreach ($revenueAccounts as $revenue):
-                                                            ?>
-                                                                <tr>
-                                                                    <td style="padding: 12px 16px; color: var(--atiera-gray-700);"><?php echo htmlspecialchars($revenue['account_name']); ?></td>
-                                                                    <td style="padding: 12px 16px; color: var(--atiera-gray-700);">Revenue</td>
-                                                                    <td style="padding: 12px 16px; color: var(--atiera-gray-700); text-align: right;">&#8369;<?php echo number_format($revenue['balance'] ?? 0, 2); ?></td>
-                                                                </tr>
-                                                            <?php endforeach; ?>
-                                                            <tr style="background-color: var(--atiera-gray-50); font-weight: 700;">
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);">Total Revenue</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);"></td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700); text-align: right;">&#8369;<?php echo number_format($totalRevenue, 2); ?></td>
-                                                            </tr>
-
-                                                            <!-- Expenses Section -->
-                                                            <tr style="background-color: var(--atiera-gray-50);">
-                                                                <th colspan="3" style="color: var(--atiera-blue-700); font-weight: 700; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100);">Expenses</th>
-                                                            </tr>
-                                                            <?php
-                                                            $expenseAccounts = array_filter($chartOfAccounts, function($account) {
-                                                                return $account['account_type'] === 'expense' && ($account['balance'] ?? 0) != 0;
-                                                            });
-                                                            foreach ($expenseAccounts as $expense):
-                                                            ?>
-                                                                <tr>
-                                                                    <td style="padding: 12px 16px; color: var(--atiera-gray-700);"><?php echo htmlspecialchars($expense['account_name']); ?></td>
-                                                                    <td style="padding: 12px 16px; color: var(--atiera-gray-700);">Expense</td>
-                                                                    <td style="padding: 12px 16px; color: var(--atiera-gray-700); text-align: right;">&#8369;<?php echo number_format($expense['balance'] ?? 0, 2); ?></td>
-                                                                </tr>
-                                                            <?php endforeach; ?>
-                                                            <tr style="background-color: var(--atiera-gray-50); font-weight: 700;">
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);">Total Expenses</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);"></td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700); text-align: right;">&#8369;<?php echo number_format($totalExpenses, 2); ?></td>
-                                                            </tr>
-
-                                                            <!-- Net Profit -->
-                                                            <tr style="background-color: var(--atiera-gray-50); font-weight: 700;">
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);">Net Profit</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);"></td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700); text-align: right;">&#8369;<?php echo number_format($netProfit, 2); ?></td>
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <h6 class="financial-statement-title">Income Statement - For the period ending <?php echo date('F j, Y'); ?></h6>
+                                        <table class="table financial-table">
+                                            <tr><th>Revenue</th><th></th><th>&#8369;<?php echo number_format($totalRevenue, 2); ?></th></tr>
+                                            <?php
+                                            // Get revenue accounts
+                                            $revenueAccounts = array_filter($chartOfAccounts, function($account) {
+                                                return $account['account_type'] === 'revenue';
+                                            });
+                                            foreach ($revenueAccounts as $revenue):
+                                            ?>
+                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($revenue['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($revenue['balance'] ?? 0, 2); ?></td></tr>
+                                            <?php endforeach; ?>
+                                            <tr><th>Expenses</th><th></th><th>&#8369;<?php echo number_format($totalExpenses, 2); ?></th></tr>
+                                            <?php
+                                            // Get expense accounts
+                                            $expenseAccounts = array_filter($chartOfAccounts, function($account) {
+                                                return $account['account_type'] === 'expense';
+                                            });
+                                            foreach ($expenseAccounts as $expense):
+                                            ?>
+                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($expense['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($expense['balance'] ?? 0, 2); ?></td></tr>
+                                            <?php endforeach; ?>
+                                            <tr class="total-row"><th>Net Profit</th><th></th><th>&#8369;<?php echo number_format($netProfit, 2); ?></th></tr>
+                                        </table>
                                     </div>
                                     <div class="tab-pane fade" id="cash-flow" role="tabpanel">
-                                        <div class="card border-0 shadow-sm mb-4" style="border: 1px solid var(--atiera-gray-200); background: var(--atiera-white);">
-                                            <div class="card-body p-4">
-                                                <h6 class="financial-statement-title mb-4" style="color: var(--atiera-gray-900); font-weight: 700;">Cash Flow Statement - For the period ending <?php echo date('F j, Y', strtotime($financialDateTo)); ?> (<?php echo ucfirst($financialPeriod); ?> period)</h6>
-                                                <div class="table-responsive">
-                                                    <table class="table financial-table mb-0" style="border: 1px solid var(--atiera-gray-200); border-radius: 12px; overflow: hidden; border-collapse: separate; border-spacing: 0; background: var(--atiera-white);">
-                                                        <thead>
-                                                            <tr style="background-color: var(--atiera-blue-50);">
-                                                                <th style="color: var(--atiera-blue-700); font-weight: 700; border-top: none; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100);">Activity</th>
-                                                                <th style="color: var(--atiera-blue-700); font-weight: 700; border-top: none; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100); width: 20%;">Type</th>
-                                                                <th style="color: var(--atiera-blue-700); font-weight: 700; border-top: none; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100); text-align: right; width: 25%;">Amount</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            <!-- Operating Activities -->
-                                                            <tr style="background-color: var(--atiera-gray-50);">
-                                                                <th colspan="3" style="color: var(--atiera-blue-700); font-weight: 700; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100);">Operating Activities</th>
-                                                            </tr>
-                                                            <tr>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-gray-700);">Net Income</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-gray-700);">Operating</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-gray-700); text-align: right;">&#8369;<?php echo number_format($netProfit, 2); ?></td>
-                                                            </tr>
-                                                            <?php
-                                                            $operatingCashFlow = $netProfit; // Simplified
-                                                            ?>
-                                                            <tr style="background-color: var(--atiera-gray-50); font-weight: 700;">
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);">Net Operating Cash Flow</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);"></td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700); text-align: right;">&#8369;<?php echo number_format($operatingCashFlow, 2); ?></td>
-                                                            </tr>
-
-                                                            <!-- Investing Activities -->
-                                                            <tr style="background-color: var(--atiera-gray-50);">
-                                                                <th colspan="3" style="color: var(--atiera-blue-700); font-weight: 700; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100);">Investing Activities</th>
-                                                            </tr>
-                                                            <tr>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-gray-700);">No investing activities recorded</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-gray-700);">Investing</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-gray-700); text-align: right;">&#8369;0.00</td>
-                                                            </tr>
-                                                            <tr style="background-color: var(--atiera-gray-50); font-weight: 700;">
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);">Net Investing Cash Flow</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);"></td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700); text-align: right;">&#8369;0.00</td>
-                                                            </tr>
-
-                                                            <!-- Financing Activities -->
-                                                            <tr style="background-color: var(--atiera-gray-50);">
-                                                                <th colspan="3" style="color: var(--atiera-blue-700); font-weight: 700; padding: 12px 16px; border-bottom: 1px solid var(--atiera-gray-100);">Financing Activities</th>
-                                                            </tr>
-                                                            <tr>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-gray-700);">No financing activities recorded</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-gray-700);">Financing</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-gray-700); text-align: right;">&#8369;0.00</td>
-                                                            </tr>
-                                                            <tr style="background-color: var(--atiera-gray-50); font-weight: 700;">
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);">Net Financing Cash Flow</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);"></td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700); text-align: right;">&#8369;0.00</td>
-                                                            </tr>
-
-                                                            <!-- Net Cash Flow -->
-                                                            <tr style="background-color: var(--atiera-gray-50); font-weight: 700;">
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);">Net Cash Flow</td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700);"></td>
-                                                                <td style="padding: 12px 16px; color: var(--atiera-blue-700); text-align: right;">&#8369;<?php echo number_format($operatingCashFlow, 2); ?></td>
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <h6 class="financial-statement-title">Cash Flow Statement - For the period ending <?php echo date('F j, Y'); ?></h6>
+                                        <table class="table financial-table">
+                                            <tr><th>Operating Activities</th><th></th><th>&#8369;<?php echo number_format($netProfit, 2); ?></th></tr>
+                                            <tr><td>&nbsp;&nbsp;Net Income</td><td></td><td>&#8369;<?php echo number_format($netProfit, 2); ?></td></tr>
+                                            <?php
+                                            $operatingCashFlow = $netProfit; // Simplified - would include other adjustments
+                                            ?>
+                                            <tr class="total-row"><th>Net Operating Cash Flow</th><th></th><th>&#8369;<?php echo number_format($operatingCashFlow, 2); ?></th></tr>
+                                            <tr><th>Investing Activities</th><th></th><th>&#8369;0.00</th></tr>
+                                            <tr><th>Financing Activities</th><th></th><th>&#8369;0.00</th></tr>
+                                            <tr class="total-row"><th>Net Cash Flow</th><th></th><th>&#8369;<?php echo number_format($operatingCashFlow, 2); ?></th></tr>
+                                        </table>
                                     </div>
                                 </div>
                             </div>
