@@ -459,12 +459,12 @@ function generateTrialBalance($db, $dateFrom, $dateTo, $format) {
         LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
         WHERE coa.is_active = 1
         AND (je.status = 'posted' OR je.status IS NULL OR je.status = '')
-        AND (je.entry_date IS NULL OR je.entry_date BETWEEN ? AND ?)
+        AND (je.entry_date IS NULL OR je.entry_date <= ?)
         GROUP BY coa.id, coa.account_code, coa.account_name, coa.account_type
         HAVING debit_total != 0 OR credit_total != 0
         ORDER BY coa.account_code
     ");
-    $stmt->execute([$dateFrom, $dateTo]);
+    $stmt->execute([$dateTo]);
     $rawAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $accounts = [];

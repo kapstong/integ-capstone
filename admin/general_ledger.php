@@ -152,12 +152,12 @@ try {
         JOIN journal_entries je ON jel.journal_entry_id = je.id
         WHERE coa.is_active = 1
           AND (je.status = 'posted' OR je.status IS NULL OR je.status = '')
-          AND je.entry_date BETWEEN ? AND ?
+          AND je.entry_date <= ?
         GROUP BY coa.id, coa.account_code, coa.account_name, coa.account_type
         HAVING debit_total != 0 OR credit_total != 0
         ORDER BY coa.account_code ASC
     ");
-    $trialBalanceStmt->execute([$trialDateFrom, $trialDateTo]);
+    $trialBalanceStmt->execute([$trialDateTo]);
     $trialBalanceRaw = $trialBalanceStmt->fetchAll();
 
     $trialBalance = [];
@@ -215,11 +215,11 @@ try {
             FROM journal_entry_lines jel
             JOIN journal_entries je ON jel.journal_entry_id = je.id
             WHERE (je.status = 'posted' OR je.status IS NULL OR je.status = '')
-              AND je.entry_date BETWEEN ? AND ?
+              AND je.entry_date <= ?
               AND jel.account_id IN ($placeholders)
             ORDER BY je.entry_date DESC, je.id DESC, jel.id DESC
         ");
-        $breakdownStmt->execute(array_merge([$trialDateFrom, $trialDateTo], $trialAccountIds));
+        $breakdownStmt->execute(array_merge([$trialDateTo], $trialAccountIds));
         $rows = $breakdownStmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as $row) {
             $accountId = (int)$row['account_id'];
@@ -253,10 +253,10 @@ try {
             SELECT id, disbursement_date, payee, reference_number, purpose, amount, account_id
             FROM disbursements
             WHERE account_id IN ($placeholders)
-              AND disbursement_date BETWEEN ? AND ?
+              AND disbursement_date <= ?
             ORDER BY disbursement_date DESC, id DESC
         ");
-        $salaryStmt->execute(array_merge($salaryAccountIds, [$trialDateFrom, $trialDateTo]));
+        $salaryStmt->execute(array_merge($salaryAccountIds, [$trialDateTo]));
         $rows = $salaryStmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as $row) {
             $accountId = (int)$row['account_id'];
