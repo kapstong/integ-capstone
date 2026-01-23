@@ -621,8 +621,8 @@ header('Content-Type: application/javascript');
         modal.show();
     }
 
-        // Global variables
-        let currentFilters = {};
+        // Global variables (guarded to allow safe reload)
+        var currentFilters = window.currentFilters = window.currentFilters || {};
 
         function updateTabBadge(tabId, count) {
             const tabButton = document.getElementById(tabId);

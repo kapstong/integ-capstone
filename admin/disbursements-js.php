@@ -426,8 +426,8 @@ header('Content-Type: application/javascript');
         modal.show();
     }
 
-        // Global variables
-        let currentFilters = {};
+        // Global variables (guarded to allow safe reload)
+        var currentFilters = window.currentFilters = window.currentFilters || {};
 
         // Helper function to show loading in table
         function showTableLoading(tbodyId, loadingText) {

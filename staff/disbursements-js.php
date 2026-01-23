@@ -426,8 +426,8 @@ header('Content-Type: application/javascript');
         modal.show();
     }
 
-        // Global variables
-        let currentFilters = {};
+        // Global variables (guarded to allow safe reload)
+        var currentFilters = window.currentFilters = window.currentFilters || {};
 
         // Load disbursements from API
         async function loadDisbursements() {
