@@ -8,15 +8,15 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/privacy_output_mask.php';
 
-function format_currency($amount, $symbol = '\u20B1', $decimals = 2)
+function format_currency($amount, $symbol = '₱', $decimals = 2)
 {
     // Normalize amount
     $amt = is_numeric($amount) ? (float)$amount : 0.0;
 
     // When privacy masking is active, return masked value
     if (function_exists('privacyShouldMaskOutput') && privacyShouldMaskOutput()) {
-        // Use 'PHP' label for PHP word matches or currency symbol otherwise
-        $currencyLabel = $symbol === 'PHP' ? 'PHP' : $symbol;
+        // Use 'PHP' label for PHP literal, otherwise output the symbol then masked stars
+        $currencyLabel = (strtoupper($symbol) === 'PHP') ? 'PHP' : $symbol;
         return $currencyLabel . ' ' . str_repeat('*', 8);
     }
 
