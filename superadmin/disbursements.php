@@ -769,7 +769,8 @@ body {
                             </div>
                             <div class="col-auto">
                                 <label for="disbFilterUser" class="form-label mb-0">User</label>
-                                <input type="text" class="form-control" id="disbFilterUser" placeholder="Name or username">
+                                <input type="text" class="form-control" id="disbFilterUser" list="disbFilterUserList" placeholder="Name or username">
+                                <datalist id="disbFilterUserList"></datalist>
                             </div>
                             <div class="col-auto">
                                 <label for="disbFilterAction" class="form-label mb-0">Action</label>

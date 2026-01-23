@@ -101,6 +101,11 @@ header('Content-Type: application/javascript');
                 }).join('');
                 updateTabBadge('audit-tab', auditLogs.length);
 
+                // Populate inline filter dropdowns based on current audit data
+                if (typeof populateDisbursementFilters === 'function') {
+                    try { populateDisbursementFilters(auditLogs); } catch (e) { /* ignore */ }
+                }
+
             } catch (error) {
                 const tbody = document.getElementById('auditTableBody');
                 if (tbody) {
@@ -207,6 +212,47 @@ header('Content-Type: application/javascript');
                 }
             }
             return params;
+        }
+
+        // Populate filter inputs (action list, user list) from current audit logs
+        function populateDisbursementFilters(logs) {
+            if (!Array.isArray(logs)) return;
+            const actions = new Set();
+            const users = new Set();
+
+            logs.forEach(l => {
+                const a = (l.action_label || l.action || '').toString().trim();
+                if (a) actions.add(a);
+                const u = (l.full_name || l.username || '').toString().trim();
+                if (u) users.add(u);
+            });
+
+            // Populate action select
+            const actionSelect = document.getElementById('disbFilterAction');
+            if (actionSelect) {
+                // Keep the first option (All Actions)
+                const firstOpt = actionSelect.querySelector('option');
+                actionSelect.innerHTML = '';
+                if (firstOpt) actionSelect.appendChild(firstOpt);
+                // Append sorted actions
+                Array.from(actions).sort().forEach(act => {
+                    const opt = document.createElement('option');
+                    opt.value = act;
+                    opt.textContent = act;
+                    actionSelect.appendChild(opt);
+                });
+            }
+
+            // Populate user datalist
+            const userList = document.getElementById('disbFilterUserList');
+            if (userList) {
+                userList.innerHTML = '';
+                Array.from(users).sort().forEach(u => {
+                    const opt = document.createElement('option');
+                    opt.value = u;
+                    userList.appendChild(opt);
+                });
+            }
         }
 
         function applyDisbursementFilters() {
