@@ -27,6 +27,29 @@ function toggleSidebar() {
     var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
         return new bootstrap.Popover(popoverTriggerEl);
     });
+
+    // Persist active tab per page on refresh
+    (function () {
+        const tabTriggers = document.querySelectorAll('[data-bs-toggle="tab"]');
+        if (!tabTriggers.length) {
+            return;
+        }
+        const storageKey = 'activeTab:' + window.location.pathname;
+        tabTriggers.forEach(function (trigger) {
+            trigger.addEventListener('shown.bs.tab', function (event) {
+                if (event.target && event.target.id) {
+                    localStorage.setItem(storageKey, event.target.id);
+                }
+            });
+        });
+        const savedTabId = localStorage.getItem(storageKey);
+        if (savedTabId) {
+            const savedTrigger = document.getElementById(savedTabId);
+            if (savedTrigger) {
+                new bootstrap.Tab(savedTrigger).show();
+            }
+        }
+    })();
 });
 </script>
 </body>
