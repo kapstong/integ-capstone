@@ -1086,7 +1086,7 @@ try {
                                         $hasDetails = !empty($trialBreakdown[$accountId ?? 0]);
                                         ?>
                                         <?php if ($hasDetails): ?>
-                                            <div class="modal fade" id="<?php echo $modalId; ?>" tabindex="-1" aria-labelledby="<?php echo $modalLabelId; ?>" aria-hidden="true">
+                                            <div class="modal fade trial-modal" id="<?php echo $modalId; ?>" tabindex="-1" aria-labelledby="<?php echo $modalLabelId; ?>" aria-hidden="true">
                                                 <div class="modal-dialog modal-lg modal-dialog-scrollable">
                                                     <div class="modal-content">
                                                         <div class="modal-header">
@@ -2608,6 +2608,11 @@ try {
             const coaCategoryFilter = document.getElementById('coaCategoryFilter');
             const coaClearFilters = document.getElementById('coaClearFilters');
             const journalSearchInput = document.getElementById('journalSearchInput');
+            const trialModals = document.querySelectorAll('.trial-modal');
+
+            trialModals.forEach(modal => {
+                document.body.appendChild(modal);
+            });
 
             if (coaSearchInput && coaCategoryFilter) {
                 coaSearchInput.addEventListener('input', applyCoaFilters);
