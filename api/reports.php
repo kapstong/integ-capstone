@@ -105,6 +105,14 @@ function handleGet($db, $logger) {
             $dateTo = date('Y-m-t'); // Last day of current month
         }
 
+        if ($reportType === 'trial_balance' && $format !== 'json') {
+            $logger->logUserAction('exported', 'trial_balance', '', null, [
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
+                'format' => $format
+            ]);
+        }
+
         switch ($reportType) {
             case 'balance_sheet':
                 generateBalanceSheet($db, $dateFrom, $dateTo, $format);

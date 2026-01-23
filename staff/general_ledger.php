@@ -295,7 +295,7 @@ try {
             FROM audit_log al
             LEFT JOIN users u ON al.user_id = u.id
             WHERE al.user_id IS NOT NULL
-              AND al.table_name IN ('journal_entries', 'journal_entry_lines', 'chart_of_accounts')
+              AND al.table_name IN ('journal_entries', 'journal_entry_lines', 'chart_of_accounts', 'trial_balance')
             ORDER BY al.created_at DESC
             LIMIT 10
         ")->fetchAll() ?? [];
@@ -1996,38 +1996,58 @@ try {
             });
         }
 
-        function applyFilters() {
+        const auditTablesScope = 'journal_entries,journal_entry_lines,chart_of_accounts,trial_balance';
+        let auditPollTimer = null;
+
+        function normalizeAuditResponse(data) {
+            if (Array.isArray(data)) {
+                return data;
+            }
+            if (data && Array.isArray(data.audit_trail)) {
+                return data.audit_trail;
+            }
+            return null;
+        }
+
+        function fetchAuditTrail(params, { silent = false } = {}) {
+            return fetch(`api/audit.php?${params.toString()}`, { method: 'GET' })
+                .then(response => response.json())
+                .then(data => {
+                    const logs = normalizeAuditResponse(data);
+                    if (!logs) {
+                        throw new Error(data?.error || 'Failed to fetch audit trail');
+                    }
+                    updateAuditTrailTable(logs);
+                })
+                .catch(error => {
+                    if (!silent) {
+                        console.error('Error fetching audit trail:', error);
+                        showAlert('error', error.message || 'Failed to apply filters.');
+                    }
+                });
+        }
+
+        function buildAuditParams() {
             const dateFrom = document.getElementById('filterDateFrom').value;
             const dateTo = document.getElementById('filterDateTo').value;
             const user = document.getElementById('filterUser').value;
             const action = document.getElementById('filterAction').value;
 
-            // Build query parameters
             const params = new URLSearchParams();
+            params.append('table_name', auditTablesScope);
             if (dateFrom) params.append('date_from', dateFrom);
             if (dateTo) params.append('date_to', dateTo);
             if (user) params.append('user', user);
             if (action) params.append('action', action);
 
-            // Fetch filtered audit trail
-            fetch(`api/audit.php?${params.toString()}`, {
-                method: 'GET'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && Array.isArray(data.audit_trail)) {
-                    // Update the audit trail table
-                    updateAuditTrailTable(data.audit_trail);
-                } else {
-                    throw new Error(data.error || 'Failed to fetch filtered audit trail');
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching filtered audit trail:', error);
-                showAlert('error', error.message || 'Failed to apply filters.');
-            });
+            return params;
+        }
 
-            // Close the modal
+        function applyFilters() {
+            const params = buildAuditParams();
+
+            fetchAuditTrail(params);
+
             const modal = bootstrap.Modal.getInstance(document.getElementById('filterModal'));
             modal.hide();
         }
@@ -2071,6 +2091,26 @@ try {
                     <td>${formatDetails(log)}</td>
                 </tr>
             `).join('');
+        }
+
+        function startAuditPolling() {
+            if (auditPollTimer) {
+                return;
+            }
+            auditPollTimer = setInterval(() => {
+                const auditTab = document.getElementById('audit');
+                if (!auditTab || !auditTab.classList.contains('show')) {
+                    return;
+                }
+                fetchAuditTrail(buildAuditParams(), { silent: true });
+            }, 15000);
+        }
+
+        function stopAuditPolling() {
+            if (auditPollTimer) {
+                clearInterval(auditPollTimer);
+                auditPollTimer = null;
+            }
         }
 
         function editAccount() {
@@ -3196,6 +3236,20 @@ try {
             trialSearchInputs.forEach(input => {
                 input.addEventListener('input', applyTrialModalSearch);
             });
+
+            const auditTabTrigger = document.getElementById('audit-tab');
+            if (auditTabTrigger) {
+                auditTabTrigger.addEventListener('shown.bs.tab', function() {
+                    fetchAuditTrail(buildAuditParams(), { silent: true });
+                    startAuditPolling();
+                });
+                auditTabTrigger.addEventListener('hidden.bs.tab', stopAuditPolling);
+            }
+
+            const auditTabPane = document.getElementById('audit');
+            if (auditTabPane && auditTabPane.classList.contains('show')) {
+                startAuditPolling();
+            }
         });
 
         // Initialize sidebar state on page load
