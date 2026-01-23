@@ -46,6 +46,41 @@ switch ($trialPeriod) {
 }
 $trialDateFrom = $trialDateFromObj->format('Y-m-d');
 
+// Financial statements date filters
+$financialPeriod = isset($_GET['financial_period']) ? strtolower(trim($_GET['financial_period'])) : 'monthly';
+$financialDateToInput = isset($_GET['financial_date']) ? trim($_GET['financial_date']) : date('Y-m-d');
+$financialDateToObj = DateTime::createFromFormat('Y-m-d', $financialDateToInput) ?: new DateTime();
+$financialDateTo = $financialDateToObj->format('Y-m-d');
+$financialDateFromObj = clone $financialDateToObj;
+switch ($financialPeriod) {
+    case 'daily':
+        break;
+    case 'weekly':
+        $financialDateFromObj->modify('monday this week');
+        break;
+    case 'monthly':
+        $financialDateFromObj->modify('first day of this month');
+        break;
+    case 'quarterly':
+        $quarterStartMonth = (int)(floor(((int)$financialDateToObj->format('n') - 1) / 3) * 3) + 1;
+        $financialDateFromObj = new DateTime($financialDateToObj->format('Y') . '-' . str_pad((string)$quarterStartMonth, 2, '0', STR_PAD_LEFT) . '-01');
+        break;
+    case 'semi-annually':
+    case 'semiannually':
+        $halfStartMonth = ((int)$financialDateToObj->format('n') <= 6) ? 1 : 7;
+        $financialDateFromObj = new DateTime($financialDateToObj->format('Y') . '-' . str_pad((string)$halfStartMonth, 2, '0', STR_PAD_LEFT) . '-01');
+        break;
+    case 'annually':
+    case 'yearly':
+        $financialDateFromObj->modify('first day of january');
+        break;
+    default:
+        $financialPeriod = 'monthly';
+        $financialDateFromObj->modify('first day of this month');
+        break;
+}
+$financialDateFrom = $financialDateFromObj->format('Y-m-d');
+
 // Fetch summary data and actual data for all modules
 try {
     // Auto-sync Core 1 payments into journal entries
@@ -112,7 +147,42 @@ try {
 
     $netProfit = $totalRevenue - $totalExpenses;
 
+    // Calculate balances for Financial Statements (use selected financial date)
+    $finBalanceStmt = $db->prepare("\n        SELECT\n            coa.account_type,\n            SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as balance\n        FROM chart_of_accounts coa\n        LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id\n        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id\n            AND (je.status = 'posted' OR je.status IS NULL OR je.status = '')\n            AND je.entry_date <= ?\n        WHERE coa.is_active = 1\n        GROUP BY coa.id, coa.account_type\n    ");
+    $finBalanceStmt->execute([$financialDateTo]);
+    $finBalanceQuery = $finBalanceStmt->fetchAll();
+
+    $finTotalAssets = 0;
+    $finTotalLiabilities = 0;
+    $finTotalEquity = 0;
+    $finTotalRevenue = 0;
+    $finTotalExpenses = 0;
+
+    foreach ($finBalanceQuery as $row) {
+        $balance = intval($row['balance']);
+        switch ($row['account_type']) {
+            case 'asset':
+                $finTotalAssets += $balance;
+                break;
+            case 'liability':
+                $finTotalLiabilities += $balance;
+                break;
+            case 'equity':
+                $finTotalEquity += $balance;
+                break;
+            case 'revenue':
+                $finTotalRevenue += $balance;
+                break;
+            case 'expense':
+                $finTotalExpenses += $balance;
+                break;
+        }
+    }
+
+    $finNetProfit = $finTotalRevenue - $finTotalExpenses;
+
     // Fetch actual Chart of Accounts with calculated balances
+    // Fetch actual Chart of Accounts with calculated balances (page display - no date filter)
     $chartOfAccountsQuery = $db->query("
         SELECT
             coa.id,
@@ -129,6 +199,139 @@ try {
         GROUP BY coa.id, coa.account_code, coa.account_name, coa.account_type, coa.description, coa.category
         ORDER BY coa.account_code ASC
     ")->fetchAll();
+
+    // Fetch Chart of Accounts balances as of selected financial date (for Financial Statements)
+    $chartOfAccountsFinancialStmt = $db->prepare("
+        SELECT
+            coa.id,
+            coa.account_code,
+            coa.account_name,
+            coa.account_type,
+            coa.description,
+            coa.category,
+            COALESCE(SUM(jel.debit - jel.credit), 0) as balance
+        FROM chart_of_accounts coa
+        LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id 
+            AND (je.status = 'posted' OR je.status IS NULL OR je.status = '')
+            AND je.entry_date <= ?
+        WHERE coa.is_active = 1
+        GROUP BY coa.id, coa.account_code, coa.account_name, coa.account_type, coa.description, coa.category
+        ORDER BY coa.account_code ASC
+    ");
+    $chartOfAccountsFinancialStmt->execute([$financialDateTo]);
+    $chartOfAccountsFinancial = $chartOfAccountsFinancialStmt->fetchAll();
+
+    // --- Cash Flow Calculation (classification method) ---
+    // Configurable: manual cash account codes (set to specific bank/cash account codes if available)
+    $cashAccountCodesManual = []; // e.g. ['1000','1001']
+
+    // Build list of cash account IDs by heuristics (account_name contains 'cash' or 'bank', or category == 'cash')
+    $cashAccountIds = [];
+    foreach ($chartOfAccountsQuery as $coaRow) {
+        $name = strtolower($coaRow['account_name'] ?? '');
+        $code = (string)($coaRow['account_code'] ?? '');
+        $category = strtolower((string)($coaRow['category'] ?? ''));
+        if (in_array($code, $cashAccountCodesManual, true)) {
+            $cashAccountIds[] = $coaRow['id'];
+            continue;
+        }
+        if ($coaRow['account_type'] === 'asset' && (stripos($name, 'cash') !== false || stripos($name, 'bank') !== false || $category === 'cash')) {
+            $cashAccountIds[] = $coaRow['id'];
+        }
+    }
+    $cashAccountIds = array_values(array_unique($cashAccountIds));
+
+    // Prepare totals
+    $finOperatingCF = 0.0;
+    $finInvestingCF = 0.0;
+    $finFinancingCF = 0.0;
+
+    if (!empty($cashAccountIds)) {
+        // Fetch journal entry lines within the period (posted)
+        $rows = [];
+        $stmt = $db->prepare("SELECT jel.journal_entry_id, jel.account_id, COALESCE(jel.debit,0) AS debit, COALESCE(jel.credit,0) AS credit, coa.account_type, coa.account_name FROM journal_entry_lines jel JOIN journal_entries je ON jel.journal_entry_id = je.id AND (je.status = 'posted' OR je.status IS NULL OR je.status = '') AND je.entry_date BETWEEN ? AND ? JOIN chart_of_accounts coa ON jel.account_id = coa.id ORDER BY jel.journal_entry_id");
+        $stmt->execute([$financialDateFrom, $financialDateTo]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Group by journal_entry_id
+        $entries = [];
+        foreach ($rows as $r) {
+            $jid = $r['journal_entry_id'];
+            if (!isset($entries[$jid])) $entries[$jid] = [];
+            $entries[$jid][] = $r;
+        }
+
+        foreach ($entries as $jid => $lines) {
+            // compute cash movement and classify counterpart lines
+            $cashMovement = 0.0;
+            $classification = ['operating' => 0.0, 'investing' => 0.0, 'financing' => 0.0];
+            foreach ($lines as $ln) {
+                $amt = floatval($ln['debit']) - floatval($ln['credit']);
+                if (in_array((int)$ln['account_id'], $cashAccountIds, true)) {
+                    $cashMovement += $amt; // positive = increase in cash
+                }
+            }
+            if (abs($cashMovement) < 0.01) continue; // no cash effect
+
+            // For classification, look at non-cash lines and allocate their opposite amounts
+            foreach ($lines as $ln) {
+                if (in_array((int)$ln['account_id'], $cashAccountIds, true)) continue;
+                $amt = floatval($ln['debit']) - floatval($ln['credit']);
+                // The cash effect corresponding to this line is -amt
+                $cashEq = -$amt;
+                $atype = strtolower((string)($ln['account_type'] ?? ''));
+                // Heuristic mapping
+                if ($atype === 'revenue' || $atype === 'expense') {
+                    $classification['operating'] += $cashEq;
+                } elseif ($atype === 'liability' || $atype === 'equity') {
+                    $classification['financing'] += $cashEq;
+                } elseif ($atype === 'asset') {
+                    $aname = strtolower((string)($ln['account_name'] ?? ''));
+                    if (stripos($aname, 'receiv') !== false || stripos($aname, 'inventory') !== false || stripos($aname, 'prepaid') !== false) {
+                        $classification['operating'] += $cashEq;
+                    } else {
+                        // assume investing for non-current assets
+                        $classification['investing'] += $cashEq;
+                    }
+                } else {
+                    // fallback to operating
+                    $classification['operating'] += $cashEq;
+                }
+            }
+
+            // Sum classification amounts into totals
+            $finOperatingCF += $classification['operating'];
+            $finInvestingCF += $classification['investing'];
+            $finFinancingCF += $classification['financing'];
+        }
+
+        // Reconciliation: compute actual cash account balance change for period
+        $placeholders = implode(',', array_fill(0, count($cashAccountIds), '?'));
+        $startDateObj = DateTime::createFromFormat('Y-m-d', $financialDateFrom) ?: new DateTime();
+        $startDateObj->modify('-1 day');
+        $cashStartDate = $startDateObj->format('Y-m-d');
+
+        $cashBalStmt = $db->prepare("SELECT coa.id, COALESCE(SUM(CASE WHEN je.entry_date <= ? THEN (COALESCE(jel.debit,0) - COALESCE(jel.credit,0)) ELSE 0 END),0) as bal_start, COALESCE(SUM(CASE WHEN je.entry_date <= ? THEN (COALESCE(jel.debit,0) - COALESCE(jel.credit,0)) ELSE 0 END),0) as bal_end FROM chart_of_accounts coa LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id AND (je.status = 'posted' OR je.status IS NULL OR je.status = '') WHERE coa.id IN ($placeholders) GROUP BY coa.id");
+        $params = array_merge([$cashStartDate, $financialDateTo], $cashAccountIds);
+        $cashBalStmt->execute($params);
+        $cashBalances = $cashBalStmt->fetchAll(PDO::FETCH_ASSOC);
+        $cashStartTotal = 0.0;
+        $cashEndTotal = 0.0;
+        foreach ($cashBalances as $cb) {
+            $cashStartTotal += floatval($cb['bal_start']);
+            $cashEndTotal += floatval($cb['bal_end']);
+        }
+        $cashDelta = $cashEndTotal - $cashStartTotal;
+    } else {
+        $cashStartTotal = $cashEndTotal = $cashDelta = 0.0;
+    }
+
+    // Expose cash flow totals for use in templates
+    $finOperatingCF = $finOperatingCF ?? 0.0;
+    $finInvestingCF = $finInvestingCF ?? 0.0;
+    $finFinancingCF = $finFinancingCF ?? 0.0;
+    $cashDelta = $cashDelta ?? 0.0;
 
     // Fetch actual Journal Entries with proper formatting
     $journalEntriesQuery = $db->query("
@@ -334,6 +537,13 @@ try {
     $trialCreditTotal = 0;
     $unbalancedCount = 0;
     $trialBreakdown = [];
+    $finTotalAssets = 0;
+    $finTotalLiabilities = 0;
+    $finTotalEquity = 0;
+    $finTotalRevenue = 0;
+    $finTotalExpenses = 0;
+    $finNetProfit = 0;
+    $chartOfAccountsFinancial = [];
 }
 ?>
 <!DOCTYPE html>
@@ -1601,164 +1811,291 @@ try {
                             </div>
                             <!-- Financial Statements Tab -->
                             <div class="tab-pane fade financial-statements" id="financial" role="tabpanel" aria-labelledby="financial-tab">
-                                <!-- Header Section -->
-                                <div class="row mb-4 financial-header">
-                                    <div class="col-12">
-                                        <div class="d-flex justify-content-between align-items-center mb-3">
-                                            <div>
-                                                <h5 class="mb-1 fw-bold text-primary">
-                                                    <i class="fas fa-chart-line me-2"></i>Financial Statements
-                                                </h5>
-                                                <p class="text-muted mb-0 small">Comprehensive financial position and performance analysis</p>
-                                            </div>
-                                            <div class="text-end">
-                                                <small class="text-muted d-block">As of: <?php echo date('M j, Y', strtotime($financialDateTo)); ?></small>
-                                                <small class="text-muted d-block"><?php echo ucfirst($financialPeriod); ?> Period</small>
-                                            </div>
-                                        </div>
+                                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                                    <div>
+                                        <h6 class="mb-1">Financial Statements</h6>
+                                        <small class="text-muted">Period: <?php echo ucfirst($financialPeriod); ?> (<?php echo htmlspecialchars($financialDateFrom); ?> to <?php echo htmlspecialchars($financialDateTo); ?>)</small>
+                                    </div>
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                        <form class="d-flex flex-wrap align-items-center gap-2" method="get">
+                                            <input type="hidden" name="tab" value="financial">
+                                            <select class="form-select" name="financial_period" style="min-width: 180px;">
+                                                <option value="daily" <?php echo $financialPeriod === 'daily' ? 'selected' : ''; ?>>Daily</option>
+                                                <option value="weekly" <?php echo $financialPeriod === 'weekly' ? 'selected' : ''; ?>>Weekly</option>
+                                                <option value="monthly" <?php echo $financialPeriod === 'monthly' ? 'selected' : ''; ?>>Monthly</option>
+                                                <option value="quarterly" <?php echo $financialPeriod === 'quarterly' ? 'selected' : ''; ?>>Quarterly</option>
+                                                <option value="semi-annually" <?php echo $financialPeriod === 'semi-annually' || $financialPeriod === 'semiannually' ? 'selected' : ''; ?>>Semi-Annually</option>
+                                                <option value="annually" <?php echo $financialPeriod === 'annually' ? 'selected' : ''; ?>>Annually</option>
+                                                <option value="yearly" <?php echo $financialPeriod === 'yearly' ? 'selected' : ''; ?>>Yearly</option>
+                                            </select>
+                                            <input type="date" class="form-control" name="financial_date" value="<?php echo htmlspecialchars($financialDateTo); ?>">
+                                            <button class="btn btn-primary" type="submit">Apply</button>
+                                        </form>
                                     </div>
                                 </div>
 
-                                <!-- Controls Section -->
-                                <div class="row mb-4">
-                                    <div class="col-12">
-                                        <div class="card border-0 shadow-sm financial-controls">
-                                            <div class="card-body p-4">
-                                                <div class="row align-items-center">
-                                                    <div class="col-lg-6 mb-3 mb-lg-0">
-                                                        <div class="d-flex align-items-center gap-3">
-                                                            <div class="control-group">
-                                                                <label class="form-label fw-semibold text-muted mb-2 small">VIEW MODE</label>
-                                                                <div class="btn-group btn-group-sm" role="group" aria-label="View mode">
-                                                                    <input type="radio" class="btn-check" name="financialView" id="summaryView" autocomplete="off" checked>
-                                                                    <label class="btn btn-outline-primary" for="summaryView">
-                                                                        <i class="fas fa-list me-1"></i>Summary
-                                                                    </label>
-                                                                    <input type="radio" class="btn-check" name="financialView" id="breakdownView" autocomplete="off">
-                                                                    <label class="btn btn-outline-primary" for="breakdownView">
-                                                                        <i class="fas fa-stream me-1"></i>Breakdown
-                                                                    </label>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-lg-6">
-                                                        <div class="control-group">
-                                                            <label class="form-label fw-semibold text-muted mb-2 small">PERIOD & DATE FILTERS</label>
-                                                            <form class="financial-filters" method="get" id="financialPeriodForm">
-                                                                <input type="hidden" name="tab" value="financial">
-                                                                <div class="input-group input-group-sm">
-                                                                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
-                                                                    <select class="form-select" name="financial_period" id="financialPeriod">
-                                                                        <option value="daily" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'daily') ? 'selected' : ''; ?>>Daily</option>
-                                                                        <option value="weekly" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'weekly') ? 'selected' : ''; ?>>Weekly</option>
-                                                                        <option value="monthly" <?php echo (!isset($_GET['financial_period']) || $_GET['financial_period'] === 'monthly') ? 'selected' : ''; ?>>Monthly</option>
-                                                                        <option value="quarterly" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'quarterly') ? 'selected' : ''; ?>>Quarterly</option>
-                                                                        <option value="semi-annually" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'semi-annually') ? 'selected' : ''; ?>>Semi-Annually</option>
-                                                                        <option value="annually" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'annually') ? 'selected' : ''; ?>>Annually</option>
-                                                                        <option value="yearly" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'yearly') ? 'selected' : ''; ?>>Yearly</option>
-                                                                    </select>
-                                                                </div>
-                                                                <div class="input-group input-group-sm">
-                                                                    <span class="input-group-text"><i class="fas fa-calendar-day"></i></span>
-                                                                    <input type="date" class="form-control" name="financial_date" id="financialDate" value="<?php echo isset($_GET['financial_date']) ? htmlspecialchars($_GET['financial_date']) : date('Y-m-d'); ?>">
-                                                                </div>
-                                                                <button class="btn btn-primary btn-sm" type="submit">
-                                                                    <i class="fas fa-sync-alt me-1"></i>Update
-                                                                </button>
-                                                            </form>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <ul class="nav nav-pills mb-4 financial-subtabs" id="financialSubTabs" role="tablist">
-                                    <li class="nav-item">
-                                        <a class="nav-link active" id="balance-sheet-tab" data-bs-toggle="pill" href="#balance-sheet" role="tab">
+                                <!-- Financial Statements Navigation Tabs -->
+                                <ul class="nav nav-tabs mb-3" id="financialStatementsTabs" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" id="balance-sheet-tab" data-bs-toggle="tab" data-bs-target="#balance-sheet" type="button" role="tab" aria-controls="balance-sheet" aria-selected="true">
                                             <i class="fas fa-balance-scale me-2"></i>Balance Sheet
-                                        </a>
+                                        </button>
                                     </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" id="income-statement-tab" data-bs-toggle="pill" href="#income-statement" role="tab">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="income-statement-tab" data-bs-toggle="tab" data-bs-target="#income-statement" type="button" role="tab" aria-controls="income-statement" aria-selected="false">
                                             <i class="fas fa-chart-bar me-2"></i>Income Statement
-                                        </a>
+                                        </button>
                                     </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" id="cash-flow-tab" data-bs-toggle="pill" href="#cash-flow" role="tab">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="cash-flow-tab" data-bs-toggle="tab" data-bs-target="#cash-flow" type="button" role="tab" aria-controls="cash-flow" aria-selected="false">
                                             <i class="fas fa-money-bill-wave me-2"></i>Cash Flow
-                                        </a>
+                                        </button>
                                     </li>
                                 </ul>
-                                <div class="tab-content">
-                                    <div class="tab-pane fade show active" id="balance-sheet" role="tabpanel">
-                                        <h6 class="financial-statement-title">Balance Sheet - As of <?php echo date('F j, Y'); ?></h6>
-                                        <table class="table financial-table">
-                                            <tr><th>Assets</th><th></th><th>&#8369;<?php echo number_format($totalAssets, 2); ?></th></tr>
-                                            <?php
-                                            // Get asset accounts for breakdown
-                                            $assetAccounts = array_filter($chartOfAccounts, function($account) {
-                                                return $account['account_type'] === 'asset';
-                                            });
-                                            foreach ($assetAccounts as $asset):
-                                            ?>
-                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($asset['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($asset['balance'] ?? 0, 2); ?></td></tr>
-                                            <?php endforeach; ?>
-                                            <tr><th>Liabilities</th><th></th><th>&#8369;<?php echo number_format($totalLiabilities, 2); ?></th></tr>
-                                            <tr><th>Equity</th><th></th><th>&#8369;<?php echo number_format($totalAssets - $totalLiabilities, 2); ?></th></tr>
-                                            <?php
-                                            // Get equity accounts for breakdown
-                                            $equityAccounts = array_filter($chartOfAccounts, function($account) {
-                                                return $account['account_type'] === 'equity';
-                                            });
-                                            foreach ($equityAccounts as $equity):
-                                            ?>
-                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($equity['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($equity['balance'] ?? 0, 2); ?></td></tr>
-                                            <?php endforeach; ?>
-                                            <tr class="total-row"><td>&nbsp;&nbsp;Retained Earnings</td><td></td><td>&#8369;<?php echo number_format($netProfit, 2); ?></td></tr>
-                                        </table>
+
+                                <!-- Financial Statements Tab Content -->
+                                <div class="tab-content" id="financialStatementsContent">
+                                    <!-- Balance Sheet Tab Pane -->
+                                    <div class="tab-pane fade show active" id="balance-sheet" role="tabpanel" aria-labelledby="balance-sheet-tab">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Account</th>
+                                                        <th>Type</th>
+                                                        <th class="text-end" style="width: 25%;">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- Assets Section -->
+                                                    <tr style="background-color: #f8f9fa; font-weight: 600;">
+                                                        <td colspan="3">ASSETS</td>
+                                                    </tr>
+                                                    <?php
+                                                    $assetAccounts = array_filter($chartOfAccountsFinancial, function($account) {
+                                                        return $account['account_type'] === 'asset' && ($account['balance'] ?? 0) != 0;
+                                                    });
+                                                    foreach ($assetAccounts as $asset):
+                                                    ?>
+                                                        <tr>
+                                                            <td><?php echo htmlspecialchars($asset['account_name']); ?></td>
+                                                            <td>Asset</td>
+                                                            <td class="text-end">&#8369;<?php echo number_format($asset['balance'] ?? 0, 2); ?></td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                    <tr style="font-weight: 600; background-color: #f0f0f0;">
+                                                        <td>Total Assets</td>
+                                                        <td></td>
+                                                        <td class="text-end">&#8369;<?php echo number_format($finTotalAssets, 2); ?></td>
+                                                    </tr>
+
+                                                    <!-- Liabilities Section -->
+                                                    <tr style="background-color: #f8f9fa; font-weight: 600;">
+                                                        <td colspan="3">LIABILITIES</td>
+                                                    </tr>
+                                                    <?php
+                                                    $liabilityAccounts = array_filter($chartOfAccountsFinancial, function($account) {
+                                                        return $account['account_type'] === 'liability' && ($account['balance'] ?? 0) != 0;
+                                                    });
+                                                    foreach ($liabilityAccounts as $liability):
+                                                    ?>
+                                                        <tr>
+                                                            <td><?php echo htmlspecialchars($liability['account_name']); ?></td>
+                                                            <td>Liability</td>
+                                                            <td class="text-end">&#8369;<?php echo number_format($liability['balance'] ?? 0, 2); ?></td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                    <tr style="font-weight: 600; background-color: #f0f0f0;">
+                                                        <td>Total Liabilities</td>
+                                                        <td></td>
+                                                        <td class="text-end">&#8369;<?php echo number_format($finTotalLiabilities, 2); ?></td>
+                                                    </tr>
+
+                                                    <!-- Equity Section -->
+                                                    <tr style="background-color: #f8f9fa; font-weight: 600;">
+                                                        <td colspan="3">EQUITY</td>
+                                                    </tr>
+                                                    <?php
+                                                    $equityAccounts = array_filter($chartOfAccountsFinancial, function($account) {
+                                                        return $account['account_type'] === 'equity' && ($account['balance'] ?? 0) != 0;
+                                                    });
+                                                    foreach ($equityAccounts as $equity):
+                                                    ?>
+                                                        <tr>
+                                                            <td><?php echo htmlspecialchars($equity['account_name']); ?></td>
+                                                            <td>Equity</td>
+                                                            <td class="text-end">&#8369;<?php echo number_format($equity['balance'] ?? 0, 2); ?></td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                    <tr>
+                                                        <td>Retained Earnings</td>
+                                                        <td>Equity</td>
+                                                        <td class="text-end">&#8369;<?php echo number_format($finNetProfit, 2); ?></td>
+                                                    </tr>
+                                                    <tr style="font-weight: 600; background-color: #f0f0f0;">
+                                                        <td>Total Equity</td>
+                                                        <td></td>
+                                                        <td class="text-end">&#8369;<?php echo number_format($finTotalEquity + $finNetProfit, 2); ?></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <?php 
+                                        $balanceSheetBalanced = abs($finTotalAssets - ($finTotalLiabilities + $finTotalEquity + $finNetProfit)) < 0.01;
+                                        ?>
+                                        <?php if ($balanceSheetBalanced): ?>
+                                            <div class="alert alert-success mt-3">
+                                                <strong>Balanced:</strong> Assets = Liabilities + Equity
+                                            </div>
+                                        <?php else: ?>
+                                            <div class="alert alert-warning mt-3">
+                                                <strong>Note:</strong> Balance Sheet is not balanced. Assets = &#8369;<?php echo number_format($finTotalAssets, 2); ?>, Liabilities + Equity = &#8369;<?php echo number_format($finTotalLiabilities + $finTotalEquity + $finNetProfit, 2); ?>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
-                                    <div class="tab-pane fade" id="income-statement" role="tabpanel">
-                                        <h6 class="financial-statement-title">Income Statement - For the period ending <?php echo date('F j, Y'); ?></h6>
-                                        <table class="table financial-table">
-                                            <tr><th>Revenue</th><th></th><th>&#8369;<?php echo number_format($totalRevenue, 2); ?></th></tr>
-                                            <?php
-                                            // Get revenue accounts
-                                            $revenueAccounts = array_filter($chartOfAccounts, function($account) {
-                                                return $account['account_type'] === 'revenue';
-                                            });
-                                            foreach ($revenueAccounts as $revenue):
-                                            ?>
-                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($revenue['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($revenue['balance'] ?? 0, 2); ?></td></tr>
-                                            <?php endforeach; ?>
-                                            <tr><th>Expenses</th><th></th><th>&#8369;<?php echo number_format($totalExpenses, 2); ?></th></tr>
-                                            <?php
-                                            // Get expense accounts
-                                            $expenseAccounts = array_filter($chartOfAccounts, function($account) {
-                                                return $account['account_type'] === 'expense';
-                                            });
-                                            foreach ($expenseAccounts as $expense):
-                                            ?>
-                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($expense['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($expense['balance'] ?? 0, 2); ?></td></tr>
-                                            <?php endforeach; ?>
-                                            <tr class="total-row"><th>Net Profit</th><th></th><th>&#8369;<?php echo number_format($netProfit, 2); ?></th></tr>
-                                        </table>
+
+                                    <!-- Income Statement Tab Pane -->
+                                    <div class="tab-pane fade" id="income-statement" role="tabpanel" aria-labelledby="income-statement-tab">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Account</th>
+                                                        <th>Type</th>
+                                                        <th class="text-end" style="width: 25%;">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- Revenue Section -->
+                                                    <tr style="background-color: #f8f9fa; font-weight: 600;">
+                                                        <td colspan="3">REVENUE</td>
+                                                    </tr>
+                                                    <?php
+                                                    $revenueAccounts = array_filter($chartOfAccountsFinancial, function($account) {
+                                                        return $account['account_type'] === 'revenue' && ($account['balance'] ?? 0) != 0;
+                                                    });
+                                                    foreach ($revenueAccounts as $revenue):
+                                                    ?>
+                                                        <tr>
+                                                            <td><?php echo htmlspecialchars($revenue['account_name']); ?></td>
+                                                            <td>Revenue</td>
+                                                            <td class="text-end">&#8369;<?php echo number_format($revenue['balance'] ?? 0, 2); ?></td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                    <tr style="font-weight: 600; background-color: #f0f0f0;">
+                                                        <td>Total Revenue</td>
+                                                        <td></td>
+                                                        <td class="text-end">&#8369;<?php echo number_format($finTotalRevenue, 2); ?></td>
+                                                    </tr>
+
+                                                    <!-- Expenses Section -->
+                                                    <tr style="background-color: #f8f9fa; font-weight: 600;">
+                                                        <td colspan="3">EXPENSES</td>
+                                                    </tr>
+                                                    <?php
+                                                    $expenseAccounts = array_filter($chartOfAccountsFinancial, function($account) {
+                                                        return $account['account_type'] === 'expense' && ($account['balance'] ?? 0) != 0;
+                                                    });
+                                                    foreach ($expenseAccounts as $expense):
+                                                    ?>
+                                                        <tr>
+                                                            <td><?php echo htmlspecialchars($expense['account_name']); ?></td>
+                                                            <td>Expense</td>
+                                                            <td class="text-end">&#8369;<?php echo number_format($expense['balance'] ?? 0, 2); ?></td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                    <tr style="font-weight: 600; background-color: #f0f0f0;">
+                                                        <td>Total Expenses</td>
+                                                        <td></td>
+                                                        <td class="text-end">&#8369;<?php echo number_format($finTotalExpenses, 2); ?></td>
+                                                    </tr>
+
+                                                    <!-- Net Profit/Loss -->
+                                                    <tr style="font-weight: 600; background-color: #f0f0f0;">
+                                                        <td>Net Income (Loss)</td>
+                                                        <td></td>
+                                                        <td class="text-end">&#8369;<?php echo number_format($finNetProfit, 2); ?></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
-                                    <div class="tab-pane fade" id="cash-flow" role="tabpanel">
-                                        <h6 class="financial-statement-title">Cash Flow Statement - For the period ending <?php echo date('F j, Y'); ?></h6>
-                                        <table class="table financial-table">
-                                            <tr><th>Operating Activities</th><th></th><th>&#8369;<?php echo number_format($netProfit, 2); ?></th></tr>
-                                            <tr><td>&nbsp;&nbsp;Net Income</td><td></td><td>&#8369;<?php echo number_format($netProfit, 2); ?></td></tr>
-                                            <?php
-                                            $operatingCashFlow = $netProfit; // Simplified - would include other adjustments
-                                            ?>
-                                            <tr class="total-row"><th>Net Operating Cash Flow</th><th></th><th>&#8369;<?php echo number_format($operatingCashFlow, 2); ?></th></tr>
-                                            <tr><th>Investing Activities</th><th></th><th>&#8369;0.00</th></tr>
-                                            <tr><th>Financing Activities</th><th></th><th>&#8369;0.00</th></tr>
-                                            <tr class="total-row"><th>Net Cash Flow</th><th></th><th>&#8369;<?php echo number_format($operatingCashFlow, 2); ?></th></tr>
-                                        </table>
+
+                                    <!-- Cash Flow Tab Pane -->
+                                    <div class="tab-pane fade" id="cash-flow" role="tabpanel" aria-labelledby="cash-flow-tab">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Activity</th>
+                                                        <th>Type</th>
+                                                        <th class="text-end" style="width: 25%;">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- Operating Activities -->
+                                                    <tr style="background-color: #f8f9fa; font-weight: 600;">
+                                                        <td colspan="3">OPERATING ACTIVITIES</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Net Income</td>
+                                                        <td>Operating</td>
+                                                        <td class="text-end">&#8369;<?php echo number_format($finNetProfit, 2); ?></td>
+                                                    </tr>
+                                                    <tr style="font-weight: 600; background-color: #f0f0f0;">
+                                                        <td>Net Operating Cash Flow</td>
+                                                        <td></td>
+                                                        <td class="text-end">&#8369;<?php echo number_format($finOperatingCF, 2); ?></td>
+                                                    </tr>
+
+                                                    <!-- Investing Activities -->
+                                                    <tr style="background-color: #f8f9fa; font-weight: 600;">
+                                                        <td colspan="3">INVESTING ACTIVITIES</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>No investing activities recorded</td>
+                                                        <td>Investing</td>
+                                                        <td class="text-end">&#8369;0.00</td>
+                                                    </tr>
+                                                    <tr style="font-weight: 600; background-color: #f0f0f0;">
+                                                        <td>Net Investing Cash Flow</td>
+                                                        <td></td>
+                                                        <td class="text-end">&#8369;<?php echo number_format($finInvestingCF, 2); ?></td>
+                                                    </tr>
+
+                                                    <!-- Financing Activities -->
+                                                    <tr style="background-color: #f8f9fa; font-weight: 600;">
+                                                        <td colspan="3">FINANCING ACTIVITIES</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>No financing activities recorded</td>
+                                                        <td>Financing</td>
+                                                        <td class="text-end">&#8369;0.00</td>
+                                                    </tr>
+                                                    <tr style="font-weight: 600; background-color: #f0f0f0;">
+                                                        <td>Net Financing Cash Flow</td>
+                                                        <td></td>
+                                                        <td class="text-end">&#8369;<?php echo number_format($finFinancingCF, 2); ?></td>
+                                                    </tr>
+
+                                                    <!-- Net Cash Flow -->
+                                                    <tr style="font-weight: 600; background-color: #f0f0f0;">
+                                                        <td>Net Cash Flow</td>
+                                                        <td></td>
+                                                        <td class="text-end">&#8369;<?php echo number_format(($finOperatingCF + $finInvestingCF + $finFinancingCF), 2); ?></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td colspan="2">Cash Balance Change (reconciled)</td>
+                                                        <td class="text-end">&#8369;<?php echo number_format($cashDelta, 2); ?></td>
+                                                    </tr>
+                                                    <?php if (abs(($finOperatingCF + $finInvestingCF + $finFinancingCF) - $cashDelta) > 0.01): ?>
+                                                        <tr>
+                                                            <td colspan="3"><div class="alert alert-warning mt-2 mb-0">Reconciliation discrepancy: classified cash flows (<?php echo number_format(($finOperatingCF + $finInvestingCF + $finFinancingCF),2); ?>) do not equal actual cash balance change (<?php echo number_format($cashDelta,2); ?>).</div></td>
+                                                        </tr>
+                                                    <?php endif; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -3537,37 +3874,37 @@ try {
         }
 
         function showBalanceSheetSummary(table) {
-            const totalAssets = <?php echo $totalAssets; ?>;
-            const totalLiabilities = <?php echo $totalLiabilities; ?>;
-            const totalEquity = <?php echo $totalEquity; ?>;
+            const totalAssets = <?php echo $finTotalAssets; ?>;
+            const totalLiabilities = <?php echo $finTotalLiabilities; ?>;
+            const totalEquity = <?php echo $finTotalEquity; ?>;
 
             table.innerHTML = `
                 <tr><th>Assets</th><th></th><th>&#8369;${number_format(totalAssets, 2)}</th></tr>
                 <tr><th>Liabilities</th><th></th><th>&#8369;${number_format(totalLiabilities, 2)}</th></tr>
                 <tr><th>Equity</th><th></th><th>&#8369;${number_format(totalAssets - totalLiabilities, 2)}</th></tr>
                 <?php
-                // Get equity accounts for breakdown
-                $equityAccounts = array_filter($chartOfAccounts, function($account) {
+                // Get equity accounts for breakdown (financial date)
+                $equityAccounts = array_filter($chartOfAccountsFinancial, function($account) {
                     return $account['account_type'] === 'equity';
                 });
                 foreach ($equityAccounts as $equity):
                 ?>
                     <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($equity['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($equity['balance'] ?? 0, 2); ?></td></tr>
                 <?php endforeach; ?>
-                <tr class="total-row"><td>&nbsp;&nbsp;Retained Earnings</td><td></td><td>&#8369;<?php echo number_format($netProfit, 2); ?></td></tr>
+                <tr class="total-row"><td>&nbsp;&nbsp;Retained Earnings</td><td></td><td>&#8369;<?php echo number_format($finNetProfit, 2); ?></td></tr>
             `;
         }
 
         function showBalanceSheetBreakdown(table) {
-            const totalAssets = <?php echo $totalAssets; ?>;
-            const totalLiabilities = <?php echo $totalLiabilities; ?>;
-            const totalEquity = <?php echo $totalEquity; ?>;
+            const totalAssets = <?php echo $finTotalAssets; ?>;
+            const totalLiabilities = <?php echo $finTotalLiabilities; ?>;
+            const totalEquity = <?php echo $finTotalEquity; ?>;
 
             table.innerHTML = `
                 <tr><th colspan="3" class="text-center bg-primary text-white">Assets</th></tr>
                 <tr><th>Account</th><th>Type</th><th>Balance</th></tr>
                 <?php
-                $assetAccounts = array_filter($chartOfAccounts, function($account) {
+                $assetAccounts = array_filter($chartOfAccountsFinancial, function($account) {
                     return $account['account_type'] === 'asset' && ($account['balance'] ?? 0) != 0;
                 });
                 foreach ($assetAccounts as $asset):
@@ -3579,7 +3916,7 @@ try {
                 <tr><th colspan="3" class="text-center bg-warning text-dark">Liabilities</th></tr>
                 <tr><th>Account</th><th>Type</th><th>Balance</th></tr>
                 <?php
-                $liabilityAccounts = array_filter($chartOfAccounts, function($account) {
+                $liabilityAccounts = array_filter($chartOfAccountsFinancial, function($account) {
                     return $account['account_type'] === 'liability' && ($account['balance'] ?? 0) != 0;
                 });
                 foreach ($liabilityAccounts as $liability):
@@ -3591,22 +3928,22 @@ try {
                 <tr><th colspan="3" class="text-center bg-success text-white">Equity</th></tr>
                 <tr><th>Account</th><th>Type</th><th>Balance</th></tr>
                 <?php
-                $equityAccounts = array_filter($chartOfAccounts, function($account) {
+                $equityAccounts = array_filter($chartOfAccountsFinancial, function($account) {
                     return $account['account_type'] === 'equity' && ($account['balance'] ?? 0) != 0;
                 });
                 foreach ($equityAccounts as $equity):
                 ?>
                     <tr><td><?php echo htmlspecialchars($equity['account_name']); ?></td><td>Equity</td><td>&#8369;<?php echo number_format($equity['balance'] ?? 0, 2); ?></td></tr>
                 <?php endforeach; ?>
-                <tr><td>Retained Earnings</td><td>Equity</td><td>&#8369;<?php echo number_format($netProfit, 2); ?></td></tr>
-                <tr class="total-row"><th>Total Equity</th><th></th><th>&#8369;<?php echo number_format($totalEquity + $netProfit, 2); ?></th></tr>
+                    <tr><td>Retained Earnings</td><td>Equity</td><td>&#8369;<?php echo number_format($finNetProfit, 2); ?></td></tr>
+                    <tr class="total-row"><th>Total Equity</th><th></th><th>&#8369;<?php echo number_format($finTotalEquity + $finNetProfit, 2); ?></th></tr>
             `;
         }
 
         function showIncomeStatementSummary(table) {
-            const totalRevenue = <?php echo $totalRevenue; ?>;
-            const totalExpenses = <?php echo $totalExpenses; ?>;
-            const netProfit = <?php echo $netProfit; ?>;
+            const totalRevenue = <?php echo $finTotalRevenue; ?>;
+            const totalExpenses = <?php echo $finTotalExpenses; ?>;
+            const netProfit = <?php echo $finNetProfit; ?>;
 
             table.innerHTML = `
                 <tr><th>Revenue</th><th></th><th>&#8369;${number_format(totalRevenue, 2)}</th></tr>
@@ -3624,7 +3961,7 @@ try {
                 <tr><th colspan="3" class="text-center bg-success text-white">Revenue</th></tr>
                 <tr><th>Account</th><th>Type</th><th>Amount</th></tr>
                 <?php
-                $revenueAccounts = array_filter($chartOfAccounts, function($account) {
+                $revenueAccounts = array_filter($chartOfAccountsFinancial, function($account) {
                     return $account['account_type'] === 'revenue' && ($account['balance'] ?? 0) != 0;
                 });
                 foreach ($revenueAccounts as $revenue):
@@ -3636,21 +3973,21 @@ try {
                 <tr><th colspan="3" class="text-center bg-danger text-white">Expenses</th></tr>
                 <tr><th>Account</th><th>Type</th><th>Amount</th></tr>
                 <?php
-                $expenseAccounts = array_filter($chartOfAccounts, function($account) {
+                $expenseAccounts = array_filter($chartOfAccountsFinancial, function($account) {
                     return $account['account_type'] === 'expense' && ($account['balance'] ?? 0) != 0;
                 });
                 foreach ($expenseAccounts as $expense):
                 ?>
                     <tr><td><?php echo htmlspecialchars($expense['account_name']); ?></td><td>Expense</td><td>&#8369;<?php echo number_format($expense['balance'] ?? 0, 2); ?></td></tr>
                 <?php endforeach; ?>
-                <tr class="total-row"><th>Total Expenses</th><th></th><th>&#8369;<?php echo number_format($totalExpenses, 2); ?></th></tr>
+                <tr class="total-row"><th>Total Expenses</th><th></th><th>&#8369;<?php echo number_format($finTotalExpenses, 2); ?></th></tr>
 
-                <tr class="total-row"><th>Net Profit</th><th></th><th>&#8369;<?php echo number_format($netProfit, 2); ?></th></tr>
+                <tr class="total-row"><th>Net Profit</th><th></th><th>&#8369;<?php echo number_format($finNetProfit, 2); ?></th></tr>
             `;
         }
 
         function showCashFlowSummary(table) {
-            const netProfit = <?php echo $netProfit; ?>;
+            const netProfit = <?php echo $finNetProfit; ?>;
             const operatingCashFlow = netProfit; // Simplified
 
             table.innerHTML = `
@@ -3664,7 +4001,7 @@ try {
         }
 
         function showCashFlowBreakdown(table) {
-            const netProfit = <?php echo $netProfit; ?>;
+            const netProfit = <?php echo $finNetProfit; ?>;
             const operatingCashFlow = netProfit; // Simplified
 
             table.innerHTML = `
