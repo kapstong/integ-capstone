@@ -1470,7 +1470,7 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
                     $existsStmt = $db->prepare("
                         SELECT COUNT(*) as count
                         FROM imported_transactions
-                        WHERE source_system = 'CORE1_HOTEL' AND external_id = ?
+                        WHERE source_system = 'HOTEL_CORE1' AND external_id = ?
                     ");
                     $existsStmt->execute([$externalId]);
                     $exists = $existsStmt->fetch(PDO::FETCH_ASSOC);
@@ -1479,7 +1479,7 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
                         $existingRowStmt = $db->prepare("
                             SELECT id, journal_entry_id, transaction_date, amount, external_reference
                             FROM imported_transactions
-                            WHERE source_system = 'CORE1_HOTEL' AND external_id = ?
+                            WHERE source_system = 'HOTEL_CORE1' AND external_id = ?
                             LIMIT 1
                         ");
                         $existingRowStmt->execute([$externalId]);
@@ -1519,7 +1519,7 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
 
                     $stmt->execute([
                         $batchId,
-                        'CORE1_HOTEL',
+                        'HOTEL_CORE1',
                         $transactionDate,
                         'hotel_payment',
                         $externalId,
@@ -1553,7 +1553,7 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
                         $db->prepare("
                             UPDATE imported_transactions
                             SET journal_entry_id = ?, status = 'posted', posted_at = NOW(), posted_by = 1
-                            WHERE external_id = ? AND source_system = 'CORE1_HOTEL'
+                            WHERE external_id = ? AND source_system = 'HOTEL_CORE1'
                         ")->execute([$journalEntryId, $externalId]);
                     }
 
@@ -1729,7 +1729,7 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
                 'credit_account_id' => $arAccount,
                 'amount' => $data['amount'],
                 'reference_number' => $paymentNumber,
-                'source_system' => 'CORE1_HOTEL'
+                'source_system' => 'HOTEL_CORE1'
             ]);
             $journalEntryId = $result['journal_entry_id'] ?? null;
         }
@@ -1766,7 +1766,7 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
                 'credit_account_id' => $arAccount,
                 'amount' => $amount,
                 'reference_number' => $reference ?: ('CORE1_PAY_' . ($payment['id'] ?? time())),
-                'source_system' => 'CORE1_HOTEL'
+                'source_system' => 'HOTEL_CORE1'
             ]);
 
             return $result['journal_entry_id'] ?? null;
@@ -1847,7 +1847,7 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
             INSERT INTO daily_revenue_summary
             (business_date, department_id, revenue_center_id, source_system, total_transactions,
              gross_revenue, discounts, service_charge, taxes, net_revenue)
-            VALUES (?, ?, ?, 'CORE1_HOTEL', ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, 'HOTEL_CORE1', ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 total_transactions = VALUES(total_transactions),
                 gross_revenue = VALUES(gross_revenue),
