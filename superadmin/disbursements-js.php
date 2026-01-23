@@ -167,6 +167,13 @@ header('Content-Type: application/javascript');
             modal.show();
         }
 
+        // Expose implementation reference so page-level wrappers can invoke it safely
+        try {
+            if (typeof window !== 'undefined') window._disbFilterImpl = showDisbursementFilterModal;
+        } catch (e) {
+            // ignore in non-browser contexts
+        }
+
         function buildDisbursementAuditParams() {
             const dateFrom = document.getElementById('disbFilterDateFrom')?.value || '';
             const dateTo = document.getElementById('disbFilterDateTo')?.value || '';
