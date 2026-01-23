@@ -1812,12 +1812,12 @@ try {
                             </div>
                             <!-- Financial Statements Tab -->
                             <div class="tab-pane fade financial-statements" id="financial" role="tabpanel" aria-labelledby="financial-tab">
-                                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
                                     <div>
                                         <h6 class="mb-1">Financial Statements</h6>
                                         <small class="text-muted">Period: <?php echo ucfirst($financialPeriod); ?> (<?php echo htmlspecialchars($financialDateFrom); ?> to <?php echo htmlspecialchars($financialDateTo); ?>)</small>
                                     </div>
-                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <div class="d-flex flex-wrap align-items-center gap-3">
                                         <form class="d-flex flex-wrap align-items-center gap-2" method="get">
                                             <input type="hidden" name="tab" value="financial">
                                             <select class="form-select" name="financial_period" style="min-width: 180px;">
@@ -1832,7 +1832,7 @@ try {
                                             <input type="date" class="form-control" name="financial_date" value="<?php echo htmlspecialchars($financialDateTo); ?>">
                                             <button class="btn btn-primary" type="submit">Apply</button>
                                         </form>
-                                            <div class="d-flex align-items-center gap-2">
+                                            <div class="d-flex align-items-center gap-3 ms-2">
                                                 <?php if (function_exists('privacyIsVisible') && !privacyIsVisible()): ?>
                                                     <button class="btn btn-outline-secondary" disabled title="Privacy mode is enabled">Print</button>
                                                 <?php else: ?>
@@ -2141,12 +2141,24 @@ try {
                                                             $detailsLabel = $detailsLabel . ' #' . $recordLabel;
                                                         }
                                                     ?>
-                                                    <tr>
-                                                        <td><?php echo htmlspecialchars(date('Y-m-d h:i A', strtotime($log['date_time']))); ?></td>
-                                                        <td><?php echo htmlspecialchars($log['user_name'] ?? 'Unknown'); ?></td>
-                                                        <td><?php echo htmlspecialchars($log['action'] ?? 'Unknown'); ?></td>
-                                                        <td><?php echo htmlspecialchars($detailsLabel); ?></td>
-                                                    </tr>
+                                                        <tr>
+                                                            <?php
+                                                                $ts = $log['date_time'] ?? null;
+                                                                $displayDate = 'N/A';
+                                                                if (!empty($ts)) {
+                                                                    try {
+                                                                        $dt = new DateTime($ts);
+                                                                        $displayDate = $dt->format('Y-m-d h:i A');
+                                                                    } catch (Exception $e) {
+                                                                        $displayDate = 'N/A';
+                                                                    }
+                                                                }
+                                                            ?>
+                                                            <td><?php echo htmlspecialchars($displayDate); ?></td>
+                                                            <td><?php echo htmlspecialchars($log['user_name'] ?? 'Unknown'); ?></td>
+                                                            <td><?php echo htmlspecialchars($log['action'] ?? 'Unknown'); ?></td>
+                                                            <td><?php echo htmlspecialchars($detailsLabel); ?></td>
+                                                        </tr>
                                                 <?php endforeach; ?>
                                             <?php endif; ?>
                                         </tbody>
