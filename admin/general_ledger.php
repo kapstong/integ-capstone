@@ -1125,6 +1125,10 @@ try {
                                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                         </div>
                                                         <div class="modal-body trial-modal-body">
+                                                            <div class="input-group mb-3">
+                                                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                                                <input type="search" class="form-control trial-search-input" id="<?php echo $searchId; ?>" data-target="<?php echo $tableId; ?>" placeholder="Search transactions">
+                                                            </div>
                                                             <?php if (!empty($salaryDisbursements[$accountId ?? 0])): ?>
                                                                 <div class="mb-4">
                                                                     <h6 class="mb-2">Payroll Disbursements</h6>
@@ -1154,10 +1158,6 @@ try {
                                                                     </div>
                                                                 </div>
                                                             <?php endif; ?>
-                                                            <div class="input-group mb-3">
-                                                                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                                                <input type="search" class="form-control trial-search-input" id="<?php echo $searchId; ?>" data-target="<?php echo $tableId; ?>" placeholder="Search transactions">
-                                                            </div>
                                                             <div class="table-responsive">
                                                                 <table class="table table-sm mb-0" id="<?php echo $tableId; ?>">
                                                                     <thead>
