@@ -1835,10 +1835,8 @@ try {
                                             <div class="d-flex align-items-center gap-2">
                                                 <?php if (function_exists('privacyIsVisible') && !privacyIsVisible()): ?>
                                                     <button class="btn btn-outline-secondary" disabled title="Privacy mode is enabled">Print</button>
-                                                    <button class="btn btn-outline-secondary" disabled title="Privacy mode is enabled">Download PDF</button>
                                                 <?php else: ?>
                                                     <a class="btn btn-outline-secondary" href="financials_print.php?financial_period=<?php echo urlencode($financialPeriod); ?>&financial_date=<?php echo urlencode($financialDateTo); ?>&auto_print=1" target="_blank">Print</a>
-                                                    <a class="btn btn-primary" href="/api/pdf.php?type=financial_report&start_date=<?php echo urlencode($financialDateFrom); ?>&end_date=<?php echo urlencode($financialDateTo); ?>&report_type=summary">Download PDF</a>
                                                 <?php endif; ?>
                                             </div>
                                     </div>

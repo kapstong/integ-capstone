@@ -151,7 +151,8 @@ if (!empty($cashAccountIds)) {
 }
 
 // Logging
-$logger->logUserAction('print_view', 'financial_statements', null, null, [
+// Log print action to audit trail (use 'printed' for consistency with other print actions)
+$logger->logUserAction('printed', 'financial_statements', null, null, [
     'filters' => [
         'financial_period' => $financialPeriod,
         'financial_date' => $financialDateTo
@@ -215,7 +216,6 @@ $printedAt = date('M d, Y h:i A');
 
     <div class="no-print" style="margin-top:18px; text-align:center;">
         <button onclick="window.print();" style="padding:8px 14px; margin-right:8px;">Print</button>
-        <a href="/api/pdf.php?type=financial_report&start_date=<?php echo urlencode($financialDateFrom); ?>&end_date=<?php echo urlencode($financialDateTo); ?>&report_type=summary" style="padding:8px 14px; background:#0b5ed7; color:#fff; text-decoration:none; border-radius:4px;">Download PDF</a>
     </div>
 </div>
 <script>
