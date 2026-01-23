@@ -621,10 +621,12 @@ require_once '../includes/database.php';
                     <h6 class="mb-0">Profit & Loss Statement (Income Statement)</h6>
                     <div>
                         <select class="form-select form-select-sm me-2" id="incomePeriodSelect" style="width: auto;" onchange="updateIncomeStatementPeriod()">
-                            <option value="current_month">Current Month</option>
-                            <option value="last_month">Last Month</option>
-                            <option value="last_quarter">Last Quarter</option>
-                            <option value="year_to_date">Year to Date</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="semi_annually">Semi-Annually</option>
+                            <option value="annually">Annually</option>
                             <option value="custom">Custom Range</option>
                         </select>
                         <button class="btn btn-outline-secondary me-2" onclick="exportIncomeStatement('csv')"><i class="fas fa-download me-2"></i>Export CSV</button>
@@ -1067,29 +1069,75 @@ require_once '../includes/database.php';
             const now = new Date();
             let from, to;
 
-            switch (period) {
-                case 'current_month':
-                    from = new Date(now.getFullYear(), now.getMonth(), 1);
-                    to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                    break;
-                case 'last_month':
-                    from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                    to = new Date(now.getFullYear(), now.getMonth(), 0);
-                    break;
-                case 'last_quarter':
-                    const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 - 3, 1);
-                    const quarterEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 0);
-                    from = quarterStart;
-                    to = quarterEnd;
-                    break;
-                case 'year_to_date':
-                    from = new Date(now.getFullYear(), 0, 1);
-                    to = now;
-                    break;
-                default:
-                    from = new Date(now.getFullYear(), now.getMonth(), 1);
-                    to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            function startOfWeek(d) {
+                const date = new Date(d);
+                const day = date.getDay();
+                const diff = (day === 0 ? -6 : 1 - day);
+                date.setDate(date.getDate() + diff);
+                date.setHours(0,0,0,0);
+                return date;
             }
+
+            switch (period) {
+                case 'daily':
+                    from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    to = new Date(from);
+                    function getDateRange(period) {
+                        const now = new Date();
+                        let from, to;
+
+                        function startOfWeek(d) {
+                            const date = new Date(d);
+                            const day = date.getDay();
+                            const diff = (day === 0 ? -6 : 1 - day);
+                            date.setDate(date.getDate() + diff);
+                            date.setHours(0,0,0,0);
+                            return date;
+                        }
+
+                        switch (period) {
+                            case 'daily':
+                                from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                                to = new Date(from);
+                                break;
+                            case 'weekly':
+                                from = startOfWeek(now);
+                                to = new Date(from);
+                                to.setDate(from.getDate() + 6);
+                                break;
+                            case 'monthly':
+                                from = new Date(now.getFullYear(), now.getMonth(), 1);
+                                to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                                break;
+                            case 'quarterly':
+                                const qStartMonth = Math.floor(now.getMonth() / 3) * 3;
+                                from = new Date(now.getFullYear(), qStartMonth, 1);
+                                to = new Date(now.getFullYear(), qStartMonth + 3, 0);
+                                break;
+                            case 'semi_annually':
+                                if (now.getMonth() < 6) {
+                                    from = new Date(now.getFullYear(), 0, 1);
+                                    to = new Date(now.getFullYear(), 6, 0);
+                                } else {
+                                    from = new Date(now.getFullYear(), 6, 1);
+                                    to = new Date(now.getFullYear(), 12, 0);
+                                }
+                                break;
+                            case 'annually':
+                            case 'yearly':
+                                from = new Date(now.getFullYear(), 0, 1);
+                                to = new Date(now.getFullYear(), 11, 31);
+                                break;
+                            default:
+                                from = new Date(now.getFullYear(), now.getMonth(), 1);
+                                to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                        }
+
+                        return {
+                            from: from.toISOString().split('T')[0],
+                            to: to.toISOString().split('T')[0]
+                        };
+                    }
 
             return {
                 from: from.toISOString().split('T')[0],
