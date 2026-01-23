@@ -46,6 +46,41 @@ switch ($trialPeriod) {
 }
 $trialDateFrom = $trialDateFromObj->format('Y-m-d');
 
+// Financial statements date filters
+$financialPeriod = isset($_GET['financial_period']) ? strtolower(trim($_GET['financial_period'])) : 'monthly';
+$financialDateToInput = isset($_GET['financial_date']) ? trim($_GET['financial_date']) : date('Y-m-d');
+$financialDateToObj = DateTime::createFromFormat('Y-m-d', $financialDateToInput) ?: new DateTime();
+$financialDateTo = $financialDateToObj->format('Y-m-d');
+$financialDateFromObj = clone $financialDateToObj;
+switch ($financialPeriod) {
+    case 'daily':
+        break;
+    case 'weekly':
+        $financialDateFromObj->modify('monday this week');
+        break;
+    case 'monthly':
+        $financialDateFromObj->modify('first day of this month');
+        break;
+    case 'quarterly':
+        $quarterStartMonth = (int)(floor(((int)$financialDateToObj->format('n') - 1) / 3) * 3) + 1;
+        $financialDateFromObj = new DateTime($financialDateToObj->format('Y') . '-' . str_pad((string)$quarterStartMonth, 2, '0', STR_PAD_LEFT) . '-01');
+        break;
+    case 'semi-annually':
+    case 'semiannually':
+        $halfStartMonth = ((int)$financialDateToObj->format('n') <= 6) ? 1 : 7;
+        $financialDateFromObj = new DateTime($financialDateToObj->format('Y') . '-' . str_pad((string)$halfStartMonth, 2, '0', STR_PAD_LEFT) . '-01');
+        break;
+    case 'annually':
+    case 'yearly':
+        $financialDateFromObj->modify('first day of january');
+        break;
+    default:
+        $financialPeriod = 'monthly';
+        $financialDateFromObj->modify('first day of this month');
+        break;
+}
+$financialDateFrom = $financialDateFromObj->format('Y-m-d');
+
 // Fetch summary data and actual data for all modules
 try {
     // Auto-sync Core 1 payments into journal entries
@@ -60,7 +95,7 @@ try {
     $totalAccounts = $db->query("SELECT COUNT(*) as count FROM chart_of_accounts WHERE is_active = 1")->fetch()['count'];
     $totalEntries = $db->query("SELECT COUNT(*) as count FROM journal_entries WHERE status != 'voided'")->fetch()['count'] ?? 0;
 
-    // Calculate balances from journal entries
+    // Calculate balances from journal entries (using financial period dates)
     $balanceStmt = $db->prepare("
         SELECT
             coa.account_type,
@@ -69,11 +104,11 @@ try {
         LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
         LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
             AND (je.status = 'posted' OR je.status IS NULL OR je.status = '')
-            AND je.entry_date <= ?
+            AND je.entry_date BETWEEN ? AND ?
         WHERE coa.is_active = 1
         GROUP BY coa.id, coa.account_type
     ");
-    $balanceStmt->execute([$trialDateTo]);
+    $balanceStmt->execute([$financialDateFrom, $financialDateTo]);
     $balanceQuery = $balanceStmt->fetchAll();
 
     // Initialize balance variables
@@ -756,18 +791,31 @@ try {
             font-size: 0.9em;
         }
         .financial-table th {
-            background-color: #f8f9fa;
-            color: #495057;
+            background: linear-gradient(135deg, var(--atiera-blue-600) 0%, var(--atiera-blue-800) 100%);
+            color: var(--atiera-white);
             font-weight: 600;
             border-top: none;
+            padding: 1rem;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
         }
         .financial-table td {
             border: none;
             padding: 12px 15px;
+            color: var(--atiera-gray-900);
         }
         .financial-table .total-row {
-            background-color: #e9ecef;
+            background: linear-gradient(135deg, var(--atiera-gold) 0%, var(--atiera-gold-dark) 100%);
             font-weight: bold;
+            color: var(--atiera-white);
+        }
+        .financial-table tr:nth-child(even) {
+            background: var(--atiera-gray-50);
+        }
+        .financial-table tr:hover {
+            background: var(--atiera-blue-50);
+            transition: background-color 0.3s ease;
         }
         .alert-custom {
             border-radius: 8px;
@@ -1469,20 +1517,64 @@ try {
                             </div>
                             <!-- Financial Statements Tab -->
                             <div class="tab-pane fade" id="financial" role="tabpanel" aria-labelledby="financial-tab">
-                                <ul class="nav nav-pills mb-3" id="financialSubTabs" role="tablist">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+                                    <div>
+                                        <h6 class="mb-1 fw-bold text-primary"><i class="fas fa-chart-line me-2"></i>Financial Statements</h6>
+                                        <small class="text-muted">Comprehensive financial position and performance analysis</small>
+                                    </div>
+                                    <div class="d-flex flex-wrap align-items-center gap-3">
+                                        <!-- View Toggle -->
+                                        <div class="btn-group" role="group" aria-label="View mode">
+                                            <input type="radio" class="btn-check" name="financialView" id="summaryView" autocomplete="off" checked>
+                                            <label class="btn btn-outline-primary btn-sm" for="summaryView">
+                                                <i class="fas fa-list me-1"></i>Summary
+                                            </label>
+                                            <input type="radio" class="btn-check" name="financialView" id="breakdownView" autocomplete="off">
+                                            <label class="btn btn-outline-primary btn-sm" for="breakdownView">
+                                                <i class="fas fa-stream me-1"></i>Breakdown
+                                            </label>
+                                        </div>
+
+                                        <!-- Period Controls -->
+                                        <form class="d-flex flex-wrap align-items-center gap-2" method="get" id="financialPeriodForm">
+                                            <input type="hidden" name="tab" value="financial">
+                                            <select class="form-select form-select-sm" name="financial_period" id="financialPeriod" style="min-width: 140px;">
+                                                <option value="daily" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'daily') ? 'selected' : ''; ?>>Daily</option>
+                                                <option value="weekly" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'weekly') ? 'selected' : ''; ?>>Weekly</option>
+                                                <option value="monthly" <?php echo (!isset($_GET['financial_period']) || $_GET['financial_period'] === 'monthly') ? 'selected' : ''; ?>>Monthly</option>
+                                                <option value="quarterly" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'quarterly') ? 'selected' : ''; ?>>Quarterly</option>
+                                                <option value="semi-annually" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'semi-annually') ? 'selected' : ''; ?>>Semi-Annually</option>
+                                                <option value="annually" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'annually') ? 'selected' : ''; ?>>Annually</option>
+                                                <option value="yearly" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'yearly') ? 'selected' : ''; ?>>Yearly</option>
+                                            </select>
+                                            <input type="date" class="form-control form-control-sm" name="financial_date" id="financialDate" value="<?php echo isset($_GET['financial_date']) ? htmlspecialchars($_GET['financial_date']) : date('Y-m-d'); ?>" style="min-width: 140px;">
+                                            <button class="btn btn-primary btn-sm" type="submit">
+                                                <i class="fas fa-sync-alt me-1"></i>Update
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <ul class="nav nav-pills mb-4" id="financialSubTabs" role="tablist">
                                     <li class="nav-item">
-                                        <a class="nav-link active" id="balance-sheet-tab" data-bs-toggle="pill" href="#balance-sheet" role="tab">Balance Sheet</a>
+                                        <a class="nav-link active" id="balance-sheet-tab" data-bs-toggle="pill" href="#balance-sheet" role="tab">
+                                            <i class="fas fa-balance-scale me-2"></i>Balance Sheet
+                                        </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link" id="income-statement-tab" data-bs-toggle="pill" href="#income-statement" role="tab">Income Statement</a>
+                                        <a class="nav-link" id="income-statement-tab" data-bs-toggle="pill" href="#income-statement" role="tab">
+                                            <i class="fas fa-chart-bar me-2"></i>Income Statement
+                                        </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link" id="cash-flow-tab" data-bs-toggle="pill" href="#cash-flow" role="tab">Cash Flow</a>
+                                        <a class="nav-link" id="cash-flow-tab" data-bs-toggle="pill" href="#cash-flow" role="tab">
+                                            <i class="fas fa-money-bill-wave me-2"></i>Cash Flow
+                                        </a>
                                     </li>
                                 </ul>
                                 <div class="tab-content">
-                                    <div class="tab-pane fade show active" id="balance-sheet" role="tabpanel">
-                                        <h6>Balance Sheet - As of <?php echo date('F j, Y'); ?></h6>
+                    <div class="tab-pane fade show active" id="balance-sheet" role="tabpanel">
+                                        <h6>Balance Sheet - As of <?php echo date('F j, Y', strtotime($financialDateTo)); ?> (<?php echo ucfirst($financialPeriod); ?> period)</h6>
                                         <table class="table financial-table">
                                             <tr><th>Assets</th><th></th><th>&#8369;<?php echo number_format($totalAssets, 2); ?></th></tr>
                                             <?php
@@ -3260,6 +3352,218 @@ try {
             }
         });
 
+        // Financial Statements Functions
+        function toggleFinancialView() {
+            const summaryView = document.getElementById('summaryView');
+            const breakdownView = document.getElementById('breakdownView');
+            const isSummaryView = summaryView.checked;
+
+            // Update all financial statement tables
+            updateFinancialStatementsDisplay(isSummaryView);
+        }
+
+        function updateFinancialStatementsDisplay(isSummaryView) {
+            const statements = ['balance-sheet', 'income-statement', 'cash-flow'];
+
+            statements.forEach(statement => {
+                const container = document.getElementById(statement);
+                if (!container) return;
+
+                const table = container.querySelector('.financial-table');
+                if (!table) return;
+
+                if (isSummaryView) {
+                    // Show summary view (current implementation)
+                    showFinancialSummary(table, statement);
+                } else {
+                    // Show breakdown view
+                    showFinancialBreakdown(table, statement);
+                }
+            });
+        }
+
+        function showFinancialSummary(table, statementType) {
+            // Clear existing content
+            table.innerHTML = '';
+
+            switch (statementType) {
+                case 'balance-sheet':
+                    showBalanceSheetSummary(table);
+                    break;
+                case 'income-statement':
+                    showIncomeStatementSummary(table);
+                    break;
+                case 'cash-flow':
+                    showCashFlowSummary(table);
+                    break;
+            }
+        }
+
+        function showFinancialBreakdown(table, statementType) {
+            // Clear existing content
+            table.innerHTML = '';
+
+            switch (statementType) {
+                case 'balance-sheet':
+                    showBalanceSheetBreakdown(table);
+                    break;
+                case 'income-statement':
+                    showIncomeStatementBreakdown(table);
+                    break;
+                case 'cash-flow':
+                    showCashFlowBreakdown(table);
+                    break;
+            }
+        }
+
+        function showBalanceSheetSummary(table) {
+            const totalAssets = <?php echo $totalAssets; ?>;
+            const totalLiabilities = <?php echo $totalLiabilities; ?>;
+            const totalEquity = <?php echo $totalEquity; ?>;
+
+            table.innerHTML = `
+                <tr><th>Assets</th><th></th><th>&#8369;${number_format(totalAssets, 2)}</th></tr>
+                <tr><th>Liabilities</th><th></th><th>&#8369;${number_format(totalLiabilities, 2)}</th></tr>
+                <tr><th>Equity</th><th></th><th>&#8369;${number_format(totalAssets - totalLiabilities, 2)}</th></tr>
+                <?php
+                // Get equity accounts for breakdown
+                $equityAccounts = array_filter($chartOfAccounts, function($account) {
+                    return $account['account_type'] === 'equity';
+                });
+                foreach ($equityAccounts as $equity):
+                ?>
+                    <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($equity['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($equity['balance'] ?? 0, 2); ?></td></tr>
+                <?php endforeach; ?>
+                <tr class="total-row"><td>&nbsp;&nbsp;Retained Earnings</td><td></td><td>&#8369;<?php echo number_format($netProfit, 2); ?></td></tr>
+            `;
+        }
+
+        function showBalanceSheetBreakdown(table) {
+            const totalAssets = <?php echo $totalAssets; ?>;
+            const totalLiabilities = <?php echo $totalLiabilities; ?>;
+            const totalEquity = <?php echo $totalEquity; ?>;
+
+            table.innerHTML = `
+                <tr><th colspan="3" class="text-center bg-primary text-white">Assets</th></tr>
+                <tr><th>Account</th><th>Type</th><th>Balance</th></tr>
+                <?php
+                $assetAccounts = array_filter($chartOfAccounts, function($account) {
+                    return $account['account_type'] === 'asset' && ($account['balance'] ?? 0) != 0;
+                });
+                foreach ($assetAccounts as $asset):
+                ?>
+                    <tr><td><?php echo htmlspecialchars($asset['account_name']); ?></td><td>Asset</td><td>&#8369;<?php echo number_format($asset['balance'] ?? 0, 2); ?></td></tr>
+                <?php endforeach; ?>
+                <tr class="total-row"><th>Total Assets</th><th></th><th>&#8369;<?php echo number_format($totalAssets, 2); ?></th></tr>
+
+                <tr><th colspan="3" class="text-center bg-warning text-dark">Liabilities</th></tr>
+                <tr><th>Account</th><th>Type</th><th>Balance</th></tr>
+                <?php
+                $liabilityAccounts = array_filter($chartOfAccounts, function($account) {
+                    return $account['account_type'] === 'liability' && ($account['balance'] ?? 0) != 0;
+                });
+                foreach ($liabilityAccounts as $liability):
+                ?>
+                    <tr><td><?php echo htmlspecialchars($liability['account_name']); ?></td><td>Liability</td><td>&#8369;<?php echo number_format($liability['balance'] ?? 0, 2); ?></td></tr>
+                <?php endforeach; ?>
+                <tr class="total-row"><th>Total Liabilities</th><th></th><th>&#8369;<?php echo number_format($totalLiabilities, 2); ?></th></tr>
+
+                <tr><th colspan="3" class="text-center bg-success text-white">Equity</th></tr>
+                <tr><th>Account</th><th>Type</th><th>Balance</th></tr>
+                <?php
+                $equityAccounts = array_filter($chartOfAccounts, function($account) {
+                    return $account['account_type'] === 'equity' && ($account['balance'] ?? 0) != 0;
+                });
+                foreach ($equityAccounts as $equity):
+                ?>
+                    <tr><td><?php echo htmlspecialchars($equity['account_name']); ?></td><td>Equity</td><td>&#8369;<?php echo number_format($equity['balance'] ?? 0, 2); ?></td></tr>
+                <?php endforeach; ?>
+                <tr><td>Retained Earnings</td><td>Equity</td><td>&#8369;<?php echo number_format($netProfit, 2); ?></td></tr>
+                <tr class="total-row"><th>Total Equity</th><th></th><th>&#8369;<?php echo number_format($totalEquity + $netProfit, 2); ?></th></tr>
+            `;
+        }
+
+        function showIncomeStatementSummary(table) {
+            const totalRevenue = <?php echo $totalRevenue; ?>;
+            const totalExpenses = <?php echo $totalExpenses; ?>;
+            const netProfit = <?php echo $netProfit; ?>;
+
+            table.innerHTML = `
+                <tr><th>Revenue</th><th></th><th>&#8369;${number_format(totalRevenue, 2)}</th></tr>
+                <tr><th>Expenses</th><th></th><th>&#8369;${number_format(totalExpenses, 2)}</th></tr>
+                <tr class="total-row"><th>Net Profit</th><th></th><th>&#8369;${number_format(netProfit, 2)}</th></tr>
+            `;
+        }
+
+        function showIncomeStatementBreakdown(table) {
+            const totalRevenue = <?php echo $totalRevenue; ?>;
+            const totalExpenses = <?php echo $totalExpenses; ?>;
+            const netProfit = <?php echo $netProfit; ?>;
+
+            table.innerHTML = `
+                <tr><th colspan="3" class="text-center bg-success text-white">Revenue</th></tr>
+                <tr><th>Account</th><th>Type</th><th>Amount</th></tr>
+                <?php
+                $revenueAccounts = array_filter($chartOfAccounts, function($account) {
+                    return $account['account_type'] === 'revenue' && ($account['balance'] ?? 0) != 0;
+                });
+                foreach ($revenueAccounts as $revenue):
+                ?>
+                    <tr><td><?php echo htmlspecialchars($revenue['account_name']); ?></td><td>Revenue</td><td>&#8369;<?php echo number_format($revenue['balance'] ?? 0, 2); ?></td></tr>
+                <?php endforeach; ?>
+                <tr class="total-row"><th>Total Revenue</th><th></th><th>&#8369;<?php echo number_format($totalRevenue, 2); ?></th></tr>
+
+                <tr><th colspan="3" class="text-center bg-danger text-white">Expenses</th></tr>
+                <tr><th>Account</th><th>Type</th><th>Amount</th></tr>
+                <?php
+                $expenseAccounts = array_filter($chartOfAccounts, function($account) {
+                    return $account['account_type'] === 'expense' && ($account['balance'] ?? 0) != 0;
+                });
+                foreach ($expenseAccounts as $expense):
+                ?>
+                    <tr><td><?php echo htmlspecialchars($expense['account_name']); ?></td><td>Expense</td><td>&#8369;<?php echo number_format($expense['balance'] ?? 0, 2); ?></td></tr>
+                <?php endforeach; ?>
+                <tr class="total-row"><th>Total Expenses</th><th></th><th>&#8369;<?php echo number_format($totalExpenses, 2); ?></th></tr>
+
+                <tr class="total-row"><th>Net Profit</th><th></th><th>&#8369;<?php echo number_format($netProfit, 2); ?></th></tr>
+            `;
+        }
+
+        function showCashFlowSummary(table) {
+            const netProfit = <?php echo $netProfit; ?>;
+            const operatingCashFlow = netProfit; // Simplified
+
+            table.innerHTML = `
+                <tr><th>Operating Activities</th><th></th><th>&#8369;${number_format(netProfit, 2)}</th></tr>
+                <tr><td>&nbsp;&nbsp;Net Income</td><td></td><td>&#8369;${number_format(netProfit, 2)}</td></tr>
+                <tr class="total-row"><th>Net Operating Cash Flow</th><th></th><th>&#8369;${number_format(operatingCashFlow, 2)}</th></tr>
+                <tr><th>Investing Activities</th><th></th><th>&#8369;0.00</th></tr>
+                <tr><th>Financing Activities</th><th></th><th>&#8369;0.00</th></tr>
+                <tr class="total-row"><th>Net Cash Flow</th><th></th><th>&#8369;${number_format(operatingCashFlow, 2)}</th></tr>
+            `;
+        }
+
+        function showCashFlowBreakdown(table) {
+            const netProfit = <?php echo $netProfit; ?>;
+            const operatingCashFlow = netProfit; // Simplified
+
+            table.innerHTML = `
+                <tr><th colspan="3" class="text-center bg-info text-white">Operating Activities</th></tr>
+                <tr><td>Net Income</td><td>Operating</td><td>&#8369;${number_format(netProfit, 2)}</td></tr>
+                <tr class="total-row"><th>Net Operating Cash Flow</th><th></th><th>&#8369;${number_format(operatingCashFlow, 2)}</th></tr>
+
+                <tr><th colspan="3" class="text-center bg-secondary text-white">Investing Activities</th></tr>
+                <tr><td>No investing activities recorded</td><td>Investing</td><td>&#8369;0.00</td></tr>
+                <tr class="total-row"><th>Net Investing Cash Flow</th><th></th><th>&#8369;0.00</th></tr>
+
+                <tr><th colspan="3" class="text-center bg-warning text-dark">Financing Activities</th></tr>
+                <tr><td>No financing activities recorded</td><td>Financing</td><td>&#8369;0.00</td></tr>
+                <tr class="total-row"><th>Net Financing Cash Flow</th><th></th><th>&#8369;0.00</th></tr>
+
+                <tr class="total-row"><th>Net Cash Flow</th><th></th><th>&#8369;${number_format(operatingCashFlow, 2)}</th></tr>
+            `;
+        }
+
         // Initialize sidebar state on page load
         document.addEventListener('DOMContentLoaded', function() {
             const sidebar = document.getElementById('sidebar');
@@ -3289,6 +3593,18 @@ try {
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
+
+            // Initialize financial view toggle
+            const viewRadios = document.querySelectorAll('input[name="financialView"]');
+            viewRadios.forEach(radio => {
+                radio.addEventListener('change', toggleFinancialView);
+            });
+
+            // Set initial view
+            const summaryView = document.getElementById('summaryView');
+            if (summaryView && summaryView.checked) {
+                toggleFinancialView();
+            }
         });
     </script>
 
