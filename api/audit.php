@@ -160,6 +160,25 @@ function getAuditTrail($db, $filters = []) {
             $oldValues = $log['old_values'] ? json_decode($log['old_values'], true) : [];
             $newValues = $log['new_values'] ? json_decode($log['new_values'], true) : [];
 
+            // Normalize common field aliases to keep audit payloads aligned
+            $aliases = [
+                'payment_date' => 'disbursement_date',
+                'disb_no' => 'disbursement_number',
+                'disb_number' => 'disbursement_number',
+                'ref' => 'reference_number',
+                'ref_number' => 'reference_number',
+                'reference' => 'reference_number'
+            ];
+
+            foreach ($aliases as $alias => $canonical) {
+                if (isset($newValues[$alias]) && !isset($newValues[$canonical])) {
+                    $newValues[$canonical] = $newValues[$alias];
+                }
+                if (isset($oldValues[$alias]) && !isset($oldValues[$canonical])) {
+                    $oldValues[$canonical] = $oldValues[$alias];
+                }
+            }
+
             if ($log['table_name'] === 'disbursements') {
                 // If record_id is present but disbursement_number missing, query the disbursements table
                 if (empty($log['disbursement_number']) && !empty($log['record_id'])) {

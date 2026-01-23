@@ -145,6 +145,37 @@ class Logger {
             'new_values' => $newValues
         ];
         $this->info("User action: $action", $context);
+        // Normalize common field aliases so audit records align with disbursements table
+        $aliases = [
+            'payment_date' => 'disbursement_date',
+            'disb_no' => 'disbursement_number',
+            'disb_number' => 'disbursement_number',
+            'ref' => 'reference_number',
+            'ref_number' => 'reference_number',
+            'reference' => 'reference_number'
+        ];
+
+        // Ensure arrays for manipulation (handle JSON strings passed in)
+        if (is_string($oldValues)) {
+            $decoded = json_decode($oldValues, true);
+            $oldValues = $decoded === null ? [] : $decoded;
+        }
+        if (is_string($newValues)) {
+            $decoded = json_decode($newValues, true);
+            $newValues = $decoded === null ? [] : $decoded;
+        }
+
+        if (!is_array($oldValues)) $oldValues = (array)$oldValues;
+        if (!is_array($newValues)) $newValues = (array)$newValues;
+
+        foreach ($aliases as $alias => $canonical) {
+            if (isset($newValues[$alias]) && !isset($newValues[$canonical])) {
+                $newValues[$canonical] = $newValues[$alias];
+            }
+            if (isset($oldValues[$alias]) && !isset($oldValues[$canonical])) {
+                $oldValues[$canonical] = $oldValues[$alias];
+            }
+        }
 
         // Log to database audit trail
         try {
