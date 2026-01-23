@@ -286,11 +286,17 @@ try {
     // Fetch audit trail (if table exists)
     try {
         $auditTrail = $db->query("
-            SELECT created_at as date_time, user_id as user, action, table_name as details, record_id
-            FROM audit_log
-            WHERE user_id IS NOT NULL
-              AND table_name IN ('journal_entries', 'journal_entry_lines', 'chart_of_accounts')
-            ORDER BY created_at DESC
+            SELECT
+                al.created_at as date_time,
+                COALESCE(u.full_name, u.username, CONCAT('User #', al.user_id)) as user_name,
+                al.action,
+                al.table_name as details,
+                al.record_id
+            FROM audit_log al
+            LEFT JOIN users u ON al.user_id = u.id
+            WHERE al.user_id IS NOT NULL
+              AND al.table_name IN ('journal_entries', 'journal_entry_lines', 'chart_of_accounts')
+            ORDER BY al.created_at DESC
             LIMIT 10
         ")->fetchAll() ?? [];
     } catch (Exception $e) {
@@ -1571,7 +1577,7 @@ try {
                                                 <?php foreach ($auditTrail as $log): ?>
                                                     <tr>
                                                         <td><?php echo htmlspecialchars(date('Y-m-d h:i A', strtotime($log['date_time']))); ?></td>
-                                                        <td><?php echo htmlspecialchars($log['user'] ?? 'Unknown'); ?></td>
+                                                        <td><?php echo htmlspecialchars($log['user_name'] ?? 'Unknown'); ?></td>
                                                         <td><?php echo htmlspecialchars($log['action'] ?? 'Unknown'); ?></td>
                                                         <td><?php echo htmlspecialchars(($log['details'] ?? 'Unknown') . ' - ' . ($log['record_id'] ?? 'N/A')); ?></td>
                                                     </tr>
@@ -2042,7 +2048,7 @@ try {
             tbody.innerHTML = auditTrail.map(log => `
                 <tr>
                     <td>${new Date(log.date_time).toLocaleString()}</td>
-                    <td>${log.user || 'Unknown'}</td>
+                    <td>${log.full_name || log.username || log.user || log.user_name || 'Unknown'}</td>
                     <td>${log.action || ''}</td>
                     <td>${log.details || ''}</td>
                 </tr>

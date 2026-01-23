@@ -653,9 +653,10 @@ try {
                                 <tr>
                                     <td><?php echo date('M j, Y H:i:s', strtotime($log['created_at'])); ?></td>
                                     <td>
-                                        <?php if ($log['username']): ?>
-                                            <span title="<?php echo htmlspecialchars($log['full_name']); ?>">
-                                                <?php echo htmlspecialchars($log['username']); ?>
+                                        <?php if (!empty($log['full_name']) || !empty($log['username'])): ?>
+                                            <?php $displayName = $log['full_name'] ?: $log['username']; ?>
+                                            <span title="<?php echo htmlspecialchars($log['username'] ?? $displayName); ?>">
+                                                <?php echo htmlspecialchars($displayName); ?>
                                             </span>
                                         <?php else: ?>
                                             <span class="text-muted">System</span>
@@ -738,7 +739,7 @@ function showLogDetails(logId) {
                             <h6>Basic Information</h6>
                             <table class="table table-sm">
                                 <tr><td><strong>ID:</strong></td><td>${log.id}</td></tr>
-                                <tr><td><strong>User:</strong></td><td>${log.username || 'System'}</td></tr>
+                                <tr><td><strong>User:</strong></td><td>${log.full_name || log.username || 'System'}</td></tr>
                                 <tr><td><strong>Action:</strong></td><td>${log.action}</td></tr>
                                 <tr><td><strong>Table:</strong></td><td>${log.table_name || 'N/A'}</td></tr>
                                 <tr><td><strong>Record ID:</strong></td><td>${log.record_id || 'N/A'}</td></tr>

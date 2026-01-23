@@ -2,6 +2,7 @@
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
 require_once '../includes/privacy_guard.php';
+require_once '../includes/logger.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -16,6 +17,8 @@ $dateFromInput = trim($_GET['date_from'] ?? '');
 $dateToInput = trim($_GET['date_to'] ?? '');
 $period = strtolower(trim($_GET['period'] ?? ''));
 $autoPrint = ($_GET['auto_print'] ?? '') === '1';
+
+$logger = Logger::getInstance();
 
 function normalizeDate(?string $value): ?string
 {
@@ -153,6 +156,18 @@ if ($fromDate || $toDate) {
 
 $printedAt = date('M d, Y h:i A');
 $totalEntries = count($entries);
+
+if ($autoPrint) {
+    $logger->logUserAction('printed', 'journal_entries', '', null, [
+        'report' => 'journal_entries',
+        'filters' => [
+            'search' => $search,
+            'date_from' => $dateFromInput,
+            'date_to' => $dateToInput,
+            'period' => $period
+        ]
+    ]);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
