@@ -1755,6 +1755,7 @@ $departments = [
             syncDepartmentIntegrations();
         });
     </script>
+<script src="../includes/tab_persistence.js?v=1"></script>
 </body>
 </html>
 
