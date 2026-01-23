@@ -167,6 +167,7 @@ try {
 
     // Build trial balance breakdown (latest 50 lines per account)
     $trialBreakdown = [];
+    $salaryDisbursements = [];
     $trialAccountIds = array_filter(array_column($trialBalance, 'account_id'));
     if (!empty($trialAccountIds)) {
         $placeholders = implode(',', array_fill(0, count($trialAccountIds), '?'));
@@ -195,6 +196,39 @@ try {
                 continue;
             }
             $trialBreakdown[$accountId][] = $row;
+        }
+    }
+
+    // Fetch payroll disbursements for salary expense accounts
+    $salaryAccountIds = [];
+    foreach ($trialBalance as $account) {
+        $accountId = (int)($account['account_id'] ?? 0);
+        if ($accountId === 0) {
+            continue;
+        }
+        $accountName = strtolower($account['account_name'] ?? '');
+        $accountCode = $account['account_code'] ?? '';
+        if (strpos($accountName, 'salar') !== false || in_array($accountCode, ['5401', '5402', '5403', '6000'], true)) {
+            $salaryAccountIds[] = $accountId;
+        }
+    }
+    $salaryAccountIds = array_values(array_unique($salaryAccountIds));
+    if (!empty($salaryAccountIds)) {
+        $placeholders = implode(',', array_fill(0, count($salaryAccountIds), '?'));
+        $salaryStmt = $db->prepare("
+            SELECT id, disbursement_date, payee, reference_number, purpose, amount, account_id
+            FROM disbursements
+            WHERE account_id IN ($placeholders)
+            ORDER BY disbursement_date DESC, id DESC
+        ");
+        $salaryStmt->execute($salaryAccountIds);
+        $rows = $salaryStmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as $row) {
+            $accountId = (int)$row['account_id'];
+            if (!isset($salaryDisbursements[$accountId])) {
+                $salaryDisbursements[$accountId] = [];
+            }
+            $salaryDisbursements[$accountId][] = $row;
         }
     }
 
@@ -1051,7 +1085,8 @@ try {
                                                     $modalLabelId = $modalId . '-label';
                                                     $searchId = $detailId . '-search';
                                                     $tableId = $detailId . '-table';
-                                                    $hasDetails = !empty($trialBreakdown[$account['account_id'] ?? 0]);
+                                                    $accountId = $account['account_id'] ?? 0;
+                                                    $hasDetails = !empty($trialBreakdown[$accountId]) || !empty($salaryDisbursements[$accountId]);
                                                     ?>
                                                     <tr>
                                                         <td><?php echo htmlspecialchars($account['account_name']); ?></td>
@@ -1087,7 +1122,7 @@ try {
                                         $detailId = 'trial-details-' . intval($accountId);
                                         $searchId = $detailId . '-search';
                                         $tableId = $detailId . '-table';
-                                        $hasDetails = !empty($trialBreakdown[$accountId ?? 0]);
+                                        $hasDetails = !empty($trialBreakdown[$accountId ?? 0]) || !empty($salaryDisbursements[$accountId ?? 0]);
                                         ?>
                                         <?php if ($hasDetails): ?>
                                             <div class="modal fade trial-modal" id="<?php echo $modalId; ?>" tabindex="-1" aria-labelledby="<?php echo $modalLabelId; ?>" aria-hidden="true">
@@ -1098,6 +1133,35 @@ try {
                                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                         </div>
                                                         <div class="modal-body trial-modal-body">
+                                                            <?php if (!empty($salaryDisbursements[$accountId ?? 0])): ?>
+                                                                <div class="mb-4">
+                                                                    <h6 class="mb-2">Payroll Disbursements</h6>
+                                                                    <div class="table-responsive">
+                                                                        <table class="table table-sm mb-0">
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    <th>Date</th>
+                                                                                    <th>Payee</th>
+                                                                                    <th>Reference</th>
+                                                                                    <th>Purpose</th>
+                                                                                    <th class="text-end">Amount</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                <?php foreach ($salaryDisbursements[$accountId] as $row): ?>
+                                                                                    <tr>
+                                                                                        <td><?php echo htmlspecialchars($row['disbursement_date']); ?></td>
+                                                                                        <td><?php echo htmlspecialchars($row['payee'] ?? ''); ?></td>
+                                                                                        <td><?php echo htmlspecialchars($row['reference_number'] ?? ''); ?></td>
+                                                                                        <td><?php echo htmlspecialchars($row['purpose'] ?? ''); ?></td>
+                                                                                        <td class="text-end"><?php echo '&#8369;' . number_format((float)($row['amount'] ?? 0), 2); ?></td>
+                                                                                    </tr>
+                                                                                <?php endforeach; ?>
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </div>
+                                                            <?php endif; ?>
                                                             <div class="input-group mb-3">
                                                                 <span class="input-group-text"><i class="fas fa-search"></i></span>
                                                                 <input type="search" class="form-control trial-search-input" id="<?php echo $searchId; ?>" data-target="<?php echo $tableId; ?>" placeholder="Search transactions">
