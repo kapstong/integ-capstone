@@ -1477,41 +1477,77 @@ try {
                             </div>
                             <!-- Financial Statements Tab -->
                             <div class="tab-pane fade" id="financial" role="tabpanel" aria-labelledby="financial-tab">
-                                <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-                                    <div>
-                                        <h6 class="mb-1 fw-bold text-primary"><i class="fas fa-chart-line me-2"></i>Financial Statements</h6>
-                                        <small class="text-muted">Comprehensive financial position and performance analysis</small>
-                                    </div>
-                                    <div class="d-flex flex-wrap align-items-center gap-3">
-                                        <!-- View Toggle -->
-                                        <div class="btn-group" role="group" aria-label="View mode">
-                                            <input type="radio" class="btn-check" name="financialView" id="summaryView" autocomplete="off" checked>
-                                            <label class="btn btn-outline-primary btn-sm" for="summaryView">
-                                                <i class="fas fa-list me-1"></i>Summary
-                                            </label>
-                                            <input type="radio" class="btn-check" name="financialView" id="breakdownView" autocomplete="off">
-                                            <label class="btn btn-outline-primary btn-sm" for="breakdownView">
-                                                <i class="fas fa-stream me-1"></i>Breakdown
-                                            </label>
+                                <!-- Header Section -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div>
+                                                <h5 class="mb-1 fw-bold text-primary">
+                                                    <i class="fas fa-chart-line me-2"></i>Financial Statements
+                                                </h5>
+                                                <p class="text-muted mb-0 small">Comprehensive financial position and performance analysis</p>
+                                            </div>
+                                            <div class="text-end">
+                                                <small class="text-muted d-block">As of: <?php echo date('M j, Y', strtotime($financialDateTo)); ?></small>
+                                                <small class="text-muted d-block"><?php echo ucfirst($financialPeriod); ?> Period</small>
+                                            </div>
                                         </div>
+                                    </div>
+                                </div>
 
-                                        <!-- Period Controls -->
-                                        <form class="d-flex flex-wrap align-items-center gap-2" method="get" id="financialPeriodForm">
-                                            <input type="hidden" name="tab" value="financial">
-                                            <select class="form-select form-select-sm" name="financial_period" id="financialPeriod" style="min-width: 140px;">
-                                                <option value="daily" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'daily') ? 'selected' : ''; ?>>Daily</option>
-                                                <option value="weekly" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'weekly') ? 'selected' : ''; ?>>Weekly</option>
-                                                <option value="monthly" <?php echo (!isset($_GET['financial_period']) || $_GET['financial_period'] === 'monthly') ? 'selected' : ''; ?>>Monthly</option>
-                                                <option value="quarterly" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'quarterly') ? 'selected' : ''; ?>>Quarterly</option>
-                                                <option value="semi-annually" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'semi-annually') ? 'selected' : ''; ?>>Semi-Annually</option>
-                                                <option value="annually" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'annually') ? 'selected' : ''; ?>>Annually</option>
-                                                <option value="yearly" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'yearly') ? 'selected' : ''; ?>>Yearly</option>
-                                            </select>
-                                            <input type="date" class="form-control form-control-sm" name="financial_date" id="financialDate" value="<?php echo isset($_GET['financial_date']) ? htmlspecialchars($_GET['financial_date']) : date('Y-m-d'); ?>" style="min-width: 140px;">
-                                            <button class="btn btn-primary btn-sm" type="submit">
-                                                <i class="fas fa-sync-alt me-1"></i>Update
-                                            </button>
-                                        </form>
+                                <!-- Controls Section -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <div class="card border-0 shadow-sm">
+                                            <div class="card-body p-4">
+                                                <div class="row align-items-center">
+                                                    <div class="col-lg-6 mb-3 mb-lg-0">
+                                                        <div class="d-flex align-items-center gap-3">
+                                                            <div class="control-group">
+                                                                <label class="form-label fw-semibold text-muted mb-2 small">VIEW MODE</label>
+                                                                <div class="btn-group btn-group-sm" role="group" aria-label="View mode">
+                                                                    <input type="radio" class="btn-check" name="financialView" id="summaryView" autocomplete="off" checked>
+                                                                    <label class="btn btn-outline-primary" for="summaryView">
+                                                                        <i class="fas fa-list me-1"></i>Summary
+                                                                    </label>
+                                                                    <input type="radio" class="btn-check" name="financialView" id="breakdownView" autocomplete="off">
+                                                                    <label class="btn btn-outline-primary" for="breakdownView">
+                                                                        <i class="fas fa-stream me-1"></i>Breakdown
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-lg-6">
+                                                        <div class="control-group">
+                                                            <label class="form-label fw-semibold text-muted mb-2 small">PERIOD & DATE FILTERS</label>
+                                                            <form class="d-flex flex-wrap align-items-center gap-2" method="get" id="financialPeriodForm">
+                                                                <input type="hidden" name="tab" value="financial">
+                                                                <div class="input-group input-group-sm">
+                                                                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                                                    <select class="form-select" name="financial_period" id="financialPeriod">
+                                                                        <option value="daily" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'daily') ? 'selected' : ''; ?>>Daily</option>
+                                                                        <option value="weekly" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'weekly') ? 'selected' : ''; ?>>Weekly</option>
+                                                                        <option value="monthly" <?php echo (!isset($_GET['financial_period']) || $_GET['financial_period'] === 'monthly') ? 'selected' : ''; ?>>Monthly</option>
+                                                                        <option value="quarterly" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'quarterly') ? 'selected' : ''; ?>>Quarterly</option>
+                                                                        <option value="semi-annually" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'semi-annually') ? 'selected' : ''; ?>>Semi-Annually</option>
+                                                                        <option value="annually" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'annually') ? 'selected' : ''; ?>>Annually</option>
+                                                                        <option value="yearly" <?php echo (isset($_GET['financial_period']) && $_GET['financial_period'] === 'yearly') ? 'selected' : ''; ?>>Yearly</option>
+                                                                    </select>
+                                                                </div>
+                                                                <div class="input-group input-group-sm">
+                                                                    <span class="input-group-text"><i class="fas fa-calendar-day"></i></span>
+                                                                    <input type="date" class="form-control" name="financial_date" id="financialDate" value="<?php echo isset($_GET['financial_date']) ? htmlspecialchars($_GET['financial_date']) : date('Y-m-d'); ?>">
+                                                                </div>
+                                                                <button class="btn btn-primary btn-sm" type="submit">
+                                                                    <i class="fas fa-sync-alt me-1"></i>Update
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
