@@ -710,11 +710,7 @@ try {
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Bills / Payables Management</h5>
-                        <?php if ($auth->hasPermission('bills.create')): ?>
-                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addBillModal">
-                            <i class="fas fa-cloud-upload-alt me-1"></i>Receive Bills
-                        </button>
-                        <?php endif; ?>
+                        <!-- Receive Bills button removed per request -->
                     </div>
                     <div class="card-body">
                         <div class="row mb-3">
@@ -1033,9 +1029,9 @@ try {
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Receive Bills</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
+                                <h5 class="modal-title">Add Bill</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
                 <div class="modal-body">
                     <form id="addBillForm">
                         <div class="mb-3">
@@ -2843,11 +2839,12 @@ try {
             form.reset();
             delete form.dataset.editBillId;
 
-            // Reset modal title and button to receive mode
-            document.querySelector('#addBillModal .modal-title').textContent = 'Receive Bills';
+            // Reset modal title and button to add mode
+            const titleEl = document.querySelector('#addBillModal .modal-title');
+            if (titleEl) titleEl.textContent = 'Add Bill';
             const submitBtn = document.querySelector('#addBillModal .btn-primary');
             if (submitBtn) {
-                submitBtn.textContent = 'Receive';
+                submitBtn.textContent = 'Add Bill';
             }
         }
 
