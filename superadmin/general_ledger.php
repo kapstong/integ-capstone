@@ -833,24 +833,58 @@ try {
         .print-only {
             display: none;
         }
+        .print-report {
+            margin-bottom: 16px;
+        }
         .print-header {
             display: none;
             align-items: center;
             gap: 16px;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
         .print-header img {
-            width: 80px;
+            width: 76px;
             height: auto;
         }
         .print-title {
             font-size: 18pt;
             font-weight: 700;
-            color: #111;
+            color: #1e2936;
         }
         .print-subtitle {
             font-size: 10pt;
-            color: #555;
+            color: #54606d;
+        }
+        .print-report-meta {
+            display: none;
+            gap: 16px;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border: 1px solid #e3e6ea;
+            border-radius: 10px;
+            margin-bottom: 14px;
+        }
+        .print-report-meta > div {
+            flex: 1 1 0;
+        }
+        .print-label {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 8pt;
+            color: #7b8794;
+            margin-bottom: 4px;
+        }
+        .print-value {
+            font-size: 10.5pt;
+            font-weight: 600;
+            color: #1e2936;
+        }
+        .print-separator {
+            display: none;
+            height: 2px;
+            background: #1e2936;
+            margin-bottom: 16px;
+            border-radius: 999px;
         }
         .print-watermark {
             display: none;
@@ -865,6 +899,9 @@ try {
             pointer-events: none;
         }
         @media print {
+            @page {
+                margin: 12mm;
+            }
             body * {
                 visibility: hidden;
             }
@@ -883,8 +920,13 @@ try {
             .print-only {
                 display: block !important;
             }
-            .print-header {
+            .print-header,
+            .print-report-meta,
+            .print-separator {
                 display: flex !important;
+            }
+            .print-separator {
+                display: block !important;
             }
             .print-watermark {
                 display: block !important;
@@ -1156,7 +1198,7 @@ try {
                                         </div>
                                     </div>
                                 </div>
-                                <div class="print-only">
+                                <div class="print-only print-report">
                                     <div class="print-header">
                                         <img src="../logo2.png" alt="ATIERA Logo">
                                         <div>
@@ -1164,6 +1206,21 @@ try {
                                             <div class="print-subtitle">financial.atierahotelandrestaurant.com</div>
                                         </div>
                                     </div>
+                                    <div class="print-report-meta">
+                                        <div>
+                                            <div class="print-label">Report</div>
+                                            <div class="print-value" id="printReportTitle">Journal Entries</div>
+                                        </div>
+                                        <div>
+                                            <div class="print-label">Period</div>
+                                            <div class="print-value" id="printReportPeriod">All Dates</div>
+                                        </div>
+                                        <div>
+                                            <div class="print-label">Generated On</div>
+                                            <div class="print-value" id="printReportDate">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="print-separator"></div>
                                     <div class="print-watermark">
                                         <img src="../logo2.png" alt="ATIERA Watermark" style="width: 100%; height: auto;">
                                     </div>
@@ -2785,11 +2842,56 @@ try {
             applyJournalFilters();
         }
 
+        function formatPrintDate(value) {
+            if (!value) {
+                return '';
+            }
+            const date = value instanceof Date ? value : new Date(value);
+            if (Number.isNaN(date.getTime())) {
+                return '';
+            }
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit'
+            });
+        }
+
+        function updateJournalPrintMeta() {
+            const periodEl = document.getElementById('printReportPeriod');
+            const dateEl = document.getElementById('printReportDate');
+            const periodValue = document.getElementById('journalPeriodFilter')?.value || '';
+            const dateFromValue = document.getElementById('journalDateFrom')?.value || '';
+            const dateToValue = document.getElementById('journalDateTo')?.value || '';
+
+            let periodLabel = 'All Dates';
+            if (dateFromValue || dateToValue) {
+                const fromLabel = dateFromValue ? formatPrintDate(dateFromValue) : 'Any';
+                const toLabel = dateToValue ? formatPrintDate(dateToValue) : 'Any';
+                periodLabel = `${fromLabel} to ${toLabel}`;
+            } else if (periodValue) {
+                const range = getJournalPeriodRange(periodValue);
+                if (range) {
+                    const startLabel = formatPrintDate(range.start);
+                    const endLabel = formatPrintDate(range.end);
+                    periodLabel = `${periodValue.charAt(0).toUpperCase() + periodValue.slice(1)} (${startLabel} - ${endLabel})`;
+                }
+            }
+
+            if (periodEl) {
+                periodEl.textContent = periodLabel;
+            }
+            if (dateEl) {
+                dateEl.textContent = formatPrintDate(new Date());
+            }
+        }
+
         function printJournalEntries() {
             if (window.PrivacyMode && typeof window.PrivacyMode.isHidden === 'function' && window.PrivacyMode.isHidden()) {
                 showAlert('error', 'Privacy mode is enabled. Disable it to export or download data.');
                 return;
             }
+            updateJournalPrintMeta();
             window.print();
         }
 
@@ -2903,6 +3005,7 @@ try {
             if (emptyRow) {
                 emptyRow.style.display = visibleCount === 0 ? '' : 'none';
             }
+            updateJournalPrintMeta();
         }
 
         function applyTrialModalSearch(event) {
