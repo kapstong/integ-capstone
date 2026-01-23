@@ -705,34 +705,6 @@ try {
         <!-- Top Navbar -->
         <?php include '../includes/global_navbar.php'; ?>
 
-        <?php if (!empty($core1SyncError)): ?>
-            <div class="alert alert-danger alert-custom mt-3">
-                <strong>Core 1 Sync Failed:</strong>
-                <?php echo htmlspecialchars($core1SyncError); ?>
-            </div>
-        <?php elseif (is_array($core1SyncResult)): ?>
-            <div class="alert alert-<?php echo !empty($core1SyncResult['errors']) ? 'warning' : 'success'; ?> alert-custom mt-3">
-                <strong>Core 1 Sync:</strong>
-                <?php echo htmlspecialchars($core1SyncResult['message'] ?? 'Sync completed.'); ?>
-                <?php if (isset($core1SyncResult['imported_count'])): ?>
-                    <span class="ms-2">(Imported <?php echo (int)$core1SyncResult['imported_count']; ?>)</span>
-                <?php endif; ?>
-                <?php if (!empty($core1SyncResult['errors']) && is_array($core1SyncResult['errors'])): ?>
-                    <div class="mt-2">
-                        <strong>Sample errors:</strong>
-                        <ul class="mb-0">
-                            <?php foreach (array_slice($core1SyncResult['errors'], 0, 5) as $err): ?>
-                                <li><?php echo htmlspecialchars($err); ?></li>
-                            <?php endforeach; ?>
-                        </ul>
-                        <?php if (count($core1SyncResult['errors']) > 5): ?>
-                            <div class="small text-muted">Showing 5 of <?php echo count($core1SyncResult['errors']); ?> errors.</div>
-                        <?php endif; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
-
         <!-- Stats Cards -->
         <div class="row mb-4">
             <div class="col-md-3">
