@@ -1,0 +1,545 @@
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta name="csrf-token" content="12eaceae4fbdb963fae77cd44df0f8603b088b3a68913b96c871637ce5c455c5">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ATIERA — Secure Login</title>
+<link rel="icon" href="logo2.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="responsive.css">
+
+<style>
+  :root{
+    --blue-600:#1b2f73; --blue-700:#15265e; --blue-800:#0f1c49; --blue-a:#2342a6;
+    --gold:#d4af37; --ink:#0f172a; --muted:#64748b;
+    --ring:0 0 0 3px rgba(35,66,166,.28);
+    --card-bg: rgba(255,255,255,.95); --card-border: rgba(226,232,240,.9);
+    --wm-opa-light:.35; --wm-opa-dark:.55;
+  }
+  @media (prefers-color-scheme: dark){ :root{ --ink:#e5e7eb; --muted:#9ca3af; } }
+
+  body{
+    min-height:100svh; margin:0; color:var(--ink);
+    background:
+      radial-gradient(70% 60% at 8% 10%, rgba(255,255,255,.18) 0, transparent 60%),
+      radial-gradient(40% 40% at 100% 0%, rgba(212,175,55,.08) 0, transparent 40%),
+      linear-gradient(140deg, rgba(15,28,73,1) 50%, rgba(255,255,255,1) 50%);
+  }
+  html.dark body{
+    background:
+      radial-gradient(70% 60% at 8% 10%, rgba(212,175,55,.08) 0, transparent 60%),
+      radial-gradient(40% 40% at 100% 0%, rgba(212,175,55,.12) 0, transparent 40%),
+      linear-gradient(140deg, rgba(7,12,38,1) 50%, rgba(11,21,56,1) 50%);
+    color:#e5e7eb;
+  }
+
+  .bg-watermark{ position:fixed; inset:0; z-index:-1; display:grid; place-items:center; pointer-events:none; }
+  .bg-watermark img{
+    width:min(820px,70vw); max-height:68vh; object-fit:contain; opacity:var(--wm-opa-light);
+    filter: drop-shadow(0 0 26px rgba(255,255,255,.40)) drop-shadow(0 14px 34px rgba(0,0,0,.25));
+    transition:opacity .25s ease, filter .25s ease, transform .6s ease;
+  }
+  html.dark .bg-watermark img{
+    opacity:var(--wm-opa-dark);
+    filter: drop-shadow(0 0 34px rgba(255,255,255,.55)) drop-shadow(0 16px 40px rgba(0,0,0,.30));
+  }
+
+  .reveal { opacity:0; transform:translateY(8px); animation:reveal .45s .05s both; }
+  @keyframes reveal { to { opacity:1; transform:none; } }
+
+  .card{
+    background:var(--card-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    border:1px solid var(--card-border); border-radius:18px; box-shadow:0 16px 48px rgba(2,6,23,.18);
+  }
+  html.dark .card{ background:rgba(17,24,39,.92); border-color:rgba(71,85,105,.55); box-shadow:0 16px 48px rgba(0,0,0,.5); }
+
+  .field{ position:relative; }
+  .input{
+    width:100%; border:1px solid #e5e7eb; border-radius:12px; background:#fff;
+    padding:1rem 2.6rem 1rem .95rem; outline:none; color:#0f172a; transition:border-color .15s, box-shadow .15s, background .15s;
+  }
+  .input:focus{ border-color:var(--blue-a); box-shadow:var(--ring) }
+  html.dark .input{ background:#0b1220; border-color:#243041; color:#e5e7eb; }
+  .float-label{
+    position:absolute; left:.9rem; top:50%; transform:translateY(-50%); padding:0 .25rem; color:#94a3b8;
+    pointer-events:none; background:transparent; transition:all .15s ease;
+  }
+  .input:focus + .float-label,
+  .input:not(:placeholder-shown) + .float-label{
+    top:0; transform:translateY(-50%) scale(.92); color:var(--blue-a); background:#fff;
+  }
+  html.dark .input:focus + .float-label,
+  html.dark .input:not(:placeholder-shown) + .float-label{ background:#0b1220; }
+  .icon-right{ position:absolute; right:.6rem; top:50%; transform:translateY(-50%); color:#64748b; }
+  html.dark .icon-right{ color:#94a3b8; }
+
+  .btn{
+    width:100%; display:inline-flex; align-items:center; justify-content:center; gap:.6rem;
+    background:linear-gradient(180deg, var(--blue-600), var(--blue-800));
+    color:#fff; font-weight:800; border-radius:14px; padding:.95rem 1rem; border:1px solid rgba(255,255,255,.06);
+    transition:transform .08s ease, filter .15s ease, box-shadow .2s ease; box-shadow:0 8px 18px rgba(2,6,23,.18);
+  }
+  .btn:hover{ filter:saturate(1.08); box-shadow:0 12px 26px rgba(2,6,23,.26); }
+  .btn:active{ transform:translateY(1px) scale(.99); }
+  .btn[disabled]{ opacity:.85; cursor:not-allowed; }
+
+  .alert{ border-radius:12px; padding:.65rem .8rem; font-size:.9rem; transition:opacity 0.5s ease }
+  .alert-error{ border:1px solid #fecaca; background:#fef2f2; color:#b91c1c }
+  .alert-info{ border:1px solid #c7d2fe; background:#eef2ff; color:#3730a3 }
+  html.dark .alert-error{ background:#3f1b1b; border-color:#7f1d1d; color:#fecaca }
+  html.dark .alert-info{ background:#1e1b4b; border-color:#3730a3; color:#c7d2fe }
+
+  .typing::after{ content:'|'; margin-left:2px; opacity:.6; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50%{opacity:0} }
+</style>
+</head>
+
+<body class="grid md:grid-cols-2 gap-0 place-items-center p-6 md:p-10">
+  <style>
+/* ATIERA Loading Screen - Matches System Color Palette */
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #F1F7EE;
+    z-index: 10000;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(8px);
+}
+
+.loading-screen.show {
+    display: block;
+    opacity: 1;
+}
+
+.loading-screen-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    padding: 3rem 2.5rem;
+    background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 20px;
+    box-shadow:
+        0 25px 50px rgba(30, 41, 54, 0.15),
+        0 15px 35px rgba(30, 41, 54, 0.1),
+        0 0 0 1px rgba(30, 41, 54, 0.05);
+    border: 1px solid rgba(30, 41, 54, 0.08);
+    max-width: 420px;
+    width: 90%;
+}
+
+.loading-header {
+    margin-bottom: 2rem;
+}
+
+.loading-logo {
+    width: 140px;
+    height: auto;
+    margin-bottom: 1.5rem;
+    filter: drop-shadow(0 4px 12px rgba(30, 41, 54, 0.15));
+}
+
+.loading-title {
+    color: #1e2936;
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin: 0 0 0.5rem 0;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    text-shadow: 0 1px 2px rgba(30, 41, 54, 0.1);
+}
+
+.loading-subtitle {
+    color: #6c757d;
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin: 0;
+    opacity: 0.8;
+}
+
+.loading-animation {
+    margin: 2rem 0;
+}
+
+.loading-spinner {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1.5rem auto;
+    position: relative;
+}
+
+.loading-spinner::before,
+.loading-spinner::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.loading-spinner::before {
+    width: 100%;
+    height: 100%;
+    border: 3px solid rgba(30, 41, 54, 0.1);
+    border-top: 3px solid #1e2936;
+    animation: spin 1.5s linear infinite;
+}
+
+.loading-spinner::after {
+    width: 80%;
+    height: 80%;
+    background: linear-gradient(135deg, #1e2936 0%, #2342a6 100%);
+    top: 10%;
+    left: 10%;
+    opacity: 0.15;
+    filter: blur(8px);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+}
+
+.loading-progress-container {
+    position: relative;
+    margin-top: 1rem;
+}
+
+.loading-progress-bg {
+    width: 100%;
+    height: 3px;
+    background: #e9ecef;
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+}
+
+.loading-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #1e2936 0%, #2342a6 50%, #1e2936 100%);
+    border-radius: 2px;
+    width: 0%;
+    animation: progress 2.5s ease-in-out infinite;
+    position: relative;
+}
+
+.loading-progress-fill::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 20px;
+    height: 100%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 100%);
+    animation: shimmer 2.5s ease-in-out infinite;
+}
+
+@keyframes progress {
+    0% { width: 0%; }
+    50% { width: 85%; }
+    100% { width: 100%; }
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-20px); }
+    100% { transform: translateX(40px); }
+}
+
+.loading-accent {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1e2936 0%, #d4af37 50%, #1e2936 100%);
+    border-radius: 20px 20px 0 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .loading-screen-content {
+        padding: 2.5rem 2rem;
+        margin: 1rem;
+        width: calc(100% - 2rem);
+    }
+
+    .loading-title {
+        font-size: 1.5rem;
+    }
+
+    .loading-subtitle {
+        font-size: 0.9rem;
+    }
+
+    .loading-spinner {
+        width: 56px;
+        height: 56px;
+    }
+
+    .loading-logo {
+        width: 120px;
+    }
+}
+
+@media (max-width: 480px) {
+    .loading-screen-content {
+        padding: 2rem 1.5rem;
+    }
+
+    .loading-title {
+        font-size: 1.4rem;
+    }
+
+    .loading-logo {
+        width: 100px;
+    }
+}
+</style>
+
+<!-- Loading Screen HTML -->
+<div id="loading-screen" class="loading-screen">
+    <div class="loading-screen-content">
+        <div class="loading-accent"></div>
+        <div class="loading-header">
+            <img src="../logo.png" alt="ATIERA" class="loading-logo" onerror="this.src='../logo2.png'">
+            <h2 class="loading-title">Loading ATIERA</h2>
+            <p class="loading-subtitle">Securing your financial data...</p>
+        </div>
+
+        <div class="loading-animation">
+            <div class="loading-spinner"></div>
+            <div class="loading-progress-container">
+                <div class="loading-progress-bg">
+                    <div class="loading-progress-fill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * Loading Screen Controller
+ */
+(function() {
+    'use strict';
+
+    const loadingScreen = document.getElementById('loading-screen');
+    let hideTimeout = null;
+
+    /**
+     * Show loading screen
+     */
+    function showLoading() {
+        if (hideTimeout) {
+            clearTimeout(hideTimeout);
+        }
+        loadingScreen.classList.add('show');
+
+        // Auto-hide after 10 seconds as fallback
+        setTimeout(() => {
+            hideLoading();
+        }, 10000);
+    }
+
+    /**
+     * Hide loading screen
+     */
+    function hideLoading() {
+        loadingScreen.classList.remove('show');
+        hideTimeout = setTimeout(() => {
+            loadingScreen.style.display = 'none';
+        }, 300);
+    }
+
+    /**
+     * Intercept all link clicks for smooth navigation
+     */
+    function interceptLinks() {
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a[href]');
+            if (link &&
+                link.href &&
+                link.host === window.location.host && // Same domain
+                !link.hasAttribute('download') && // Not download links
+                !link.hasAttribute('target') && // Not external links
+                !link.href.includes('#') && // Not anchor links
+                !link.classList.contains('dropdown-item') && // Not dropdown items (handled differently)
+                !link.classList.contains('no-loading')) { // Allow opting out
+
+                // Show loading screen
+                showLoading();
+            }
+        });
+    }
+
+    /**
+     * Show loading during form submissions
+     */
+    function interceptForms() {
+        document.addEventListener('submit', function(e) {
+            if (!e.target.classList.contains('no-loading')) {
+                showLoading();
+            }
+        });
+    }
+
+    /**
+     * Hide loading on page load
+     */
+    function handlePageLoad() {
+        // Hide loading screen when page is fully loaded
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                hideLoading();
+            }, 500); // Small delay for smooth transition
+        });
+
+        // Also hide on DOM ready as fallback
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                hideLoading();
+            }, 100);
+        });
+    }
+
+    /**
+     * Hide loading when navigating away (page unload)
+     */
+    function handleNavigation() {
+        window.addEventListener('beforeunload', function() {
+            showLoading();
+        });
+    }
+
+    /**
+     * Public API
+     */
+    window.LoadingScreen = {
+        show: showLoading,
+        hide: hideLoading
+    };
+
+    // Initialize
+    function init() {
+        interceptLinks();
+        interceptForms();
+        handlePageLoad();
+        handleNavigation();
+    }
+
+    // Start when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
+</script>
+
+
+  <div class="bg-watermark" aria-hidden="true">
+    <img src="logo.png" alt="ATIERA watermark" id="wm">
+  </div>
+
+  <section class="hidden md:flex w-full h-full items-center justify-center">
+    <div class="max-w-lg text-white px-6 reveal">
+      <img src="logo.png" alt="ATIERA" class="w-56 mb-6 drop-shadow-xl select-none" draggable="false">
+      <h1 class="text-4xl font-extrabold leading-tight tracking-tight">
+        ATIERA <span style="color:var(--gold)">HOTEL & RESTAURANT</span> Management
+      </h1>
+      <p class="mt-4 text-white/90 text-lg">Secure • Fast • Intuitive</p>
+    </div>
+  </section>
+
+  <main class="w-full max-w-md md:ml-auto">
+    <div id="card" class="card p-6 sm:p-8 reveal">
+      <div class="flex items-center justify-between mb-4">
+        <div class="md:hidden flex items-center gap-3">
+          <img src="logo.png" alt="ATIERA" class="h-10 w-auto">
+          <div>
+            <div class="text-sm font-semibold leading-4">ATIERA Finance Suite</div>
+            <div class="text-[10px] text-[color:var(--muted)]">Blue • White • <span class="font-medium" style="color:var(--gold)">Gold</span></div>
+          </div>
+        </div>
+        <button id="modeBtn" class="px-3 py-2 rounded-lg border border-slate-200 text-sm hover:bg-white/60 dark:hover:bg-slate-800" aria-pressed="false" title="Toggle dark mode">🌓</button>
+      </div>
+
+      <h3 class="text-lg sm:text-xl font-semibold mb-1">Sign in</h3>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Use your credentials to continue.</p>
+
+      
+      <form method="POST" class="space-y-4" novalidate >
+        <input type="hidden" name="csrf_token" value="12eaceae4fbdb963fae77cd44df0f8603b088b3a68913b96c871637ce5c455c5">        <div class="field">
+          <input id="username" name="username" type="text" autocomplete="username" class="input peer" placeholder=" " required value="" >
+          <label for="username" class="float-label">Username</label>
+          <span class="icon-right" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5.33 0-8 2.67-8 5v1h16v-1c0-2.33-2.67-5-8-5Z" fill="currentColor"/></svg>
+          </span>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
+          </div>
+          <div class="field">
+            <input id="password" name="password" type="password" autocomplete="current-password" class="input peer" placeholder=" " required >
+            <label for="password" class="float-label">••••••••</label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn" >
+          <span>Sign In</span>
+        </button>
+
+        <p class="text-xs text-center text-slate-500 dark:text-slate-400">© 2025 ATIERA</p>
+      </form>
+    </div>
+  </main>
+
+<script>
+  const $ = (s, r=document)=>r.querySelector(s);
+
+  const modeBtn = $('#modeBtn');
+  const wmImg = $('#wm');
+
+  modeBtn.addEventListener('click', ()=>{
+    const root = document.documentElement;
+    const dark = root.classList.toggle('dark');
+    modeBtn.setAttribute('aria-pressed', String(dark));
+    wmImg.style.transform = 'scale(1.01)'; setTimeout(()=> wmImg.style.transform = '', 220);
+  });
+
+  // Handle lockout countdown
+  
+  // Auto-hide logout message after 5 seconds
+  </script>
+<script src="includes/tab_persistence.js?v=1"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"405d884c1c9541a4a1852555b7bf6864","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
+

@@ -136,16 +136,16 @@ function getAuditTrail($db, $filters = []) {
 
         $whereClause = $where ? "WHERE " . implode(" AND ", $where) : "";
 
-        $stmt = $db->prepare("\
-            SELECT a.*,\
-                   u.username, u.full_name,\
-                   d.disbursement_number, d.reference_number\
-            FROM audit_log a\
-            LEFT JOIN users u ON a.user_id = u.id\
-            LEFT JOIN disbursements d ON a.record_id = d.id AND a.table_name = 'disbursements'\
-            $whereClause\
-            ORDER BY a.created_at DESC\
-            LIMIT 1000\
+        $stmt = $db->prepare("
+            SELECT a.*,
+                   u.username, u.full_name,
+                   d.disbursement_number
+            FROM audit_log a
+            LEFT JOIN users u ON a.user_id = u.id
+            LEFT JOIN disbursements d ON a.record_id = d.id AND a.table_name = 'disbursements'
+            $whereClause
+            ORDER BY a.created_at DESC
+            LIMIT 1000
         ");
         $stmt->execute($params);
 
@@ -180,43 +180,33 @@ function getAuditTrail($db, $filters = []) {
             }
 
             if ($log['table_name'] === 'disbursements') {
-                // If record_id is present but disbursement_number or reference_number missing, query the disbursements table
-                if ((!isset($log['disbursement_number']) || empty($log['disbursement_number']) || !isset($log['reference_number']) || empty($log['reference_number'])) && !empty($log['record_id'])) {
+                // If record_id is present but disbursement_number missing, query the disbursements table
+                if (empty($log['disbursement_number']) && !empty($log['record_id'])) {
                     try {
-                        $stmt2 = $db->prepare("SELECT disbursement_number, reference_number FROM disbursements WHERE id = ? LIMIT 1");
+                        $stmt2 = $db->prepare("SELECT disbursement_number FROM disbursements WHERE id = ? LIMIT 1");
                         $stmt2->execute([$log['record_id']]);
                         $row = $stmt2->fetch(PDO::FETCH_ASSOC);
-                        if ($row) {
-                            if (empty($log['disbursement_number']) && !empty($row['disbursement_number'])) {
-                                $log['disbursement_number'] = $row['disbursement_number'];
-                            }
-                            if (empty($log['reference_number']) && !empty($row['reference_number'])) {
-                                $log['reference_number'] = $row['reference_number'];
-                            }
+                        if ($row && !empty($row['disbursement_number'])) {
+                            $log['disbursement_number'] = $row['disbursement_number'];
                         }
                     } catch (Exception $e) {
                         // ignore DB lookup errors
                     }
                 }
 
-                // If disbursement_number present in new/old values but record_id/reference_number missing, try to resolve it
-                if (empty($log['record_id']) || empty($log['reference_number'])) {
+                // If disbursement_number present in new/old values but record_id is missing, try to resolve it
+                if (empty($log['record_id'])) {
                     $possibleNum = $newValues['disbursement_number'] ?? $oldValues['disbursement_number'] ?? $newValues['disbursement_no'] ?? $oldValues['disbursement_no'] ?? null;
                     if (!empty($possibleNum) && empty($log['disbursement_number'])) {
                         $log['disbursement_number'] = $possibleNum;
                     }
-                    if (!empty($possibleNum) && (empty($log['record_id']) || empty($log['reference_number']))) {
+                    if (!empty($possibleNum) && empty($log['record_id'])) {
                         try {
-                            $stmt3 = $db->prepare("SELECT id, reference_number FROM disbursements WHERE disbursement_number = ? LIMIT 1");
+                            $stmt3 = $db->prepare("SELECT id FROM disbursements WHERE disbursement_number = ? LIMIT 1");
                             $stmt3->execute([$possibleNum]);
                             $r = $stmt3->fetch(PDO::FETCH_ASSOC);
-                            if ($r) {
-                                if (!empty($r['id']) && empty($log['record_id'])) {
-                                    $log['record_id'] = $r['id'];
-                                }
-                                if (!empty($r['reference_number']) && empty($log['reference_number'])) {
-                                    $log['reference_number'] = $r['reference_number'];
-                                }
+                            if ($r && !empty($r['id'])) {
+                                $log['record_id'] = $r['id'];
                             }
                         } catch (Exception $e) {
                             // ignore
@@ -225,45 +215,22 @@ function getAuditTrail($db, $filters = []) {
                 }
 
                 // If still missing, fallback to parsing description fields for common DISB tokens
-                if (empty($log['disbursement_number']) || empty($log['reference_number'])) {
-                    $text = ($log['action_description'] ?? '') . ' ' . ($newValues['description'] ?? '') . ' ' . ($oldValues['description'] ?? '') . ' ' . json_encode($newValues) . ' ' . json_encode($oldValues);
-                    if (preg_match('/(DISB-\d{8}-\d{3}|DISB-\d+)|(\bID\s*(\d+)\b)|(\b\d{1,6}\b)|(REF[:#]?\s*\w[-\w\d]*)/i', $text, $m)) {
+                if (empty($log['disbursement_number'])) {
+                    $text = ($log['action_description'] ?? '') . ' ' . ($newValues['description'] ?? '') . ' ' . ($oldValues['description'] ?? '');
+                    if (preg_match('/(DISB-\d{8}-\d{3}|DISB-\d+)|(\bID\s*(\d+)\b)|(\b\d{1,6}\b)/i', $text, $m)) {
                         foreach ($m as $candidate) {
                             if (!empty($candidate)) {
-                                if (preg_match('/^REF[:#]?/i', $candidate)) {
-                                    if (empty($log['reference_number'])) $log['reference_number'] = preg_replace('/^REF[:#]?\s*/i', '', $candidate);
-                                } else {
-                                    if (empty($log['disbursement_number'])) $log['disbursement_number'] = $candidate;
-                                }
-                                if (!empty($log['disbursement_number']) && !empty($log['reference_number'])) break;
+                                $log['disbursement_number'] = $candidate;
+                                break;
                             }
                         }
                     }
                 }
-
-                // Compute a preferred disbursement reference for display (prefer reference_number)
-                $log['disbursement_ref'] = $log['reference_number'] ?? $log['disbursement_number'] ?? null;
             } else {
                 // Non-disbursement tables: still try to pick up possible disbursement_number from payload
-                if (empty($log['disbursement_number']) || empty($log['reference_number'])) {
+                if (empty($log['disbursement_number'])) {
                     $possible = $newValues['disbursement_number'] ?? $oldValues['disbursement_number'] ?? null;
-                    if (!empty($possible)) {
-                        if (empty($log['disbursement_number'])) $log['disbursement_number'] = $possible;
-                        // attempt to resolve reference_number by disbursement_number
-                        if (empty($log['reference_number'])) {
-                            try {
-                                $stmtx = $db->prepare("SELECT id, reference_number FROM disbursements WHERE disbursement_number = ? LIMIT 1");
-                                $stmtx->execute([$possible]);
-                                $rx = $stmtx->fetch(PDO::FETCH_ASSOC);
-                                if ($rx) {
-                                    if (empty($log['record_id']) && !empty($rx['id'])) $log['record_id'] = $rx['id'];
-                                    if (!empty($rx['reference_number'])) $log['reference_number'] = $rx['reference_number'];
-                                }
-                            } catch (Exception $e) {
-                                // ignore
-                            }
-                        }
-                    }
+                    if (!empty($possible)) $log['disbursement_number'] = $possible;
                 }
             }
 
@@ -280,10 +247,6 @@ function getAuditTrail($db, $filters = []) {
 
             // Compute the action description (this may also use the enriched disbursement_number)
             $log['action_description'] = formatAction($log);
-            // Ensure a generic disbursement_ref exists for non-disbursement tables if possible
-            if (empty($log['disbursement_ref'])) {
-                $log['disbursement_ref'] = $log['reference_number'] ?? $log['disbursement_number'] ?? null;
-            }
         }
 
         return $logs;

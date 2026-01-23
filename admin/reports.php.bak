@@ -672,7 +672,7 @@ $db = Database::getInstance()->getConnection();
     </style>
 </head>
 <body>
-    <?php include '../includes/superadmin_navigation.php'; ?>
+    <?php include '../includes/admin_navigation.php'; ?>
 
     <div class="content">
         <!-- Top Navbar -->
@@ -835,19 +835,19 @@ $db = Database::getInstance()->getConnection();
                                       <div class="col-md-4">
                                           <div class="p-3 border rounded">
                                               <div class="text-muted">Month-to-Date Revenue</div>
-                                              <div class="fw-bold fs-4" id="analyticsMtdRevenue">₱ 0.00</div>
+                                              <div class="fw-bold fs-4" id="analyticsMtdRevenue">ƒ,ñ0</div>
                                           </div>
                                       </div>
                                       <div class="col-md-4">
                                           <div class="p-3 border rounded">
                                               <div class="text-muted">Month-to-Date Expenses</div>
-                                              <div class="fw-bold fs-4 text-danger" id="analyticsMtdExpenses">₱ 0.00</div>
+                                              <div class="fw-bold fs-4 text-danger" id="analyticsMtdExpenses">ƒ,ñ0</div>
                                           </div>
                                       </div>
                                       <div class="col-md-4">
                                           <div class="p-3 border rounded">
                                               <div class="text-muted">Net Operating Result</div>
-                                              <div class="fw-bold fs-4" id="analyticsNetResult">₱ 0.00</div>
+                                              <div class="fw-bold fs-4" id="analyticsNetResult">ƒ,ñ0</div>
                                           </div>
                                       </div>
                                   </div>
@@ -1065,12 +1065,9 @@ $db = Database::getInstance()->getConnection();
                     throw new Error(data.error || `HTTP error! status: ${response.status}`);
                 }
 
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                if (!data.report_type) {
-                    throw new Error('Invalid report response format');
+                // Check if we have the expected data fields for income statement
+                if (!data.report_type || data.error) {
+                    throw new Error(data.error || 'Failed to generate income statement');
                 }
 
                 // Store data globally for export
@@ -1339,12 +1336,8 @@ $db = Database::getInstance()->getConnection();
                     throw new Error('Invalid JSON response from server');
                 }
 
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                if (!data.report_type || data.report_type !== 'Balance Sheet') {
-                    throw new Error('Invalid balance sheet response format');
+                if (!data.assets || data.error) {
+                    throw new Error(data.error || 'Failed to generate balance sheet');
                 }
 
                 // Store data globally for export
@@ -1484,12 +1477,13 @@ $db = Database::getInstance()->getConnection();
                     throw new Error('Invalid JSON response from server');
                 }
 
-                if (data.error) {
-                    throw new Error(data.error);
+                if (!data.operating_activities || data.error) {
+                    throw new Error(data.error || 'Failed to generate cash flow statement');
                 }
 
-                if (!data.report_type || data.report_type !== 'Cash Flow Statement') {
-                    throw new Error('Invalid cash flow response format');
+                // Check if operating activities data exists
+                if (!data.operating_activities) {
+                    throw new Error('Invalid response format: missing operating activities data');
                 }
 
                 // Store data globally for export
@@ -1847,7 +1841,7 @@ $db = Database::getInstance()->getConnection();
                     throw new Error('Invalid JSON response from server');
                 }
 
-                if (!data.success || data.error) {
+                if (!data.summary || data.error) {
                     throw new Error(data.error || 'Failed to generate cash flow summary');
                 }
 
@@ -2168,8 +2162,9 @@ $db = Database::getInstance()->getConnection();
             `);
             printWindow.document.write('</style></head><body>');
             printWindow.document.write(printContainer.innerHTML);
-            printWindow.document.write('<script src="../includes/tab_persistence.js?v=1"></script>');
-            printWindow.document.write('</body></html>');
+            printWindow.document.write('
+<script src="../includes/tab_persistence.js?v=1"></script>
+</body></html>');
             printWindow.document.close();
 
             setTimeout(() => {
@@ -2326,20 +2321,10 @@ $db = Database::getInstance()->getConnection();
 
         function loadAnalyticsSummary() {
             fetch('../api/reports.php?type=analytics_summary')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('HTTP ' + response.status);
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
-                    if (!data.success) {
+                    if (!data.mtd) {
                         showAlert(data.error || 'Failed to load analytics', 'danger');
-                        return;
-                    }
-
-                    if (!data.mtd || !data.trend) {
-                        showAlert('Invalid analytics response format', 'danger');
                         return;
                     }
 
@@ -2347,9 +2332,9 @@ $db = Database::getInstance()->getConnection();
                     const mtdExpenses = data.mtd.expenses || 0;
                     const mtdNet = data.mtd.net || 0;
 
-                    document.getElementById('analyticsMtdRevenue').textContent = '₱ ' + mtdRevenue.toLocaleString();
-                    document.getElementById('analyticsMtdExpenses').textContent = '₱ ' + mtdExpenses.toLocaleString();
-                    document.getElementById('analyticsNetResult').textContent = '₱ ' + mtdNet.toLocaleString();
+                    document.getElementById('analyticsMtdRevenue').textContent = 'ƒ,ñ' + mtdRevenue.toLocaleString();
+                    document.getElementById('analyticsMtdExpenses').textContent = 'ƒ,ñ' + mtdExpenses.toLocaleString();
+                    document.getElementById('analyticsNetResult').textContent = 'ƒ,ñ' + mtdNet.toLocaleString();
                     document.getElementById('analyticsNetResult').className = 'fw-bold fs-4 ' + (mtdNet >= 0 ? 'text-success' : 'text-danger');
 
                     const ctx = document.getElementById('reportTrendsChart');
@@ -2394,7 +2379,7 @@ $db = Database::getInstance()->getConnection();
                                     beginAtZero: true,
                                     ticks: {
                                         callback: function(value) {
-                                            return '₱' + value.toLocaleString();
+                                            return 'ƒ,ñ' + value.toLocaleString();
                                         }
                                     }
                                 }
@@ -2402,10 +2387,7 @@ $db = Database::getInstance()->getConnection();
                         }
                     });
                 })
-                .catch(error => {
-                    console.error('Error loading analytics:', error);
-                    showAlert('Error loading analytics: ' + error.message, 'danger');
-                });
+                .catch(error => showAlert('Error: ' + error.message, 'danger'));
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -2418,10 +2400,10 @@ $db = Database::getInstance()->getConnection();
 
     <script src="../includes/privacy_mode.js?v=11"></script>
     <script src="../includes/inactivity_timeout.js?v=3"></script>
-<script src="../includes/navbar_datetime.js"></script>
-<script src="../includes/tab_persistence.js?v=1"></script>
- </body>
- </html>
+    <script src="../includes/navbar_datetime.js"></script>
+    <script src="../includes/tab_persistence.js?v=1"></script>
+</body>
+</html>
 
 
 
