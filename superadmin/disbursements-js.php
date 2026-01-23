@@ -110,6 +110,145 @@ header('Content-Type: application/javascript');
             }
         }
 
+        // --- Disbursement Audit Filters ---
+        function showDisbursementFilterModal() {
+            const modalHTML = `
+            <div class="modal fade" id="disbFilterModal" tabindex="-1" aria-labelledby="disbFilterModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="disbFilterModalLabel"><i class="fas fa-filter me-2"></i>Filter Audit Trail</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="disbAuditFilterForm">
+                                <div class="mb-3">
+                                    <label for="disbFilterDateFrom" class="form-label">Date From</label>
+                                    <input type="date" class="form-control" id="disbFilterDateFrom">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="disbFilterDateTo" class="form-label">Date To</label>
+                                    <input type="date" class="form-control" id="disbFilterDateTo">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="disbFilterUser" class="form-label">User</label>
+                                    <input type="text" class="form-control" id="disbFilterUser" placeholder="Search by name or username">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="disbFilterAction" class="form-label">Action</label>
+                                    <select class="form-select" id="disbFilterAction">
+                                        <option value="">All Actions</option>
+                                        <option value="Created">Created</option>
+                                        <option value="Updated">Updated</option>
+                                        <option value="Deleted">Deleted</option>
+                                        <option value="Viewed">Viewed</option>
+                                        <option value="Processed Payment">Processed Payment</option>
+                                        <option value="Printed">Printed</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="disbFilterRef" class="form-label">Disbursement Ref / ID</label>
+                                    <input type="text" class="form-control" id="disbFilterRef" placeholder="DISB-YYYYMMDD-### or numeric ID">
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" onclick="clearDisbursementFilters()" data-bs-dismiss="modal">Clear Filters</button>
+                            <button type="button" class="btn btn-primary" onclick="applyDisbursementFilters()">Apply Filters</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+            const existing = document.getElementById('disbFilterModal');
+            if (existing) existing.remove();
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            const modal = new bootstrap.Modal(document.getElementById('disbFilterModal'));
+            modal.show();
+        }
+
+        function buildDisbursementAuditParams() {
+            const dateFrom = document.getElementById('disbFilterDateFrom')?.value || '';
+            const dateTo = document.getElementById('disbFilterDateTo')?.value || '';
+            const user = document.getElementById('disbFilterUser')?.value || '';
+            const action = document.getElementById('disbFilterAction')?.value || '';
+            const ref = document.getElementById('disbFilterRef')?.value || '';
+            const actionMap = {
+                'Created': 'created',
+                'Updated': 'updated',
+                'Deleted': 'deleted',
+                'Viewed': 'viewed',
+                'Processed Payment': 'processed_payment',
+                'Printed': 'printed'
+            };
+            const mappedAction = actionMap[action] || (action ? action.toLowerCase() : '');
+
+            const params = new URLSearchParams();
+            params.append('scope', 'disbursements');
+            params.append('table_name', 'disbursements');
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
+            if (user) params.append('user', user);
+            if (mappedAction) params.append('action', mappedAction);
+            if (ref) {
+                // Try to pass record_id if numeric, otherwise pass reference as part of search (record_id param will help server-side)
+                const m = String(ref).match(/\d+/);
+                if (m && String(ref).toLowerCase().indexOf('disb') === -1) {
+                    params.append('record_id', m[0]);
+                } else {
+                    params.append('reference_search', ref);
+                }
+            }
+            return params;
+        }
+
+        function applyDisbursementFilters() {
+            const params = buildDisbursementAuditParams();
+            fetch(`../api/audit.php?${params.toString()}`, { credentials: 'include' })
+                .then(res => res.json())
+                .then(logs => {
+                    const tbody = document.getElementById('auditTableBody');
+                    if (!tbody) return;
+                    if (!Array.isArray(logs) || logs.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No audit logs found</td></tr>';
+                        updateTabBadge('audit-tab', 0);
+                        return;
+                    }
+                    tbody.innerHTML = logs.map(log => {
+                        const actionLabel = log.action_label || log.action;
+                        let disbRef = log.disbursement_number || log.record_id || '';
+                        if (!disbRef) {
+                            try {
+                                const nv = log.new_values ? JSON.parse(log.new_values) : null;
+                                const ov = log.old_values ? JSON.parse(log.old_values) : null;
+                                disbRef = nv?.disbursement_number || ov?.disbursement_number || '';
+                            } catch (e) {}
+                        }
+                        if (!disbRef && log.action_description) {
+                            const m = String(log.action_description).match(/DISB-\d{8}-\d{3}|DISB-\d+|\bID\s*(\d+)\b|(\d{1,6})/i);
+                            if (m) disbRef = m[0];
+                        }
+                        if (!disbRef) disbRef = 'N/A';
+                        return '<tr><td>' + log.formatted_date + '</td><td>' + (log.full_name || log.username || 'Unknown') + '</td><td><span class="badge bg-info">' + actionLabel + '</span></td><td>' + disbRef + '</td><td>' + (log.action_description || '') + '</td></tr>';
+                    }).join('');
+                    updateTabBadge('audit-tab', logs.length);
+                })
+                .catch(err => {
+                    console.error('Error applying disbursement filters:', err);
+                    const tbody = document.getElementById('auditTableBody');
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Error loading audit trail</td></tr>';
+                });
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('disbFilterModal'));
+            if (modal) modal.hide();
+        }
+
+        function clearDisbursementFilters() {
+            const form = document.getElementById('disbAuditFilterForm');
+            if (form) form.reset();
+            loadAuditTrail();
+        }
+
         // Reports and Analytics
         async function loadDisbursementReports() {
             try {

@@ -752,9 +752,9 @@ body {
 
             <!-- Audit Trail Tab -->
             <div class="tab-pane fade" id="audit" role="tabpanel" aria-labelledby="audit-tab">
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">Audit Trail and Controls</h6>
-                    <button class="btn btn-outline-secondary"><i class="fas fa-filter me-2"></i>Filter Logs</button>
+                    <button class="btn btn-outline-secondary" onclick="showDisbursementFilterModal()"><i class="fas fa-filter me-2"></i>Filter Logs</button>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-striped" id="auditTable">
