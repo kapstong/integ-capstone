@@ -1060,7 +1060,10 @@ try {
                                                     <option value="yearly">Yearly</option>
                                                 </select>
                                             </div>
-                                            <div class="col-md-8 d-flex align-items-end justify-content-end">
+                                            <div class="col-md-8 d-flex align-items-end justify-content-end gap-2">
+                                                <button class="btn btn-outline-secondary" type="button" id="journalPrintExportBtn" title="Export PDF" aria-label="Export PDF" onclick="printJournalEntries()">
+                                                    <i class="fas fa-file-pdf me-1"></i>Print PDF
+                                                </button>
                                                 <button class="btn btn-outline-secondary" type="button" onclick="clearJournalFilters()">
                                                     <i class="fas fa-redo me-1"></i>Clear Filters
                                                 </button>
@@ -2683,6 +2686,14 @@ try {
             }
 
             applyJournalFilters();
+        }
+
+        function printJournalEntries() {
+            if (window.PrivacyMode && typeof window.PrivacyMode.isHidden === 'function' && window.PrivacyMode.isHidden()) {
+                showAlert('error', 'Privacy mode is enabled. Disable it to export or download data.');
+                return;
+            }
+            window.print();
         }
 
         function getJournalPeriodRange(period) {
