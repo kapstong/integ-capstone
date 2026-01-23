@@ -182,6 +182,11 @@ $totalEntries = count($entries);
             max-width: 900px;
             margin: 0 auto;
             position: relative;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 28px 32px 24px;
+            box-shadow: 0 14px 32px rgba(30, 41, 54, 0.08);
+            background: #ffffff;
         }
         .watermark {
             position: fixed;
@@ -190,7 +195,7 @@ $totalEntries = count($entries);
             transform: translate(-50%, -50%);
             width: 60%;
             max-width: 520px;
-            opacity: 0.4;
+            opacity: 0.3;
             pointer-events: none;
             z-index: 0;
         }
@@ -254,6 +259,7 @@ $totalEntries = count($entries);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 12px 14px;
+            box-shadow: 0 8px 20px rgba(30, 41, 54, 0.08);
         }
         .meta-label {
             text-transform: uppercase;
@@ -271,14 +277,19 @@ $totalEntries = count($entries);
             color: var(--muted);
             margin-bottom: 12px;
         }
+        .table-wrap {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: 0 10px 22px rgba(30, 41, 54, 0.06);
+            position: relative;
+            z-index: 1;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-            z-index: 1;
+            border: none;
         }
         thead th {
             background: var(--brand);
@@ -295,6 +306,9 @@ $totalEntries = count($entries);
             font-size: 9.5pt;
             vertical-align: top;
         }
+        tbody tr:nth-child(even) td {
+            background: #f3f5f7;
+        }
         tbody tr:last-child td {
             border-bottom: none;
         }
@@ -307,6 +321,15 @@ $totalEntries = count($entries);
             padding: 24px;
             color: var(--muted);
         }
+        .report-footer {
+            margin-top: 18px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 9pt;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+            padding-top: 12px;
+        }
         @media print {
             @page {
                 margin: 12mm;
@@ -316,6 +339,7 @@ $totalEntries = count($entries);
             }
             .page {
                 max-width: none;
+                box-shadow: none;
             }
             .watermark {
                 position: fixed;
@@ -355,51 +379,59 @@ $totalEntries = count($entries);
                 <div class="meta-label">Total Entries</div>
                 <div class="meta-value"><?php echo number_format($totalEntries); ?></div>
             </div>
-            <div class="meta-card">
-                <div class="meta-label">Search</div>
-                <div class="meta-value"><?php echo htmlspecialchars($search !== '' ? $search : 'None'); ?></div>
-            </div>
+            <?php if ($search !== ''): ?>
+                <div class="meta-card">
+                    <div class="meta-label">Search</div>
+                    <div class="meta-value"><?php echo htmlspecialchars($search); ?></div>
+                </div>
+            <?php endif; ?>
         </div>
 
         <?php if ($search !== '' || $dateFromInput !== '' || $dateToInput !== '' || $period !== ''): ?>
             <div class="filters-note">Filters applied for this printout.</div>
         <?php endif; ?>
 
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 120px;">Date</th>
-                    <th style="width: 150px;">Reference</th>
-                    <th style="width: 180px;">Account</th>
-                    <th>Description</th>
-                    <th style="width: 110px;">Debit</th>
-                    <th style="width: 110px;">Credit</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($entries)): ?>
+        <div class="table-wrap">
+            <table>
+                <thead>
                     <tr>
-                        <td colspan="6" class="empty-state">No journal entries found for the selected filters.</td>
+                        <th style="width: 120px;">Date</th>
+                        <th style="width: 150px;">Reference</th>
+                        <th style="width: 180px;">Account</th>
+                        <th>Description</th>
+                        <th style="width: 110px;">Debit</th>
+                        <th style="width: 110px;">Credit</th>
                     </tr>
-                <?php else: ?>
-                    <?php foreach ($entries as $entry): ?>
-                        <?php
-                            $entryDate = formatLabelDate($entry['date'] ?? '');
-                            $debit = $entry['debit'] ?? 0;
-                            $credit = $entry['credit'] ?? 0;
-                        ?>
+                </thead>
+                <tbody>
+                    <?php if (empty($entries)): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($entryDate); ?></td>
-                            <td><?php echo htmlspecialchars($entry['reference'] ?? ''); ?></td>
-                            <td><?php echo htmlspecialchars($entry['account_name'] ?? ''); ?></td>
-                            <td><?php echo htmlspecialchars($entry['description'] ?? ''); ?></td>
-                            <td class="amount"><?php echo $debit > 0 ? '&#8369;' . number_format((float) $debit, 2) : '-'; ?></td>
-                            <td class="amount"><?php echo $credit > 0 ? '&#8369;' . number_format((float) $credit, 2) : '-'; ?></td>
+                            <td colspan="6" class="empty-state">No journal entries found for the selected filters.</td>
                         </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                    <?php else: ?>
+                        <?php foreach ($entries as $entry): ?>
+                            <?php
+                                $entryDate = formatLabelDate($entry['date'] ?? '');
+                                $debit = $entry['debit'] ?? 0;
+                                $credit = $entry['credit'] ?? 0;
+                            ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($entryDate); ?></td>
+                                <td><?php echo htmlspecialchars($entry['reference'] ?? ''); ?></td>
+                                <td><?php echo htmlspecialchars($entry['account_name'] ?? ''); ?></td>
+                                <td><?php echo htmlspecialchars($entry['description'] ?? ''); ?></td>
+                                <td class="amount"><?php echo $debit > 0 ? '&#8369;' . number_format((float) $debit, 2) : '-'; ?></td>
+                                <td class="amount"><?php echo $credit > 0 ? '&#8369;' . number_format((float) $credit, 2) : '-'; ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <div class="report-footer">
+            <div>ATIERA Financial Management System</div>
+            <div>Printed: <?php echo htmlspecialchars($printedAt); ?></div>
+        </div>
     </div>
 
     <?php if ($autoPrint): ?>
