@@ -2679,14 +2679,16 @@ try {
                 return isNaN(dt2.getTime()) ? 'N/A' : dt2.toLocaleString();
             };
 
-            tbody.innerHTML = auditTrail.map(log => `
+            tbody.innerHTML = auditTrail.map(log => {
+                const rawDate = log.created_at || log.date_time || log.formatted_date || log.date || '';
+                return `
                 <tr>
-                    <td>${safeFormatDate(log.date_time)}</td>
+                    <td>${safeFormatDate(rawDate)}</td>
                     <td>${(log.full_name || log.username || log.user || log.user_name || 'Unknown')}</td>
                     <td>${(log.action || '')}</td>
                     <td>${formatDetails(log)}</td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         function startAuditPolling() {

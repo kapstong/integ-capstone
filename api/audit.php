@@ -8,19 +8,13 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization');
 ob_start();
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
-
-// Set up error handler to catch and output errors as JSON
-set_error_handler(function($errno, $errstr, $errfile, $errline) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Server error: ' . $errstr]);
-    ob_end_flush();
-    exit(1);
-}, E_ALL);
-
-// Set up exception handler
-set_exception_handler(function($exception) {
-    http_response_code(500);
     echo json_encode(['error' => 'Exception: ' . $exception->getMessage()]);
+        $stmt = $db->prepare("
+            INSERT INTO audit_log (
+                user_id, action, table_name, record_id, old_values, new_values,
+                ip_address, user_agent, created_at
+            ) VALUES (?, ?, 'disbursements', ?, ?, ?, ?, ?, NOW())
+        ");
     ob_end_flush();
     exit(1);
 });
@@ -61,7 +55,7 @@ function getAuditTrail($db, $filters = []) {
         $where = [];
         $params = [];
         $allowedTables = ['disbursements', 'hr3_claims', 'payroll'];
-        $allowedActions = ['created', 'updated', 'deleted', 'approved', 'rejected', 'processed_payment', 'viewed'];
+        $allowedActions = ['created', 'updated', 'deleted', 'approved', 'rejected', 'processed_payment', 'viewed', 'printed'];
         $scope = $filters['scope'] ?? '';
 
         // Filter by table
@@ -170,12 +164,12 @@ function logDisbursementAction($db, $action, $recordId, $oldValues = null, $newV
     try {
         $userId = $userId ?? $_SESSION['user']['id'] ?? 1;
 
-        $stmt = $db->prepare("
-            INSERT INTO audit_log (
-                user_id, action, table_name, record_id, old_values, new_values,
-                ip_address, user_agent
-            ) VALUES (?, ?, 'disbursements', ?, ?, ?, ?, ?)
-        ");
+            $stmt = $db->prepare("
+                INSERT INTO audit_log (
+                    user_id, action, table_name, record_id, old_values, new_values,
+                    ip_address, user_agent, created_at
+                ) VALUES (?, ?, 'disbursements', ?, ?, ?, ?, ?, NOW())
+            ");
 
         $stmt->execute([
             $userId,
@@ -315,7 +309,7 @@ try {
                 $newValues = $_POST['new_values'] ?? null;
 
                 $allowedTables = ['disbursements', 'hr3_claims', 'payroll'];
-                $allowedActions = ['created', 'updated', 'deleted', 'approved', 'rejected', 'processed_payment'];
+                $allowedActions = ['created', 'updated', 'deleted', 'approved', 'rejected', 'processed_payment', 'printed'];
 
                 if (!in_array($table, $allowedTables, true) || !in_array($action, $allowedActions, true)) {
                     http_response_code(400);
