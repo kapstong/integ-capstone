@@ -2028,10 +2028,10 @@ try {
         }
 
         function buildAuditParams() {
-            const dateFrom = document.getElementById('filterDateFrom').value;
-            const dateTo = document.getElementById('filterDateTo').value;
-            const user = document.getElementById('filterUser').value;
-            const action = document.getElementById('filterAction').value;
+            const dateFrom = document.getElementById('filterDateFrom')?.value || '';
+            const dateTo = document.getElementById('filterDateTo')?.value || '';
+            const user = document.getElementById('filterUser')?.value || '';
+            const action = document.getElementById('filterAction')?.value || '';
 
             const params = new URLSearchParams();
             params.append('table_name', auditTablesScope);
