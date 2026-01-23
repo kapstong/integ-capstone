@@ -848,6 +848,7 @@ try {
             border: none;
             padding: 0 1.1rem;
             font-weight: 600;
+            color: var(--atiera-white);
         }
         .financial-statements .financial-subtabs {
             gap: 0.5rem;
