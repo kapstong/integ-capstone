@@ -14,11 +14,17 @@ $db = Database::getInstance()->getConnection();
 // Fetch summary data and actual data for all modules
 try {
     // Auto-sync Core 1 payments into journal entries
+    $core1SyncResult = null;
+    $core1SyncError = null;
     try {
         $integrationManager = APIIntegrationManager::getInstance();
-        $integrationManager->executeIntegrationAction('core1', 'importPayments');
+        $core1Config = $integrationManager->getIntegrationConfig('core1');
+        if (!$core1Config || empty($core1Config['api_url']) || !filter_var($core1Config['api_url'], FILTER_VALIDATE_URL)) {
+            throw new Exception('Core 1 integration is not configured or has an invalid API URL.');
+        }
+        $core1SyncResult = $integrationManager->executeIntegrationAction('core1', 'importPayments');
     } catch (Exception $e) {
-        // Ignore integration failures to keep GL accessible
+        $core1SyncError = $e->getMessage();
     }
 
     // Basic stats
@@ -151,6 +157,8 @@ try {
     $journalEntries = [];
     $trialBalance = [];
     $auditTrail = [];
+    $core1SyncResult = null;
+    $core1SyncError = $e->getMessage();
 }
 ?>
 <!DOCTYPE html>
@@ -696,6 +704,21 @@ try {
     <div class="content">
         <!-- Top Navbar -->
         <?php include '../includes/global_navbar.php'; ?>
+
+        <?php if (!empty($core1SyncError)): ?>
+            <div class="alert alert-danger alert-custom mt-3">
+                <strong>Core 1 Sync Failed:</strong>
+                <?php echo htmlspecialchars($core1SyncError); ?>
+            </div>
+        <?php elseif (is_array($core1SyncResult)): ?>
+            <div class="alert alert-success alert-custom mt-3">
+                <strong>Core 1 Sync:</strong>
+                <?php echo htmlspecialchars($core1SyncResult['message'] ?? 'Sync completed.'); ?>
+                <?php if (isset($core1SyncResult['imported_count'])): ?>
+                    <span class="ms-2">(Imported <?php echo (int)$core1SyncResult['imported_count']; ?>)</span>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
         <!-- Stats Cards -->
         <div class="row mb-4">
