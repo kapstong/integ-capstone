@@ -6,6 +6,7 @@
 
 require_once '../includes/auth.php';
 require_once '../includes/backup.php';
+require_once '../includes/privacy_guard.php';
 
 header('Content-Type: application/json');
 session_start();
@@ -53,6 +54,8 @@ try {
                         echo json_encode(['error' => 'Backup ID required']);
                         exit;
                     }
+
+                    requirePrivacyVisible('json');
 
                     // Get backup info
                     $stmt = $db->prepare("SELECT * FROM backups WHERE id = ?");

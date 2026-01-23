@@ -62,11 +62,15 @@ try {
         case 'send_code':
             handleSendCode($user);
             break;
-            
+
         case 'verify_code':
             handleVerifyCode($user);
             break;
-            
+
+        case 'set_visibility':
+            handleSetVisibility($user);
+            break;
+
         case 'check_status':
             handleCheckStatus($user);
             break;
@@ -147,6 +151,7 @@ function handleVerifyCode($user) {
             // Mark as unlocked in session
             $_SESSION['privacy_unlocked'] = true;
             $_SESSION['privacy_unlocked_time'] = time();
+            $_SESSION['privacy_visible'] = true;
             
             // Clear the code
             unset($_SESSION['privacy_code']);
@@ -174,15 +179,49 @@ function handleVerifyCode($user) {
 function handleCheckStatus($user) {
     try {
         $unlocked = isset($_SESSION['privacy_unlocked']) && $_SESSION['privacy_unlocked'] === true;
-        
+        $visible = isset($_SESSION['privacy_visible']) && $_SESSION['privacy_visible'] === true;
+
         echo json_encode([
             'success' => true,
-            'unlocked' => $unlocked
+            'unlocked' => $unlocked,
+            'visible' => $visible
         ]);
-        
+
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['error' => 'Status check failed: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle updating privacy visibility
+ */
+function handleSetVisibility($user) {
+    try {
+        $visibleParam = $_POST['visible'] ?? $_GET['visible'] ?? null;
+        if ($visibleParam === null) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Visibility flag is required']);
+            return;
+        }
+
+        $visible = $visibleParam === '1' || $visibleParam === 1 || $visibleParam === true || $visibleParam === 'true';
+
+        if ($visible && (!isset($_SESSION['privacy_unlocked']) || $_SESSION['privacy_unlocked'] !== true)) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Privacy mode is locked']);
+            return;
+        }
+
+        $_SESSION['privacy_visible'] = $visible;
+
+        echo json_encode([
+            'success' => true,
+            'visible' => $visible
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to update visibility: ' . $e->getMessage()]);
     }
 }
 

@@ -31,6 +31,7 @@ try {
 require_once __DIR__ . '/../includes/database.php';
 require_once __DIR__ . '/../includes/logger.php';
 require_once __DIR__ . '/../includes/mailer.php';
+require_once __DIR__ . '/../includes/privacy_guard.php';
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Failed to load required files: ' . $e->getMessage()]);
@@ -85,6 +86,10 @@ function handleGet($db, $logger) {
         $dateFrom = isset($_GET['date_from']) ? $_GET['date_from'] : null;
         $dateTo = isset($_GET['date_to']) ? $_GET['date_to'] : null;
         $format = isset($_GET['format']) ? $_GET['format'] : 'json'; // json, csv, pdf
+
+        if ($format !== 'json') {
+            requirePrivacyVisible('json');
+        }
 
         if (!$reportType) {
             http_response_code(400);

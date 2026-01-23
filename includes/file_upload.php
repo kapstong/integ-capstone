@@ -260,6 +260,9 @@ class FileUploadManager {
      * Download file
      */
     public function downloadFile($fileId) {
+        require_once __DIR__ . '/privacy_guard.php';
+        requirePrivacyVisible('text');
+
         $file = $this->getFile($fileId);
 
         if (!$file) {

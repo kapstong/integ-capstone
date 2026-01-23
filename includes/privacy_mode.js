@@ -27,6 +27,7 @@
 
         ensureMaskStyles();
         scrubLegacyMaskedSpans();
+        setDownloadButtonsDisabled(true);
 
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
         while (walker.nextNode()) {
@@ -41,6 +42,7 @@
         isHidden = true;
         updateEyeButton();
         persistVisibility();
+        syncPrivacyVisibility(false);
     }
 
     /**
@@ -67,6 +69,8 @@
         isHidden = false;
         updateEyeButton();
         persistVisibility();
+        setDownloadButtonsDisabled(false);
+        syncPrivacyVisibility(true);
     }
 
     /**
@@ -532,6 +536,9 @@
         const observer = new MutationObserver(function() {
             if (isHidden) {
                 hideAmounts(true);
+                setDownloadButtonsDisabled(true);
+            } else {
+                setDownloadButtonsDisabled(false);
             }
         });
 
@@ -539,6 +546,18 @@
             childList: true,
             subtree: true
         });
+
+        document.addEventListener('click', function(event) {
+            if (!isHidden) {
+                return;
+            }
+            const target = event.target.closest('a, button, input[type="button"], input[type="submit"]');
+            if (!target || !isDownloadElement(target)) {
+                return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+        }, true);
 
         window.addEventListener('storage', function(event) {
             if (event.key !== STORAGE_KEY) {
@@ -694,8 +713,107 @@
                 white-space: pre;
                 color: var(--privacy-mask-color, #1f2937);
             }
+            .privacy-download-disabled {
+                opacity: 0.55 !important;
+                pointer-events: none !important;
+                cursor: not-allowed !important;
+            }
         `;
         document.head.appendChild(style);
+    }
+
+    function syncPrivacyVisibility(visible) {
+        const apiPath = getApiPath('privacy_code.php');
+        const formData = new URLSearchParams();
+        formData.append('action', 'set_visibility');
+        formData.append('visible', visible ? '1' : '0');
+
+        fetch(apiPath, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString()
+        }).catch(() => {
+            // Ignore visibility sync failures
+        });
+    }
+
+    function isDownloadElement(element) {
+        if (!element) {
+            return false;
+        }
+        if (element.matches('a[download]')) {
+            return true;
+        }
+        const text = (element.textContent || '').toLowerCase();
+        const value = (element.value || '').toLowerCase();
+        const attrs = [
+            element.id || '',
+            element.name || '',
+            element.className || '',
+            element.getAttribute('aria-label') || '',
+            element.getAttribute('title') || ''
+        ].join(' ').toLowerCase();
+
+        if (text.includes('export') || text.includes('download') || value.includes('export') || value.includes('download')) {
+            return true;
+        }
+        if (attrs.includes('export') || attrs.includes('download')) {
+            return true;
+        }
+
+        if (element.matches('a[href]')) {
+            const href = (element.getAttribute('href') || '').toLowerCase();
+            if (href.includes('export') || href.includes('download')) {
+                return true;
+            }
+            if (/\.(csv|xlsx|xls|pdf|zip|txt|json)(\?|#|$)/i.test(href)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function setDownloadButtonsDisabled(disabled) {
+        ensureMaskStyles();
+        const candidates = document.querySelectorAll('a, button, input[type="button"], input[type="submit"]');
+        candidates.forEach(element => {
+            if (!isDownloadElement(element)) {
+                return;
+            }
+
+            if (disabled) {
+                if (!element.hasAttribute('data-privacy-prev-disabled')) {
+                    element.setAttribute('data-privacy-prev-disabled', element.disabled ? '1' : '0');
+                }
+                if (!element.hasAttribute('data-privacy-prev-tabindex')) {
+                    const prevTabindex = element.getAttribute('tabindex');
+                    element.setAttribute('data-privacy-prev-tabindex', prevTabindex === null ? '' : prevTabindex);
+                }
+                element.classList.add('privacy-download-disabled');
+                element.setAttribute('aria-disabled', 'true');
+                if (element.matches('button, input[type="button"], input[type="submit"]')) {
+                    element.disabled = true;
+                } else {
+                    element.setAttribute('tabindex', '-1');
+                }
+            } else {
+                const wasDisabled = element.getAttribute('data-privacy-prev-disabled');
+                const prevTabindex = element.getAttribute('data-privacy-prev-tabindex');
+                element.classList.remove('privacy-download-disabled');
+                element.removeAttribute('aria-disabled');
+                if (element.matches('button, input[type="button"], input[type="submit"]')) {
+                    element.disabled = wasDisabled === '1';
+                } else if (prevTabindex === '') {
+                    element.removeAttribute('tabindex');
+                } else if (prevTabindex !== null) {
+                    element.setAttribute('tabindex', prevTabindex);
+                }
+                element.removeAttribute('data-privacy-prev-disabled');
+                element.removeAttribute('data-privacy-prev-tabindex');
+            }
+        });
     }
 
     init();

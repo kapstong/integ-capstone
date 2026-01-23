@@ -2396,7 +2396,7 @@ $db = Database::getInstance()->getConnection();
         });
     </script>
 
-    <script src="../includes/privacy_mode.js?v=8"></script>
+    <script src="../includes/privacy_mode.js?v=10"></script>
     <script src="../includes/inactivity_timeout.js?v=3"></script>
 <script src="../includes/navbar_datetime.js"></script>
 
