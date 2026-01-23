@@ -283,6 +283,9 @@
 
                 codeInput.value = '';
                 codeInput.classList.remove('is-invalid');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 150);
 
             } else {
                 codeInput.classList.add('is-invalid');
