@@ -157,7 +157,7 @@ try {
         LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
         JOIN journal_entries je ON jel.journal_entry_id = je.id
         WHERE coa.is_active = 1
-          AND je.status = 'posted'
+          AND (je.status = 'posted' OR je.status IS NULL OR je.status = '')
           AND je.entry_date BETWEEN ? AND ?
         GROUP BY coa.id, coa.account_code, coa.account_name, coa.account_type
         HAVING debit_total != 0 OR credit_total != 0
