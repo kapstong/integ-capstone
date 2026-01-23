@@ -68,9 +68,11 @@ header('Content-Type: application/javascript');
 
                 tbody.innerHTML = auditLogs.map(log => {
                     const actionLabel = log.action_label || log.action;
-                    // Prefer explicit disbursement number, then record id, then try JSON fields, then parse description
+                    // Prefer explicit reference number, then disbursement number, then record id, then try JSON fields, then parse description
                     let disbRef = '';
-                    if (log.disbursement_number) disbRef = log.disbursement_number;
+                    if (log.reference_number) disbRef = log.reference_number;
+                    if (!disbRef && log.disbursement_ref) disbRef = log.disbursement_ref;
+                    if (!disbRef && log.disbursement_number) disbRef = log.disbursement_number;
                     if (!disbRef && log.record_id) disbRef = log.record_id;
 
                     if (!disbRef) {
