@@ -830,6 +830,83 @@ try {
         .modal-backdrop {
             z-index: 1990;
         }
+        .print-only {
+            display: none;
+        }
+        .print-header {
+            display: none;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .print-header img {
+            width: 80px;
+            height: auto;
+        }
+        .print-title {
+            font-size: 18pt;
+            font-weight: 700;
+            color: #111;
+        }
+        .print-subtitle {
+            font-size: 10pt;
+            color: #555;
+        }
+        .print-watermark {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.4;
+            z-index: 0;
+            width: 60%;
+            max-width: 520px;
+            pointer-events: none;
+        }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #journal, #journal * {
+                visibility: visible;
+            }
+            #journal {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            #journalFiltersSection {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .print-header {
+                display: flex !important;
+            }
+            .print-watermark {
+                display: block !important;
+            }
+            #journal .table {
+                box-shadow: none;
+                position: relative;
+                z-index: 1;
+            }
+            #journal .table thead th {
+                background: #1e2936 !important;
+                color: #ffffff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            #journal .table tbody td {
+                color: #111 !important;
+            }
+            #journal .table tbody tr {
+                page-break-inside: avoid;
+            }
+        }
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
@@ -1077,6 +1154,18 @@ try {
                                                 </button>
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+                                <div class="print-only">
+                                    <div class="print-header">
+                                        <img src="../logo2.png" alt="ATIERA Logo">
+                                        <div>
+                                            <div class="print-title">ATIERA : Hotel and Restaurant Management System</div>
+                                            <div class="print-subtitle">financial.atierahotelandrestaurant.com</div>
+                                        </div>
+                                    </div>
+                                    <div class="print-watermark">
+                                        <img src="../logo2.png" alt="ATIERA Watermark" style="width: 100%; height: auto;">
                                     </div>
                                 </div>
                                 <div class="table-responsive">
