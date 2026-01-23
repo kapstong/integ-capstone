@@ -111,6 +111,7 @@ try {
     // Fetch trial balance data (normalize by account type)
     $trialBalanceRaw = $db->query("
         SELECT
+            coa.id as account_id,
             coa.account_code,
             coa.account_name,
             coa.account_type,
@@ -155,11 +156,45 @@ try {
         $trialCreditTotal += $creditBalance;
 
         $trialBalance[] = [
+            'account_id' => $row['account_id'] ?? null,
             'account_code' => $row['account_code'],
             'account_name' => $row['account_name'],
             'debit_balance' => $debitBalance,
             'credit_balance' => $creditBalance
         ];
+    }
+
+    // Build trial balance breakdown (latest 50 lines per account)
+    $trialBreakdown = [];
+    $trialAccountIds = array_filter(array_column($trialBalance, 'account_id'));
+    if (!empty($trialAccountIds)) {
+        $placeholders = implode(',', array_fill(0, count($trialAccountIds), '?'));
+        $breakdownStmt = $db->prepare("
+            SELECT
+                jel.account_id,
+                je.entry_date,
+                je.entry_number,
+                je.description,
+                jel.debit,
+                jel.credit
+            FROM journal_entry_lines jel
+            JOIN journal_entries je ON jel.journal_entry_id = je.id
+            WHERE je.status = 'posted'
+              AND jel.account_id IN ($placeholders)
+            ORDER BY je.entry_date DESC, je.id DESC, jel.id DESC
+        ");
+        $breakdownStmt->execute($trialAccountIds);
+        $rows = $breakdownStmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as $row) {
+            $accountId = (int)$row['account_id'];
+            if (!isset($trialBreakdown[$accountId])) {
+                $trialBreakdown[$accountId] = [];
+            }
+            if (count($trialBreakdown[$accountId]) >= 50) {
+                continue;
+            }
+            $trialBreakdown[$accountId][] = $row;
+        }
     }
 
     // Detect unbalanced posted journal entries
@@ -213,6 +248,7 @@ try {
     $trialDebitTotal = 0;
     $trialCreditTotal = 0;
     $unbalancedCount = 0;
+    $trialBreakdown = [];
 }
 ?>
 <!DOCTYPE html>
@@ -976,6 +1012,7 @@ try {
                                                 <th>Account</th>
                                                 <th>Debit Balance</th>
                                                 <th>Credit Balance</th>
+                                                <th>Details</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -991,16 +1028,60 @@ try {
                                                 $credit_total = $trialCreditTotal ?? 0;
                                                 foreach ($trialBalance as $account):
                                                 ?>
+                                                    <?php
+                                                    $detailId = 'trial-details-' . intval($account['account_id'] ?? 0);
+                                                    $hasDetails = !empty($trialBreakdown[$account['account_id'] ?? 0]);
+                                                    ?>
                                                     <tr>
                                                         <td><?php echo htmlspecialchars($account['account_name']); ?></td>
                                                         <td><?php echo $account['debit_balance'] > 0 ? '&#8369;' . number_format($account['debit_balance'], 2) : '-'; ?></td>
                                                         <td><?php echo $account['credit_balance'] > 0 ? '&#8369;' . number_format($account['credit_balance'], 2) : '-'; ?></td>
+                                                        <td>
+                                                            <?php if ($hasDetails): ?>
+                                                                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#<?php echo $detailId; ?>" aria-expanded="false" aria-controls="<?php echo $detailId; ?>">
+                                                                    View
+                                                                </button>
+                                                            <?php else: ?>
+                                                                -
+                                                            <?php endif; ?>
+                                                        </td>
                                                     </tr>
+                                                    <?php if ($hasDetails): ?>
+                                                        <tr class="collapse" id="<?php echo $detailId; ?>">
+                                                            <td colspan="4">
+                                                                <div class="table-responsive">
+                                                                    <table class="table table-sm mb-0">
+                                                                        <thead>
+                                                                            <tr>
+                                                                                <th>Date</th>
+                                                                                <th>Reference</th>
+                                                                                <th>Description</th>
+                                                                                <th>Debit</th>
+                                                                                <th>Credit</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            <?php foreach ($trialBreakdown[$account['account_id']] as $line): ?>
+                                                                                <tr>
+                                                                                    <td><?php echo htmlspecialchars($line['entry_date']); ?></td>
+                                                                                    <td><?php echo htmlspecialchars($line['entry_number']); ?></td>
+                                                                                    <td><?php echo htmlspecialchars($line['description']); ?></td>
+                                                                                    <td><?php echo $line['debit'] > 0 ? '&#8369;' . number_format($line['debit'], 2) : '-'; ?></td>
+                                                                                    <td><?php echo $line['credit'] > 0 ? '&#8369;' . number_format($line['credit'], 2) : '-'; ?></td>
+                                                                                </tr>
+                                                                            <?php endforeach; ?>
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    <?php endif; ?>
                                                 <?php endforeach; ?>
                                                 <tr class="table-dark">
                                                     <td><strong>Total</strong></td>
                                                     <td><strong>&#8369;<?php echo number_format($debit_total, 2); ?></strong></td>
                                                     <td><strong>&#8369;<?php echo number_format($credit_total, 2); ?></strong></td>
+                                                    <td></td>
                                                 </tr>
                                             <?php endif; ?>
                                         </tbody>
