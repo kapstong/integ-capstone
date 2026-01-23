@@ -3,6 +3,7 @@ require_once '../includes/auth.php';
 require_once '../includes/database.php';
 require_once '../includes/api_integrations.php';
 require_once '../includes/privacy_guard.php';
+require_once '../includes/formatting.php';
 
 if (!isset($_SESSION['user'])) {
     header('Location: ../index.php');
@@ -1366,13 +1367,13 @@ try {
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
-                    <h3>&#8369;<?php echo number_format($totalAssets, 2); ?></h3>
+                    <h3><?php echo format_currency($totalAssets); ?></h3>
                     <p>Total Assets <i class="fas fa-info-circle text-muted ms-1" data-bs-toggle="tooltip" title="As of the selected Trial Balance date"></i></p>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
-                    <h3>&#8369;<?php echo number_format($netProfit, 2); ?></h3>
+                    <h3><?php echo format_currency($netProfit); ?></h3>
                     <p>Net Profit <i class="fas fa-info-circle text-muted ms-1" data-bs-toggle="tooltip" title="As of the selected Trial Balance date"></i></p>
                 </div>
             </div>
@@ -1696,8 +1697,8 @@ try {
                                                 <?php endforeach; ?>
                                                 <tr class="trial-total-row">
                                                     <td><strong>Total</strong></td>
-                                                    <td><strong>&#8369;<?php echo number_format($debit_total, 2); ?></strong></td>
-                                                    <td><strong>&#8369;<?php echo number_format($credit_total, 2); ?></strong></td>
+                                                    <td><strong><?php echo format_currency($debit_total); ?></strong></td>
+                                                    <td><strong><?php echo format_currency($credit_total); ?></strong></td>
                                                     <td></td>
                                                 </tr>
                                             <?php endif; ?>
@@ -1888,13 +1889,13 @@ try {
                                                         <tr>
                                                             <td><?php echo htmlspecialchars($asset['account_name']); ?></td>
                                                             <td>Asset</td>
-                                                            <td class="text-end">&#8369;<?php echo number_format($asset['balance'] ?? 0, 2); ?></td>
+                                                            <td class="text-end"><?php echo format_currency($asset['balance'] ?? 0); ?></td>
                                                         </tr>
                                                     <?php endforeach; ?>
                                                     <tr style="font-weight: 600; background-color: #f0f0f0;">
                                                         <td>Total Assets</td>
                                                         <td></td>
-                                                        <td class="text-end">&#8369;<?php echo number_format($finTotalAssets, 2); ?></td>
+                                                        <td class="text-end"><?php echo format_currency($finTotalAssets); ?></td>
                                                     </tr>
 
                                                     <!-- Liabilities Section -->
@@ -1910,13 +1911,13 @@ try {
                                                         <tr>
                                                             <td><?php echo htmlspecialchars($liability['account_name']); ?></td>
                                                             <td>Liability</td>
-                                                            <td class="text-end">&#8369;<?php echo number_format($liability['balance'] ?? 0, 2); ?></td>
+                                                            <td class="text-end"><?php echo format_currency($liability['balance'] ?? 0); ?></td>
                                                         </tr>
                                                     <?php endforeach; ?>
                                                     <tr style="font-weight: 600; background-color: #f0f0f0;">
                                                         <td>Total Liabilities</td>
                                                         <td></td>
-                                                        <td class="text-end">&#8369;<?php echo number_format($finTotalLiabilities, 2); ?></td>
+                                                        <td class="text-end"><?php echo format_currency($finTotalLiabilities); ?></td>
                                                     </tr>
 
                                                     <!-- Equity Section -->
@@ -1932,18 +1933,18 @@ try {
                                                         <tr>
                                                             <td><?php echo htmlspecialchars($equity['account_name']); ?></td>
                                                             <td>Equity</td>
-                                                            <td class="text-end">&#8369;<?php echo number_format($equity['balance'] ?? 0, 2); ?></td>
+                                                            <td class="text-end"><?php echo format_currency($equity['balance'] ?? 0); ?></td>
                                                         </tr>
                                                     <?php endforeach; ?>
                                                     <tr>
                                                         <td>Retained Earnings</td>
                                                         <td>Equity</td>
-                                                        <td class="text-end">&#8369;<?php echo number_format($finNetProfit, 2); ?></td>
+                                                        <td class="text-end"><?php echo format_currency($finNetProfit); ?></td>
                                                     </tr>
                                                     <tr style="font-weight: 600; background-color: #f0f0f0;">
                                                         <td>Total Equity</td>
                                                         <td></td>
-                                                        <td class="text-end">&#8369;<?php echo number_format($finTotalEquity + $finNetProfit, 2); ?></td>
+                                                        <td class="text-end"><?php echo format_currency($finTotalEquity + $finNetProfit); ?></td>
                                                     </tr>
                                                 </tbody>
                                             </table>
@@ -1957,7 +1958,7 @@ try {
                                             </div>
                                         <?php else: ?>
                                             <div class="alert alert-warning mt-3">
-                                                <strong>Note:</strong> Balance Sheet is not balanced. Assets = &#8369;<?php echo number_format($finTotalAssets, 2); ?>, Liabilities + Equity = &#8369;<?php echo number_format($finTotalLiabilities + $finTotalEquity + $finNetProfit, 2); ?>
+                                                <strong>Note:</strong> Balance Sheet is not balanced. Assets = <?php echo format_currency($finTotalAssets); ?>, Liabilities + Equity = <?php echo format_currency($finTotalLiabilities + $finTotalEquity + $finNetProfit); ?>
                                             </div>
                                         <?php endif; ?>
                                     </div>
@@ -1987,13 +1988,13 @@ try {
                                                         <tr>
                                                             <td><?php echo htmlspecialchars($revenue['account_name']); ?></td>
                                                             <td>Revenue</td>
-                                                            <td class="text-end">&#8369;<?php echo number_format($revenue['balance'] ?? 0, 2); ?></td>
+                                                            <td class="text-end"><?php echo format_currency($revenue['balance'] ?? 0); ?></td>
                                                         </tr>
                                                     <?php endforeach; ?>
                                                     <tr style="font-weight: 600; background-color: #f0f0f0;">
                                                         <td>Total Revenue</td>
                                                         <td></td>
-                                                        <td class="text-end">&#8369;<?php echo number_format($finTotalRevenue, 2); ?></td>
+                                                        <td class="text-end"><?php echo format_currency($finTotalRevenue); ?></td>
                                                     </tr>
 
                                                     <!-- Expenses Section -->
@@ -2009,20 +2010,20 @@ try {
                                                         <tr>
                                                             <td><?php echo htmlspecialchars($expense['account_name']); ?></td>
                                                             <td>Expense</td>
-                                                            <td class="text-end">&#8369;<?php echo number_format($expense['balance'] ?? 0, 2); ?></td>
+                                                            <td class="text-end"><?php echo format_currency($expense['balance'] ?? 0); ?></td>
                                                         </tr>
                                                     <?php endforeach; ?>
                                                     <tr style="font-weight: 600; background-color: #f0f0f0;">
                                                         <td>Total Expenses</td>
                                                         <td></td>
-                                                        <td class="text-end">&#8369;<?php echo number_format($finTotalExpenses, 2); ?></td>
+                                                        <td class="text-end"><?php echo format_currency($finTotalExpenses); ?></td>
                                                     </tr>
 
                                                     <!-- Net Profit/Loss -->
                                                     <tr style="font-weight: 600; background-color: #f0f0f0;">
                                                         <td>Net Income (Loss)</td>
                                                         <td></td>
-                                                        <td class="text-end">&#8369;<?php echo number_format($finNetProfit, 2); ?></td>
+                                                        <td class="text-end"><?php echo format_currency($finNetProfit); ?></td>
                                                     </tr>
                                                 </tbody>
                                             </table>
@@ -2048,12 +2049,12 @@ try {
                                                     <tr>
                                                         <td>Net Income</td>
                                                         <td>Operating</td>
-                                                        <td class="text-end">&#8369;<?php echo number_format($finNetProfit, 2); ?></td>
+                                                        <td class="text-end"><?php echo format_currency($finNetProfit); ?></td>
                                                     </tr>
                                                     <tr style="font-weight: 600; background-color: #f0f0f0;">
                                                         <td>Net Operating Cash Flow</td>
                                                         <td></td>
-                                                        <td class="text-end">&#8369;<?php echo number_format($finOperatingCF, 2); ?></td>
+                                                        <td class="text-end"><?php echo format_currency($finOperatingCF); ?></td>
                                                     </tr>
 
                                                     <!-- Investing Activities -->
@@ -2068,7 +2069,7 @@ try {
                                                     <tr style="font-weight: 600; background-color: #f0f0f0;">
                                                         <td>Net Investing Cash Flow</td>
                                                         <td></td>
-                                                        <td class="text-end">&#8369;<?php echo number_format($finInvestingCF, 2); ?></td>
+                                                        <td class="text-end"><?php echo format_currency($finInvestingCF); ?></td>
                                                     </tr>
 
                                                     <!-- Financing Activities -->
@@ -2083,18 +2084,18 @@ try {
                                                     <tr style="font-weight: 600; background-color: #f0f0f0;">
                                                         <td>Net Financing Cash Flow</td>
                                                         <td></td>
-                                                        <td class="text-end">&#8369;<?php echo number_format($finFinancingCF, 2); ?></td>
+                                                        <td class="text-end"><?php echo format_currency($finFinancingCF); ?></td>
                                                     </tr>
 
                                                     <!-- Net Cash Flow -->
                                                     <tr style="font-weight: 600; background-color: #f0f0f0;">
                                                         <td>Net Cash Flow</td>
                                                         <td></td>
-                                                        <td class="text-end">&#8369;<?php echo number_format(($finOperatingCF + $finInvestingCF + $finFinancingCF), 2); ?></td>
+                                                        <td class="text-end"><?php echo format_currency(($finOperatingCF + $finInvestingCF + $finFinancingCF)); ?></td>
                                                     </tr>
                                                     <tr>
                                                         <td colspan="2">Cash Balance Change (reconciled)</td>
-                                                        <td class="text-end">&#8369;<?php echo number_format($cashDelta, 2); ?></td>
+                                                        <td class="text-end"><?php echo format_currency($cashDelta); ?></td>
                                                     </tr>
                                                     <?php if (abs(($finOperatingCF + $finInvestingCF + $finFinancingCF) - $cashDelta) > 0.01): ?>
                                                         <tr>
@@ -3937,9 +3938,9 @@ try {
                 });
                 foreach ($equityAccounts as $equity):
                 ?>
-                    <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($equity['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($equity['balance'] ?? 0, 2); ?></td></tr>
+                    <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($equity['account_name']); ?></td><td></td><td><?php echo format_currency($equity['balance'] ?? 0); ?></td></tr>
                 <?php endforeach; ?>
-                <tr class="total-row"><td>&nbsp;&nbsp;Retained Earnings</td><td></td><td>&#8369;<?php echo number_format($finNetProfit, 2); ?></td></tr>
+                <tr class="total-row"><td>&nbsp;&nbsp;Retained Earnings</td><td></td><td><?php echo format_currency($finNetProfit); ?></td></tr>
             `;
         }
 
@@ -3957,9 +3958,9 @@ try {
                 });
                 foreach ($assetAccounts as $asset):
                 ?>
-                    <tr><td><?php echo htmlspecialchars($asset['account_name']); ?></td><td>Asset</td><td>&#8369;<?php echo number_format($asset['balance'] ?? 0, 2); ?></td></tr>
+                    <tr><td><?php echo htmlspecialchars($asset['account_name']); ?></td><td>Asset</td><td><?php echo format_currency($asset['balance'] ?? 0); ?></td></tr>
                 <?php endforeach; ?>
-                <tr class="total-row"><th>Total Assets</th><th></th><th>&#8369;<?php echo number_format($totalAssets, 2); ?></th></tr>
+                <tr class="total-row"><th>Total Assets</th><th></th><th><?php echo format_currency($totalAssets); ?></th></tr>
 
                 <tr><th colspan="3" class="text-center bg-warning text-dark">Liabilities</th></tr>
                 <tr><th>Account</th><th>Type</th><th>Balance</th></tr>
@@ -3969,9 +3970,9 @@ try {
                 });
                 foreach ($liabilityAccounts as $liability):
                 ?>
-                    <tr><td><?php echo htmlspecialchars($liability['account_name']); ?></td><td>Liability</td><td>&#8369;<?php echo number_format($liability['balance'] ?? 0, 2); ?></td></tr>
+                    <tr><td><?php echo htmlspecialchars($liability['account_name']); ?></td><td>Liability</td><td><?php echo format_currency($liability['balance'] ?? 0); ?></td></tr>
                 <?php endforeach; ?>
-                <tr class="total-row"><th>Total Liabilities</th><th></th><th>&#8369;<?php echo number_format($totalLiabilities, 2); ?></th></tr>
+                <tr class="total-row"><th>Total Liabilities</th><th></th><th><?php echo format_currency($totalLiabilities); ?></th></tr>
 
                 <tr><th colspan="3" class="text-center bg-success text-white">Equity</th></tr>
                 <tr><th>Account</th><th>Type</th><th>Balance</th></tr>
@@ -3981,10 +3982,10 @@ try {
                 });
                 foreach ($equityAccounts as $equity):
                 ?>
-                    <tr><td><?php echo htmlspecialchars($equity['account_name']); ?></td><td>Equity</td><td>&#8369;<?php echo number_format($equity['balance'] ?? 0, 2); ?></td></tr>
+                    <tr><td><?php echo htmlspecialchars($equity['account_name']); ?></td><td>Equity</td><td><?php echo format_currency($equity['balance'] ?? 0); ?></td></tr>
                 <?php endforeach; ?>
-                    <tr><td>Retained Earnings</td><td>Equity</td><td>&#8369;<?php echo number_format($finNetProfit, 2); ?></td></tr>
-                    <tr class="total-row"><th>Total Equity</th><th></th><th>&#8369;<?php echo number_format($finTotalEquity + $finNetProfit, 2); ?></th></tr>
+                    <tr><td>Retained Earnings</td><td>Equity</td><td><?php echo format_currency($finNetProfit); ?></td></tr>
+                    <tr class="total-row"><th>Total Equity</th><th></th><th><?php echo format_currency($finTotalEquity + $finNetProfit); ?></th></tr>
             `;
         }
 
@@ -3994,9 +3995,9 @@ try {
             const netProfit = <?php echo $finNetProfit; ?>;
 
             table.innerHTML = `
-                <tr><th>Revenue</th><th></th><th>&#8369;${number_format(totalRevenue, 2)}</th></tr>
-                <tr><th>Expenses</th><th></th><th>&#8369;${number_format(totalExpenses, 2)}</th></tr>
-                <tr class="total-row"><th>Net Profit</th><th></th><th>&#8369;${number_format(netProfit, 2)}</th></tr>
+                <tr><th>Revenue</th><th></th><th><?php echo format_currency($finTotalRevenue); ?></th></tr>
+                <tr><th>Expenses</th><th></th><th><?php echo format_currency($finTotalExpenses); ?></th></tr>
+                <tr class="total-row"><th>Net Profit</th><th></th><th><?php echo format_currency($finNetProfit); ?></th></tr>
             `;
         }
 
@@ -4014,9 +4015,9 @@ try {
                 });
                 foreach ($revenueAccounts as $revenue):
                 ?>
-                    <tr><td><?php echo htmlspecialchars($revenue['account_name']); ?></td><td>Revenue</td><td>&#8369;<?php echo number_format($revenue['balance'] ?? 0, 2); ?></td></tr>
+                    <tr><td><?php echo htmlspecialchars($revenue['account_name']); ?></td><td>Revenue</td><td><?php echo format_currency($revenue['balance'] ?? 0); ?></td></tr>
                 <?php endforeach; ?>
-                <tr class="total-row"><th>Total Revenue</th><th></th><th>&#8369;<?php echo number_format($totalRevenue, 2); ?></th></tr>
+                <tr class="total-row"><th>Total Revenue</th><th></th><th><?php echo format_currency($totalRevenue); ?></th></tr>
 
                 <tr><th colspan="3" class="text-center bg-danger text-white">Expenses</th></tr>
                 <tr><th>Account</th><th>Type</th><th>Amount</th></tr>
@@ -4026,11 +4027,11 @@ try {
                 });
                 foreach ($expenseAccounts as $expense):
                 ?>
-                    <tr><td><?php echo htmlspecialchars($expense['account_name']); ?></td><td>Expense</td><td>&#8369;<?php echo number_format($expense['balance'] ?? 0, 2); ?></td></tr>
+                    <tr><td><?php echo htmlspecialchars($expense['account_name']); ?></td><td>Expense</td><td><?php echo format_currency($expense['balance'] ?? 0); ?></td></tr>
                 <?php endforeach; ?>
-                <tr class="total-row"><th>Total Expenses</th><th></th><th>&#8369;<?php echo number_format($finTotalExpenses, 2); ?></th></tr>
+                <tr class="total-row"><th>Total Expenses</th><th></th><th><?php echo format_currency($finTotalExpenses); ?></th></tr>
 
-                <tr class="total-row"><th>Net Profit</th><th></th><th>&#8369;<?php echo number_format($finNetProfit, 2); ?></th></tr>
+                <tr class="total-row"><th>Net Profit</th><th></th><th><?php echo format_currency($finNetProfit); ?></th></tr>
             `;
         }
 
