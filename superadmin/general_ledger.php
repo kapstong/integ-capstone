@@ -1628,10 +1628,10 @@ try {
                                         <h6 class="mb-1">Trial Balance Report</h6>
                                         <small class="text-muted">Period: <?php echo ucfirst($trialPeriod); ?> (<?php echo htmlspecialchars($trialDateFrom); ?> to <?php echo htmlspecialchars($trialDateTo); ?>)</small>
                                     </div>
-                                    <div class="d-flex flex-wrap align-items-center gap-2">
-                                        <form class="d-flex flex-wrap align-items-center gap-2" method="get">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <form class="d-flex align-items-center gap-2 flex-nowrap" method="get" style="align-items:center;">
                                             <input type="hidden" name="tab" value="trial">
-                                            <select class="form-select" name="trial_period" style="min-width: 180px;">
+                                            <select class="form-select me-2" name="trial_period" style="min-width:170px;">
                                                 <option value="daily" <?php echo $trialPeriod === 'daily' ? 'selected' : ''; ?>>Daily</option>
                                                 <option value="weekly" <?php echo $trialPeriod === 'weekly' ? 'selected' : ''; ?>>Weekly</option>
                                                 <option value="monthly" <?php echo $trialPeriod === 'monthly' ? 'selected' : ''; ?>>Monthly</option>
@@ -1640,10 +1640,10 @@ try {
                                                 <option value="annually" <?php echo $trialPeriod === 'annually' ? 'selected' : ''; ?>>Annually</option>
                                                 <option value="yearly" <?php echo $trialPeriod === 'yearly' ? 'selected' : ''; ?>>Yearly</option>
                                             </select>
-                                            <input type="date" class="form-control" name="trial_date" value="<?php echo htmlspecialchars($trialDateTo); ?>">
+                                            <input type="date" class="form-control me-2" name="trial_date" value="<?php echo htmlspecialchars($trialDateTo); ?>" style="width:165px;">
                                             <button class="btn btn-primary" type="submit">Apply</button>
                                         </form>
-                                        <button class="btn btn-outline-secondary" onclick="exportTrialBalance()"><i class="fas fa-download me-2"></i>Export</button>
+                                        <button class="btn btn-outline-secondary ms-2" onclick="exportTrialBalance()"><i class="fas fa-download me-2"></i>Export</button>
                                     </div>
                                 </div>
                                 <div class="table-responsive">
