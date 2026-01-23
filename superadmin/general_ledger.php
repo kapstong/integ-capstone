@@ -721,13 +721,13 @@ try {
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
-                    <h3>₱<?php echo number_format($totalAssets, 2); ?></h3>
+                    <h3>&#8369;<?php echo number_format($totalAssets, 2); ?></h3>
                     <p>Total Assets</p>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
-                    <h3>₱<?php echo number_format($netProfit, 2); ?></h3>
+                    <h3>&#8369;<?php echo number_format($netProfit, 2); ?></h3>
                     <p>Net Profit</p>
                 </div>
             </div>
@@ -895,8 +895,8 @@ try {
                                                         <td><?php echo htmlspecialchars($journalReference); ?></td>
                                                         <td><?php echo htmlspecialchars($journalAccount); ?></td>
                                                         <td><?php echo htmlspecialchars($journalDescription); ?></td>
-                                                        <td><?php echo $journalDebit > 0 ? '?' . number_format($journalDebit, 2) : '-'; ?></td>
-                                                        <td><?php echo $journalCredit > 0 ? '?' . number_format($journalCredit, 2) : '-'; ?></td>
+                                                        <td><?php echo $journalDebit > 0 ? '&#8369;' . number_format($journalDebit, 2) : '-'; ?></td>
+                                                        <td><?php echo $journalCredit > 0 ? '&#8369;' . number_format($journalCredit, 2) : '-'; ?></td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                                 <tr id="journalEmptyState" style="display: none;">
@@ -941,14 +941,14 @@ try {
                                                 ?>
                                                     <tr>
                                                         <td><?php echo htmlspecialchars($account['account_name']); ?></td>
-                                                        <td><?php echo $account['debit_balance'] > 0 ? '₱' . number_format($account['debit_balance'], 2) : '-'; ?></td>
-                                                        <td><?php echo $account['credit_balance'] > 0 ? '₱' . number_format($account['credit_balance'], 2) : '-'; ?></td>
+                                                        <td><?php echo $account['debit_balance'] > 0 ? '&#8369;' . number_format($account['debit_balance'], 2) : '-'; ?></td>
+                                                        <td><?php echo $account['credit_balance'] > 0 ? '&#8369;' . number_format($account['credit_balance'], 2) : '-'; ?></td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                                 <tr class="table-dark">
                                                     <td><strong>Total</strong></td>
-                                                    <td><strong>₱<?php echo number_format($debit_total, 2); ?></strong></td>
-                                                    <td><strong>₱<?php echo number_format($credit_total, 2); ?></strong></td>
+                                                    <td><strong>&#8369;<?php echo number_format($debit_total, 2); ?></strong></td>
+                                                    <td><strong>&#8369;<?php echo number_format($credit_total, 2); ?></strong></td>
                                                 </tr>
                                             <?php endif; ?>
                                         </tbody>
@@ -975,7 +975,7 @@ try {
                                     <div class="tab-pane fade show active" id="balance-sheet" role="tabpanel">
                                         <h6>Balance Sheet - As of <?php echo date('F j, Y'); ?></h6>
                                         <table class="table financial-table">
-                                            <tr><th>Assets</th><th></th><th>₱<?php echo number_format($totalAssets, 2); ?></th></tr>
+                                            <tr><th>Assets</th><th></th><th>&#8369;<?php echo number_format($totalAssets, 2); ?></th></tr>
                                             <?php
                                             // Get asset accounts for breakdown
                                             $assetAccounts = array_filter($chartOfAccounts, function($account) {
@@ -983,10 +983,10 @@ try {
                                             });
                                             foreach ($assetAccounts as $asset):
                                             ?>
-                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($asset['account_name']); ?></td><td></td><td>₱<?php echo number_format($asset['balance'] ?? 0, 2); ?></td></tr>
+                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($asset['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($asset['balance'] ?? 0, 2); ?></td></tr>
                                             <?php endforeach; ?>
-                                            <tr><th>Liabilities</th><th></th><th>₱<?php echo number_format($totalLiabilities, 2); ?></th></tr>
-                                            <tr><th>Equity</th><th></th><th>₱<?php echo number_format($totalAssets - $totalLiabilities, 2); ?></th></tr>
+                                            <tr><th>Liabilities</th><th></th><th>&#8369;<?php echo number_format($totalLiabilities, 2); ?></th></tr>
+                                            <tr><th>Equity</th><th></th><th>&#8369;<?php echo number_format($totalAssets - $totalLiabilities, 2); ?></th></tr>
                                             <?php
                                             // Get equity accounts for breakdown
                                             $equityAccounts = array_filter($chartOfAccounts, function($account) {
@@ -994,15 +994,15 @@ try {
                                             });
                                             foreach ($equityAccounts as $equity):
                                             ?>
-                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($equity['account_name']); ?></td><td></td><td>₱<?php echo number_format($equity['balance'] ?? 0, 2); ?></td></tr>
+                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($equity['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($equity['balance'] ?? 0, 2); ?></td></tr>
                                             <?php endforeach; ?>
-                                            <tr class="total-row"><td>&nbsp;&nbsp;Retained Earnings</td><td></td><td>₱<?php echo number_format($netProfit, 2); ?></td></tr>
+                                            <tr class="total-row"><td>&nbsp;&nbsp;Retained Earnings</td><td></td><td>&#8369;<?php echo number_format($netProfit, 2); ?></td></tr>
                                         </table>
                                     </div>
                                     <div class="tab-pane fade" id="income-statement" role="tabpanel">
                                         <h6>Income Statement - For the period ending <?php echo date('F j, Y'); ?></h6>
                                         <table class="table financial-table">
-                                            <tr><th>Revenue</th><th></th><th>₱<?php echo number_format($totalRevenue, 2); ?></th></tr>
+                                            <tr><th>Revenue</th><th></th><th>&#8369;<?php echo number_format($totalRevenue, 2); ?></th></tr>
                                             <?php
                                             // Get revenue accounts
                                             $revenueAccounts = array_filter($chartOfAccounts, function($account) {
@@ -1010,9 +1010,9 @@ try {
                                             });
                                             foreach ($revenueAccounts as $revenue):
                                             ?>
-                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($revenue['account_name']); ?></td><td></td><td>₱<?php echo number_format($revenue['balance'] ?? 0, 2); ?></td></tr>
+                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($revenue['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($revenue['balance'] ?? 0, 2); ?></td></tr>
                                             <?php endforeach; ?>
-                                            <tr><th>Expenses</th><th></th><th>₱<?php echo number_format($totalExpenses, 2); ?></th></tr>
+                                            <tr><th>Expenses</th><th></th><th>&#8369;<?php echo number_format($totalExpenses, 2); ?></th></tr>
                                             <?php
                                             // Get expense accounts
                                             $expenseAccounts = array_filter($chartOfAccounts, function($account) {
@@ -1020,23 +1020,23 @@ try {
                                             });
                                             foreach ($expenseAccounts as $expense):
                                             ?>
-                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($expense['account_name']); ?></td><td></td><td>₱<?php echo number_format($expense['balance'] ?? 0, 2); ?></td></tr>
+                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($expense['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($expense['balance'] ?? 0, 2); ?></td></tr>
                                             <?php endforeach; ?>
-                                            <tr class="total-row"><th>Net Profit</th><th></th><th>₱<?php echo number_format($netProfit, 2); ?></th></tr>
+                                            <tr class="total-row"><th>Net Profit</th><th></th><th>&#8369;<?php echo number_format($netProfit, 2); ?></th></tr>
                                         </table>
                                     </div>
                                     <div class="tab-pane fade" id="cash-flow" role="tabpanel">
                                         <h6>Cash Flow Statement - For the period ending <?php echo date('F j, Y'); ?></h6>
                                         <table class="table financial-table">
-                                            <tr><th>Operating Activities</th><th></th><th>₱<?php echo number_format($netProfit, 2); ?></th></tr>
-                                            <tr><td>&nbsp;&nbsp;Net Income</td><td></td><td>₱<?php echo number_format($netProfit, 2); ?></td></tr>
+                                            <tr><th>Operating Activities</th><th></th><th>&#8369;<?php echo number_format($netProfit, 2); ?></th></tr>
+                                            <tr><td>&nbsp;&nbsp;Net Income</td><td></td><td>&#8369;<?php echo number_format($netProfit, 2); ?></td></tr>
                                             <?php
                                             $operatingCashFlow = $netProfit; // Simplified - would include other adjustments
                                             ?>
-                                            <tr class="total-row"><th>Net Operating Cash Flow</th><th></th><th>₱<?php echo number_format($operatingCashFlow, 2); ?></th></tr>
-                                            <tr><th>Investing Activities</th><th></th><th>₱0.00</th></tr>
-                                            <tr><th>Financing Activities</th><th></th><th>₱0.00</th></tr>
-                                            <tr class="total-row"><th>Net Cash Flow</th><th></th><th>₱<?php echo number_format($operatingCashFlow, 2); ?></th></tr>
+                                            <tr class="total-row"><th>Net Operating Cash Flow</th><th></th><th>&#8369;<?php echo number_format($operatingCashFlow, 2); ?></th></tr>
+                                            <tr><th>Investing Activities</th><th></th><th>&#8369;0.00</th></tr>
+                                            <tr><th>Financing Activities</th><th></th><th>&#8369;0.00</th></tr>
+                                            <tr class="total-row"><th>Net Cash Flow</th><th></th><th>&#8369;<?php echo number_format($operatingCashFlow, 2); ?></th></tr>
                                         </table>
                                     </div>
                                 </div>
@@ -1893,7 +1893,7 @@ try {
 
             const difference = Math.abs(totalDebit - totalCredit);
             if (difference > 0.01) {
-                return { valid: false, message: `Debits must equal credits. Current difference: ₱${difference.toFixed(2)}` };
+                return { valid: false, message: `Debits must equal credits. Current difference: &#8369;${difference.toFixed(2)}` };
             }
 
             return { valid: true };
@@ -2252,7 +2252,7 @@ try {
 
             const difference = Math.abs(totalDebit - totalCredit);
             if (difference > 0.01) {
-                return { valid: false, message: `Debits must equal credits. Current difference: ₱${difference.toFixed(2)}` };
+                return { valid: false, message: `Debits must equal credits. Current difference: &#8369;${difference.toFixed(2)}` };
             }
 
             return { valid: true };
@@ -2459,6 +2459,5 @@ try {
 </body>
 </html>
     <!-- Inactivity Timeout - Blur screen + Auto logout -->
-
 
 
