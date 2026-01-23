@@ -2660,11 +2660,30 @@ try {
                 return recordId ? `${label} #${recordId}` : label;
             };
 
+            const safeFormatDate = (s) => {
+                if (!s) return 'N/A';
+                // Try to parse YYYY-MM-DD HH:MM[:SS] format robustly
+                const m = (s || '').toString().trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+                if (m) {
+                    const y = parseInt(m[1], 10);
+                    const mo = parseInt(m[2], 10) - 1;
+                    const d = parseInt(m[3], 10);
+                    const hh = parseInt(m[4], 10);
+                    const mm = parseInt(m[5], 10);
+                    const ss = parseInt(m[6] || '0', 10);
+                    const dt = new Date(y, mo, d, hh, mm, ss);
+                    return isNaN(dt.getTime()) ? 'N/A' : dt.toLocaleString();
+                }
+                // Fallback: try native Date parsing
+                const dt2 = new Date(s);
+                return isNaN(dt2.getTime()) ? 'N/A' : dt2.toLocaleString();
+            };
+
             tbody.innerHTML = auditTrail.map(log => `
                 <tr>
-                    <td>${new Date(log.date_time).toLocaleString()}</td>
-                    <td>${log.full_name || log.username || log.user || log.user_name || 'Unknown'}</td>
-                    <td>${log.action || ''}</td>
+                    <td>${safeFormatDate(log.date_time)}</td>
+                    <td>${(log.full_name || log.username || log.user || log.user_name || 'Unknown')}</td>
+                    <td>${(log.action || '')}</td>
                     <td>${formatDetails(log)}</td>
                 </tr>
             `).join('');
