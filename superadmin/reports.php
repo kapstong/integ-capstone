@@ -1,7 +1,9 @@
 <?php
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
-        // Analytics removed: UI and handlers deleted
+    // Analytics removed: UI and handlers deleted
+?>
+        
         .sidebar .nav-item {
             position: relative;
         }
