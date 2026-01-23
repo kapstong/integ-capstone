@@ -734,6 +734,12 @@ try {
             background: #f8f9fa;
             border-radius: 0 0 12px 12px;
         }
+        .modal {
+            z-index: 2000;
+        }
+        .modal-backdrop {
+            z-index: 1990;
+        }
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
