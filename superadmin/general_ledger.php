@@ -603,8 +603,11 @@ try {
             max-height: 60vh;
             overflow-y: auto;
         }
+        .trial-total-row {
+            background-color: #f1f3f5;
+        }
         .trial-total-row td {
-            color: #f7c948;
+            color: #1e2936;
         }
         .account-type {
             padding: 4px 8px;
@@ -1064,7 +1067,7 @@ try {
                                                         </td>
                                                     </tr>
                                                 <?php endforeach; ?>
-                                                <tr class="table-dark trial-total-row">
+                                                <tr class="trial-total-row">
                                                     <td><strong>Total</strong></td>
                                                     <td><strong>&#8369;<?php echo number_format($debit_total, 2); ?></strong></td>
                                                     <td><strong>&#8369;<?php echo number_format($credit_total, 2); ?></strong></td>
