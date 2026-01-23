@@ -675,11 +675,34 @@ require_once '../includes/database.php';
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">Balance Sheet</h6>
                     <div>
-                        <select class="form-select form-select-sm me-2" style="width: auto;" id="balanceDateSelect" onchange="updateBalanceSheet()">
-                            <option value="current">Current Date</option>
-                            <option value="last_month">Last Month</option>
-                            <option value="last_quarter">Last Quarter</option>
+                        <select class="form-select form-select-sm me-2" style="width: auto;" id="balancePeriodSelect" onchange="updateBalanceSheet()">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="semi_annually">Semi-Annually</option>
+                            <option value="annually">Annually</option>
+                            <option value="custom">Custom Range</option>
                         </select>
+                        
+                        <div id="balanceCustomRange" class="card mb-3" style="display: none; margin-top:10px;">
+                            <div class="card-body p-3">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-4">
+                                        <label class="form-label">From Date</label>
+                                        <input type="date" class="form-control" id="balanceFromDate">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">To Date</label>
+                                        <input type="date" class="form-control" id="balanceToDate">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">&nbsp;</label>
+                                        <button class="btn btn-primary w-100" onclick="generateBalanceSheet()">Apply Custom Range</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <button class="btn btn-outline-secondary me-2" onclick="exportBalanceSheet('csv')"><i class="fas fa-download me-2"></i>Export CSV</button>
                         <button class="btn btn-primary" onclick="generateBalanceSheet()"><i class="fas fa-sync me-2"></i>Generate Report</button>
                     </div>
@@ -705,11 +728,34 @@ require_once '../includes/database.php';
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">Cash Flow Statement</h6>
                     <div>
-                        <select class="form-select form-select-sm me-2" style="width: auto;" id="cashFlowPeriodSelect">
-                            <option value="last_quarter">Last Quarter</option>
-                            <option value="last_6_months">Last 6 Months</option>
-                            <option value="year_to_date">Year to Date</option>
+                        <select class="form-select form-select-sm me-2" style="width: auto;" id="cashFlowPeriodSelect" onchange="updateCashFlowPeriod()">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="semi_annually">Semi-Annually</option>
+                            <option value="annually">Annually</option>
+                            <option value="custom">Custom Range</option>
                         </select>
+
+                        <div id="cashFlowCustomRange" class="card mb-3" style="display: none; margin-top:10px;">
+                            <div class="card-body p-3">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-4">
+                                        <label class="form-label">From Date</label>
+                                        <input type="date" class="form-control" id="cashFlowFromDate">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">To Date</label>
+                                        <input type="date" class="form-control" id="cashFlowToDate">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">&nbsp;</label>
+                                        <button class="btn btn-primary w-100" onclick="generateCashFlow()">Apply Custom Range</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <button class="btn btn-outline-secondary me-2" onclick="exportCashFlow('csv')"><i class="fas fa-download me-2"></i>Export CSV</button>
                         <button class="btn btn-primary" onclick="generateCashFlow()"><i class="fas fa-sync me-2"></i>Generate Report</button>
                     </div>
@@ -1156,18 +1202,48 @@ require_once '../includes/database.php';
             });
         }
 
-        // Update balance sheet when period changes
+        // Update balance sheet when period changes (show/hide custom range)
         function updateBalanceSheet() {
+            const periodSelect = document.getElementById('balancePeriodSelect');
+            const customRange = document.getElementById('balanceCustomRange');
+            if (periodSelect && customRange) {
+                if (periodSelect.value === 'custom') customRange.style.display = 'block';
+                else customRange.style.display = 'none';
+            }
+
             if (typeof generateBalanceSheet === 'function') {
                 generateBalanceSheet();
+            }
+        }
+
+        // Show/hide custom range for cash flow
+        function updateCashFlowPeriod() {
+            const periodSelect = document.getElementById('cashFlowPeriodSelect');
+            const customRange = document.getElementById('cashFlowCustomRange');
+            if (periodSelect && customRange) {
+                if (periodSelect.value === 'custom') customRange.style.display = 'block';
+                else customRange.style.display = 'none';
             }
         }
 
         // Generate balance sheet
         async function generateBalanceSheet() {
             const container = document.getElementById('balanceSheetContainer');
-            const dateSelect = document.getElementById('balanceDateSelect');
-            const asOfDate = dateSelect ? dateSelect.value : 'current';
+            const periodSelect = document.getElementById('balancePeriodSelect');
+            let dateFrom, dateTo;
+
+            if (periodSelect && periodSelect.value === 'custom') {
+                dateFrom = document.getElementById('balanceFromDate').value;
+                dateTo = document.getElementById('balanceToDate').value;
+            } else if (periodSelect) {
+                const dates = getDateRange(periodSelect.value);
+                dateFrom = dates.from;
+                dateTo = dates.to;
+            } else {
+                const dates = getDateRange('monthly');
+                dateFrom = dates.from;
+                dateTo = dates.to;
+            }
 
             // Show loading state
             container.innerHTML = `
@@ -1182,8 +1258,9 @@ require_once '../includes/database.php';
             `;
 
             try {
-                // Fetch balance sheet data
-                const response = await fetch(`../api/reports.php?type=balance_sheet&as_of_date=${asOfDate}`);
+                // Fetch balance sheet data (provide date range and as_of_date for compatibility)
+                const query = `?type=balance_sheet&date_from=${dateFrom}&date_to=${dateTo}&as_of_date=${dateTo}`;
+                const response = await fetch(`../api/reports.php${query}`);
 
                 // Check if response is OK
                 if (!response.ok) {
@@ -1308,7 +1385,20 @@ require_once '../includes/database.php';
         async function generateCashFlow() {
             const container = document.getElementById('cashFlowContainer');
             const periodSelect = document.getElementById('cashFlowPeriodSelect');
-            const period = periodSelect ? periodSelect.value : 'last_quarter';
+            let dateFrom, dateTo;
+
+            if (periodSelect && periodSelect.value === 'custom') {
+                dateFrom = document.getElementById('cashFlowFromDate').value;
+                dateTo = document.getElementById('cashFlowToDate').value;
+            } else if (periodSelect) {
+                const dates = getDateRange(periodSelect.value);
+                dateFrom = dates.from;
+                dateTo = dates.to;
+            } else {
+                const dates = getDateRange('quarterly');
+                dateFrom = dates.from;
+                dateTo = dates.to;
+            }
 
             // Show loading state
             container.innerHTML = `
@@ -1323,8 +1413,8 @@ require_once '../includes/database.php';
             `;
 
             try {
-                // Fetch cash flow data
-                const response = await fetch(`../api/reports.php?type=cash_flow&period=${period}`);
+                // Fetch cash flow data using date range
+                const response = await fetch(`../api/reports.php?type=cash_flow&date_from=${dateFrom}&date_to=${dateTo}`);
 
                 // Check if response is OK
                 if (!response.ok) {
