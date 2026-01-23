@@ -1502,11 +1502,12 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
 
                     $paymentDate = $payment['created_at'] ?? date('Y-m-d');
                     $transactionDate = date('Y-m-d', strtotime($paymentDate));
-                    $paymentMethod = $payment['payment_method'] ?? 'unknown';
+                    $paymentMethodRaw = $payment['payment_method'] ?? 'unknown';
+                    $paymentMethod = $this->normalizePaymentMethod($paymentMethodRaw);
                     $reference = $payment['payment_intent_id'] ?? '';
                     $userId = $payment['user_id'] ?? '';
                     $customerLabel = $userId ? "Core 1 Hotel Guest #{$userId}" : 'Core 1 Hotel Guest';
-                    $description = "Hotel payment {$reference} ({$paymentMethod})";
+                    $description = "Hotel payment {$reference} ({$paymentMethodRaw})";
                     $batchId = 'CORE1_PAY_' . date('Ymd_His');
 
                     $stmt = $db->prepare("
@@ -1690,7 +1691,7 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
             $data['customer_id'],
             $data['payment_date'],
             $data['amount'],
-            $data['payment_method'],
+            $this->normalizePaymentMethod($data['payment_method'] ?? 'other'),
             $data['reference_number'],
             $data['notes'],
             1
@@ -1777,6 +1778,35 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
             ]);
             return null;
         }
+    }
+
+    private function normalizePaymentMethod($method) {
+        $method = strtolower(trim((string)$method));
+        if ($method === '') {
+            return 'other';
+        }
+
+        $mapping = [
+            'gcash' => 'other',
+            'paymaya' => 'other',
+            'maya' => 'other',
+            'card' => 'credit_card',
+            'credit' => 'credit_card',
+            'debit' => 'credit_card',
+            'bank' => 'bank_transfer',
+            'bank_transfer' => 'bank_transfer',
+            'transfer' => 'bank_transfer',
+            'cash' => 'cash',
+            'check' => 'check',
+            'cheque' => 'check',
+            'refund' => 'refund'
+        ];
+
+        if (isset($mapping[$method])) {
+            return $mapping[$method];
+        }
+
+        return 'other';
     }
 
     private function upsertOutletDailySales($db, $outletId, $businessDate, $amount, $paymentNumber) {
