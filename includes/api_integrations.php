@@ -1475,6 +1475,28 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
                     $existsStmt->execute([$externalId]);
                     $exists = $existsStmt->fetch(PDO::FETCH_ASSOC);
                     if (!empty($exists['count'])) {
+                        // If already imported but journal entry missing, create it now
+                        $existingRowStmt = $db->prepare("
+                            SELECT id, journal_entry_id, transaction_date, amount, external_reference
+                            FROM imported_transactions
+                            WHERE source_system = 'CORE1_HOTEL' AND external_id = ?
+                            LIMIT 1
+                        ");
+                        $existingRowStmt->execute([$externalId]);
+                        $existingRow = $existingRowStmt->fetch(PDO::FETCH_ASSOC);
+                        if ($existingRow && empty($existingRow['journal_entry_id'])) {
+                            $journalEntryId = $this->createCore1JournalEntryFromPayment(
+                                $existingRow,
+                                $payment
+                            );
+                            if ($journalEntryId) {
+                                $db->prepare("
+                                    UPDATE imported_transactions
+                                    SET journal_entry_id = ?, status = 'posted', posted_at = NOW(), posted_by = 1
+                                    WHERE id = ?
+                                ")->execute([$journalEntryId, $existingRow['id']]);
+                            }
+                        }
                         continue;
                     }
 
@@ -1510,7 +1532,7 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
                     ]);
                     $transactionsInserted++;
 
-                    $paymentNumber = $this->insertPaymentReceived($database, $db, [
+                    $paymentResult = $this->insertPaymentReceived($database, $db, [
                         'customer_id' => $defaultCustomerId,
                         'payment_date' => $transactionDate,
                         'amount' => $amount,
@@ -1518,11 +1540,21 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
                         'reference_number' => $reference,
                         'notes' => $description
                     ]);
+                    $paymentNumber = is_array($paymentResult) ? $paymentResult['payment_number'] : $paymentResult;
+                    $journalEntryId = is_array($paymentResult) ? ($paymentResult['journal_entry_id'] ?? null) : null;
                     $paymentsInserted++;
 
                     if ($outlet) {
                         $this->upsertOutletDailySales($db, $outlet['id'], $transactionDate, $amount, $paymentNumber);
                         $this->upsertDailyRevenueSummary($db, $transactionDate, $outlet['department_id'], $outlet['revenue_center_id']);
+                    }
+
+                    if ($journalEntryId) {
+                        $db->prepare("
+                            UPDATE imported_transactions
+                            SET journal_entry_id = ?, status = 'posted', posted_at = NOW(), posted_by = 1
+                            WHERE external_id = ? AND source_system = 'CORE1_HOTEL'
+                        ")->execute([$journalEntryId, $externalId]);
                     }
 
                     $importedCount++;
@@ -1688,8 +1720,9 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
 
         $cashAccount = $this->getAccountId('1001');
         $arAccount = $this->getAccountId('1002');
+        $journalEntryId = null;
         if ($cashAccount && $arAccount) {
-            $this->createJournalEntry([
+            $result = $this->createJournalEntry([
                 'date' => $data['payment_date'],
                 'description' => 'Core 1 payment ' . $paymentNumber,
                 'debit_account_id' => $cashAccount,
@@ -1698,9 +1731,52 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
                 'reference_number' => $paymentNumber,
                 'source_system' => 'CORE1_HOTEL'
             ]);
+            $journalEntryId = $result['journal_entry_id'] ?? null;
         }
 
-        return $paymentNumber;
+        return [
+            'payment_number' => $paymentNumber,
+            'journal_entry_id' => $journalEntryId
+        ];
+    }
+
+    private function createCore1JournalEntryFromPayment($existingRow, $payment) {
+        try {
+            $cashAccount = $this->getAccountId('1001');
+            $arAccount = $this->getAccountId('1002');
+            if (!$cashAccount || !$arAccount) {
+                throw new Exception('Missing required chart of accounts for Core 1');
+            }
+
+            $paymentMethod = $payment['payment_method'] ?? 'unknown';
+            $reference = $payment['payment_intent_id'] ?? ($existingRow['external_reference'] ?? '');
+            $description = "Core 1 payment {$reference} ({$paymentMethod})";
+            $date = isset($existingRow['transaction_date'])
+                ? date('Y-m-d', strtotime($existingRow['transaction_date']))
+                : date('Y-m-d');
+            $amount = floatval($existingRow['amount'] ?? ($payment['amount'] ?? 0));
+            if ($amount <= 0) {
+                return null;
+            }
+
+            $result = $this->createJournalEntry([
+                'date' => $date,
+                'description' => $description,
+                'debit_account_id' => $cashAccount,
+                'credit_account_id' => $arAccount,
+                'amount' => $amount,
+                'reference_number' => $reference ?: ('CORE1_PAY_' . ($payment['id'] ?? time())),
+                'source_system' => 'CORE1_HOTEL'
+            ]);
+
+            return $result['journal_entry_id'] ?? null;
+        } catch (Exception $e) {
+            Logger::getInstance()->error('Core 1 journal entry backfill failed', [
+                'error' => $e->getMessage(),
+                'external_id' => $existingRow['id'] ?? null
+            ]);
+            return null;
+        }
     }
 
     private function upsertOutletDailySales($db, $outletId, $businessDate, $amount, $paymentNumber) {
