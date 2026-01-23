@@ -1581,13 +1581,22 @@ try {
                                                         <i class="fas fa-info-circle me-2"></i>No audit records found.
                                                     </td>
                                                 </tr>
-                            <?php else: ?>
+                                            <?php else: ?>
                                                 <?php foreach ($auditTrail as $log): ?>
+                                                    <?php
+                                                        $tableLabel = str_replace('_', ' ', (string)($log['details'] ?? ''));
+                                                        $tableLabel = ucwords(trim($tableLabel));
+                                                        $recordLabel = trim((string)($log['record_id'] ?? ''));
+                                                        $detailsLabel = $tableLabel !== '' ? $tableLabel : 'Unknown';
+                                                        if ($recordLabel !== '') {
+                                                            $detailsLabel = $detailsLabel . ' #' . $recordLabel;
+                                                        }
+                                                    ?>
                                                     <tr>
                                                         <td><?php echo htmlspecialchars(date('Y-m-d h:i A', strtotime($log['date_time']))); ?></td>
                                                         <td><?php echo htmlspecialchars($log['user_name'] ?? 'Unknown'); ?></td>
                                                         <td><?php echo htmlspecialchars($log['action'] ?? 'Unknown'); ?></td>
-                                                        <td><?php echo htmlspecialchars(($log['details'] ?? 'Unknown') . ' - ' . ($log['record_id'] ?? 'N/A')); ?></td>
+                                                        <td><?php echo htmlspecialchars($detailsLabel); ?></td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                             <?php endif; ?>
@@ -2053,12 +2062,21 @@ try {
                 return;
             }
 
+            const formatDetails = (log) => {
+                const raw = (log.details || log.table_name || '').toString();
+                const label = raw
+                    ? raw.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())
+                    : 'Unknown';
+                const recordId = (log.record_id || '').toString().trim();
+                return recordId ? `${label} #${recordId}` : label;
+            };
+
             tbody.innerHTML = auditTrail.map(log => `
                 <tr>
                     <td>${new Date(log.date_time).toLocaleString()}</td>
                     <td>${log.full_name || log.username || log.user || log.user_name || 'Unknown'}</td>
                     <td>${log.action || ''}</td>
-                    <td>${log.details || ''}</td>
+                    <td>${formatDetails(log)}</td>
                 </tr>
             `).join('');
         }
