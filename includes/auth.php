@@ -6,11 +6,23 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+if (!isset($_SESSION['privacy_unlocked'])) {
+    $_SESSION['privacy_unlocked'] = false;
+}
+if (!isset($_SESSION['privacy_visible'])) {
+    $_SESSION['privacy_visible'] = false;
+}
+
 // Log page views for authenticated users (non-API, non-AJAX requests)
 if (!empty($_SESSION['user']['id'])) {
     $scriptPath = $_SERVER['PHP_SELF'] ?? '';
     $isApi = strpos($scriptPath, '/api/') !== false || strpos($scriptPath, '\\api\\') !== false;
     $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+    if (!$isApi && !$isAjax && stripos($scriptPath, '.php') !== false) {
+        require_once __DIR__ . '/privacy_output_mask.php';
+        startPrivacyOutputMasking();
+    }
 
     if (!$isApi && !$isAjax && stripos($scriptPath, '.php') !== false) {
         $scriptName = pathinfo($scriptPath, PATHINFO_FILENAME);
