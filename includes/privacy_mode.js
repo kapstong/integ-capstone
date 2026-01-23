@@ -424,14 +424,15 @@
     }
 
     /**
-     * Create simple eye icon button in navbar
+     * Create or wire up eye icon button in navbar
      */
     function createEyeButton() {
-        // Wait a bit for DOM to be fully ready
-        setTimeout(function() {
-            const button = document.createElement('button');
-            button.id = 'privacyEyeButton';
-            button.className = 'btn btn-link me-3';
+        const setupEyeButton = (button) => {
+            if (!button) {
+                return;
+            }
+
+            button.classList.add('btn', 'btn-link', 'me-3');
             button.style.cssText = `
                 color: #64748b !important;
                 padding: 0.5rem !important;
@@ -439,22 +440,44 @@
                 background: none !important;
                 transition: color 0.2s ease !important;
             `;
-            button.innerHTML = `<i class="fas fa-eye fa-lg" id="privacyEyeIcon"></i>`;
+            if (!button.querySelector('#privacyEyeIcon')) {
+                button.innerHTML = `<i class="fas fa-eye fa-lg" id="privacyEyeIcon"></i>`;
+            }
             button.title = 'Toggle Privacy Mode - Show/Hide Amounts';
 
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                toggleAmounts();
-            });
+            if (!button.dataset.privacyBound) {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleAmounts();
+                });
 
-            button.addEventListener('mouseenter', function() {
-                this.style.color = '#1e2936 !important';
-            });
+                button.addEventListener('mouseenter', function() {
+                    this.style.color = '#1e2936 !important';
+                });
 
-            button.addEventListener('mouseleave', function() {
-                this.style.color = '#64748b !important';
-            });
+                button.addEventListener('mouseleave', function() {
+                    this.style.color = '#64748b !important';
+                });
+
+                button.dataset.privacyBound = '1';
+            }
+
+            eyeButton = button;
+            updateEyeButton();
+        };
+
+        // Wait a bit for DOM to be fully ready
+        setTimeout(function() {
+            const existingButton = document.getElementById('privacyEyeButton');
+            if (existingButton) {
+                setupEyeButton(existingButton);
+                return;
+            }
+
+            const button = document.createElement('button');
+            button.id = 'privacyEyeButton';
+            setupEyeButton(button);
 
             // Find the top navbar container with notification bell and user dropdown
             // Look for the user dropdown first, then get its parent container
@@ -466,9 +489,6 @@
                 // Insert button before the dropdown (between notification bell and user dropdown)
                 navbarContainer.insertBefore(button, userDropdown.parentElement);
             }
-
-            eyeButton = button;
-            updateEyeButton();
         }, 300); // Wait 300ms for DOM to be ready
     }
 

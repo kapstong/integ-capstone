@@ -43,6 +43,10 @@ $userRoleDisplay = ucwords(str_replace('_', ' ', $userRoleDisplay));
         </button>
         <span class="navbar-brand mb-0 h1 me-4"><?php echo $navTitle; ?></span>
         <div class="d-flex align-items-center me-4">
+            <button class="btn btn-link me-3" type="button" id="privacyEyeButton"
+                    title="Toggle Privacy Mode - Show/Hide Amounts" aria-label="Toggle privacy mode">
+                <i class="fas fa-eye fa-lg" id="privacyEyeIcon"></i>
+            </button>
             <div class="dropdown">
                 <button class="btn btn-link text-dark dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
