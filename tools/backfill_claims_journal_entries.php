@@ -71,6 +71,53 @@ function getClaimsExpenseAccountId(PDO $db) {
     return getFirstActiveExpenseAccountId($db);
 }
 
+function getNextJournalEntryNumber(PDO $db) {
+    $stmt = $db->query("SELECT MAX(CAST(SUBSTRING_INDEX(entry_number, '-', -1) AS UNSIGNED)) as max_num FROM journal_entries WHERE entry_number LIKE 'JE-%'");
+    $maxNum = $stmt->fetch(PDO::FETCH_ASSOC)['max_num'] ?? 0;
+    return 'JE-' . str_pad($maxNum + 1, 6, '0', STR_PAD_LEFT);
+}
+
+function createJournalEntryForDisbursement(PDO $db, array $disb, $debitAccountId, $creditAccountId) {
+    $entryNumber = getNextJournalEntryNumber($db);
+    $entryDate = $disb['disbursement_date'] ?? date('Y-m-d');
+    $description = $disb['purpose'] ?? ('Disbursement: Payment to ' . ($disb['payee'] ?? 'vendor') . ' - ' . ($disb['reference_number'] ?? 'N/A'));
+    $amount = floatval($disb['amount'] ?? 0);
+    if ($amount <= 0) {
+        return null;
+    }
+
+    $stmt = $db->prepare("
+        INSERT INTO journal_entries (
+            entry_number, entry_date, description, reference,
+            total_debit, total_credit, status, created_by, posted_by, posted_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 'posted', 1, 1, NOW())
+    ");
+    $stmt->execute([
+        $entryNumber,
+        $entryDate,
+        $description,
+        'DISB-' . $disb['id'],
+        $amount,
+        $amount
+    ]);
+
+    $entryId = $db->lastInsertId();
+
+    $stmt = $db->prepare("
+        INSERT INTO journal_entry_lines (journal_entry_id, account_id, debit, credit, description)
+        VALUES (?, ?, ?, 0, ?)
+    ");
+    $stmt->execute([$entryId, $debitAccountId, $amount, $description]);
+
+    $stmt = $db->prepare("
+        INSERT INTO journal_entry_lines (journal_entry_id, account_id, debit, credit, description)
+        VALUES (?, ?, 0, ?, ?)
+    ");
+    $stmt->execute([$entryId, $creditAccountId, $amount, $description]);
+
+    return $entryId;
+}
+
 try {
     $db = Database::getInstance()->getConnection();
 } catch (Exception $e) {
@@ -88,7 +135,7 @@ if (!$cashAccountId || !$claimsExpenseAccountId) {
 
 // Find HR3 claims disbursements
 $stmt = $db->query("
-    SELECT id, disbursement_number, payee, purpose, reference_number, account_id
+    SELECT id, disbursement_number, disbursement_date, payee, purpose, reference_number, account_id, amount
     FROM disbursements
     WHERE LOWER(CONCAT(IFNULL(payee, ''), ' ', IFNULL(purpose, ''), ' ', IFNULL(reference_number, ''))) LIKE '%hr3%'
        OR LOWER(CONCAT(IFNULL(payee, ''), ' ', IFNULL(purpose, ''), ' ', IFNULL(reference_number, ''))) LIKE '%claim%'
@@ -108,7 +155,26 @@ foreach ($disbursements as $disb) {
     $entryId = $entryStmt->fetchColumn();
 
     if (!$entryId) {
-        $skipped++;
+        if ($dryRun) {
+            $updatedEntries++;
+        } else {
+            $db->beginTransaction();
+            try {
+                $entryId = createJournalEntryForDisbursement($db, $disb, $claimsExpenseAccountId, $cashAccountId);
+                if ($entryId) {
+                    $updateDisb = $db->prepare("UPDATE disbursements SET account_id = ? WHERE id = ?");
+                    $updateDisb->execute([$claimsExpenseAccountId, $disb['id']]);
+                    $updatedEntries++;
+                    $updatedDisbursements++;
+                } else {
+                    $skipped++;
+                }
+                $db->commit();
+            } catch (Exception $e) {
+                $db->rollBack();
+                fwrite(STDERR, "Failed to create entry for {$ref}: " . $e->getMessage() . PHP_EOL);
+            }
+        }
         continue;
     }
 
@@ -121,7 +187,22 @@ foreach ($disbursements as $disb) {
     $lines = $linesStmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (empty($lines)) {
-        $skipped++;
+        if ($dryRun) {
+            $updatedEntries++;
+        } else {
+            $db->beginTransaction();
+            try {
+                createJournalEntryForDisbursement($db, $disb, $claimsExpenseAccountId, $cashAccountId);
+                $updateDisb = $db->prepare("UPDATE disbursements SET account_id = ? WHERE id = ?");
+                $updateDisb->execute([$claimsExpenseAccountId, $disb['id']]);
+                $updatedEntries++;
+                $updatedDisbursements++;
+                $db->commit();
+            } catch (Exception $e) {
+                $db->rollBack();
+                fwrite(STDERR, "Failed to backfill lines for {$ref}: " . $e->getMessage() . PHP_EOL);
+            }
+        }
         continue;
     }
 
