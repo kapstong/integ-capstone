@@ -1614,6 +1614,55 @@ body {
     });
     </script>
 
+    <script>
+    // Audit Trail loader for Admin Disbursements
+    document.addEventListener('DOMContentLoaded', function() {
+        async function loadAuditTrail() {
+            try {
+                const resp = await fetch('../api/audit.php?scope=disbursements', { credentials: 'include' });
+                const logs = await resp.json();
+                const tbody = document.getElementById('auditTableBody');
+                if (!tbody) return;
+
+                if (!Array.isArray(logs) || logs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center">No audit logs found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = logs.map(log => {
+                    const date = log.formatted_date || (log.created_at ? new Date(log.created_at).toLocaleString() : '');
+                    const user = log.display_user || log.full_name || log.username || (log.user_id ? 'User #' + log.user_id : 'System');
+                    const action = log.action_label || log.action || '';
+
+                    let disbRef = log.disbursement_number || (log.record_id ? log.record_id : '');
+                    try {
+                        const nv = log.new_values ? JSON.parse(log.new_values) : null;
+                        const ov = log.old_values ? JSON.parse(log.old_values) : null;
+                        disbRef = disbRef || nv?.disbursement_number || ov?.disbursement_number || nv?.disbursement_no || ov?.disbursement_no || '';
+                    } catch (e) { /* ignore malformed JSON */ }
+                    if (!disbRef) disbRef = 'N/A';
+
+                    const details = log.action_description || (log.new_values ? (typeof log.new_values === 'string' ? log.new_values : JSON.stringify(log.new_values)) : '') || '';
+
+                    return `<tr><td>${date}</td><td>${user}</td><td><span class="badge bg-info">${action}</span></td><td>${disbRef}</td><td>${details}</td></tr>`;
+                }).join('');
+
+            } catch (err) {
+                const tbody = document.getElementById('auditTableBody');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Error loading audit trail</td></tr>';
+                console.error('Error loading audit trail:', err);
+            }
+        }
+
+        const auditTab = document.getElementById('audit-tab');
+        if (auditTab) {
+            auditTab.addEventListener('shown.bs.tab', function() {
+                loadAuditTrail();
+            });
+        }
+    });
+    </script>
+
     <!-- Privacy Mode - Hide amounts with asterisks + Eye button -->
     <script src="../includes/privacy_mode.js?v=11"></script>
 
