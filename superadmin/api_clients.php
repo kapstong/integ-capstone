@@ -323,6 +323,7 @@ function deleteClient(clientId, clientName) {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../includes/inactivity_timeout.js"></script>
+<script src="../includes/tab_persistence.js?v=1"></script>
 </body>
 </html>
 

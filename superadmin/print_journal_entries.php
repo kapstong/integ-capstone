@@ -464,5 +464,6 @@ if ($autoPrint) {
             });
         </script>
     <?php endif; ?>
+<script src="../includes/tab_persistence.js?v=1"></script>
 </body>
 </html>

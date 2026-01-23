@@ -2162,7 +2162,9 @@ $db = Database::getInstance()->getConnection();
             `);
             printWindow.document.write('</style></head><body>');
             printWindow.document.write(printContainer.innerHTML);
-            printWindow.document.write('</body></html>');
+            printWindow.document.write('
+<script src="../includes/tab_persistence.js?v=1"></script>
+</body></html>');
             printWindow.document.close();
 
             setTimeout(() => {
@@ -2400,9 +2402,9 @@ $db = Database::getInstance()->getConnection();
     <script src="../includes/inactivity_timeout.js?v=3"></script>
 <script src="../includes/navbar_datetime.js"></script>
 <script src="../includes/tab_persistence.js?v=1"></script>
-
 </body>
 </html>
+<script src="../includes/tab_persistence.js?v=1"></script>
 </body>
 
 
