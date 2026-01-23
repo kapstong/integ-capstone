@@ -6,8 +6,33 @@
 
 require_once __DIR__ . '/../includes/database.php';
 
-$apply = in_array('--apply', $argv, true);
-$dryRun = !$apply;
+function getWebToken() {
+    $envToken = getenv('BACKFILL_PAYROLL_TOKEN');
+    if (is_string($envToken) && $envToken !== '') {
+        return $envToken;
+    }
+    return null;
+}
+
+$isCli = (PHP_SAPI === 'cli' || PHP_SAPI === 'phpdbg');
+$apply = false;
+$dryRun = true;
+
+if ($isCli) {
+    $apply = in_array('--apply', $argv, true);
+    $dryRun = !$apply;
+} else {
+    $token = $_GET['token'] ?? '';
+    $expected = getWebToken();
+    if (!$expected || !is_string($token) || $token !== $expected) {
+        http_response_code(403);
+        echo "Forbidden: invalid token.\n";
+        exit(1);
+    }
+    $apply = isset($_GET['apply']) && ($_GET['apply'] === '1' || $_GET['apply'] === 'true');
+    $dryRun = !$apply;
+    header('Content-Type: text/plain; charset=utf-8');
+}
 
 function getAccountIdByCode(PDO $db, $code) {
     $stmt = $db->prepare("SELECT id FROM chart_of_accounts WHERE account_code = ? AND is_active = 1 LIMIT 1");
