@@ -6,14 +6,6 @@
 
 require_once __DIR__ . '/../includes/database.php';
 
-function getWebToken() {
-    $envToken = getenv('BACKFILL_PAYROLL_TOKEN');
-    if (is_string($envToken) && $envToken !== '') {
-        return $envToken;
-    }
-    return null;
-}
-
 $isCli = (PHP_SAPI === 'cli' || PHP_SAPI === 'phpdbg');
 $apply = false;
 $dryRun = true;
@@ -22,11 +14,13 @@ if ($isCli) {
     $apply = in_array('--apply', $argv, true);
     $dryRun = !$apply;
 } else {
-    $token = $_GET['token'] ?? '';
-    $expected = getWebToken();
-    if (!$expected || !is_string($token) || $token !== $expected) {
+    require_once __DIR__ . '/../includes/auth.php';
+    $auth = new Auth();
+    $roleName = strtolower($_SESSION['user']['role_name'] ?? '');
+    $hasSuperRole = $roleName === 'super_admin' || $auth->hasRole('super_admin');
+    if (!$hasSuperRole) {
         http_response_code(403);
-        echo "Forbidden: invalid token.\n";
+        echo "Forbidden: superadmin access required.\n";
         exit(1);
     }
     $apply = isset($_GET['apply']) && ($_GET['apply'] === '1' || $_GET['apply'] === 'true');
