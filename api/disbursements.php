@@ -759,10 +759,11 @@ function createDisbursementJournalEntry($db, $disbursementId, $data) {
     $stmt = $db->prepare("
         INSERT INTO journal_entries (
             entry_number, entry_date, description, reference,
-            total_debit, total_credit, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            total_debit, total_credit, status, created_by, posted_by, posted_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 'posted', ?, ?, NOW())
     ");
 
+    $createdBy = $_SESSION['user']['id'] ?? 1;
     $stmt->execute([
         $entryNumber,
         $entryDate,
@@ -770,7 +771,8 @@ function createDisbursementJournalEntry($db, $disbursementId, $data) {
         'DISB-' . $disbursementId,
         $data['amount'],
         $data['amount'],
-        $_SESSION['user']['id'] ?? 1
+        $createdBy,
+        $createdBy
     ]);
 
     $entryId = $db->lastInsertId();

@@ -32,7 +32,8 @@ try {
             SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as balance
         FROM chart_of_accounts coa
         LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id AND je.status = 'posted'
+        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+            AND (je.status = 'posted' OR je.status IS NULL)
         WHERE coa.is_active = 1
         GROUP BY coa.id, coa.account_type
     ")->fetchAll();
@@ -173,7 +174,7 @@ try {
                 jel.credit
             FROM journal_entry_lines jel
             JOIN journal_entries je ON jel.journal_entry_id = je.id
-            WHERE je.status = 'posted'
+            WHERE je.status = 'posted' OR je.status IS NULL
               AND jel.account_id IN ($placeholders)
             ORDER BY je.entry_date DESC, je.id DESC, jel.id DESC
         ");
