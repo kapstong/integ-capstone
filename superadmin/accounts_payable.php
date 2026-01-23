@@ -2,6 +2,8 @@
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
 
+$auth = new Auth();
+
 if (!isset($_SESSION['user'])) {
     header('Location: ../index.php');
     exit;
@@ -708,9 +710,11 @@ try {
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Bills / Payables Management</h5>
+                        <?php if ($auth->hasPermission('bills.create')): ?>
                         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addBillModal">
-                            <i class="fas fa-plus me-1"></i>Add Bill
+                            <i class="fas fa-cloud-upload-alt me-1"></i>Receive Bills
                         </button>
+                        <?php endif; ?>
                     </div>
                     <div class="card-body">
                         <div class="row mb-3">
@@ -1023,16 +1027,21 @@ try {
 
     <!-- Footer -->
 
-    <!-- Add Bill Modal -->
+    <!-- Receive Bills Modal -->
     <div class="modal fade" id="addBillModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Add New Bill</h5>
+                    <h5 class="modal-title">Receive Bills</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="addBillForm">
+                        <div class="mb-3">
+                            <label for="billsFile" class="form-label">Upload Bills (CSV/PDF)</label>
+                            <input type="file" class="form-control" id="billsFile" name="bills_file" accept=".csv,.pdf">
+                            <div class="form-text">Upload a CSV for batch import or PDF attachments from departments. AP will validate and record bills.</div>
+                        </div>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -1079,7 +1088,7 @@ try {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" form="addBillForm">Add Bill</button>
+                    <button type="submit" class="btn btn-primary" form="addBillForm">Receive</button>
                 </div>
             </div>
         </div>
@@ -1371,6 +1380,40 @@ try {
             // Check if we're in edit mode BEFORE accessing form data
             const isEditMode = !!this.dataset.editBillId;
             const editBillId = this.dataset.editBillId;
+
+            // If a file is selected, submit CSV to import endpoint instead of normal JSON create
+            const billsFileInput = document.getElementById('billsFile');
+            if (billsFileInput && billsFileInput.files && billsFileInput.files.length > 0) {
+                const file = billsFileInput.files[0];
+                const fd = new FormData();
+                fd.append('bills_file', file);
+
+                try {
+                    const resp = await fetch(`${apiBase}bills_import.php`, {
+                        method: 'POST',
+                        body: fd
+                    });
+                    const result = await resp.json();
+                    if (result.success) {
+                        showAlert(`Imported ${result.created} bills successfully`, 'success');
+                        const modalEl = document.getElementById('addBillModal');
+                        if (modalEl) {
+                            const modal = bootstrap.Modal.getInstance(modalEl);
+                            if (modal) modal.hide();
+                        }
+                        this.reset();
+                        await prePopulateBillNumber();
+                        loadBills();
+                    } else {
+                        throw new Error(result.error || 'Import failed');
+                    }
+                } catch (err) {
+                    console.error('CSV import error:', err);
+                    showAlert('CSV import error: ' + err.message, 'danger');
+                }
+
+                return; // Stop normal JSON submission when file used
+            }
 
             // Ensure bill number is captured even for readonly fields
             const billNumber = document.getElementById('billNumber').value?.trim();
@@ -2820,11 +2863,11 @@ try {
             form.reset();
             delete form.dataset.editBillId;
 
-            // Reset modal title and button
-            document.querySelector('#addBillModal .modal-title').textContent = 'Add New Bill';
+            // Reset modal title and button to receive mode
+            document.querySelector('#addBillModal .modal-title').textContent = 'Receive Bills';
             const submitBtn = document.querySelector('#addBillModal .btn-primary');
             if (submitBtn) {
-                submitBtn.textContent = 'Add Bill';
+                submitBtn.textContent = 'Receive';
             }
         }
 

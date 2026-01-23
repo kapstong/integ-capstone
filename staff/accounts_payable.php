@@ -2,6 +2,8 @@
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
 
+$auth = new Auth();
+
 if (!isset($_SESSION['user'])) {
     header('Location: ../index.php');
     exit;
@@ -708,9 +710,11 @@ try {
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Bills / Payables Management</h5>
+                        <?php if ($auth->hasPermission('bills.create')): ?>
                         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addBillModal">
-                            <i class="fas fa-plus me-1"></i>Add Bill
+                            <i class="fas fa-cloud-upload-alt me-1"></i>Receive Bills
                         </button>
+                        <?php endif; ?>
                     </div>
                     <div class="card-body">
                         <div class="row mb-3">
@@ -836,7 +840,7 @@ try {
                             <div class="card-body">
                                 <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
                                 <h6 class="card-title">Paid Collectibles</h6>
-                                <p class="card-text display-6" id="collectiblesPaidTotal">?0.00</p>
+                                <p class="card-text display-6" id="collectiblesPaidTotal">₱0.00</p>
                                 <small class="text-muted" id="collectiblesPaidCount">0 bills</small>
                             </div>
                         </div>
@@ -846,7 +850,7 @@ try {
                             <div class="card-body">
                                 <i class="fas fa-hourglass-half fa-2x text-warning mb-2"></i>
                                 <h6 class="card-title">Unpaid Collectibles</h6>
-                                <p class="card-text display-6" id="collectiblesUnpaidTotal">?0.00</p>
+                                <p class="card-text display-6" id="collectiblesUnpaidTotal">₱0.00</p>
                                 <small class="text-muted" id="collectiblesUnpaidCount">0 bills</small>
                             </div>
                         </div>
@@ -1024,16 +1028,21 @@ try {
 
     <!-- Footer -->
 
-    <!-- Add Bill Modal -->
+    <!-- Receive Bills Modal -->
     <div class="modal fade" id="addBillModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Add New Bill</h5>
+                    <h5 class="modal-title">Receive Bills</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="addBillForm">
+                        <div class="mb-3">
+                            <label for="billsFile" class="form-label">Upload Bills (CSV/PDF)</label>
+                            <input type="file" class="form-control" id="billsFile" name="bills_file" accept=".csv,.pdf">
+                            <div class="form-text">Upload a CSV for batch import or PDF attachments from departments. AP will validate and record bills.</div>
+                        </div>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -1080,7 +1089,7 @@ try {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" form="addBillForm">Add Bill</button>
+                    <button type="submit" class="btn btn-primary" form="addBillForm">Receive</button>
                 </div>
             </div>
         </div>
@@ -2817,11 +2826,11 @@ try {
             form.reset();
             delete form.dataset.editBillId;
 
-            // Reset modal title and button
-            document.querySelector('#addBillModal .modal-title').textContent = 'Add New Bill';
+            // Reset modal title and button to receive mode
+            document.querySelector('#addBillModal .modal-title').textContent = 'Receive Bills';
             const submitBtn = document.querySelector('#addBillModal .btn-primary');
             if (submitBtn) {
-                submitBtn.textContent = 'Add Bill';
+                submitBtn.textContent = 'Receive';
             }
         }
 

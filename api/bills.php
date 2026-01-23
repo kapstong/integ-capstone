@@ -133,6 +133,14 @@ try {
             break;
 
         case 'POST':
+            // Server-side permission: only users with bills.create may create bills
+            $auth = new Auth();
+            if (!$auth->hasPermission('bills.create')) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Forbidden: insufficient permissions']);
+                exit;
+            }
+
             // Create new bill
             $data = json_decode(file_get_contents('php://input'), true);
 
@@ -299,6 +307,14 @@ try {
             break;
 
         case 'PUT':
+            // Server-side permission: only users with bills.edit may update bills
+            $auth = new Auth();
+            if (!$auth->hasPermission('bills.edit')) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Forbidden: insufficient permissions']);
+                exit;
+            }
+
             // Update bill
             if (!isset($_GET['id'])) {
                 http_response_code(400);
