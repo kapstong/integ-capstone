@@ -149,10 +149,10 @@ try {
             COALESCE(SUM(jel.credit), 0) as credit_total
         FROM chart_of_accounts coa
         LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
-            AND je.status = 'posted'
-            AND je.entry_date BETWEEN ? AND ?
+        JOIN journal_entries je ON jel.journal_entry_id = je.id
         WHERE coa.is_active = 1
+          AND je.status = 'posted'
+          AND je.entry_date BETWEEN ? AND ?
         GROUP BY coa.id, coa.account_code, coa.account_name, coa.account_type
         HAVING debit_total != 0 OR credit_total != 0
         ORDER BY coa.account_code ASC
