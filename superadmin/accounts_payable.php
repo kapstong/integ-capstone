@@ -1373,6 +1373,10 @@ try {
         // API base URL for different user types (use local api folder for consistency)
         const apiBase = '../api/';
 
+        // Currency and privacy flags (server-driven)
+        const CURRENCY_SYMBOL = '<?php echo "₱"; ?>';
+        const PRIVACY_VISIBLE = <?php echo (isset($_SESSION['privacy_visible']) && $_SESSION['privacy_visible']) ? 'true' : 'false'; ?>;
+
         // Handle bill form submission
         document.getElementById('addBillForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -1803,10 +1807,18 @@ try {
             const unpaidCountEl = document.getElementById('collectiblesUnpaidCount');
 
             if (paidTotalEl) {
-                paidTotalEl.textContent = `?${paidTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                if (PRIVACY_VISIBLE) {
+                    paidTotalEl.textContent = `${CURRENCY_SYMBOL}${paidTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                } else {
+                    paidTotalEl.textContent = `${CURRENCY_SYMBOL} ${'*'.repeat(8)}`;
+                }
             }
             if (unpaidTotalEl) {
-                unpaidTotalEl.textContent = `?${unpaidTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                if (PRIVACY_VISIBLE) {
+                    unpaidTotalEl.textContent = `${CURRENCY_SYMBOL}${unpaidTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                } else {
+                    unpaidTotalEl.textContent = `${CURRENCY_SYMBOL} ${'*'.repeat(8)}`;
+                }
             }
             if (paidCountEl) {
                 paidCountEl.textContent = `${paidCount} bills`;
@@ -1883,13 +1895,17 @@ try {
                     : '<span class="badge bg-warning text-dark">Unpaid</span>';
                 const billStatus = bill.status ? bill.status.charAt(0).toUpperCase() + bill.status.slice(1) : 'Draft';
 
+                const amountDisplay = PRIVACY_VISIBLE
+                    ? `${CURRENCY_SYMBOL}${amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+                    : `${CURRENCY_SYMBOL} ${'*'.repeat(8)}`;
+
                 const row = `
                     <tr>
                         <td>${bill.bill_number || bill.id}</td>
                         <td>${bill.vendor_name || 'Unknown Vendor'}</td>
                         <td>${bill.bill_date ? new Date(bill.bill_date).toLocaleDateString() : 'N/A'}</td>
                         <td>${bill.due_date ? new Date(bill.due_date).toLocaleDateString() : 'N/A'}</td>
-                        <td>?${amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td>${amountDisplay}</td>
                         <td>${statusBadge}</td>
                         <td>${billStatus}</td>
                         <td>
