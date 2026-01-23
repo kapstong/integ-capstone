@@ -2891,8 +2891,31 @@ try {
                 showAlert('error', 'Privacy mode is enabled. Disable it to export or download data.');
                 return;
             }
-            updateJournalPrintMeta();
-            window.print();
+            const params = new URLSearchParams();
+            const searchValue = document.getElementById('journalSearchInput')?.value || '';
+            const dateFromValue = document.getElementById('journalDateFrom')?.value || '';
+            const dateToValue = document.getElementById('journalDateTo')?.value || '';
+            const periodValue = document.getElementById('journalPeriodFilter')?.value || '';
+
+            if (searchValue.trim()) {
+                params.set('search', searchValue.trim());
+            }
+            if (dateFromValue) {
+                params.set('date_from', dateFromValue);
+            }
+            if (dateToValue) {
+                params.set('date_to', dateToValue);
+            }
+            if (periodValue) {
+                params.set('period', periodValue);
+            }
+            params.set('auto_print', '1');
+
+            const printUrl = `print_journal_entries.php?${params.toString()}`;
+            const printWindow = window.open(printUrl, '_blank');
+            if (!printWindow) {
+                showAlert('error', 'Popup blocked. Please allow popups to print.');
+            }
         }
 
         function getJournalPeriodRange(period) {
