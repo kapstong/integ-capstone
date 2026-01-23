@@ -2160,7 +2160,7 @@ $db = Database::getInstance()->getConnection();
             `);
             printWindow.document.write('</style></head><body>');
             printWindow.document.write(printContainer.innerHTML);
-            printWindow.document.write('<script src="../includes/tab_persistence.js?v=1"></script>');
+            printWindow.document.write('<script src="../includes/tab_persistence.js?v=1"><\/script>');
             printWindow.document.write('</body></html>');
             printWindow.document.close();
 
