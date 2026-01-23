@@ -2578,20 +2578,27 @@ try {
 
         function fetchAuditTrail(params, { silent = false } = {}) {
             return fetch(`../api/audit.php?${params.toString()}`, { method: 'GET' })
-                .then(response => response.json())
-                .then(data => {
-                    const logs = normalizeAuditResponse(data);
-                    if (!logs) {
-                        throw new Error(data?.error || 'Failed to fetch audit trail');
-                    }
-                    updateAuditTrailTable(logs);
-                })
-                .catch(error => {
-                    if (!silent) {
-                        console.error('Error fetching audit trail:', error);
-                        showAlert('error', error.message || 'Failed to apply filters.');
-                    }
-                });
+                    .then(async response => {
+                        const text = await response.text();
+                        // try to parse JSON, otherwise surface server output for debugging
+                        let data;
+                        try {
+                            data = JSON.parse(text);
+                        } catch (e) {
+                            throw new Error('Invalid JSON from audit API: ' + (text ? text.substring(0, 500) : '<empty response>'));
+                        }
+                        const logs = normalizeAuditResponse(data);
+                        if (!logs) {
+                            throw new Error(data?.error || 'Failed to fetch audit trail');
+                        }
+                        updateAuditTrailTable(logs);
+                    })
+                    .catch(error => {
+                        if (!silent) {
+                            console.error('Error fetching audit trail:', error);
+                            showAlert('error', error.message || 'Failed to apply filters.');
+                        }
+                    });
         }
 
         function buildAuditParams() {
