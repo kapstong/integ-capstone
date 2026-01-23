@@ -11,6 +11,41 @@ if (!isset($_SESSION['user'])) {
 // Initialize database connection
 $db = Database::getInstance()->getConnection();
 
+// Trial balance date filters
+$trialPeriod = isset($_GET['trial_period']) ? strtolower(trim($_GET['trial_period'])) : 'monthly';
+$trialDateToInput = isset($_GET['trial_date']) ? trim($_GET['trial_date']) : date('Y-m-d');
+$trialDateToObj = DateTime::createFromFormat('Y-m-d', $trialDateToInput) ?: new DateTime();
+$trialDateTo = $trialDateToObj->format('Y-m-d');
+$trialDateFromObj = clone $trialDateToObj;
+switch ($trialPeriod) {
+    case 'daily':
+        break;
+    case 'weekly':
+        $trialDateFromObj->modify('monday this week');
+        break;
+    case 'monthly':
+        $trialDateFromObj->modify('first day of this month');
+        break;
+    case 'quarterly':
+        $quarterStartMonth = (int)(floor(((int)$trialDateToObj->format('n') - 1) / 3) * 3) + 1;
+        $trialDateFromObj = new DateTime($trialDateToObj->format('Y') . '-' . str_pad((string)$quarterStartMonth, 2, '0', STR_PAD_LEFT) . '-01');
+        break;
+    case 'semi-annually':
+    case 'semiannually':
+        $halfStartMonth = ((int)$trialDateToObj->format('n') <= 6) ? 1 : 7;
+        $trialDateFromObj = new DateTime($trialDateToObj->format('Y') . '-' . str_pad((string)$halfStartMonth, 2, '0', STR_PAD_LEFT) . '-01');
+        break;
+    case 'annually':
+    case 'yearly':
+        $trialDateFromObj->modify('first day of january');
+        break;
+    default:
+        $trialPeriod = 'monthly';
+        $trialDateFromObj->modify('first day of this month');
+        break;
+}
+$trialDateFrom = $trialDateFromObj->format('Y-m-d');
+
 // Fetch summary data and actual data for all modules
 try {
     // Auto-sync Core 1 payments into journal entries
@@ -104,7 +139,7 @@ try {
     ")->fetchAll();
 
     // Fetch trial balance data (normalize by account type)
-    $trialBalanceRaw = $db->query("
+    $trialBalanceStmt = $db->prepare("
         SELECT
             coa.id as account_id,
             coa.account_code,
@@ -114,12 +149,16 @@ try {
             COALESCE(SUM(jel.credit), 0) as credit_total
         FROM chart_of_accounts coa
         LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
-        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id AND je.status = 'posted'
+        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+            AND je.status = 'posted'
+            AND je.entry_date BETWEEN ? AND ?
         WHERE coa.is_active = 1
         GROUP BY coa.id, coa.account_code, coa.account_name, coa.account_type
         HAVING debit_total != 0 OR credit_total != 0
         ORDER BY coa.account_code ASC
-    ")->fetchAll();
+    ");
+    $trialBalanceStmt->execute([$trialDateFrom, $trialDateTo]);
+    $trialBalanceRaw = $trialBalanceStmt->fetchAll();
 
     $trialBalance = [];
     $trialDebitTotal = 0;
@@ -176,10 +215,11 @@ try {
             FROM journal_entry_lines jel
             JOIN journal_entries je ON jel.journal_entry_id = je.id
             WHERE (je.status = 'posted' OR je.status IS NULL OR je.status = '')
+              AND je.entry_date BETWEEN ? AND ?
               AND jel.account_id IN ($placeholders)
             ORDER BY je.entry_date DESC, je.id DESC, jel.id DESC
         ");
-        $breakdownStmt->execute($trialAccountIds);
+        $breakdownStmt->execute(array_merge([$trialDateFrom, $trialDateTo], $trialAccountIds));
         $rows = $breakdownStmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as $row) {
             $accountId = (int)$row['account_id'];
@@ -213,9 +253,10 @@ try {
             SELECT id, disbursement_date, payee, reference_number, purpose, amount, account_id
             FROM disbursements
             WHERE account_id IN ($placeholders)
+              AND disbursement_date BETWEEN ? AND ?
             ORDER BY disbursement_date DESC, id DESC
         ");
-        $salaryStmt->execute($salaryAccountIds);
+        $salaryStmt->execute(array_merge($salaryAccountIds, [$trialDateFrom, $trialDateTo]));
         $rows = $salaryStmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as $row) {
             $accountId = (int)$row['account_id'];
@@ -1044,9 +1085,28 @@ try {
                             </div>
                             <!-- Trial Balance Tab -->
                             <div class="tab-pane fade" id="trial" role="tabpanel" aria-labelledby="trial-tab">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="mb-0">Trial Balance Report</h6>
-                                    <button class="btn btn-outline-secondary" onclick="exportTrialBalance()"><i class="fas fa-download me-2"></i>Export</button>
+                                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                                    <div>
+                                        <h6 class="mb-1">Trial Balance Report</h6>
+                                        <small class="text-muted">Period: <?php echo ucfirst($trialPeriod); ?> (<?php echo htmlspecialchars($trialDateFrom); ?> to <?php echo htmlspecialchars($trialDateTo); ?>)</small>
+                                    </div>
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                        <form class="d-flex flex-wrap align-items-center gap-2" method="get">
+                                            <input type="hidden" name="tab" value="trial">
+                                            <select class="form-select" name="trial_period" style="min-width: 180px;">
+                                                <option value="daily" <?php echo $trialPeriod === 'daily' ? 'selected' : ''; ?>>Daily</option>
+                                                <option value="weekly" <?php echo $trialPeriod === 'weekly' ? 'selected' : ''; ?>>Weekly</option>
+                                                <option value="monthly" <?php echo $trialPeriod === 'monthly' ? 'selected' : ''; ?>>Monthly</option>
+                                                <option value="quarterly" <?php echo $trialPeriod === 'quarterly' ? 'selected' : ''; ?>>Quarterly</option>
+                                                <option value="semi-annually" <?php echo $trialPeriod === 'semi-annually' || $trialPeriod === 'semiannually' ? 'selected' : ''; ?>>Semi-Annually</option>
+                                                <option value="annually" <?php echo $trialPeriod === 'annually' ? 'selected' : ''; ?>>Annually</option>
+                                                <option value="yearly" <?php echo $trialPeriod === 'yearly' ? 'selected' : ''; ?>>Yearly</option>
+                                            </select>
+                                            <input type="date" class="form-control" name="trial_date" value="<?php echo htmlspecialchars($trialDateTo); ?>">
+                                            <button class="btn btn-primary" type="submit">Apply</button>
+                                        </form>
+                                        <button class="btn btn-outline-secondary" onclick="exportTrialBalance()"><i class="fas fa-download me-2"></i>Export</button>
+                                    </div>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-striped">
@@ -1561,8 +1621,15 @@ try {
             exportBtn.disabled = true;
 
             // Make API call to get trial balance data
-            const currentDate = new Date().toISOString().split('T')[0];
-            fetch(`../api/reports.php?type=trial_balance&date_to=${currentDate}&format=csv`, {
+            const trialDateFrom = '<?php echo $trialDateFrom; ?>';
+            const trialDateTo = '<?php echo $trialDateTo; ?>';
+            const params = new URLSearchParams({
+                type: 'trial_balance',
+                date_from: trialDateFrom,
+                date_to: trialDateTo,
+                format: 'csv'
+            });
+            fetch(`../api/reports.php?${params.toString()}`, {
                 method: 'GET'
             })
             .then(response => {
@@ -1578,7 +1645,7 @@ try {
                 const url = URL.createObjectURL(blob);
 
                 link.setAttribute('href', url);
-                link.setAttribute('download', `trial_balance_${currentDate}.csv`);
+                link.setAttribute('download', `trial_balance_${trialDateTo}.csv`);
                 link.style.visibility = 'hidden';
 
                 document.body.appendChild(link);
@@ -2643,6 +2710,15 @@ try {
 
         // Make table action buttons functional
         document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeTab = urlParams.get('tab');
+            if (activeTab) {
+                const trigger = document.querySelector(`#${activeTab}-tab`);
+                if (trigger) {
+                    new bootstrap.Tab(trigger).show();
+                }
+            }
+
             // Add click handlers for edit buttons in account table
             const editButtons = document.querySelectorAll('#coa table button[class*="btn-outline-primary"]');
             editButtons.forEach((button, index) => {
