@@ -1818,9 +1818,9 @@ try {
                                         <small class="text-muted">Period: <?php echo ucfirst($financialPeriod); ?> (<?php echo htmlspecialchars($financialDateFrom); ?> to <?php echo htmlspecialchars($financialDateTo); ?>)</small>
                                     </div>
                                     <div class="d-flex flex-wrap align-items-center gap-3">
-                                        <form class="d-flex flex-wrap align-items-center gap-2" method="get">
+                                        <form class="d-flex align-items-center gap-2 flex-nowrap" method="get" style="align-items:center;">
                                             <input type="hidden" name="tab" value="financial">
-                                            <select class="form-select" name="financial_period" style="min-width: 180px;">
+                                            <select class="form-select me-2" name="financial_period" style="min-width: 170px;">
                                                 <option value="daily" <?php echo $financialPeriod === 'daily' ? 'selected' : ''; ?>>Daily</option>
                                                 <option value="weekly" <?php echo $financialPeriod === 'weekly' ? 'selected' : ''; ?>>Weekly</option>
                                                 <option value="monthly" <?php echo $financialPeriod === 'monthly' ? 'selected' : ''; ?>>Monthly</option>
@@ -1829,7 +1829,7 @@ try {
                                                 <option value="annually" <?php echo $financialPeriod === 'annually' ? 'selected' : ''; ?>>Annually</option>
                                                 <option value="yearly" <?php echo $financialPeriod === 'yearly' ? 'selected' : ''; ?>>Yearly</option>
                                             </select>
-                                            <input type="date" class="form-control" name="financial_date" value="<?php echo htmlspecialchars($financialDateTo); ?>">
+                                            <input type="date" class="form-control me-2" name="financial_date" value="<?php echo htmlspecialchars($financialDateTo); ?>" style="width:165px;">
                                             <button class="btn btn-primary" type="submit">Apply</button>
                                         </form>
                                             <div class="d-flex align-items-center gap-3 ms-2">
