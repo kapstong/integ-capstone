@@ -151,10 +151,47 @@ function getAuditTrail($db, $filters = []) {
 
         $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Format the results
+        // Format the results and enrich missing disbursement/user data when possible
         foreach ($logs as &$log) {
             $log['formatted_date'] = date('M j, Y g:i:s A', strtotime($log['created_at']));
             $log['action_label'] = formatActionLabel($log['action']);
+
+            // Try to populate disbursement_number from stored JSON fields if join didn't return it
+            $oldValues = $log['old_values'] ? json_decode($log['old_values'], true) : [];
+            $newValues = $log['new_values'] ? json_decode($log['new_values'], true) : [];
+
+            if (empty($log['disbursement_number'])) {
+                // Prefer explicit keys from new/old values
+                $possible = $newValues['disbursement_number'] ?? $oldValues['disbursement_number'] ?? $newValues['disbursement_no'] ?? $oldValues['disbursement_no'] ?? null;
+                if (!empty($possible)) {
+                    $log['disbursement_number'] = $possible;
+                } else {
+                    // Attempt to parse common patterns from existing text fields
+                    $text = ($log['action_description'] ?? '') . ' ' . ($newValues['description'] ?? '') . ' ' . ($oldValues['description'] ?? '');
+                    if (preg_match('/(DISB-\d{8}-\d{3}|DISB-\d+)|(\bID\s*(\d+)\b)|(\b\d{1,6}\b)/i', $text, $m)) {
+                        // pick the first non-empty capture
+                        foreach ($m as $candidate) {
+                            if (!empty($candidate)) {
+                                $log['disbursement_number'] = $candidate;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Normalize a display-friendly user label
+            if (!empty($log['full_name'])) {
+                $log['display_user'] = $log['full_name'];
+            } elseif (!empty($log['username'])) {
+                $log['display_user'] = $log['username'];
+            } elseif (!empty($log['user_id'])) {
+                $log['display_user'] = 'User #' . $log['user_id'];
+            } else {
+                $log['display_user'] = 'System';
+            }
+
+            // Compute the action description (this may also use the enriched disbursement_number)
             $log['action_description'] = formatAction($log);
         }
 

@@ -92,7 +92,8 @@ header('Content-Type: application/javascript');
                     }
 
                     if (!disbRef) disbRef = 'N/A';
-                    return '<tr><td>' + log.formatted_date + '</td><td>' + (log.full_name || log.username || 'Unknown') + '</td><td><span class="badge bg-info">' + actionLabel + '</span></td><td>' + disbRef + '</td><td>' + (log.action_description || '') + '</td></tr>';
+                    const displayUser = log.display_user || log.full_name || log.username || 'System';
+                    return '<tr><td>' + log.formatted_date + '</td><td>' + displayUser + '</td><td><span class="badge bg-info">' + actionLabel + '</span></td><td>' + disbRef + '</td><td>' + (log.action_description || '') + '</td></tr>';
                 }).join('');
 
             } catch (error) {
