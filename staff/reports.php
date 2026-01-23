@@ -695,11 +695,7 @@ $db = Database::getInstance()->getConnection();
                     <i class="fas fa-money-bill-wave me-2"></i>Cash Flow
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics" type="button" role="tab">
-                    <i class="fas fa-chart-bar me-2"></i>Analytics & Export
-                </button>
-            </li>
+            <!-- Analytics tab removed -->
 
         </ul>
 
@@ -818,96 +814,7 @@ $db = Database::getInstance()->getConnection();
                 </div>
             </div>
 
-            <!-- Analytics & Export Tab -->
-            <div class="tab-pane fade" id="analytics" role="tabpanel" aria-labelledby="analytics-tab">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">Analytics & Export Features</h6>
-                    <div>
-                        <button class="btn btn-outline-secondary me-2" onclick="viewCharts()"><i class="fas fa-chart-line me-2"></i>View Charts</button>
-                        <button class="btn btn-primary" onclick="exportAllReports()"><i class="fas fa-download me-2"></i>Export All</button>
-                    </div>
-                </div>
-                  <div class="row mb-4">
-                      <div class="col-md-12">
-                          <div class="card">
-                              <div class="card-body">
-                                  <div class="row text-center g-3">
-                                      <div class="col-md-4">
-                                          <div class="p-3 border rounded">
-                                              <div class="text-muted">Month-to-Date Revenue</div>
-                                              <div class="fw-bold fs-4" id="analyticsMtdRevenue">ƒ,ñ0</div>
-                                          </div>
-                                      </div>
-                                      <div class="col-md-4">
-                                          <div class="p-3 border rounded">
-                                              <div class="text-muted">Month-to-Date Expenses</div>
-                                              <div class="fw-bold fs-4 text-danger" id="analyticsMtdExpenses">ƒ,ñ0</div>
-                                          </div>
-                                      </div>
-                                      <div class="col-md-4">
-                                          <div class="p-3 border rounded">
-                                              <div class="text-muted">Net Operating Result</div>
-                                              <div class="fw-bold fs-4" id="analyticsNetResult">ƒ,ñ0</div>
-                                          </div>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-                <div class="row">
-                    <div class="col-md-8">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Report Generation Trends</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="chart-container">
-                                    <canvas id="reportTrendsChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Export Options</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-grid gap-2">
-                                    <button class="btn btn-outline-danger" onclick="exportCurrentReportPDF()">
-                                        <i class="fas fa-file-pdf me-2"></i>Export as PDF
-                                    </button>
-                                    <button class="btn btn-outline-success" onclick="exportCurrentReportExcel()">
-                                        <i class="fas fa-file-excel me-2"></i>Export as Excel
-                                    </button>
-                                    <button class="btn btn-outline-info" onclick="printCurrentReport()">
-                                        <i class="fas fa-print me-2"></i>Print Report
-                                    </button>
-                                    <button class="btn btn-outline-secondary" onclick="emailCurrentReport()">
-                                        <i class="fas fa-envelope me-2"></i>Email Report
-                                    </button>
-                                </div>
-                                <hr>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="includeCharts">
-                                    <label class="form-check-label" for="includeCharts">
-                                        Include charts in export
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="includeDetails">
-                                    <label class="form-check-label" for="includeDetails">
-                                        Include detailed breakdowns
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
+            <!-- Analytics & Export removed -->
         </div>
     </div>
 
@@ -2305,94 +2212,7 @@ $db = Database::getInstance()->getConnection();
             }, 5000);
         }
 
-        let reportTrendsChart = null;
-
-        // View charts functionality
-        function viewCharts() {
-            const analyticsTab = document.getElementById('analytics-tab');
-            if (analyticsTab) {
-                analyticsTab.click();
-            }
-            loadAnalyticsSummary();
-        }
-
-        function loadAnalyticsSummary() {
-            fetch('../api/reports.php?type=analytics_summary')
-                .then(response => response.json())
-                .then(data => {
-                    if (!data.success) {
-                        showAlert(data.error || 'Failed to load analytics', 'danger');
-                        return;
-                    }
-
-                    const mtdRevenue = data.mtd.revenue || 0;
-                    const mtdExpenses = data.mtd.expenses || 0;
-                    const mtdNet = data.mtd.net || 0;
-
-                    document.getElementById('analyticsMtdRevenue').textContent = 'ƒ,ñ' + mtdRevenue.toLocaleString();
-                    document.getElementById('analyticsMtdExpenses').textContent = 'ƒ,ñ' + mtdExpenses.toLocaleString();
-                    document.getElementById('analyticsNetResult').textContent = 'ƒ,ñ' + mtdNet.toLocaleString();
-                    document.getElementById('analyticsNetResult').className = 'fw-bold fs-4 ' + (mtdNet >= 0 ? 'text-success' : 'text-danger');
-
-                    const ctx = document.getElementById('reportTrendsChart');
-                    if (!ctx) return;
-
-                    if (reportTrendsChart) {
-                        reportTrendsChart.destroy();
-                    }
-
-                    reportTrendsChart = new Chart(ctx.getContext('2d'), {
-                        type: 'line',
-                        data: {
-                            labels: data.trend.labels,
-                            datasets: [
-                                {
-                                    label: 'Revenue',
-                                    data: data.trend.revenue,
-                                    borderColor: 'rgba(40, 167, 69, 1)',
-                                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                                    tension: 0.3,
-                                    fill: true
-                                },
-                                {
-                                    label: 'Expenses',
-                                    data: data.trend.expenses,
-                                    borderColor: 'rgba(220, 53, 69, 1)',
-                                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                                    tension: 0.3,
-                                    fill: true
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                                legend: {
-                                    position: 'top'
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        callback: function(value) {
-                                            return 'ƒ,ñ' + value.toLocaleString();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
-                })
-                .catch(error => showAlert('Error: ' + error.message, 'danger'));
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const analyticsTab = document.getElementById('analytics-tab');
-            if (analyticsTab) {
-                analyticsTab.addEventListener('shown.bs.tab', loadAnalyticsSummary);
-            }
-        });
+        // Analytics removed: related UI and handlers have been deleted
     </script>
 
     <script src="../includes/privacy_mode.js?v=11"></script>
