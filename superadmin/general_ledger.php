@@ -67,7 +67,7 @@ try {
     $totalEntries = $db->query("SELECT COUNT(*) as count FROM journal_entries WHERE status != 'voided'")->fetch()['count'] ?? 0;
 
     // Calculate balances from journal entries
-    $balanceQuery = $db->query("
+    $balanceStmt = $db->prepare("
         SELECT
             coa.account_type,
             SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as balance
@@ -75,9 +75,12 @@ try {
         LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
         LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
             AND (je.status = 'posted' OR je.status IS NULL OR je.status = '')
+            AND je.entry_date <= ?
         WHERE coa.is_active = 1
         GROUP BY coa.id, coa.account_type
-    ")->fetchAll();
+    ");
+    $balanceStmt->execute([$trialDateTo]);
+    $balanceQuery = $balanceStmt->fetchAll();
 
     // Initialize balance variables
     $totalAssets = 0;
@@ -904,13 +907,13 @@ try {
             <div class="col-md-3">
                 <div class="stats-card">
                     <h3>&#8369;<?php echo number_format($totalAssets, 2); ?></h3>
-                    <p>Total Assets</p>
+                    <p>Total Assets <i class="fas fa-info-circle text-muted ms-1" data-bs-toggle="tooltip" title="As of the selected Trial Balance date"></i></p>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
                     <h3>&#8369;<?php echo number_format($netProfit, 2); ?></h3>
-                    <p>Net Profit</p>
+                    <p>Net Profit <i class="fas fa-info-circle text-muted ms-1" data-bs-toggle="tooltip" title="As of the selected Trial Balance date"></i></p>
                 </div>
             </div>
         </div>
