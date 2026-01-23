@@ -55,7 +55,7 @@ try {
             break;
 
         case 'POST':
-            // Create new customer
+            // Create new customer - either forward to central customer service or enforce role restriction
             $data = json_decode(file_get_contents('php://input'), true);
 
             if (!$data) {
@@ -70,12 +70,73 @@ try {
                 exit;
             }
 
+            // If integration endpoint configured, forward the creation request
+            // Add optional config constants in config.php: CUSTOMER_SERVICE_URL and CUSTOMER_SERVICE_API_KEY
+            if (defined('CUSTOMER_SERVICE_URL') && CUSTOMER_SERVICE_URL) {
+                $url = rtrim(CUSTOMER_SERVICE_URL, '/') . '/api/customers.php';
+
+                $ch = curl_init($url);
+                $payload = json_encode([
+                    'customerName' => $data['customerName'],
+                    'contactPerson' => $data['contactPerson'],
+                    'customerEmail' => $data['customerEmail'],
+                    'customerPhone' => $data['customerPhone'] ?? null,
+                    'customerAddress' => $data['customerAddress'] ?? null,
+                    'creditLimit' => $data['creditLimit'] ?? 0,
+                    'customerStatus' => $data['customerStatus'] ?? 'active'
+                ]);
+
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Content-Type: application/json',
+                    'Content-Length: ' . strlen($payload)
+                ]);
+
+                // Optionally include API key
+                if (defined('CUSTOMER_SERVICE_API_KEY') && CUSTOMER_SERVICE_API_KEY) {
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, array_merge([
+                        'Content-Type: application/json',
+                        'Content-Length: ' . strlen($payload)
+                    ], ['X-API-KEY: ' . CUSTOMER_SERVICE_API_KEY]));
+                }
+
+                $response = curl_exec($ch);
+                $err = curl_error($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($response === false || $httpCode >= 400) {
+                    http_response_code(502);
+                    echo json_encode(['success' => false, 'error' => 'Failed to forward to central customer service', 'detail' => $err, 'response' => $response]);
+                    exit;
+                }
+
+                // Return central service response to caller
+                header('Content-Type: application/json');
+                echo $response;
+                exit;
+            }
+
+            // No central service configured: enforce role/department restriction
+            $allowedRoles = ['core1', 'core2', 'customer_admin'];
+            $userRole = $_SESSION['user']['role'] ?? null;
+            $userDept = $_SESSION['user']['department'] ?? null;
+
+            if (!in_array($userRole, $allowedRoles) && !in_array($userDept, ['core1', 'core2'])) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Customer creation must be performed by Core1/Core2 department or an admin.']);
+                exit;
+            }
+
+            // Fallback: create locally if authorized
             // Generate customer code
             $stmt = $db->query("SELECT COUNT(*) as count FROM customers");
             $count = $stmt->fetch()['count'] + 1;
             $customerCode = 'C' . str_pad($count, 3, '0', STR_PAD_LEFT);
 
-            $customerId = $db->insert(
+            $customerId = Database::getInstance()->insert(
                 "INSERT INTO customers (customer_code, company_name, contact_person, email, phone, address, credit_limit, status)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 [

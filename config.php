@@ -184,6 +184,21 @@ require_once __DIR__ . '/includes/auth.php';
 // Initialize configuration
 Config::get('app.name'); // Trigger config loading
 
+// Optional: central customer service integration
+// Configure via environment variables in .env or system env:
+// CUSTOMER_SERVICE_URL, CUSTOMER_SERVICE_API_KEY
+if (getenv('CUSTOMER_SERVICE_URL')) {
+    define('CUSTOMER_SERVICE_URL', getenv('CUSTOMER_SERVICE_URL'));
+} else {
+    define('CUSTOMER_SERVICE_URL', '');
+}
+
+if (getenv('CUSTOMER_SERVICE_API_KEY')) {
+    define('CUSTOMER_SERVICE_API_KEY', getenv('CUSTOMER_SERVICE_API_KEY'));
+} else {
+    define('CUSTOMER_SERVICE_API_KEY', '');
+}
+
 // Set PHP configuration based on environment
 if (Config::isDevelopment()) {
     ini_set('display_errors', 1);

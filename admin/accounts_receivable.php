@@ -714,9 +714,15 @@ try {
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Customer Records</h5>
-                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
-                            <i class="fas fa-plus me-1"></i>Add Customer
-                        </button>
+                        <?php
+                        $allowedRoles = ['core1', 'core2', 'customer_admin'];
+                        $userRole = $_SESSION['user']['role'] ?? null;
+                        $userDept = $_SESSION['user']['department'] ?? null;
+                        if (in_array($userRole, $allowedRoles) || in_array($userDept, ['core1', 'core2'])): ?>
+                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+                                <i class="fas fa-plus me-1"></i>Add Customer
+                            </button>
+                        <?php endif; ?>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
