@@ -830,8 +830,12 @@ try {
                             </div>
                             <!-- Journal Entries Tab -->
                             <div class="tab-pane fade" id="journal" role="tabpanel" aria-labelledby="journal-tab">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                                     <h6 class="mb-0">Journal Entries</h6>
+                                    <div class="input-group" style="max-width: 360px;">
+                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                        <input type="text" class="form-control" id="journalSearchInput" placeholder="Search journal entries">
+                                    </div>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-striped">
@@ -853,16 +857,36 @@ try {
                                                     </td>
                                                 </tr>
                                             <?php else: ?>
-                                                <?php foreach ($journalEntries as $entry): ?>
-                                                    <tr>
-                                                        <td><?php echo htmlspecialchars(date('Y-m-d', strtotime($entry['date']))); ?></td>
-                                                        <td><?php echo htmlspecialchars($entry['reference']); ?></td>
-                                                        <td><?php echo htmlspecialchars($entry['account_name'] ?? 'Unknown Account'); ?></td>
-                                                        <td><?php echo htmlspecialchars($entry['description']); ?></td>
-                                                        <td><?php echo $entry['debit'] > 0 ? '₱' . number_format($entry['debit'], 2) : '-'; ?></td>
-                                                        <td><?php echo $entry['credit'] > 0 ? '₱' . number_format($entry['credit'], 2) : '-'; ?></td>
+                                                <?php foreach ($journalEntries as $entry):
+                                                    $journalDate = date('Y-m-d', strtotime($entry['date']));
+                                                    $journalReference = $entry['reference'];
+                                                    $journalAccount = $entry['account_name'] ?? 'Unknown Account';
+                                                    $journalDescription = $entry['description'];
+                                                    $journalDebit = $entry['debit'] ?? 0;
+                                                    $journalCredit = $entry['credit'] ?? 0;
+                                                ?>
+                                                    <tr
+                                                        class="journal-entry-row"
+                                                        data-journal-date="<?php echo htmlspecialchars($journalDate); ?>"
+                                                        data-journal-reference="<?php echo htmlspecialchars($journalReference); ?>"
+                                                        data-journal-account="<?php echo htmlspecialchars($journalAccount); ?>"
+                                                        data-journal-description="<?php echo htmlspecialchars($journalDescription); ?>"
+                                                        data-journal-debit="<?php echo htmlspecialchars((string)$journalDebit); ?>"
+                                                        data-journal-credit="<?php echo htmlspecialchars((string)$journalCredit); ?>"
+                                                    >
+                                                        <td><?php echo htmlspecialchars($journalDate); ?></td>
+                                                        <td><?php echo htmlspecialchars($journalReference); ?></td>
+                                                        <td><?php echo htmlspecialchars($journalAccount); ?></td>
+                                                        <td><?php echo htmlspecialchars($journalDescription); ?></td>
+                                                        <td><?php echo $journalDebit > 0 ? '?' . number_format($journalDebit, 2) : '-'; ?></td>
+                                                        <td><?php echo $journalCredit > 0 ? '?' . number_format($journalCredit, 2) : '-'; ?></td>
                                                     </tr>
                                                 <?php endforeach; ?>
+                                                <tr id="journalEmptyState" style="display: none;">
+                                                    <td colspan="6" class="text-center text-muted py-4">
+                                                        <i class="fas fa-info-circle me-2"></i>No matching journal entries. Try adjusting your search.
+                                                    </td>
+                                                </tr>
                                             <?php endif; ?>
                                         </tbody>
                                     </table>
@@ -2252,6 +2276,38 @@ try {
             }
         }
 
+
+        function applyJournalFilters() {
+            const searchInput = document.getElementById('journalSearchInput');
+            if (!searchInput) {
+                return;
+            }
+
+            const searchValue = searchInput.value.trim().toLowerCase();
+            const rows = document.querySelectorAll('#journal tbody tr[data-journal-reference]');
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const date = (row.dataset.journalDate || '').toLowerCase();
+                const reference = (row.dataset.journalReference || '').toLowerCase();
+                const account = (row.dataset.journalAccount || '').toLowerCase();
+                const description = (row.dataset.journalDescription || '').toLowerCase();
+                const debit = (row.dataset.journalDebit || '').toLowerCase();
+                const credit = (row.dataset.journalCredit || '').toLowerCase();
+
+                const matchesSearch = !searchValue || [date, reference, account, description, debit, credit].some(value => value.includes(searchValue));
+                row.style.display = matchesSearch ? '' : 'none';
+                if (matchesSearch) {
+                    visibleCount += 1;
+                }
+            });
+
+            const emptyRow = document.getElementById('journalEmptyState');
+            if (emptyRow) {
+                emptyRow.style.display = visibleCount === 0 ? '' : 'none';
+            }
+        }
+
         // Add event listener for journal modal when opened
         document.getElementById('addJournalModal').addEventListener('shown.bs.modal', function() {
             loadAccountsForModal();
@@ -2322,6 +2378,7 @@ try {
             const coaSearchInput = document.getElementById('coaSearchInput');
             const coaCategoryFilter = document.getElementById('coaCategoryFilter');
             const coaClearFilters = document.getElementById('coaClearFilters');
+            const journalSearchInput = document.getElementById('journalSearchInput');
 
             if (coaSearchInput && coaCategoryFilter) {
                 coaSearchInput.addEventListener('input', applyCoaFilters);
@@ -2335,6 +2392,11 @@ try {
                 }
 
                 applyCoaFilters();
+            }
+
+            if (journalSearchInput) {
+                journalSearchInput.addEventListener('input', applyJournalFilters);
+                applyJournalFilters();
             }
         });
 
