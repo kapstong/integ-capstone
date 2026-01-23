@@ -119,7 +119,7 @@ try {
     $totalExpenses = 0;
 
     foreach ($balanceQuery as $row) {
-        $balance = intval($row['balance']);
+        $balance = floatval($row['balance']);
         switch ($row['account_type']) {
             case 'asset':
                 $totalAssets += $balance;
@@ -140,6 +140,29 @@ try {
     }
 
     $netProfit = $totalRevenue - $totalExpenses;
+
+    // Fetch period-specific account balances for financial statements
+    $financialAccountStmt = $db->prepare("
+        SELECT
+            coa.id,
+            coa.account_type,
+            SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as balance
+        FROM chart_of_accounts coa
+        LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+            AND (je.status = 'posted' OR je.status IS NULL OR je.status = '')
+            AND je.entry_date BETWEEN ? AND ?
+        WHERE coa.is_active = 1
+        GROUP BY coa.id, coa.account_type
+    ");
+    $financialAccountStmt->execute([$financialDateFrom, $financialDateTo]);
+    $financialAccountBalances = [];
+    foreach ($financialAccountStmt->fetchAll() as $row) {
+        $financialAccountBalances[$row['id']] = [
+            'type' => $row['account_type'],
+            'balance' => floatval($row['balance'])
+        ];
+    }
 
     // Fetch actual Chart of Accounts with calculated balances
     $chartOfAccountsQuery = $db->query("
@@ -1197,6 +1220,77 @@ try {
             </div>
         </div>
 
+        <!-- Integration Status Panel -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-plug me-2"></i>External API Integration Status</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <?php
+                            $integrations = [
+                                'core1' => ['name' => 'Core 1', 'description' => 'Core payment processing'],
+                                'hr3' => ['name' => 'HR 3', 'description' => 'Human resources management'],
+                                'hr4' => ['name' => 'HR 4', 'description' => 'Advanced HR analytics'],
+                                'logistics1' => ['name' => 'Logistics 1', 'description' => 'Supply chain management'],
+                                'logistics2' => ['name' => 'Logistics 2', 'description' => 'Advanced logistics tracking']
+                            ];
+                            foreach ($integrations as $key => $integration):
+                                $status = 'unknown';
+                                $statusText = 'Unknown';
+                                $statusClass = 'secondary';
+                                $lastError = '';
+
+                                try {
+                                    $config = $integrationManager->getIntegrationConfig($key);
+                                    if ($config && !empty($config['api_url'])) {
+                                        if (filter_var($config['api_url'], FILTER_VALIDATE_URL)) {
+                                            // Placeholder for connectivity check
+                                            $status = 'configured';
+                                            $statusText = 'Configured';
+                                            $statusClass = 'info';
+                                        } else {
+                                            $status = 'config_error';
+                                            $statusText = 'Config Error';
+                                            $statusClass = 'warning';
+                                            $lastError = 'Invalid API URL';
+                                        }
+                                    } else {
+                                        $status = 'not_configured';
+                                        $statusText = 'Not Configured';
+                                        $statusClass = 'secondary';
+                                        $lastError = 'API URL not set';
+                                    }
+                                } catch (Exception $e) {
+                                    $status = 'error';
+                                    $statusText = 'Error';
+                                    $statusClass = 'danger';
+                                    $lastError = $e->getMessage();
+                                }
+                            ?>
+                                <div class="col-md-4 col-lg-2 mb-3">
+                                    <div class="text-center">
+                                        <div class="mb-2">
+                                            <span class="badge bg-<?php echo $statusClass; ?> fs-6"><?php echo htmlspecialchars($statusText); ?></span>
+                                        </div>
+                                        <div class="small fw-bold"><?php echo htmlspecialchars($integration['name']); ?></div>
+                                        <div class="small text-muted"><?php echo htmlspecialchars($integration['description']); ?></div>
+                                        <?php if ($lastError): ?>
+                                            <div class="small text-danger mt-1" title="<?php echo htmlspecialchars($lastError); ?>">
+                                                <i class="fas fa-exclamation-triangle"></i> Last Error
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-md-12">
                 <div class="card">
@@ -1733,8 +1827,9 @@ try {
                                                 return $account['account_type'] === 'asset';
                                             });
                                             foreach ($assetAccounts as $asset):
+                                                $assetBalance = isset($financialAccountBalances[$asset['id']]) ? $financialAccountBalances[$asset['id']]['balance'] : 0;
                                             ?>
-                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($asset['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($asset['balance'] ?? 0, 2); ?></td></tr>
+                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($asset['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($assetBalance, 2); ?></td></tr>
                                             <?php endforeach; ?>
                                             <tr><th>Liabilities</th><th></th><th>&#8369;<?php echo number_format($totalLiabilities, 2); ?></th></tr>
                                             <tr><th>Equity</th><th></th><th>&#8369;<?php echo number_format($totalAssets - $totalLiabilities, 2); ?></th></tr>
@@ -1760,8 +1855,9 @@ try {
                                                 return $account['account_type'] === 'revenue';
                                             });
                                             foreach ($revenueAccounts as $revenue):
+                                                $revenueBalance = isset($financialAccountBalances[$revenue['id']]) ? $financialAccountBalances[$revenue['id']]['balance'] : 0;
                                             ?>
-                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($revenue['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($revenue['balance'] ?? 0, 2); ?></td></tr>
+                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($revenue['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($revenueBalance, 2); ?></td></tr>
                                             <?php endforeach; ?>
                                             <tr><th>Expenses</th><th></th><th>&#8369;<?php echo number_format($totalExpenses, 2); ?></th></tr>
                                             <?php
@@ -1770,8 +1866,9 @@ try {
                                                 return $account['account_type'] === 'expense';
                                             });
                                             foreach ($expenseAccounts as $expense):
+                                                $expenseBalance = isset($financialAccountBalances[$expense['id']]) ? $financialAccountBalances[$expense['id']]['balance'] : 0;
                                             ?>
-                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($expense['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($expense['balance'] ?? 0, 2); ?></td></tr>
+                                                <tr><td>&nbsp;&nbsp;<?php echo htmlspecialchars($expense['account_name']); ?></td><td></td><td>&#8369;<?php echo number_format($expenseBalance, 2); ?></td></tr>
                                             <?php endforeach; ?>
                                             <tr class="total-row"><th>Net Profit</th><th></th><th>&#8369;<?php echo number_format($netProfit, 2); ?></th></tr>
                                         </table>

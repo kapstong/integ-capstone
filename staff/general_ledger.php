@@ -46,6 +46,41 @@ switch ($trialPeriod) {
 }
 $trialDateFrom = $trialDateFromObj->format('Y-m-d');
 
+// Financial statements date filters
+$financialPeriod = isset($_GET['financial_period']) ? strtolower(trim($_GET['financial_period'])) : 'monthly';
+$financialDateToInput = isset($_GET['financial_date']) ? trim($_GET['financial_date']) : date('Y-m-d');
+$financialDateToObj = DateTime::createFromFormat('Y-m-d', $financialDateToInput) ?: new DateTime();
+$financialDateTo = $financialDateToObj->format('Y-m-d');
+$financialDateFromObj = clone $financialDateToObj;
+switch ($financialPeriod) {
+    case 'daily':
+        break;
+    case 'weekly':
+        $financialDateFromObj->modify('monday this week');
+        break;
+    case 'monthly':
+        $financialDateFromObj->modify('first day of this month');
+        break;
+    case 'quarterly':
+        $quarterStartMonth = (int)(floor(((int)$financialDateToObj->format('n') - 1) / 3) * 3) + 1;
+        $financialDateFromObj = new DateTime($financialDateToObj->format('Y') . '-' . str_pad((string)$quarterStartMonth, 2, '0', STR_PAD_LEFT) . '-01');
+        break;
+    case 'semi-annually':
+    case 'semiannually':
+        $halfStartMonth = ((int)$financialDateToObj->format('n') <= 6) ? 1 : 7;
+        $financialDateFromObj = new DateTime($financialDateToObj->format('Y') . '-' . str_pad((string)$halfStartMonth, 2, '0', STR_PAD_LEFT) . '-01');
+        break;
+    case 'annually':
+    case 'yearly':
+        $financialDateFromObj->modify('first day of january');
+        break;
+    default:
+        $financialPeriod = 'monthly';
+        $financialDateFromObj->modify('first day of this month');
+        break;
+}
+$financialDateFrom = $financialDateFromObj->format('Y-m-d');
+
 // Fetch summary data and actual data for all modules
 try {
     // Auto-sync Core 1 payments into journal entries
@@ -84,7 +119,7 @@ try {
     $totalExpenses = 0;
 
     foreach ($balanceQuery as $row) {
-        $balance = intval($row['balance']);
+        $balance = floatval($row['balance']);
         switch ($row['account_type']) {
             case 'asset':
                 $totalAssets += $balance;
