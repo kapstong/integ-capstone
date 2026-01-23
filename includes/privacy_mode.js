@@ -747,7 +747,7 @@
             return true;
         }
         const text = document.body ? document.body.textContent || '' : '';
-        return /(?:PHP|P|₱)\s*\*{5,}/.test(text);
+        return /(?:PHP|P|?|\$)\s*\*{5,}/.test(text);
     }
 
     function setRefreshFlag(value) {
