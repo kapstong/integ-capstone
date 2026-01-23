@@ -2018,7 +2018,7 @@ try {
         }
 
         function fetchAuditTrail(params, { silent = false } = {}) {
-            return fetch(`api/audit.php?${params.toString()}`, { method: 'GET' })
+            return fetch(`../api/audit.php?${params.toString()}`, { method: 'GET' })
                 .then(response => response.json())
                 .then(data => {
                     const logs = normalizeAuditResponse(data);
