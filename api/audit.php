@@ -156,20 +156,49 @@ function getAuditTrail($db, $filters = []) {
             $log['formatted_date'] = date('M j, Y g:i:s A', strtotime($log['created_at']));
             $log['action_label'] = formatActionLabel($log['action']);
 
-            // Try to populate disbursement_number from stored JSON fields if join didn't return it
+            // Try to populate disbursement_number from stored JSON fields or by querying the disbursements table
             $oldValues = $log['old_values'] ? json_decode($log['old_values'], true) : [];
             $newValues = $log['new_values'] ? json_decode($log['new_values'], true) : [];
 
-            if (empty($log['disbursement_number'])) {
-                // Prefer explicit keys from new/old values
-                $possible = $newValues['disbursement_number'] ?? $oldValues['disbursement_number'] ?? $newValues['disbursement_no'] ?? $oldValues['disbursement_no'] ?? null;
-                if (!empty($possible)) {
-                    $log['disbursement_number'] = $possible;
-                } else {
-                    // Attempt to parse common patterns from existing text fields
+            if ($log['table_name'] === 'disbursements') {
+                // If record_id is present but disbursement_number missing, query the disbursements table
+                if (empty($log['disbursement_number']) && !empty($log['record_id'])) {
+                    try {
+                        $stmt2 = $db->prepare("SELECT disbursement_number FROM disbursements WHERE id = ? LIMIT 1");
+                        $stmt2->execute([$log['record_id']]);
+                        $row = $stmt2->fetch(PDO::FETCH_ASSOC);
+                        if ($row && !empty($row['disbursement_number'])) {
+                            $log['disbursement_number'] = $row['disbursement_number'];
+                        }
+                    } catch (Exception $e) {
+                        // ignore DB lookup errors
+                    }
+                }
+
+                // If disbursement_number present in new/old values but record_id is missing, try to resolve it
+                if (empty($log['record_id'])) {
+                    $possibleNum = $newValues['disbursement_number'] ?? $oldValues['disbursement_number'] ?? $newValues['disbursement_no'] ?? $oldValues['disbursement_no'] ?? null;
+                    if (!empty($possibleNum) && empty($log['disbursement_number'])) {
+                        $log['disbursement_number'] = $possibleNum;
+                    }
+                    if (!empty($possibleNum) && empty($log['record_id'])) {
+                        try {
+                            $stmt3 = $db->prepare("SELECT id FROM disbursements WHERE disbursement_number = ? LIMIT 1");
+                            $stmt3->execute([$possibleNum]);
+                            $r = $stmt3->fetch(PDO::FETCH_ASSOC);
+                            if ($r && !empty($r['id'])) {
+                                $log['record_id'] = $r['id'];
+                            }
+                        } catch (Exception $e) {
+                            // ignore
+                        }
+                    }
+                }
+
+                // If still missing, fallback to parsing description fields for common DISB tokens
+                if (empty($log['disbursement_number'])) {
                     $text = ($log['action_description'] ?? '') . ' ' . ($newValues['description'] ?? '') . ' ' . ($oldValues['description'] ?? '');
                     if (preg_match('/(DISB-\d{8}-\d{3}|DISB-\d+)|(\bID\s*(\d+)\b)|(\b\d{1,6}\b)/i', $text, $m)) {
-                        // pick the first non-empty capture
                         foreach ($m as $candidate) {
                             if (!empty($candidate)) {
                                 $log['disbursement_number'] = $candidate;
@@ -177,6 +206,12 @@ function getAuditTrail($db, $filters = []) {
                             }
                         }
                     }
+                }
+            } else {
+                // Non-disbursement tables: still try to pick up possible disbursement_number from payload
+                if (empty($log['disbursement_number'])) {
+                    $possible = $newValues['disbursement_number'] ?? $oldValues['disbursement_number'] ?? null;
+                    if (!empty($possible)) $log['disbursement_number'] = $possible;
                 }
             }
 
