@@ -835,19 +835,19 @@ $db = Database::getInstance()->getConnection();
                                       <div class="col-md-4">
                                           <div class="p-3 border rounded">
                                               <div class="text-muted">Month-to-Date Revenue</div>
-                                              <div class="fw-bold fs-4" id="analyticsMtdRevenue">ƒ,ñ0</div>
+                                              <div class="fw-bold fs-4" id="analyticsMtdRevenue">₱0</div>
                                           </div>
                                       </div>
                                       <div class="col-md-4">
                                           <div class="p-3 border rounded">
                                               <div class="text-muted">Month-to-Date Expenses</div>
-                                              <div class="fw-bold fs-4 text-danger" id="analyticsMtdExpenses">ƒ,ñ0</div>
+                                              <div class="fw-bold fs-4 text-danger" id="analyticsMtdExpenses">₱0</div>
                                           </div>
                                       </div>
                                       <div class="col-md-4">
                                           <div class="p-3 border rounded">
                                               <div class="text-muted">Net Operating Result</div>
-                                              <div class="fw-bold fs-4" id="analyticsNetResult">ƒ,ñ0</div>
+                                              <div class="fw-bold fs-4" id="analyticsNetResult">₱0</div>
                                           </div>
                                       </div>
                                   </div>
@@ -2332,9 +2332,9 @@ $db = Database::getInstance()->getConnection();
                     const mtdExpenses = data.mtd.expenses || 0;
                     const mtdNet = data.mtd.net || 0;
 
-                    document.getElementById('analyticsMtdRevenue').textContent = 'ƒ,ñ' + mtdRevenue.toLocaleString();
-                    document.getElementById('analyticsMtdExpenses').textContent = 'ƒ,ñ' + mtdExpenses.toLocaleString();
-                    document.getElementById('analyticsNetResult').textContent = 'ƒ,ñ' + mtdNet.toLocaleString();
+                    document.getElementById('analyticsMtdRevenue').textContent = '₱' + mtdRevenue.toLocaleString();
+                    document.getElementById('analyticsMtdExpenses').textContent = '₱' + mtdExpenses.toLocaleString();
+                    document.getElementById('analyticsNetResult').textContent = '₱' + mtdNet.toLocaleString();
                     document.getElementById('analyticsNetResult').className = 'fw-bold fs-4 ' + (mtdNet >= 0 ? 'text-success' : 'text-danger');
 
                     const ctx = document.getElementById('reportTrendsChart');
@@ -2379,7 +2379,7 @@ $db = Database::getInstance()->getConnection();
                                     beginAtZero: true,
                                     ticks: {
                                         callback: function(value) {
-                                            return 'ƒ,ñ' + value.toLocaleString();
+                                            return '₱' + value.toLocaleString();
                                         }
                                     }
                                 }
