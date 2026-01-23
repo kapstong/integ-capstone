@@ -790,32 +790,146 @@ try {
             margin-right: 0.5rem;
             font-size: 0.9em;
         }
-        .financial-table th {
-            background: linear-gradient(135deg, var(--atiera-blue-600) 0%, var(--atiera-blue-800) 100%);
+        :root {
+            --atiera-blue-50: #e8ecf7;
+            --atiera-blue-200: #a3b3df;
+            --atiera-blue-500: #2342a6;
+            --atiera-blue-600: #1b2f73;
+            --atiera-blue-700: #15265e;
+            --atiera-blue-800: #0f1c49;
+            --atiera-gold: #d4af37;
+            --atiera-gold-dark: #b8961f;
+            --atiera-white: #ffffff;
+            --atiera-gray-50: #f8fafc;
+            --atiera-gray-100: #f1f5f9;
+            --atiera-gray-200: #e2e8f0;
+            --atiera-gray-300: #cbd5e1;
+            --atiera-gray-600: #475569;
+            --atiera-gray-700: #334155;
+            --atiera-gray-900: #0f172a;
+        }
+        .financial-statements .financial-header h5 {
+            color: var(--atiera-blue-700);
+        }
+        .financial-statements .financial-header small,
+        .financial-statements .financial-header p {
+            color: var(--atiera-gray-600) !important;
+        }
+        .financial-statements .financial-controls {
+            border: 1px solid var(--atiera-gray-200);
+            background: var(--atiera-white);
+        }
+        .financial-statements .financial-controls .card-body {
+            padding: 1.5rem;
+        }
+        .financial-statements .financial-controls .row {
+            row-gap: 1rem;
+        }
+        .financial-statements .control-group label {
+            letter-spacing: 0.08em;
+            font-size: 0.7rem;
+            color: var(--atiera-gray-600);
+        }
+        .financial-statements .btn-outline-primary {
+            border-color: var(--atiera-blue-200);
+            color: var(--atiera-blue-600);
+        }
+        .financial-statements .btn-outline-primary:hover {
+            background: var(--atiera-blue-50);
+            color: var(--atiera-blue-700);
+        }
+        .financial-statements .btn-check:checked + .btn-outline-primary {
+            background: linear-gradient(135deg, var(--atiera-blue-600) 0%, var(--atiera-blue-700) 100%);
+            border-color: var(--atiera-blue-700);
             color: var(--atiera-white);
+            box-shadow: 0 8px 18px rgba(27, 47, 115, 0.2);
+        }
+        .financial-statements .financial-filters {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 0.75rem;
+        }
+        .financial-statements .financial-filters .input-group {
+            min-width: 170px;
+        }
+        .financial-statements .financial-filters .input-group-text {
+            background: var(--atiera-gray-50);
+            border-color: var(--atiera-gray-300);
+            color: var(--atiera-gray-700);
+        }
+        .financial-statements .financial-filters .form-select,
+        .financial-statements .financial-filters .form-control,
+        .financial-statements .financial-filters .btn {
+            height: 36px;
+        }
+        .financial-statements .financial-filters .form-select,
+        .financial-statements .financial-filters .form-control {
+            border-color: var(--atiera-gray-300);
+        }
+        .financial-statements .financial-filters .form-select:focus,
+        .financial-statements .financial-filters .form-control:focus {
+            border-color: var(--atiera-blue-500);
+            box-shadow: 0 0 0 0.15rem rgba(35, 66, 166, 0.15);
+        }
+        .financial-statements .financial-filters .btn.btn-primary {
+            background: linear-gradient(135deg, var(--atiera-blue-600) 0%, var(--atiera-blue-700) 100%);
+            border: none;
+            padding: 0 1.1rem;
             font-weight: 600;
+        }
+        .financial-statements .financial-subtabs {
+            gap: 0.5rem;
+        }
+        .financial-statements .financial-subtabs .nav-link {
+            border-radius: 999px;
+            border: 1px solid var(--atiera-gray-200);
+            background: var(--atiera-white);
+            color: var(--atiera-gray-700);
+            font-weight: 600;
+            padding: 0.45rem 1rem;
+        }
+        .financial-statements .financial-subtabs .nav-link i {
+            color: var(--atiera-gold);
+        }
+        .financial-statements .financial-subtabs .nav-link.active {
+            background: linear-gradient(135deg, var(--atiera-blue-600) 0%, var(--atiera-blue-700) 100%);
+            color: var(--atiera-white);
+            border-color: transparent;
+            box-shadow: 0 10px 20px rgba(21, 38, 94, 0.18);
+        }
+        .financial-statements .financial-statement-title {
+            color: var(--atiera-gray-900);
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        .financial-table th {
+            background-color: var(--atiera-blue-50);
+            color: var(--atiera-blue-700);
+            font-weight: 700;
             border-top: none;
-            padding: 1rem;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 0.5px;
+            padding: 12px 16px;
         }
         .financial-table td {
             border: none;
-            padding: 12px 15px;
-            color: var(--atiera-gray-900);
+            padding: 12px 16px;
+            color: var(--atiera-gray-700);
+        }
+        .financial-table {
+            border: 1px solid var(--atiera-gray-200);
+            border-radius: 12px;
+            overflow: hidden;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: var(--atiera-white);
+        }
+        .financial-table tr:not(:last-child) td,
+        .financial-table tr:not(:last-child) th {
+            border-bottom: 1px solid var(--atiera-gray-100);
         }
         .financial-table .total-row {
-            background: linear-gradient(135deg, var(--atiera-gold) 0%, var(--atiera-gold-dark) 100%);
-            font-weight: bold;
-            color: var(--atiera-white);
-        }
-        .financial-table tr:nth-child(even) {
-            background: var(--atiera-gray-50);
-        }
-        .financial-table tr:hover {
-            background: var(--atiera-blue-50);
-            transition: background-color 0.3s ease;
+            background-color: var(--atiera-gray-50);
+            font-weight: 700;
         }
         .alert-custom {
             border-radius: 8px;
@@ -1516,9 +1630,9 @@ try {
                                 <?php endif; ?>
                             </div>
                             <!-- Financial Statements Tab -->
-                            <div class="tab-pane fade" id="financial" role="tabpanel" aria-labelledby="financial-tab">
+                            <div class="tab-pane fade financial-statements" id="financial" role="tabpanel" aria-labelledby="financial-tab">
                                 <!-- Header Section -->
-                                <div class="row mb-4">
+                                <div class="row mb-4 financial-header">
                                     <div class="col-12">
                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                             <div>
@@ -1538,7 +1652,7 @@ try {
                                 <!-- Controls Section -->
                                 <div class="row mb-4">
                                     <div class="col-12">
-                                        <div class="card border-0 shadow-sm">
+                                        <div class="card border-0 shadow-sm financial-controls">
                                             <div class="card-body p-4">
                                                 <div class="row align-items-center">
                                                     <div class="col-lg-6 mb-3 mb-lg-0">
@@ -1561,7 +1675,7 @@ try {
                                                     <div class="col-lg-6">
                                                         <div class="control-group">
                                                             <label class="form-label fw-semibold text-muted mb-2 small">PERIOD & DATE FILTERS</label>
-                                                            <form class="d-flex flex-wrap align-items-center gap-2" method="get" id="financialPeriodForm">
+                                                            <form class="financial-filters" method="get" id="financialPeriodForm">
                                                                 <input type="hidden" name="tab" value="financial">
                                                                 <div class="input-group input-group-sm">
                                                                     <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
@@ -1591,7 +1705,7 @@ try {
                                     </div>
                                 </div>
 
-                                <ul class="nav nav-pills mb-4" id="financialSubTabs" role="tablist">
+                                <ul class="nav nav-pills mb-4 financial-subtabs" id="financialSubTabs" role="tablist">
                                     <li class="nav-item">
                                         <a class="nav-link active" id="balance-sheet-tab" data-bs-toggle="pill" href="#balance-sheet" role="tab">
                                             <i class="fas fa-balance-scale me-2"></i>Balance Sheet
@@ -1610,7 +1724,7 @@ try {
                                 </ul>
                                 <div class="tab-content">
                     <div class="tab-pane fade show active" id="balance-sheet" role="tabpanel">
-                                        <h6>Balance Sheet - As of <?php echo date('F j, Y', strtotime($financialDateTo)); ?> (<?php echo ucfirst($financialPeriod); ?> period)</h6>
+                                        <h6 class="financial-statement-title">Balance Sheet - As of <?php echo date('F j, Y', strtotime($financialDateTo)); ?> (<?php echo ucfirst($financialPeriod); ?> period)</h6>
                                         <table class="table financial-table">
                                             <tr><th>Assets</th><th></th><th>&#8369;<?php echo number_format($totalAssets, 2); ?></th></tr>
                                             <?php
@@ -1637,7 +1751,7 @@ try {
                                         </table>
                                     </div>
                                     <div class="tab-pane fade" id="income-statement" role="tabpanel">
-                                        <h6>Income Statement - For the period ending <?php echo date('F j, Y'); ?></h6>
+                                        <h6 class="financial-statement-title">Income Statement - For the period ending <?php echo date('F j, Y'); ?></h6>
                                         <table class="table financial-table">
                                             <tr><th>Revenue</th><th></th><th>&#8369;<?php echo number_format($totalRevenue, 2); ?></th></tr>
                                             <?php
@@ -1663,7 +1777,7 @@ try {
                                         </table>
                                     </div>
                                     <div class="tab-pane fade" id="cash-flow" role="tabpanel">
-                                        <h6>Cash Flow Statement - For the period ending <?php echo date('F j, Y'); ?></h6>
+                                        <h6 class="financial-statement-title">Cash Flow Statement - For the period ending <?php echo date('F j, Y'); ?></h6>
                                         <table class="table financial-table">
                                             <tr><th>Operating Activities</th><th></th><th>&#8369;<?php echo number_format($netProfit, 2); ?></th></tr>
                                             <tr><td>&nbsp;&nbsp;Net Income</td><td></td><td>&#8369;<?php echo number_format($netProfit, 2); ?></td></tr>
