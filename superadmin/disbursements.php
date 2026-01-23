@@ -754,7 +754,45 @@ body {
             <div class="tab-pane fade" id="audit" role="tabpanel" aria-labelledby="audit-tab">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">Audit Trail and Controls</h6>
-                    <button class="btn btn-outline-secondary" onclick="showDisbursementFilterModal()"><i class="fas fa-filter me-2"></i>Filter Logs</button>
+                    <button class="btn btn-outline-secondary" id="disbFilterToggleBtn" onclick="toggleDisbursementFiltersInline()"><i class="fas fa-filter me-2"></i>Filter Logs</button>
+                </div>
+                <div id="disbFiltersInline" class="card mb-3" style="display:none;">
+                    <div class="card-body">
+                        <form id="disbAuditFilterInlineForm" class="row g-2 align-items-end">
+                            <div class="col-auto">
+                                <label for="disbFilterDateFrom" class="form-label mb-0">Date From</label>
+                                <input type="date" class="form-control" id="disbFilterDateFrom">
+                            </div>
+                            <div class="col-auto">
+                                <label for="disbFilterDateTo" class="form-label mb-0">Date To</label>
+                                <input type="date" class="form-control" id="disbFilterDateTo">
+                            </div>
+                            <div class="col-auto">
+                                <label for="disbFilterUser" class="form-label mb-0">User</label>
+                                <input type="text" class="form-control" id="disbFilterUser" placeholder="Name or username">
+                            </div>
+                            <div class="col-auto">
+                                <label for="disbFilterAction" class="form-label mb-0">Action</label>
+                                <select class="form-select" id="disbFilterAction">
+                                    <option value="">All Actions</option>
+                                    <option value="Created">Created</option>
+                                    <option value="Updated">Updated</option>
+                                    <option value="Deleted">Deleted</option>
+                                    <option value="Viewed">Viewed</option>
+                                    <option value="Processed Payment">Processed Payment</option>
+                                    <option value="Printed">Printed</option>
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <label for="disbFilterRef" class="form-label mb-0">Ref / ID</label>
+                                <input type="text" class="form-control" id="disbFilterRef" placeholder="DISB-YYYYMMDD-### or ID">
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-secondary" onclick="clearDisbursementFilters()">Clear</button>
+                                <button type="button" class="btn btn-primary ms-2" onclick="applyDisbursementFilters()">Apply</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-striped" id="auditTable">
@@ -972,62 +1010,17 @@ body {
     </script>
     <script>
         // Ensure global handler exists to avoid ReferenceError if external JS fails to load
-        if (typeof window.showDisbursementFilterModal !== 'function') {
-            window.showDisbursementFilterModal = function() {
-                // If the external script exposed the implementation, call it.
-                if (window._disbFilterImpl && typeof window._disbFilterImpl === 'function') {
-                    return window._disbFilterImpl();
-                }
-                // Try to dynamically load the external JS and then call the implementation
-                return new Promise((resolve) => {
-                    const existingScript = document.querySelector('script[src="disbursements-js.php"]');
-                    if (existingScript && existingScript.getAttribute('data-loaded') === '1') {
-                        // Script tag present but implementation still missing — show fallback
-                        showDisbursementFilterFallback();
-                        return resolve();
-                    }
-
-                    const s = document.createElement('script');
-                    s.src = 'disbursements-js.php?_=' + Date.now();
-                    s.async = true;
-                    s.onload = function() {
-                        try {
-                            if (window._disbFilterImpl && typeof window._disbFilterImpl === 'function') {
-                                window._disbFilterImpl();
-                                resolve();
-                                return;
-                            }
-                        } catch (e) {}
-                        showDisbursementFilterFallback();
-                        resolve();
-                    };
-                    s.onerror = function() {
-                        showDisbursementFilterFallback();
-                        resolve();
-                    };
-                    document.body.appendChild(s);
-                });
-            };
-        }
-
-        function showDisbursementFilterFallback() {
-            const fallback = document.createElement('div');
-            fallback.className = 'modal fade';
-            fallback.id = 'disbFilterModalFallback';
-            fallback.innerHTML = `
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Filter Audit Trail</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">Filter functionality is temporarily unavailable.</div>
-                        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
-                    </div>
-                </div>`;
-            document.body.appendChild(fallback);
-            const m = new bootstrap.Modal(fallback);
-            m.show();
+        // Provide an inline toggle for the filter panel: it should behave like the General Ledger filter dropdown
+        function toggleDisbursementFiltersInline() {
+            const panel = document.getElementById('disbFiltersInline');
+            if (!panel) return;
+            if (panel.style.display === 'none' || panel.style.display === '') {
+                panel.style.display = 'block';
+                document.getElementById('disbFilterToggleBtn')?.classList.add('active');
+            } else {
+                panel.style.display = 'none';
+                document.getElementById('disbFilterToggleBtn')?.classList.remove('active');
+            }
         }
     </script>
     <script>
