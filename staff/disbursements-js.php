@@ -68,7 +68,13 @@ header('Content-Type: application/javascript');
 
                 tbody.innerHTML = auditLogs.map(log => {
                     const actionLabel = log.action_label || log.action;
-                    return '<tr><td>' + log.formatted_date + '</td><td>' + (log.full_name || log.username || 'Unknown') + '</td><td><span class="badge bg-info">' + actionLabel + '</span></td><td>' + (log.disbursement_number || log.record_id || 'N/A') + '</td><td>' + log.action_description + '</td></tr>';
+                    let disbRef = log.disbursement_number || log.record_id || '';
+                    if (!disbRef && log.action_description) {
+                        const m = String(log.action_description).match(/DISB-\d{8}-\d{3}|\d+/i);
+                        if (m) disbRef = m[0];
+                    }
+                    if (!disbRef) disbRef = 'N/A';
+                    return '<tr><td>' + log.formatted_date + '</td><td>' + (log.full_name || log.username || 'Unknown') + '</td><td><span class="badge bg-info">' + actionLabel + '</span></td><td>' + disbRef + '</td><td>' + (log.action_description || '') + '</td></tr>';
                 }).join('');
 
             } catch (error) {
@@ -147,7 +153,7 @@ header('Content-Type: application/javascript');
                 const pendingCount = disbursements.filter(d => d.status === 'pending').length;
 
                 document.getElementById('totalDisbursementsCount').textContent = totalDisbursements;
-                document.getElementById('totalDisbursementsAmount').textContent = '₱' + totalAmount.toLocaleString();
+                document.getElementById('totalDisbursementsAmount').innerHTML = '<span class="privacy-exempt amount-cell">₱' + totalAmount.toLocaleString() + '</span>';
                 document.getElementById('pendingDisbursementsCount').textContent = pendingCount;
 
             } catch (error) {
@@ -365,7 +371,7 @@ header('Content-Type: application/javascript');
                 <div class="col-md-6">
                     <p><strong>Reference:</strong> ${data.disbursement_number || 'N/A'}</p>
                     <p><strong>Payee:</strong> ${data.payee || 'N/A'}</p>
-                    <p><strong>Amount:</strong> ₱${parseFloat(data.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                    <p><strong>Amount:</strong> <span class="privacy-exempt amount-cell">₱${parseFloat(data.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></p>
                     <p><strong>Payment Method:</strong> ${data.payment_method || 'N/A'}</p>
                 </div>
                 <div class="col-md-6">
@@ -673,14 +679,42 @@ header('Content-Type: application/javascript');
         }
 
         function getStatusBadge(status) {
-            const badges = {
-                'completed': '<span class="badge bg-success">Completed</span>',
-                'pending': '<span class="badge bg-warning">Pending</span>',
-                'approved': '<span class="badge bg-info">Approved</span>',
-                'cancelled': '<span class="badge bg-danger">Cancelled</span>',
-                'paid': '<span class="badge bg-success">Paid</span>'
+            const key = String(status || '').toLowerCase().trim();
+            const labels = {
+                'completed': {label: 'Completed', cls: 'bg-success'},
+                'pending': {label: 'Pending', cls: 'bg-warning'},
+                'pending approval': {label: 'Pending Approval', cls: 'bg-info'},
+                'pending_approval': {label: 'Pending Approval', cls: 'bg-info'},
+                'approved': {label: 'Approved', cls: 'bg-info'},
+                'rejected': {label: 'Rejected', cls: 'bg-danger'},
+                'cancelled': {label: 'Cancelled', cls: 'bg-danger'},
+                'paid': {label: 'Paid', cls: 'bg-success'}
             };
-            return badges[status] || `<span class="badge bg-secondary">${status}</span>`;
+
+            const entry = labels[key] || null;
+            if (entry) {
+                return `<span class="badge ${entry.cls}">${entry.label}</span>`;
+            }
+
+            const human = String(status || 'Unknown').replace(/[_\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            return `<span class="badge bg-secondary">${human}</span>`;
+        }
+
+        function humanizePaymentMethod(key) {
+            if (!key) return 'N/A';
+            return String(key).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        }
+
+        function getPaymentMethodBadge(method) {
+            const m = String(method || '').toLowerCase();
+            const map = {
+                'cash': {label: 'Cash', cls: 'bg-secondary', icon: 'fas fa-money-bill-wave'},
+                'bank_transfer': {label: 'Bank Transfer', cls: 'bg-primary', icon: 'fas fa-university'},
+                'check': {label: 'Check', cls: 'bg-info', icon: 'fas fa-credit-card'},
+                'ewallet': {label: 'E-wallet', cls: 'bg-dark', icon: 'fas fa-mobile-alt'}
+            };
+            const item = map[m] || {label: humanizePaymentMethod(m) || 'N/A', cls: 'bg-secondary', icon: 'fas fa-credit-card'};
+            return `<span class="badge ${item.cls}" aria-label="${item.label}"><i class="${item.icon} me-1"></i>${item.label}</span>`;
         }
 
         function showAlert(message, type = 'info') {
@@ -732,7 +766,7 @@ header('Content-Type: application/javascript');
                     '<input type="checkbox" class="disbursement-checkbox" value="' + d.id + '" onchange="toggleSelection(this)">' :
                     '<input type="checkbox" disabled title="You do not have delete permissions">';
 
-                return '<tr><td>' + checkbox + '</td><td>' + (d.disbursement_number || d.id) + '</td><td>' + (d.payee || 'N/A') + '</td><td><span class="badge bg-secondary">' + (d.payment_method || 'N/A') + '</span></td><td>' + formatDate(d.disbursement_date) + '</td><td>₱' + parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td><td>' + getStatusBadge(d.status || 'pending') + '</td><td>' + actions + '</td></tr>';
+                return '<tr><td>' + checkbox + '</td><td>' + (d.disbursement_number || d.id) + '</td><td>' + (d.payee || 'N/A') + '</td><td><span class="badge bg-secondary">' + (d.payment_method || 'N/A') + '</span></td><td>' + formatDate(d.disbursement_date) + '</td><td><span class="privacy-exempt amount-cell">₱' + parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span></td><td>' + getStatusBadge(d.status || 'pending') + '</td><td>' + actions + '</td></tr>';
             }).join('');
 
             // Update header checkbox

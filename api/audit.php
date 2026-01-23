@@ -218,7 +218,20 @@ function formatAction($log) {
     // Format record description based on table
     switch ($table) {
         case 'disbursements':
-            $record = $log['disbursement_number'] ? "disbursement {$log['disbursement_number']}" : "disbursement ID {$log['record_id']}";
+            // Prefer human-readable disbursement number when available.
+            if (!empty($log['disbursement_number'])) {
+                $record = "disbursement {$log['disbursement_number']}";
+            } elseif (!empty($log['record_id'])) {
+                $record = "disbursement ID {$log['record_id']}";
+            } else {
+                // Attempt to read from stored values if available, otherwise mark unknown
+                $possible = $newValues['disbursement_number'] ?? $oldValues['disbursement_number'] ?? null;
+                if (!empty($possible)) {
+                    $record = "disbursement {$possible}";
+                } else {
+                    $record = "disbursement (unknown)";
+                }
+            }
             break;
         case 'payroll':
             $record = "payroll ID {$log['record_id']}";

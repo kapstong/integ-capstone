@@ -68,7 +68,13 @@ header('Content-Type: application/javascript');
 
                 tbody.innerHTML = auditLogs.map(log => {
                     const actionLabel = log.action_label || log.action;
-                    return '<tr><td>' + log.formatted_date + '</td><td>' + (log.full_name || log.username || 'Unknown') + '</td><td><span class="badge bg-info">' + actionLabel + '</span></td><td>' + (log.disbursement_number || log.record_id || 'N/A') + '</td><td>' + log.action_description + '</td></tr>';
+                    let disbRef = log.disbursement_number || log.record_id || '';
+                    if (!disbRef && log.action_description) {
+                        const m = String(log.action_description).match(/DISB-\d{8}-\d{3}|\d+/i);
+                        if (m) disbRef = m[0];
+                    }
+                    if (!disbRef) disbRef = 'N/A';
+                    return '<tr><td>' + log.formatted_date + '</td><td>' + (log.full_name || log.username || 'Unknown') + '</td><td><span class="badge bg-info">' + actionLabel + '</span></td><td>' + disbRef + '</td><td>' + (log.action_description || '') + '</td></tr>';
                 }).join('');
 
             } catch (error) {
@@ -147,7 +153,7 @@ header('Content-Type: application/javascript');
                 const pendingCount = disbursements.filter(d => d.status === 'pending').length;
 
                 document.getElementById('totalDisbursementsCount').textContent = totalDisbursements;
-                document.getElementById('totalDisbursementsAmount').textContent = '₱' + totalAmount.toLocaleString();
+                document.getElementById('totalDisbursementsAmount').innerHTML = '<span class="privacy-exempt amount-cell">₱' + totalAmount.toLocaleString() + '</span>';
                 document.getElementById('pendingDisbursementsCount').textContent = pendingCount;
 
             } catch (error) {
@@ -365,7 +371,7 @@ header('Content-Type: application/javascript');
                 <div class="col-md-6">
                     <p><strong>Reference:</strong> ${data.disbursement_number || 'N/A'}</p>
                     <p><strong>Payee:</strong> ${data.payee || 'N/A'}</p>
-                    <p><strong>Amount:</strong> ₱${parseFloat(data.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                    <p><strong>Amount:</strong> <span class="privacy-exempt amount-cell">₱${parseFloat(data.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></p>
                     <p><strong>Payment Method:</strong> ${data.payment_method || 'N/A'}</p>
                 </div>
                 <div class="col-md-6">
@@ -752,7 +758,7 @@ header('Content-Type: application/javascript');
                     '<input type="checkbox" class="disbursement-checkbox" value="' + d.id + '" onchange="toggleSelection(this)">' :
                     '<input type="checkbox" disabled title="You do not have delete permissions">';
 
-                return '<tr><td>' + checkbox + '</td><td>' + (d.disbursement_number || d.id) + '</td><td>' + (d.payee || 'N/A') + '</td><td><span class="badge bg-secondary">' + (d.payment_method || 'N/A') + '</span></td><td>' + formatDate(d.disbursement_date) + '</td><td>₱' + parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td><td>' + getStatusBadge(d.status || 'pending') + '</td><td>' + actions + '</td></tr>';
+                return '<tr><td>' + checkbox + '</td><td>' + (d.disbursement_number || d.id) + '</td><td>' + (d.payee || 'N/A') + '</td><td><span class="badge bg-secondary">' + (d.payment_method || 'N/A') + '</span></td><td>' + formatDate(d.disbursement_date) + '</td><td><span class="privacy-exempt amount-cell">₱' + parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span></td><td>' + getStatusBadge(d.status || 'pending') + '</td><td>' + actions + '</td></tr>';
             }).join('');
 
             // Update header checkbox

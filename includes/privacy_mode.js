@@ -628,7 +628,8 @@
         if (!parent) return true;
         const tag = parent.tagName;
         if (!tag) return true;
-        if (parent.classList.contains(MASKED_CLASS)) return true;
+        // Skip nodes inside elements explicitly marked to bypass privacy masking
+        if (parent.classList.contains(MASKED_CLASS) || parent.classList.contains('privacy-exempt') || (parent.closest && parent.closest('[data-privacy-exempt]'))) return true;
         const blockedTags = ['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT'];
         if (blockedTags.includes(tag)) return true;
         return false;
