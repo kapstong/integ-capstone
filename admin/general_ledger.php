@@ -1185,8 +1185,6 @@ try {
                                                                         </tbody>
                                                                     </table>
                                                                 </div>
-                                                            <?php else: ?>
-                                                                <div class="text-muted small">No journal entry breakdown available.</div>
                                                             <?php endif; ?>
                                                         </div>
                                                     </div>
