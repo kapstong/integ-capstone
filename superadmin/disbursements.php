@@ -38,6 +38,18 @@ if (!isset($_SESSION['user'])) {
 
 // Initialize database connection
 $db = Database::getInstance()->getConnection();
+$payrollExpenseAccountId = null;
+try {
+    $stmt = $db->prepare("SELECT id FROM chart_of_accounts WHERE account_code = '6000' AND is_active = 1 LIMIT 1");
+    $stmt->execute();
+    $payrollExpenseAccountId = $stmt->fetchColumn() ?: null;
+    if (!$payrollExpenseAccountId) {
+        $stmt = $db->query("SELECT id FROM chart_of_accounts WHERE account_type = 'expense' AND is_active = 1 ORDER BY account_code LIMIT 1");
+        $payrollExpenseAccountId = $stmt->fetchColumn() ?: null;
+    }
+} catch (Exception $e) {
+    $payrollExpenseAccountId = null;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -1021,6 +1033,7 @@ body {
         // Wait for DOM to be fully loaded before defining functions
     window.addEventListener('DOMContentLoaded', function() {
         window.payrollApproverName = "<?php echo htmlspecialchars($_SESSION['user']['full_name'] ?? $_SESSION['user']['username'] ?? 'Finance Department', ENT_QUOTES); ?>";
+        window.payrollExpenseAccountId = <?php echo json_encode($payrollExpenseAccountId); ?>;
         // Auto-load HR3 claims when Claims Processing tab is activated
         const claimsTab = document.getElementById('claims-tab');
         if (claimsTab) {
@@ -1559,7 +1572,8 @@ body {
                 amount: amount,
                 payment_method: 'bank_transfer',
                 reference_number: payrollId,
-                description: `Payroll approval for ${period}`
+                description: `Payroll approval for ${period}`,
+                account_id: window.payrollExpenseAccountId || null
             };
 
             const response = await fetch('../api/disbursements.php', {

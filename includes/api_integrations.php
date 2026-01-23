@@ -587,7 +587,24 @@ class HR3Integration extends BaseIntegration {
             $errors = [];
             $claimsExpenseAccount = $this->getAccountId('5300'); // Employee Claims/Reimbursements Expense (preferred)
             if (!$claimsExpenseAccount) {
+                $candidateNames = [
+                    'Employee Claims',
+                    'Employee Reimbursements',
+                    'Claims',
+                    'Reimbursements'
+                ];
+                foreach ($candidateNames as $name) {
+                    $claimsExpenseAccount = $this->getAccountId($name);
+                    if ($claimsExpenseAccount) {
+                        break;
+                    }
+                }
+            }
+            if (!$claimsExpenseAccount) {
                 $claimsExpenseAccount = $this->getAccountId('5403'); // Office Supplies (fallback)
+            }
+            if (!$claimsExpenseAccount) {
+                $claimsExpenseAccount = $this->getAccountId('6000'); // Salaries Expense (last-resort)
             }
 
             foreach ($approvedClaims as $claim) {
@@ -1293,7 +1310,26 @@ class HR4Integration extends BaseIntegration {
 
         $departmentId = $payroll['department_id'] ?? 1;
         $accountCode = $departmentAccounts[$departmentId] ?? '5401';
-        return $this->getAccountId($accountCode) ?: $this->getAccountId('5401');
+        $accountId = $this->getAccountId($accountCode);
+        if ($accountId) {
+            return $accountId;
+        }
+
+        // Prefer centralized payroll expense account if department-specific codes are inactive
+        $accountId = $this->getAccountId('6000'); // Salaries Expense
+        if ($accountId) {
+            return $accountId;
+        }
+
+        // Final fallback: any active expense account
+        try {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->query("SELECT id FROM chart_of_accounts WHERE account_type = 'expense' AND is_active = 1 ORDER BY account_code LIMIT 1");
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row['id'] ?? null;
+        } catch (Exception $e) {
+            return null;
+        }
     }
 
     /**
@@ -1301,7 +1337,22 @@ class HR4Integration extends BaseIntegration {
      * Returns the account id to use for accrued wages payable
      */
     private function getPayrollLiabilityAccount() {
-        return $this->getAccountId('2107'); // Accrued Salaries Payable
+        $candidateNames = [
+            'Accrued Salaries Payable',
+            'Payroll Payable',
+            'Salaries Payable',
+            'Wages Payable'
+        ];
+
+        foreach ($candidateNames as $name) {
+            $accountId = $this->getAccountId($name);
+            if ($accountId) {
+                return $accountId;
+            }
+        }
+
+        // Fallback to Accounts Payable if no payroll liability account exists
+        return $this->getAccountId('2001');
     }
 
     /**
@@ -1364,7 +1415,7 @@ class HR4Integration extends BaseIntegration {
                 // CREATE JOURNAL ENTRY for proper double-entry bookkeeping
                 // Debit: Salaries Expense, Credit: Accrued Salaries Payable
                 $salariesExpenseAccount = $this->getPayrollExpenseAccount($payroll);
-                $accruedSalariesAccount = $this->getAccountId('2107'); // Accrued Salaries Payable
+                $accruedSalariesAccount = $this->getPayrollLiabilityAccount();
 
                 if ($salariesExpenseAccount && $accruedSalariesAccount) {
                     $this->createJournalEntry([

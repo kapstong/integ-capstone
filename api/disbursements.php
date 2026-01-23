@@ -127,6 +127,76 @@ function applyBudgetActual($db, $accountId, $amount) {
     $stmt->execute([$amount, $amount, $budget['id']]);
 }
 
+function getAccountInfoById($db, $accountId) {
+    if (!$accountId) {
+        return null;
+    }
+    $stmt = $db->prepare("SELECT id, account_code, account_type FROM chart_of_accounts WHERE id = ? LIMIT 1");
+    $stmt->execute([$accountId]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+function getAccountIdByCode($db, $accountCode) {
+    $stmt = $db->prepare("SELECT id FROM chart_of_accounts WHERE account_code = ? AND is_active = 1 LIMIT 1");
+    $stmt->execute([$accountCode]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row['id'] ?? null;
+}
+
+function getFirstActiveExpenseAccountId($db) {
+    $stmt = $db->query("SELECT id FROM chart_of_accounts WHERE account_type = 'expense' AND is_active = 1 ORDER BY account_code LIMIT 1");
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row['id'] ?? null;
+}
+
+function getPayrollExpenseAccountId($db) {
+    $accountId = getAccountIdByCode($db, '6000'); // Salaries Expense
+    if ($accountId) {
+        return $accountId;
+    }
+    return getFirstActiveExpenseAccountId($db);
+}
+
+function isPayrollDisbursement($data) {
+    $parts = [
+        $data['payee'] ?? '',
+        $data['description'] ?? '',
+        $data['purpose'] ?? '',
+        $data['reference_number'] ?? ''
+    ];
+    $haystack = strtolower(implode(' ', $parts));
+    return strpos($haystack, 'payroll') !== false || strpos($haystack, 'hr4') !== false;
+}
+
+function resolveDisbursementAccountId($db, $data, $disbursementId = null) {
+    $accountId = $data['account_id'] ?? null;
+
+    if (!$accountId && $disbursementId) {
+        $stmt = $db->prepare("SELECT account_id FROM disbursements WHERE id = ?");
+        $stmt->execute([$disbursementId]);
+        $accountId = $stmt->fetch()['account_id'] ?? null;
+    }
+
+    if (isPayrollDisbursement($data)) {
+        $payrollAccountId = getPayrollExpenseAccountId($db);
+        if ($payrollAccountId) {
+            if (!$accountId) {
+                return $payrollAccountId;
+            }
+
+            $info = getAccountInfoById($db, $accountId);
+            if ($info) {
+                $accountCode = $info['account_code'] ?? '';
+                if (in_array($accountCode, ['1001', '1002'], true) || $info['account_type'] !== 'expense') {
+                    return $payrollAccountId;
+                }
+            }
+        }
+    }
+
+    return $accountId;
+}
+
 function processPayment($db, $data) {
     try {
         // Validate required fields
@@ -137,12 +207,16 @@ function processPayment($db, $data) {
             }
         }
 
-        if (empty($data['account_id'])) {
+        $isApPayment = !empty($data['bill_id']);
+        $data['account_id'] = resolveDisbursementAccountId($db, $data);
+        if (!$isApPayment && empty($data['account_id'])) {
             throw new Exception('Account is required for disbursements.');
         }
-        $invalidAccounts = findInvalidChartOfAccountsIds($db, [$data['account_id']]);
-        if (!empty($invalidAccounts)) {
-            throw new Exception('Selected account is invalid or inactive.');
+        if (!empty($data['account_id'])) {
+            $invalidAccounts = findInvalidChartOfAccountsIds($db, [$data['account_id']]);
+            if (!empty($invalidAccounts)) {
+                throw new Exception('Selected account is invalid or inactive.');
+            }
         }
 
         if (empty($data['bill_id']) && !empty($data['account_id'])) {
@@ -438,19 +512,23 @@ function handlePost($db) {
                 return;
             }
         }
-        if (empty($data['account_id'])) {
+        $isApPayment = !empty($data['bill_id']);
+        $data['account_id'] = resolveDisbursementAccountId($db, $data);
+        if (!$isApPayment && empty($data['account_id'])) {
             http_response_code(400);
             echo json_encode(['error' => 'Account is required for disbursements']);
             return;
         }
-        $invalidAccounts = findInvalidChartOfAccountsIds($db, [$data['account_id']]);
-        if (!empty($invalidAccounts)) {
-            http_response_code(400);
-            echo json_encode([
-                'error' => 'Selected account is invalid or inactive.',
-                'invalid_account_ids' => $invalidAccounts
-            ]);
-            return;
+        if (!empty($data['account_id'])) {
+            $invalidAccounts = findInvalidChartOfAccountsIds($db, [$data['account_id']]);
+            if (!empty($invalidAccounts)) {
+                http_response_code(400);
+                echo json_encode([
+                    'error' => 'Selected account is invalid or inactive.',
+                    'invalid_account_ids' => $invalidAccounts
+                ]);
+                return;
+            }
         }
 
         // Generate disbursement number
@@ -666,18 +744,10 @@ function createDisbursementJournalEntry($db, $disbursementId, $data) {
         $debitDescription = 'Accounts Payable - Disbursement';
         $creditDescription = 'Cash - Disbursement';
     } else {
-        $debitAccountId = $data['account_id'] ?? null;
+        $debitAccountId = resolveDisbursementAccountId($db, $data, $disbursementId);
 
         if (!$debitAccountId) {
-            $stmtAccount = $db->prepare("SELECT account_id FROM disbursements WHERE id = ?");
-            $stmtAccount->execute([$disbursementId]);
-            $debitAccountId = $stmtAccount->fetch()['account_id'] ?? null;
-        }
-
-        if (!$debitAccountId) {
-            $fallbackExpense = $db->prepare("SELECT id FROM chart_of_accounts WHERE account_type = 'expense' ORDER BY account_code LIMIT 1");
-            $fallbackExpense->execute();
-            $debitAccountId = $fallbackExpense->fetch()['id'] ?? $cashAccountId;
+            $debitAccountId = getFirstActiveExpenseAccountId($db) ?: $cashAccountId;
         }
 
         $creditAccountId = $cashAccountId;

@@ -610,22 +610,58 @@ function postInvoiceJournalEntry($db, $invoiceId, $subtotal, $taxAmount) {
     // Debit: Accounts Receivable
     $db->insert(
         "INSERT INTO journal_entry_lines (journal_entry_id, account_id, debit, description)
-         VALUES (?, (SELECT id FROM chart_of_accounts WHERE account_code = '1101'), ?, 'Accounts Receivable - Invoice')",
+         VALUES (?, (SELECT id FROM chart_of_accounts WHERE account_code = '1002'), ?, 'Accounts Receivable - Invoice')",
         [$entryId, $subtotal + $taxAmount]
     );
 
-    // Credit: Revenue accounts (or appropriate revenue account)
-    $db->insert(
-        "INSERT INTO journal_entry_lines (journal_entry_id, account_id, credit, description)
-         VALUES (?, (SELECT id FROM chart_of_accounts WHERE account_code = '4001'), ?, 'Revenue - Invoice')",
-        [$entryId, $subtotal]
+    // Credit: Revenue accounts from invoice items
+    $items = $db->select(
+        "SELECT account_id, line_total FROM invoice_items WHERE invoice_id = ?",
+        [$invoiceId]
     );
 
-    // Credit: Tax liability (if applicable)
+    $fallbackRevenueId = $db->select("SELECT id FROM chart_of_accounts WHERE account_code = '4001' AND is_active = 1");
+    if (empty($fallbackRevenueId)) {
+        $fallbackRevenueId = $db->select("SELECT id FROM chart_of_accounts WHERE account_type = 'revenue' AND is_active = 1 ORDER BY account_code LIMIT 1");
+    }
+    $fallbackRevenueId = $fallbackRevenueId[0]['id'] ?? null;
+
+    $revenueLines = [];
+    if (!empty($items)) {
+        $lineCount = count($items);
+        $runningTotal = 0;
+
+        foreach ($items as $index => $item) {
+            $accountId = $item['account_id'] ?: $fallbackRevenueId;
+            $lineAmount = round(floatval($item['line_total']), 2);
+
+            if ($index === $lineCount - 1) {
+                $lineAmount = $subtotal - $runningTotal;
+            }
+
+            $runningTotal += $lineAmount;
+            $revenueLines[] = ['account_id' => $accountId, 'amount' => $lineAmount];
+        }
+    } else {
+        $revenueLines[] = ['account_id' => $fallbackRevenueId, 'amount' => $subtotal];
+    }
+
+    foreach ($revenueLines as $line) {
+        if (!$line['account_id'] || $line['amount'] <= 0) {
+            continue;
+        }
+        $db->insert(
+            "INSERT INTO journal_entry_lines (journal_entry_id, account_id, credit, description)
+             VALUES (?, ?, ?, 'Revenue - Invoice')",
+            [$entryId, $line['account_id'], $line['amount']]
+        );
+    }
+
+    // Credit: Sales tax payable (if applicable)
     if ($taxAmount > 0) {
         $db->insert(
             "INSERT INTO journal_entry_lines (journal_entry_id, account_id, credit, description)
-             VALUES (?, (SELECT id FROM chart_of_accounts WHERE account_code = '2101'), ?, 'Tax Liability')",
+             VALUES (?, (SELECT id FROM chart_of_accounts WHERE account_code = '2108'), ?, 'Sales Tax Payable')",
             [$entryId, $taxAmount]
         );
     }
