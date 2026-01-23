@@ -978,25 +978,56 @@ body {
                 if (window._disbFilterImpl && typeof window._disbFilterImpl === 'function') {
                     return window._disbFilterImpl();
                 }
-                // Fallback: simple modal to inform user the filter is unavailable.
-                const fallback = document.createElement('div');
-                fallback.className = 'modal fade';
-                fallback.id = 'disbFilterModalFallback';
-                fallback.innerHTML = `
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Filter Audit Trail</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">Filter functionality is temporarily unavailable.</div>
-                            <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
-                        </div>
-                    </div>`;
-                document.body.appendChild(fallback);
-                const m = new bootstrap.Modal(fallback);
-                m.show();
+                // Try to dynamically load the external JS and then call the implementation
+                return new Promise((resolve) => {
+                    const existingScript = document.querySelector('script[src="disbursements-js.php"]');
+                    if (existingScript && existingScript.getAttribute('data-loaded') === '1') {
+                        // Script tag present but implementation still missing — show fallback
+                        showDisbursementFilterFallback();
+                        return resolve();
+                    }
+
+                    const s = document.createElement('script');
+                    s.src = 'disbursements-js.php?_=' + Date.now();
+                    s.async = true;
+                    s.onload = function() {
+                        try {
+                            if (window._disbFilterImpl && typeof window._disbFilterImpl === 'function') {
+                                window._disbFilterImpl();
+                                resolve();
+                                return;
+                            }
+                        } catch (e) {}
+                        showDisbursementFilterFallback();
+                        resolve();
+                    };
+                    s.onerror = function() {
+                        showDisbursementFilterFallback();
+                        resolve();
+                    };
+                    document.body.appendChild(s);
+                });
             };
+        }
+
+        function showDisbursementFilterFallback() {
+            const fallback = document.createElement('div');
+            fallback.className = 'modal fade';
+            fallback.id = 'disbFilterModalFallback';
+            fallback.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Filter Audit Trail</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">Filter functionality is temporarily unavailable.</div>
+                        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+                    </div>
+                </div>`;
+            document.body.appendChild(fallback);
+            const m = new bootstrap.Modal(fallback);
+            m.show();
         }
     </script>
     <script>
