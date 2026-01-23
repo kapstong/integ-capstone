@@ -173,8 +173,10 @@ $totalEntries = count($entries);
         }
         body {
             margin: 0;
-            padding: 32px;
+            padding: 28px;
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 11pt;
+            line-height: 1.5;
             color: var(--text);
             background: #ffffff;
         }
@@ -211,7 +213,7 @@ $totalEntries = count($entries);
             height: auto;
         }
         .brand-title {
-            font-size: 20pt;
+            font-size: 21pt;
             font-weight: 700;
             color: var(--brand);
         }
@@ -237,12 +239,12 @@ $totalEntries = count($entries);
             margin: 16px 0 18px;
         }
         .report-title {
-            font-size: 16pt;
+            font-size: 17pt;
             font-weight: 700;
             margin-bottom: 4px;
         }
         .report-subtitle {
-            font-size: 10pt;
+            font-size: 10.5pt;
             color: var(--muted);
             margin-bottom: 16px;
         }
@@ -269,11 +271,11 @@ $totalEntries = count($entries);
             margin-bottom: 4px;
         }
         .meta-value {
-            font-size: 11pt;
+            font-size: 11.5pt;
             font-weight: 600;
         }
         .filters-note {
-            font-size: 9pt;
+            font-size: 9.5pt;
             color: var(--muted);
             margin-bottom: 12px;
         }
@@ -294,17 +296,20 @@ $totalEntries = count($entries);
         thead th {
             background: var(--brand);
             color: #ffffff;
-            padding: 10px 12px;
-            font-size: 9pt;
+            padding: 11px 12px;
+            font-size: 9.5pt;
             text-transform: uppercase;
             letter-spacing: 0.04em;
             text-align: left;
         }
         tbody td {
-            padding: 10px 12px;
+            padding: 12px 12px;
             border-bottom: 1px solid var(--border);
-            font-size: 9.5pt;
+            font-size: 10pt;
             vertical-align: top;
+        }
+        td.description {
+            word-break: break-word;
         }
         tbody tr:nth-child(even) td {
             background: #f3f5f7;
@@ -332,6 +337,7 @@ $totalEntries = count($entries);
         }
         @media print {
             @page {
+                size: 8.5in 11in;
                 margin: 12mm;
             }
             body {
@@ -395,12 +401,12 @@ $totalEntries = count($entries);
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 120px;">Date</th>
-                        <th style="width: 150px;">Reference</th>
-                        <th style="width: 180px;">Account</th>
-                        <th>Description</th>
-                        <th style="width: 110px;">Debit</th>
-                        <th style="width: 110px;">Credit</th>
+                    <th style="width: 110px;">Date</th>
+                    <th style="width: 140px;">Reference</th>
+                    <th style="width: 170px;">Account</th>
+                    <th>Description</th>
+                    <th style="width: 110px;">Debit</th>
+                    <th style="width: 110px;">Credit</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -419,7 +425,7 @@ $totalEntries = count($entries);
                                 <td><?php echo htmlspecialchars($entryDate); ?></td>
                                 <td><?php echo htmlspecialchars($entry['reference'] ?? ''); ?></td>
                                 <td><?php echo htmlspecialchars($entry['account_name'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($entry['description'] ?? ''); ?></td>
+                            <td class="description"><?php echo htmlspecialchars($entry['description'] ?? ''); ?></td>
                                 <td class="amount"><?php echo $debit > 0 ? '&#8369;' . number_format((float) $debit, 2) : '-'; ?></td>
                                 <td class="amount"><?php echo $credit > 0 ? '&#8369;' . number_format((float) $credit, 2) : '-'; ?></td>
                             </tr>
