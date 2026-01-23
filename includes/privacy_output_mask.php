@@ -14,9 +14,7 @@ function startPrivacyOutputMasking(): void
         return;
     }
 
-    if (ob_get_level() === 0) {
-        ob_start('privacyMaskHtmlOutput');
-    }
+    ob_start('privacyMaskHtmlOutput');
 }
 
 function privacyMaskHtmlOutput(string $html): string
@@ -43,7 +41,7 @@ function privacyMaskHtmlOutput(string $html): string
 
 function privacyMaskCurrencies(string $text): string
 {
-    $currencyPattern = '/(\\(\\s*)?(PHP|\\x{20B1}|P|\\$)\\s*-?[\\d,]+(?:\\.\\d+)?(\\s*\\))?/iu';
+    $currencyPattern = '/(\\(\\s*)?(PHP|&#8369;|&#x20b1;|\\x{20B1}|P|\\$)\\s*-?[\\d,]+(?:\\.\\d+)?(\\s*\\))?/iu';
 
     return preg_replace_callback($currencyPattern, function ($matches) {
         $leadingParen = $matches[1] ?? '';
