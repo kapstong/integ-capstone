@@ -338,19 +338,25 @@ abstract class BaseIntegration {
             $creditAccountId = $params['credit_account_id'] ?? null;
             $amount = floatval($params['amount'] ?? 0);
             $referenceNumber = $params['reference_number'] ?? 'API_' . time();
-            $sourceSystem = $params['source_system'] ?? 'EXTERNAL_API';
+            $createdBy = $params['created_by'] ?? 1;
+            $postedBy = $params['posted_by'] ?? $createdBy;
 
             if (!$debitAccountId || !$creditAccountId || $amount <= 0) {
                 throw new Exception('Invalid journal entry parameters');
             }
 
+            // Generate journal entry number
+            $countStmt = $db->query("SELECT COUNT(*) as count FROM journal_entries WHERE YEAR(created_at) = YEAR(CURDATE())");
+            $count = ($countStmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0) + 1;
+            $entryNumber = 'JE-' . date('Y') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+
             // Create journal entry header
             $stmt = $db->prepare("
                 INSERT INTO journal_entries
-                (entry_date, description, reference_number, status, created_by, source_system)
-                VALUES (?, ?, ?, 'posted', 1, ?)
+                (entry_number, entry_date, description, reference, total_debit, total_credit, status, created_by, posted_by, posted_at)
+                VALUES (?, ?, ?, ?, ?, ?, 'posted', ?, ?, NOW())
             ");
-            $stmt->execute([$date, $description, $referenceNumber, $sourceSystem]);
+            $stmt->execute([$entryNumber, $date, $description, $referenceNumber, $amount, $amount, $createdBy, $postedBy]);
             $journalEntryId = $db->lastInsertId();
 
             // Create debit line
@@ -371,7 +377,6 @@ abstract class BaseIntegration {
 
             Logger::getInstance()->info('Journal entry created for API transaction', [
                 'journal_entry_id' => $journalEntryId,
-                'source_system' => $sourceSystem,
                 'amount' => $amount,
                 'reference' => $referenceNumber
             ]);

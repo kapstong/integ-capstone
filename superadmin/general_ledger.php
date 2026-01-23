@@ -1,6 +1,7 @@
 <?php
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
+require_once '../includes/api_integrations.php';
 
 if (!isset($_SESSION['user'])) {
     header('Location: ../index.php');
@@ -12,6 +13,14 @@ $db = Database::getInstance()->getConnection();
 
 // Fetch summary data and actual data for all modules
 try {
+    // Auto-sync Core 1 payments into journal entries
+    try {
+        $integrationManager = APIIntegrationManager::getInstance();
+        $integrationManager->executeIntegrationAction('core1', 'importPayments');
+    } catch (Exception $e) {
+        // Ignore integration failures to keep GL accessible
+    }
+
     // Basic stats
     $totalAccounts = $db->query("SELECT COUNT(*) as count FROM chart_of_accounts WHERE is_active = 1")->fetch()['count'];
     $totalEntries = $db->query("SELECT COUNT(*) as count FROM journal_entries WHERE status != 'voided'")->fetch()['count'] ?? 0;
