@@ -108,21 +108,72 @@ try {
         LIMIT 50
     ")->fetchAll();
 
-    // Fetch trial balance data with proper calculations
-    $trialBalanceQuery = $db->query("
+    // Fetch trial balance data (normalize by account type)
+    $trialBalanceRaw = $db->query("
         SELECT
             coa.account_code,
             coa.account_name,
-            COALESCE(SUM(jel.debit), 0) as debit_balance,
-            COALESCE(SUM(jel.credit), 0) as credit_balance
+            coa.account_type,
+            COALESCE(SUM(jel.debit), 0) as debit_total,
+            COALESCE(SUM(jel.credit), 0) as credit_total
         FROM chart_of_accounts coa
         LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
         LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id AND je.status = 'posted'
         WHERE coa.is_active = 1
-        GROUP BY coa.id, coa.account_code, coa.account_name
-        HAVING (debit_balance > 0 OR credit_balance > 0)
+        GROUP BY coa.id, coa.account_code, coa.account_name, coa.account_type
+        HAVING debit_total != 0 OR credit_total != 0
         ORDER BY coa.account_code ASC
     ")->fetchAll();
+
+    $trialBalance = [];
+    $trialDebitTotal = 0;
+    $trialCreditTotal = 0;
+
+    foreach ($trialBalanceRaw as $row) {
+        $normalDebit = in_array($row['account_type'], ['asset', 'expense'], true);
+        $balance = $normalDebit
+            ? (floatval($row['debit_total']) - floatval($row['credit_total']))
+            : (floatval($row['credit_total']) - floatval($row['debit_total']));
+
+        $debitBalance = 0;
+        $creditBalance = 0;
+        if ($balance >= 0) {
+            if ($normalDebit) {
+                $debitBalance = $balance;
+            } else {
+                $creditBalance = $balance;
+            }
+        } else {
+            if ($normalDebit) {
+                $creditBalance = abs($balance);
+            } else {
+                $debitBalance = abs($balance);
+            }
+        }
+
+        $trialDebitTotal += $debitBalance;
+        $trialCreditTotal += $creditBalance;
+
+        $trialBalance[] = [
+            'account_code' => $row['account_code'],
+            'account_name' => $row['account_name'],
+            'debit_balance' => $debitBalance,
+            'credit_balance' => $creditBalance
+        ];
+    }
+
+    // Detect unbalanced posted journal entries
+    $unbalancedEntries = $db->query("
+        SELECT je.entry_number,
+               SUM(COALESCE(jel.debit, 0)) as debits,
+               SUM(COALESCE(jel.credit, 0)) as credits
+        FROM journal_entries je
+        JOIN journal_entry_lines jel ON jel.journal_entry_id = je.id
+        WHERE je.status = 'posted'
+        GROUP BY je.id, je.entry_number
+        HAVING ABS(SUM(COALESCE(jel.debit, 0)) - SUM(COALESCE(jel.credit, 0))) > 0.01
+    ")->fetchAll();
+    $unbalancedCount = count($unbalancedEntries);
 
     // Fetch audit trail (if table exists)
     try {
@@ -141,7 +192,7 @@ try {
     // Assign results to variables
     $chartOfAccounts = $chartOfAccountsQuery;
     $journalEntries = $journalEntriesQuery;
-    $trialBalance = $trialBalanceQuery;
+    // $trialBalance is prepared above
 
 } catch (Exception $e) {
     error_log("Database error in general_ledger.php: " . $e->getMessage());
@@ -159,6 +210,9 @@ try {
     $auditTrail = [];
     $core1SyncResult = null;
     $core1SyncError = $e->getMessage();
+    $trialDebitTotal = 0;
+    $trialCreditTotal = 0;
+    $unbalancedCount = 0;
 }
 ?>
 <!DOCTYPE html>
@@ -933,11 +987,9 @@ try {
                                                 </tr>
                                             <?php else: ?>
                                                 <?php
-                                                $debit_total = 0;
-                                                $credit_total = 0;
+                                                $debit_total = $trialDebitTotal ?? 0;
+                                                $credit_total = $trialCreditTotal ?? 0;
                                                 foreach ($trialBalance as $account):
-                                                    $debit_total += $account['debit_balance'];
-                                                    $credit_total += $account['credit_balance'];
                                                 ?>
                                                     <tr>
                                                         <td><?php echo htmlspecialchars($account['account_name']); ?></td>
@@ -954,9 +1006,22 @@ try {
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="alert alert-info mt-3">
-                                    <strong>Note:</strong> Trial Balance shows that Debits do not equal Credits. This indicates an error in the journal entries that needs to be corrected.
-                                </div>
+                                <?php
+                                $trialDiff = abs(($trialDebitTotal ?? 0) - ($trialCreditTotal ?? 0));
+                                $hasUnbalanced = ($unbalancedCount ?? 0) > 0;
+                                ?>
+                                <?php if ($trialDiff > 0.01 || $hasUnbalanced): ?>
+                                    <div class="alert alert-warning mt-3">
+                                        <strong>Note:</strong> Debits do not equal Credits.
+                                        <?php if ($hasUnbalanced): ?>
+                                            Unbalanced entries found: <?php echo $unbalancedCount; ?>.
+                                        <?php endif; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="alert alert-success mt-3">
+                                        <strong>Balanced:</strong> Debits equal Credits.
+                                    </div>
+                                <?php endif; ?>
                             </div>
                             <!-- Financial Statements Tab -->
                             <div class="tab-pane fade" id="financial" role="tabpanel" aria-labelledby="financial-tab">
@@ -2459,5 +2524,3 @@ try {
 </body>
 </html>
     <!-- Inactivity Timeout - Blur screen + Auto logout -->
-
-

@@ -459,10 +459,48 @@ function generateTrialBalance($db, $dateFrom, $dateTo, $format) {
         ORDER BY coa.account_code
     ");
     $stmt->execute([$dateTo]);
-    $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $rawAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $totalDebits = array_sum(array_column($accounts, 'debit_total'));
-    $totalCredits = array_sum(array_column($accounts, 'credit_total'));
+    $accounts = [];
+    $totalDebits = 0;
+    $totalCredits = 0;
+
+    foreach ($rawAccounts as $row) {
+        $normalDebit = in_array($row['account_type'], ['asset', 'expense'], true);
+        $balance = $normalDebit
+            ? (floatval($row['debit_total']) - floatval($row['credit_total']))
+            : (floatval($row['credit_total']) - floatval($row['debit_total']));
+
+        $debitBalance = 0;
+        $creditBalance = 0;
+        if ($balance >= 0) {
+            if ($normalDebit) {
+                $debitBalance = $balance;
+            } else {
+                $creditBalance = $balance;
+            }
+        } else {
+            if ($normalDebit) {
+                $creditBalance = abs($balance);
+            } else {
+                $debitBalance = abs($balance);
+            }
+        }
+
+        $totalDebits += $debitBalance;
+        $totalCredits += $creditBalance;
+
+        $accounts[] = [
+            'account_code' => $row['account_code'],
+            'account_name' => $row['account_name'],
+            'account_type' => $row['account_type'],
+            'debit_total' => $row['debit_total'],
+            'credit_total' => $row['credit_total'],
+            'debit_balance' => $debitBalance,
+            'credit_balance' => $creditBalance,
+            'balance' => $balance
+        ];
+    }
 
     $report = [
         'report_type' => 'Trial Balance',
@@ -791,13 +829,13 @@ function outputCSV($report, $filename) {
             break;
 
         case 'trial_balance':
-            fputcsv($output, ['Account Code', 'Account Name', 'Debit Total', 'Credit Total', 'Balance']);
+            fputcsv($output, ['Account Code', 'Account Name', 'Debit Balance', 'Credit Balance', 'Balance']);
             foreach ($report['accounts'] as $account) {
                 fputcsv($output, [
                     $account['account_code'],
                     $account['account_name'],
-                    $account['debit_total'],
-                    $account['credit_total'],
+                    $account['debit_balance'],
+                    $account['credit_balance'],
                     $account['balance']
                 ]);
             }
