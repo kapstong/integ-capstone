@@ -685,8 +685,8 @@ try {
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link disabled" id="collections-tab" type="button" role="tab" aria-disabled="true" title="Collections removed from AP">
-                    <i class="fas fa-lock me-2"></i>Collections (Removed)
+                <button class="nav-link" id="collectibles-tab" data-bs-toggle="tab" data-bs-target="#collectibles" type="button" role="tab">
+                    <i class="fas fa-wallet me-2"></i>Collectibles
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -828,34 +828,72 @@ try {
                 </div>
             </div>
 
-            <!-- Collections Tab -->
-            <div class="tab-pane fade" id="collections" role="tabpanel">
+            <!-- Collectibles Tab -->
+            <div class="tab-pane fade" id="collectibles" role="tabpanel">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                                <h6 class="card-title">Paid Collectibles</h6>
+                                <p class="card-text display-6" id="collectiblesPaidTotal">₱0.00</p>
+                                <small class="text-muted" id="collectiblesPaidCount">0 bills</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="fas fa-hourglass-half fa-2x text-warning mb-2"></i>
+                                <h6 class="card-title">Unpaid Collectibles</h6>
+                                <p class="card-text display-6" id="collectiblesUnpaidTotal">₱0.00</p>
+                                <small class="text-muted" id="collectiblesUnpaidCount">0 bills</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Collections (Supplier Refunds / Credits)</h5>
-                        <button class="btn btn-secondary btn-sm" disabled>
-                            <i class="fas fa-lock me-1"></i>Collections Disabled
+                        <h5 class="mb-0">Collectibles (Paid vs Unpaid)</h5>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadCollectibles()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
                         </button>
                     </div>
                     <div class="card-body">
-                        <div class="alert alert-info">
-                            Collections are not recorded in Accounts Payable. Use the Collection module for cash inflows.
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <select class="form-select" id="collectibleStatusFilter">
+                                    <option value="">All Status</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="unpaid">Unpaid</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="date" class="form-control" id="collectibleDateFrom">
+                            </div>
+                            <div class="col-md-3">
+                                <input type="date" class="form-control" id="collectibleDateTo">
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-secondary" onclick="filterCollectibles()">Filter</button>
+                            </div>
                         </div>
                         <div class="table-responsive">
-                            <table class="table table-striped" id="collectionsTable">
+                            <table class="table table-striped" id="collectiblesTable">
                                 <thead>
                                     <tr>
-                                        <th>Collection #</th>
+                                        <th>Bill #</th>
                                         <th>Vendor</th>
-                                        <th>Type</th>
+                                        <th>Bill Date</th>
+                                        <th>Due Date</th>
                                         <th>Amount</th>
-                                        <th>Date</th>
-                                        <th>Reason</th>
+                                        <th>Collectible Status</th>
+                                        <th>Bill Status</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <!-- Collection data will be loaded here -->
+                                    <!-- Collectibles data will be loaded here -->
                                 </tbody>
                             </table>
                         </div>
@@ -1115,64 +1153,6 @@ try {
         </div>
     </div>
 
-    <!-- Add Collection Modal -->
-    <div class="modal fade" id="addCollectionModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Record Collection</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="addCollectionForm">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="collectionVendor" class="form-label">Vendor *</label>
-                                    <select class="form-select" id="collectionVendor" name="vendor_id" required>
-                                        <option value="">Select Vendor</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="collectionType" class="form-label">Collection Type *</label>
-                                    <select class="form-select" id="collectionType" name="collection_type" required>
-                                        <option value="refund">Refund</option>
-                                        <option value="credit">Credit Note</option>
-                                        <option value="adjustment">Adjustment</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="collectionDate" class="form-label">Collection Date *</label>
-                                    <input type="date" class="form-control" id="collectionDate" name="collection_date" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="collectionAmount" class="form-label">Amount *</label>
-                                    <input type="number" class="form-control" id="collectionAmount" name="amount" step="0.01" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="collectionReason" class="form-label">Reason *</label>
-                            <textarea class="form-control" id="collectionReason" name="reason" rows="3" required></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" form="addCollectionForm">Record Collection</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Add Adjustment Modal -->
     <div class="modal fade" id="addAdjustmentModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
@@ -1226,24 +1206,6 @@ try {
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary" form="addAdjustmentForm" id="addAdjustmentModalSubmitBtn">Add Adjustment</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- View Collection Modal -->
-    <div class="modal fade" id="collectionModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Collections</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Collection actions for Accounts Payable will be handled here.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -1395,7 +1357,7 @@ try {
             loadVendors();
             loadBills();
             loadPayments();
-            loadCollections();
+            loadCollectibles();
             loadAdjustments();
         });
 
@@ -1545,62 +1507,6 @@ try {
             } catch (error) {
                 console.error('Error recording payment:', error);
                 showAlert('Error recording payment: ' + error.message, 'danger');
-            }
-        });
-
-        document.getElementById('addCollectionForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            showAlert('Collections are disabled in AP. Use the Collection module instead.', 'warning');
-            return;
-
-            const formData = new FormData(this);
-            const collectionData = {
-                vendor_id: parseInt(formData.get('vendor_id')),
-                collection_type: formData.get('collection_type'),
-                collection_date: formData.get('collection_date'),
-                amount: parseFloat(formData.get('amount')),
-                reason: formData.get('reason'),
-                transaction_type: 'collection' // Special type for collections
-            };
-
-            try {
-                // Collections are actually payments MADE to vendors (reducing AP liability)
-                const apiData = {
-                    vendor_id: collectionData.vendor_id,
-                    amount: collectionData.amount,
-                    payment_date: collectionData.collection_date,
-                    payment_method: 'refund', // Special method for collections/refunds
-                    reference_number: `COLL-${collectionData.collection_type.toUpperCase()}-${Date.now()}`,
-                    notes: `Collection: ${collectionData.collection_type} - ${collectionData.reason}`,
-                    payment_type: 'made', // Collections reduce accounts payable (payment made back to vendor)
-                    bill_id: null
-                };
-
-                const response = await fetch(`${apiBase}payments.php`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(apiData)
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showAlert(`Collection recorded successfully! Reference: ${result.payment_number}`, 'success');
-                    const modalEl = document.getElementById('addCollectionModal');
-                    if (modalEl) {
-                        const modal = bootstrap.Modal.getInstance(modalEl);
-                        if (modal) modal.hide();
-                    }
-                    this.reset();
-                    loadCollections(); // Refresh the collections table
-                } else {
-                    throw new Error(result.error || 'Failed to record collection');
-                }
-            } catch (error) {
-                console.error('Error recording collection:', error);
-                showAlert('Error recording collection: ' + error.message, 'danger');
             }
         });
 
@@ -1820,74 +1726,132 @@ try {
             });
         }
 
-        // Load collections from payments_made table
-        async function loadCollections() {
-            const tbody = document.querySelector('#collectionsTable tbody');
-            if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Collections are disabled.</td></tr>';
+        let collectiblesData = [];
+
+        function getCollectibleStatus(bill) {
+            const status = (bill.status || '').toLowerCase();
+            return status == 'paid' ? 'paid' : 'unpaid';
+        }
+
+        function getBillAmountValue(bill) {
+            return parseFloat(bill.total_amount ?? bill.amount ?? 0);
+        }
+
+        function updateCollectiblesSummary(bills) {
+            let paidTotal = 0;
+            let unpaidTotal = 0;
+            let paidCount = 0;
+            let unpaidCount = 0;
+
+            bills.forEach(bill => {
+                const amount = getBillAmountValue(bill);
+                if (getCollectibleStatus(bill) == 'paid') {
+                    paidTotal += amount;
+                    paidCount += 1;
+                } else {
+                    unpaidTotal += amount;
+                    unpaidCount += 1;
+                }
+            });
+
+            const paidTotalEl = document.getElementById('collectiblesPaidTotal');
+            const unpaidTotalEl = document.getElementById('collectiblesUnpaidTotal');
+            const paidCountEl = document.getElementById('collectiblesPaidCount');
+            const unpaidCountEl = document.getElementById('collectiblesUnpaidCount');
+
+            if (paidTotalEl) {
+                paidTotalEl.textContent = `?${paidTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             }
-            return;
-            try {
-                const response = await fetch(`${apiBase}payments.php?type=made`);
-                const data = await response.json();
-
-                // Filter only collection entries (those with COLL- reference or Collection notes)
-                const collections = data.filter(payment =>
-                    payment.reference_number && payment.reference_number.startsWith('COLL-')
-                );
-
-                renderCollectionsTable(collections);
-            } catch (error) {
-                console.error('Error loading collections:', error);
-                showAlert('Error loading collections: ' + error.message, 'danger');
+            if (unpaidTotalEl) {
+                unpaidTotalEl.textContent = `?${unpaidTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            }
+            if (paidCountEl) {
+                paidCountEl.textContent = `${paidCount} bills`;
+            }
+            if (unpaidCountEl) {
+                unpaidCountEl.textContent = `${unpaidCount} bills`;
             }
         }
 
-        // Render collections table
-        function renderCollectionsTable(collections) {
-            const tbody = document.querySelector('#collectionsTable tbody');
+        async function loadCollectibles() {
+            try {
+                const response = await fetch(`${apiBase}bills.php`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                collectiblesData = Array.isArray(data) ? data : [];
+                updateCollectiblesSummary(collectiblesData);
+                renderCollectiblesTable(collectiblesData);
+            } catch (error) {
+                console.error('Error loading collectibles:', error);
+                showAlert('Error loading collectibles: ' + error.message, 'danger');
+            }
+        }
+
+        function filterCollectibles() {
+            renderCollectiblesTable(collectiblesData);
+        }
+
+        function renderCollectiblesTable(bills) {
+            const tbody = document.querySelector('#collectiblesTable tbody');
+            if (!tbody) {
+                return;
+            }
             tbody.innerHTML = '';
 
-            if (!collections || collections.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No collections recorded</td></tr>';
+            const statusFilter = document.getElementById('collectibleStatusFilter')?.value || '';
+            const dateFrom = document.getElementById('collectibleDateFrom')?.value;
+            const dateTo = document.getElementById('collectibleDateTo')?.value;
+            const fromDate = dateFrom ? new Date(dateFrom) : null;
+            const toDate = dateTo ? new Date(dateTo) : null;
+
+            const filtered = (bills || []).filter(bill => {
+                const collectibleStatus = getCollectibleStatus(bill);
+                if (statusFilter && collectibleStatus != statusFilter) {
+                    return false;
+                }
+                if (bill.bill_date) {
+                    const billDate = new Date(bill.bill_date);
+                    if (fromDate && billDate < fromDate) {
+                        return false;
+                    }
+                    if (toDate && billDate > toDate) {
+                        return false;
+                    }
+                } else if (fromDate || toDate) {
+                    return false;
+                }
+                return true;
+            });
+
+            if (!filtered.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No collectibles found</td></tr>';
                 return;
             }
 
-            collections.forEach(collection => {
-                // Parse collection type and reason from notes
-                let collectionType = 'Unknown';
-                let reason = '';
-                if (collection.notes && collection.notes.startsWith('Collection: ')) {
-                    const parts = collection.notes.substring(12).split(' - ');
-                    collectionType = parts[0] || 'Unknown';
-                    reason = parts[1] || '';
-                }
-
-                // Get collection type from reference number if available
-                if (collection.reference_number && collection.reference_number.startsWith('COLL-')) {
-                    const typeMatch = collection.reference_number.match(/COLL-(\w+)-/);
-                    if (typeMatch) {
-                        const typeCode = typeMatch[1];
-                        collectionType = typeCode === 'REFUND' ? 'Refund' :
-                                        typeCode === 'CREDIT' ? 'Credit Note' :
-                                        typeCode === 'ADJUSTMENT' ? 'Adjustment' : collectionType;
-                    }
-                }
+            filtered.forEach(bill => {
+                const amount = getBillAmountValue(bill);
+                const collectibleStatus = getCollectibleStatus(bill);
+                const statusBadge = collectibleStatus == 'paid'
+                    ? '<span class="badge bg-success">Paid</span>'
+                    : '<span class="badge bg-warning text-dark">Unpaid</span>';
+                const billStatus = bill.status ? bill.status.charAt(0).toUpperCase() + bill.status.slice(1) : 'Draft';
 
                 const row = `
                     <tr>
-                        <td>${collection.payment_number || collection.reference_number}</td>
-                        <td>${collection.vendor_name || 'Unknown Vendor'}</td>
-                        <td><span class="badge bg-info">${collectionType}</span></td>
-                        <td>₱${parseFloat(collection.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                        <td>${new Date(collection.payment_date).toLocaleDateString()}</td>
-                        <td>${reason || 'N/A'}</td>
+                        <td>${bill.bill_number || bill.id}</td>
+                        <td>${bill.vendor_name || 'Unknown Vendor'}</td>
+                        <td>${bill.bill_date ? new Date(bill.bill_date).toLocaleDateString() : 'N/A'}</td>
+                        <td>${bill.due_date ? new Date(bill.due_date).toLocaleDateString() : 'N/A'}</td>
+                        <td>?${amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td>${statusBadge}</td>
+                        <td>${billStatus}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-info" onclick="viewCollection(${collection.id})" title="View Details">
+                            <button class="btn btn-sm btn-outline-info" onclick="viewBill(${bill.id})" title="View Details">
                                 <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteCollection(${collection.id})" title="Delete">
-                                <i class="fas fa-trash"></i>
                             </button>
                         </td>
                     </tr>
@@ -1957,7 +1921,7 @@ try {
         // Populate vendor dropdowns in forms
         function populateVendorDropdowns(vendors) {
             const dropdowns = [
-                'billVendor', 'paymentVendor', 'collectionVendor', 'adjustmentVendor'
+                'billVendor', 'paymentVendor', 'adjustmentVendor'
             ];
 
             dropdowns.forEach(dropdownId => {
@@ -2739,154 +2703,6 @@ try {
                 }
             );
         }
-
-        // View collection details
-        async function viewCollection(collectionId) {
-            try {
-                const response = await fetch(`api/payments.php?id=${collectionId}&type=made`);
-                const data = await response.json();
-
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                let collection = data;
-                if (Array.isArray(data)) {
-                    collection = data[0];
-                }
-
-                if (!collection || !collection.id) {
-                    throw new Error('Collection not found');
-                }
-
-                // Create modal content
-                const modalContent = `
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Collection Details - ${collection.reference_number || collection.payment_number}</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">Reference Number</label>
-                                            <p class="form-control-plaintext">${collection.reference_number || collection.payment_number}</p>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">Vendor</label>
-                                            <p class="form-control-plaintext">${collection.vendor_name || 'Unknown Vendor'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">Collection Date</label>
-                                            <p class="form-control-plaintext">${new Date(collection.payment_date).toLocaleDateString()}</p>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">Amount Collected</label>
-                                            <p class="form-control-plaintext">₱${parseFloat(collection.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">Payment Method</label>
-                                            <p class="form-control-plaintext">${collection.payment_method ? collection.payment_method.replace('_', ' ').toUpperCase() : 'Unknown'}</p>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">Type</label>
-                                            <p class="form-control-plaintext"><span class="badge bg-success">Supplier Refund / Credit</span></p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">Related Bill</label>
-                                            <p class="form-control-plaintext">${collection.bill_number ? `Bill ${collection.bill_number}` : 'No specific bill'}</p>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">Created</label>
-                                            <p class="form-control-plaintext">${collection.created_at ? new Date(collection.created_at).toLocaleDateString() : 'N/A'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                ${collection.notes ? `
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">Notes</label>
-                                    <p class="form-control-plaintext">${collection.notes}</p>
-                                </div>
-                                ` : ''}
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                <button type="button" class="btn btn-danger" onclick="deleteCollection(${collection.id})">
-                                    <i class="fas fa-trash me-1"></i>Delete
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                // Create modal
-                const modalDiv = document.createElement('div');
-                modalDiv.className = 'modal fade';
-                modalDiv.innerHTML = modalContent;
-                document.body.appendChild(modalDiv);
-
-                const modal = new bootstrap.Modal(modalDiv);
-                modal.show();
-
-                // Remove modal from DOM when hidden
-                modalDiv.addEventListener('hidden.bs.modal', function() {
-                    document.body.removeChild(modalDiv);
-                });
-
-            } catch (error) {
-                showAlert('Error loading collection details: ' + error.message, 'danger');
-            }
-        }
-
-        // Delete collection
-        async function deleteCollection(collectionId) {
-            showConfirmDialog(
-                'Delete Collection',
-                'Are you sure you want to delete this collection? This action cannot be undone.',
-                async () => {
-            try {
-                const response = await fetch(`api/payments.php?id=${collectionId}&type=made`, {
-                    method: 'DELETE'
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showAlert('Collection deleted successfully', 'success');
-                    loadCollections(); // Refresh the collections table
-                } else {
-                    throw new Error(result.error || 'Failed to delete collection');
-                }
-            } catch (error) {
-                console.error('Error deleting collection:', error);
-                showAlert('Error deleting collection: ' + error.message, 'danger');
-            }
-                }
-            );
-        }
-
         // View adjustment details
         async function viewAdjustment(adjustmentId) {
             try {
