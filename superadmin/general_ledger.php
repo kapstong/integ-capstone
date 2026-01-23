@@ -599,6 +599,13 @@ try {
             vertical-align: middle;
             color: #495057;
         }
+        .trial-modal-body {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .trial-total-row td {
+            color: #f7c948;
+        }
         .account-type {
             padding: 4px 8px;
             border-radius: 12px;
@@ -1030,6 +1037,10 @@ try {
                                                 ?>
                                                     <?php
                                                     $detailId = 'trial-details-' . intval($account['account_id'] ?? 0);
+                                                    $modalId = 'trial-modal-' . intval($account['account_id'] ?? 0);
+                                                    $modalLabelId = $modalId . '-label';
+                                                    $searchId = $detailId . '-search';
+                                                    $tableId = $detailId . '-table';
                                                     $hasDetails = !empty($trialBreakdown[$account['account_id'] ?? 0]);
                                                     ?>
                                                     <tr>
@@ -1038,7 +1049,7 @@ try {
                                                         <td><?php echo $account['credit_balance'] > 0 ? '&#8369;' . number_format($account['credit_balance'], 2) : '-'; ?></td>
                                                         <td>
                                                             <?php if ($hasDetails): ?>
-                                                                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#<?php echo $detailId; ?>" aria-expanded="false" aria-controls="<?php echo $detailId; ?>">
+                                                                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#<?php echo $modalId; ?>" aria-controls="<?php echo $modalId; ?>">
                                                                     View
                                                                 </button>
                                                             <?php else: ?>
@@ -1046,38 +1057,8 @@ try {
                                                             <?php endif; ?>
                                                         </td>
                                                     </tr>
-                                                    <?php if ($hasDetails): ?>
-                                                        <tr class="collapse" id="<?php echo $detailId; ?>">
-                                                            <td colspan="4">
-                                                                <div class="table-responsive">
-                                                                    <table class="table table-sm mb-0">
-                                                                        <thead>
-                                                                            <tr>
-                                                                                <th>Date</th>
-                                                                                <th>Reference</th>
-                                                                                <th>Description</th>
-                                                                                <th>Debit</th>
-                                                                                <th>Credit</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody>
-                                                                            <?php foreach ($trialBreakdown[$account['account_id']] as $line): ?>
-                                                                                <tr>
-                                                                                    <td><?php echo htmlspecialchars($line['entry_date']); ?></td>
-                                                                                    <td><?php echo htmlspecialchars($line['entry_number']); ?></td>
-                                                                                    <td><?php echo htmlspecialchars($line['description']); ?></td>
-                                                                                    <td><?php echo $line['debit'] > 0 ? '&#8369;' . number_format($line['debit'], 2) : '-'; ?></td>
-                                                                                    <td><?php echo $line['credit'] > 0 ? '&#8369;' . number_format($line['credit'], 2) : '-'; ?></td>
-                                                                                </tr>
-                                                                            <?php endforeach; ?>
-                                                                        </tbody>
-                                                                    </table>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    <?php endif; ?>
                                                 <?php endforeach; ?>
-                                                <tr class="table-dark">
+                                                <tr class="table-dark trial-total-row">
                                                     <td><strong>Total</strong></td>
                                                     <td><strong>&#8369;<?php echo number_format($debit_total, 2); ?></strong></td>
                                                     <td><strong>&#8369;<?php echo number_format($credit_total, 2); ?></strong></td>
@@ -1087,6 +1068,61 @@ try {
                                         </tbody>
                                     </table>
                                 </div>
+                                <?php if (!empty($trialBalance)): ?>
+                                    <?php foreach ($trialBalance as $account): ?>
+                                        <?php
+                                        $accountId = $account['account_id'] ?? 0;
+                                        $modalId = 'trial-modal-' . intval($accountId);
+                                        $modalLabelId = $modalId . '-label';
+                                        $detailId = 'trial-details-' . intval($accountId);
+                                        $searchId = $detailId . '-search';
+                                        $tableId = $detailId . '-table';
+                                        $hasDetails = !empty($trialBreakdown[$accountId ?? 0]);
+                                        ?>
+                                        <?php if ($hasDetails): ?>
+                                            <div class="modal fade" id="<?php echo $modalId; ?>" tabindex="-1" aria-labelledby="<?php echo $modalLabelId; ?>" aria-hidden="true">
+                                                <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title" id="<?php echo $modalLabelId; ?>"><?php echo htmlspecialchars($account['account_name']); ?> Details</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body trial-modal-body">
+                                                            <div class="input-group mb-3">
+                                                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                                                <input type="search" class="form-control trial-search-input" id="<?php echo $searchId; ?>" data-target="<?php echo $tableId; ?>" placeholder="Search transactions">
+                                                            </div>
+                                                            <div class="table-responsive">
+                                                                <table class="table table-sm mb-0" id="<?php echo $tableId; ?>">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Date</th>
+                                                                            <th>Reference</th>
+                                                                            <th>Description</th>
+                                                                            <th>Debit</th>
+                                                                            <th>Credit</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        <?php foreach ($trialBreakdown[$accountId] as $line): ?>
+                                                                            <tr>
+                                                                                <td><?php echo htmlspecialchars($line['entry_date']); ?></td>
+                                                                                <td><?php echo htmlspecialchars($line['entry_number']); ?></td>
+                                                                                <td><?php echo htmlspecialchars($line['description']); ?></td>
+                                                                                <td><?php echo $line['debit'] > 0 ? '&#8369;' . number_format($line['debit'], 2) : '-'; ?></td>
+                                                                                <td><?php echo $line['credit'] > 0 ? '&#8369;' . number_format($line['credit'], 2) : '-'; ?></td>
+                                                                            </tr>
+                                                                        <?php endforeach; ?>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                                 <?php
                                 $trialDiff = abs(($trialDebitTotal ?? 0) - ($trialCreditTotal ?? 0));
                                 $hasUnbalanced = ($unbalancedCount ?? 0) > 0;
@@ -2471,6 +2507,30 @@ try {
             }
         }
 
+        function applyTrialModalSearch(event) {
+            const input = event.target;
+            if (!input.classList.contains('trial-search-input')) {
+                return;
+            }
+
+            const targetId = input.getAttribute('data-target');
+            if (!targetId) {
+                return;
+            }
+
+            const table = document.getElementById(targetId);
+            if (!table) {
+                return;
+            }
+
+            const searchValue = input.value.trim().toLowerCase();
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const rowText = row.textContent.toLowerCase();
+                row.style.display = !searchValue || rowText.includes(searchValue) ? '' : 'none';
+            });
+        }
+
         // Add event listener for journal modal when opened
         document.getElementById('addJournalModal').addEventListener('shown.bs.modal', function() {
             loadAccountsForModal();
@@ -2561,6 +2621,11 @@ try {
                 journalSearchInput.addEventListener('input', applyJournalFilters);
                 applyJournalFilters();
             }
+
+            const trialSearchInputs = document.querySelectorAll('.trial-search-input');
+            trialSearchInputs.forEach(input => {
+                input.addEventListener('input', applyTrialModalSearch);
+            });
         });
 
         // Initialize sidebar state on page load
