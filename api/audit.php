@@ -96,10 +96,18 @@ function getAuditTrail($db, $filters = []) {
         // Only user-driven actions
         $where[] = "a.user_id IS NOT NULL";
 
-        // Filter by user
+        // Filter by user id
         if (isset($filters['user_id'])) {
             $where[] = "a.user_id = ?";
             $params[] = $filters['user_id'];
+        }
+
+        // Filter by user name/username
+        if (isset($filters['user'])) {
+            $where[] = "(u.username LIKE ? OR u.full_name LIKE ?)";
+            $userLike = '%' . $filters['user'] . '%';
+            $params[] = $userLike;
+            $params[] = $userLike;
         }
 
         if (isset($filters['action'])) {
@@ -293,6 +301,7 @@ try {
             }
             if (isset($_GET['table_name'])) $filters['table_name'] = $_GET['table_name'];
             if (isset($_GET['scope'])) $filters['scope'] = $_GET['scope'];
+            if (isset($_GET['user'])) $filters['user'] = $_GET['user'];
 
             $auditTrail = getAuditTrail($db, $filters);
             echo json_encode($auditTrail);

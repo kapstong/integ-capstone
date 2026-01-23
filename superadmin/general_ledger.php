@@ -1901,12 +1901,7 @@ try {
                                 </div>
                                 <div class="mb-3">
                                     <label for="filterUser" class="form-label">User</label>
-                                    <select class="form-select" id="filterUser">
-                                        <option value="">All Users</option>
-                                        <option value="Super Admin">Super Admin</option>
-                                        <option value="Admin">Admin</option>
-                                        <option value="Staff">Staff</option>
-                                    </select>
+                                    <input type="text" class="form-control" id="filterUser" placeholder="Search by name or username">
                                 </div>
                                 <div class="mb-3">
                                     <label for="filterAction" class="form-label">Action</label>
@@ -1916,6 +1911,9 @@ try {
                                         <option value="Edited">Edited</option>
                                         <option value="Deleted">Deleted</option>
                                         <option value="Generated">Generated</option>
+                                        <option value="Viewed">Viewed</option>
+                                        <option value="Printed">Printed</option>
+                                        <option value="Exported">Exported</option>
                                     </select>
                                 </div>
                             </form>
@@ -2040,13 +2038,23 @@ try {
             const dateTo = document.getElementById('filterDateTo')?.value || '';
             const user = document.getElementById('filterUser')?.value || '';
             const action = document.getElementById('filterAction')?.value || '';
+            const actionMap = {
+                'Created': 'created',
+                'Edited': 'updated',
+                'Deleted': 'deleted',
+                'Generated': 'generated',
+                'Viewed': 'viewed',
+                'Printed': 'printed',
+                'Exported': 'exported'
+            };
+            const mappedAction = actionMap[action] || (action ? action.toLowerCase() : '');
 
             const params = new URLSearchParams();
             params.append('table_name', auditTablesScope);
             if (dateFrom) params.append('date_from', dateFrom);
             if (dateTo) params.append('date_to', dateTo);
             if (user) params.append('user', user);
-            if (action) params.append('action', action);
+            if (mappedAction) params.append('action', mappedAction);
 
             return params;
         }
