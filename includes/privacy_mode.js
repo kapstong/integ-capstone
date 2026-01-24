@@ -110,7 +110,7 @@
                                     <i class="fas fa-check-circle me-2"></i>
                                     Code sent to <strong id="userEmail"></strong>
                                     <div class="mt-2 small">
-                                        Code expires in: <strong id="codeTimer">5:00</strong>
+                                        Code expires in: <strong id="codeTimer">2:00</strong>
                                     </div>
                                 </div>
 
