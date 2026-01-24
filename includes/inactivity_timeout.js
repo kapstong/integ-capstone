@@ -68,8 +68,8 @@
                 backdrop-filter: blur(15px);
                 -webkit-backdrop-filter: blur(15px);
                 background: rgba(0, 0, 0, 0.3);
-                /* Keep below Bootstrap modal z-index to avoid blocking modals */
-                z-index: 11030;
+                /* Keep below Bootstrap modal z-index to avoid blocking modals (Bootstrap modal default ~1050) */
+                z-index: 1040;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -161,7 +161,7 @@
     function createWarningModal() {
         // Create modal HTML
         const modalHTML = `
-            <div id="inactivity-warning-modal" style="display: none; position: fixed; z-index: 11040; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center;">
+            <div id="inactivity-warning-modal" style="display: none; position: fixed; z-index: 1050; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center;">
                 <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-width: 400px; text-align: center;">
                     <div style="font-size: 48px; color: #f59e0b; margin-bottom: 15px;">⚠️</div>
                     <h2 style="margin: 0 0 15px 0; color: #1b2f73; font-size: 24px;">Inactivity Warning</h2>
