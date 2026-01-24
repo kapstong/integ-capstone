@@ -640,6 +640,10 @@ $db = Database::getInstance()->getConnection();
             color: white;
         }
 
+        .forecast-card.black-forecast h3 {
+            color: black !important;
+        }
+
         .forecast-card .card-body {
             padding: 2.5rem;
         }
@@ -1067,8 +1071,8 @@ $db = Database::getInstance()->getConnection();
                     <button id="refreshForecastBtn" class="btn btn-outline-secondary"><i class="fas fa-rotate me-2"></i>Refresh Forecast</button>
                 </div>
                 <div class="row mb-4">
-                    <div class="col-md-4">
-                        <div class="card forecast-card">
+                    <div class="col-md-6">
+                        <div class="card forecast-card black-forecast">
                             <div class="card-body">
                                 <h6>Projected Year-End Spend</h6>
                                 <h3 class="mb-2">Not available</h3>
@@ -1076,21 +1080,12 @@ $db = Database::getInstance()->getConnection();
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card forecast-card">
+                    <div class="col-md-6">
+                        <div class="card forecast-card black-forecast">
                             <div class="card-body">
                                 <h6>Expected Variance</h6>
                                 <h3 class="mb-2">Not available</h3>
                                 <p class="mb-0">Favorable due to staffing optimization.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card forecast-card">
-                            <div class="card-body">
-                                <h6>Claims Pressure (HR3)</h6>
-                                <h3 class="mb-2">Not available</h3>
-                                <p class="mb-0">Higher claim volume in Restaurant unit.</p>
                             </div>
                         </div>
                     </div>
