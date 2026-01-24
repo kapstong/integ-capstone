@@ -18,6 +18,7 @@
     let warningModal = null;
     let countdownInterval = null;
     let isBlurred = false;
+    let blurOverlayElement = null;
 
     // Events that count as user activity
     const activityEvents = [
@@ -95,6 +96,7 @@
 
             blurOverlay.appendChild(textDiv);
             document.body.appendChild(blurOverlay);
+            blurOverlayElement = blurOverlay;
 
             // Click anywhere to remove blur
             blurOverlay.addEventListener('click', function() {
@@ -103,6 +105,10 @@
         }
 
         blurOverlay.style.display = 'flex';
+        // Ensure overlay doesn't block Bootstrap modals if any are open
+        syncOverlayWithModals();
+        // Watch for modal DOM changes to keep overlay behavior in sync
+        observeModalChanges();
         isBlurred = true;
     }
 
@@ -115,6 +121,37 @@
             blurOverlay.style.display = 'none';
         }
         isBlurred = false;
+    }
+
+    /**
+     * If a Bootstrap modal is open, make the blur overlay non-interactive so the modal receives clicks.
+     */
+    function syncOverlayWithModals() {
+        try {
+            const blurOverlay = document.getElementById('inactivity-blur-overlay');
+            if (!blurOverlay) return;
+
+            const modalOpen = document.querySelector('.modal.show');
+            if (modalOpen) {
+                blurOverlay.style.pointerEvents = 'none';
+                // keep visual dimming but allow interaction with modal above
+                blurOverlay.style.opacity = '0.6';
+            } else {
+                blurOverlay.style.pointerEvents = 'auto';
+                blurOverlay.style.opacity = '1';
+            }
+        } catch (e) {
+            // ignore errors
+        }
+    }
+
+    let modalObserver = null;
+    function observeModalChanges() {
+        if (modalObserver) return;
+        modalObserver = new MutationObserver(function() {
+            syncOverlayWithModals();
+        });
+        modalObserver.observe(document.body, { childList: true, subtree: true });
     }
 
     /**
