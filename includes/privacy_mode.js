@@ -322,19 +322,12 @@
         })
         .then(response => response.json())
         .then(data => {
-            if (data.success && data.unlocked) {
-                if (storedVisibility === '0') {
-                    hideAmounts(true);
-                } else {
-                    // Code was already verified, show amounts immediately
-                    showAmounts();
-                }
-            } else {
-                // Not unlocked, hide amounts and clear stored preference
-                hideAmounts(true);
-                if (storedVisibility === '1') {
-                    setStoredVisibility('0');
-                }
+            // Always keep amounts hidden on page load to avoid exposing sensitive data automatically,
+            // even if the server session reports an unlocked state. The user must explicitly verify now
+            // to reveal amounts for this browser/session.
+            hideAmounts(true);
+            if (storedVisibility === '1') {
+                setStoredVisibility('0');
             }
         })
         .catch(error => {
