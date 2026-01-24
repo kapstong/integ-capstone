@@ -2156,7 +2156,7 @@ try {
         // Invoice action functions
         async function viewInvoice(id) {
             try {
-                const response = await fetch(`api/invoices.php?id=${id}`);
+                const response = await fetch(`../api/invoices.php?id=${id}`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -2263,7 +2263,7 @@ try {
                 'Are you sure you want to mark this invoice as sent? This will send notification emails.',
                 async () => {
                     try {
-                        const response = await fetch(`api/invoices.php?id=${id}`, {
+                        const response = await fetch(`../api/invoices.php?id=${id}`, {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -2305,7 +2305,7 @@ try {
                 'Are you sure you want to delete this invoice? This action cannot be undone.',
                 async () => {
                     try {
-                        const response = await fetch(`api/invoices.php?id=${id}`, {
+                        const response = await fetch(`../api/invoices.php?id=${id}`, {
                             method: 'DELETE'
                         });
                         if (!response.ok) {
@@ -2331,7 +2331,7 @@ try {
         // Payment action functions
         async function viewPayment(id) {
             try {
-                const response = await fetch(`api/payments.php?id=${id}&type=received`);
+                const response = await fetch(`../api/payments.php?id=${id}&type=received`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -2422,7 +2422,7 @@ try {
                 'Are you sure you want to delete this payment? This action cannot be undone.',
                 async () => {
                     try {
-                        const response = await fetch(`api/payments.php?id=${id}&type=received`, {
+                        const response = await fetch(`../api/payments.php?id=${id}&type=received`, {
                             method: 'DELETE'
                         });
                         if (!response.ok) {
@@ -2448,7 +2448,7 @@ try {
         // Adjustment action functions
         async function viewAdjustment(id) {
             try {
-                const response = await fetch(`api/adjustments.php?id=${id}`);
+                const response = await fetch(`../api/adjustments.php?id=${id}`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -2531,7 +2531,7 @@ try {
                 'Are you sure you want to delete this adjustment? This action cannot be undone.',
                 async () => {
                     try {
-                        const response = await fetch(`api/adjustments.php?id=${id}`, {
+                        const response = await fetch(`../api/adjustments.php?id=${id}`, {
                             method: 'DELETE'
                         });
                         if (!response.ok) {
