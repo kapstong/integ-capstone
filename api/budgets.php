@@ -60,6 +60,9 @@ function handleGet($db, $logger) {
         $action = isset($_GET['action']) ? $_GET['action'] : null;
 
         switch ($action) {
+            case 'forecast':
+                getForecastData($db);
+                break;
             case 'categories':
                 getCategories($db);
                 break;
@@ -190,6 +193,59 @@ function getAllocations($db) {
     }
 
     echo json_encode(['allocations' => $allocations]);
+}
+
+function getForecastData($db) {
+    // Return historical monthly totals for client-side forecasting (TF.js)
+    $months = isset($_GET['months']) ? (int)$_GET['months'] : 36;
+
+    $query = "
+        SELECT month, SUM(amount) as amount FROM (
+            SELECT DATE_FORMAT(disbursement_date, '%Y-%m-01') as month, amount
+            FROM disbursements
+            WHERE disbursement_date IS NOT NULL
+            UNION ALL
+            SELECT DATE_FORMAT(payment_date, '%Y-%m-01') as month, amount
+            FROM payments_made
+            WHERE payment_date IS NOT NULL
+        ) t
+        GROUP BY month
+        ORDER BY month ASC
+    ";
+
+    $stmt = $db->prepare($query);
+    $stmt->execute();
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($rows)) {
+        echo json_encode(['error' => 'Insufficient historical data for forecasting']);
+        return;
+    }
+
+    $history = [];
+    foreach ($rows as $r) {
+        $history[] = ['date' => $r['month'], 'value' => (float)$r['amount']];
+    }
+
+    // trim to last N months
+    if (count($history) > $months) {
+        $history = array_slice($history, -1 * $months);
+    }
+
+    // summary
+    $total = 0;
+    foreach ($history as $h) $total += $h['value'];
+    $avg = count($history) ? $total / count($history) : 0;
+
+    echo json_encode([
+        'history' => $history,
+        'summary' => [
+            'months' => count($history),
+            'total' => (float)$total,
+            'average_monthly' => (float)$avg
+        ],
+        'method' => 'history_only'
+    ]);
 }
 
 function getTrackingData($db) {

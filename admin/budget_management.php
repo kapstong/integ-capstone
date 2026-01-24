@@ -1064,7 +1064,7 @@ $db = Database::getInstance()->getConnection();
             <div class="tab-pane fade" id="forecasting" role="tabpanel" aria-labelledby="forecasting-tab">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">Budget Forecasting</h6>
-                    <button class="btn btn-outline-secondary"><i class="fas fa-rotate me-2"></i>Refresh Forecast</button>
+                    <button id="refreshForecastBtn" class="btn btn-outline-secondary"><i class="fas fa-rotate me-2"></i>Refresh Forecast</button>
                 </div>
                 <div class="row mb-4">
                     <div class="col-md-4">
@@ -1284,6 +1284,7 @@ $db = Database::getInstance()->getConnection();
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../includes/alert-modal.js"></script>
+    <script src="../includes/forecasting.js"></script>
     <script>
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('show');

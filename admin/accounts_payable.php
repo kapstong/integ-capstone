@@ -1595,7 +1595,7 @@ try {
         // Load bills
         async function loadBills() {
             try {
-                const response = await fetch('../api/bills.php');
+                const response = await fetch('../api/bills.php?status=draft,approved,overdue');
                 const data = await response.json();
 
                 if (data.error) {
@@ -1786,7 +1786,7 @@ try {
 
         async function loadCollectibles() {
             try {
-                const response = await fetch('../api/bills.php');
+                const response = await fetch('../api/bills.php?status=draft,approved,overdue');
                 const data = await response.json();
 
                 if (data.error) {

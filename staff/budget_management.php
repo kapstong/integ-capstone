@@ -1064,7 +1064,7 @@ $db = Database::getInstance()->getConnection();
             <div class="tab-pane fade" id="forecasting" role="tabpanel" aria-labelledby="forecasting-tab">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">Budget Forecasting</h6>
-                    <button class="btn btn-outline-secondary"><i class="fas fa-rotate me-2"></i>Refresh Forecast</button>
+                    <button id="refreshForecastBtn" class="btn btn-outline-secondary"><i class="fas fa-rotate me-2"></i>Refresh Forecast</button>
                 </div>
                 <div class="row mb-4">
                     <div class="col-md-4">
@@ -2837,6 +2837,8 @@ $db = Database::getInstance()->getConnection();
             }, 10000); // Check every 10 seconds
         }
     </script>
+
+    <script src="../includes/forecasting.js"></script>
 
     
 
