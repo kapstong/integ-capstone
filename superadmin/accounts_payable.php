@@ -1702,9 +1702,6 @@ try {
                             <button class="btn btn-sm btn-outline-info" onclick="viewBill(${bill.id})" title="View Details">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button class="btn btn-sm btn-outline-primary" onclick="editBill(${bill.id})" title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </button>
                             <button class="btn btn-sm btn-outline-danger" onclick="deleteBill(${bill.id})" title="Delete">
                                 <i class="fas fa-trash"></i>
                             </button>
@@ -2501,7 +2498,6 @@ try {
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                <button type="button" class="btn btn-primary" onclick="editBill(${bill.id})">Edit Bill</button>
                             </div>
                         </div>
                     </div>
@@ -2527,60 +2523,10 @@ try {
             }
         }
 
-        // Edit bill
+        // Edit bill (disabled for superadmin view)
         async function editBill(billId) {
-            try {
-                const response = await fetch(`api/bills.php?id=${billId}`);
-                const data = await response.json();
-
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                let bill = data;
-                if (Array.isArray(data)) {
-                    bill = data[0];
-                }
-
-                if (!bill || !bill.id) {
-                    throw new Error('Bill not found');
-                }
-
-                // Close the view modal if it exists
-                const existingModal = document.querySelector('.modal.show');
-                if (existingModal) {
-                    const modal = bootstrap.Modal.getInstance(existingModal);
-                    if (modal) modal.hide();
-                }
-
-                // Pre-populate the add bill form
-                document.getElementById('billNumber').value = bill.bill_number || '';
-                document.getElementById('billVendor').value = bill.vendor_id || '';
-                document.getElementById('billDate').value = bill.bill_date || '';
-                document.getElementById('dueDate').value = bill.due_date || '';
-                document.getElementById('billAmount').value = bill.amount || '';
-                document.getElementById('billDescription').value = bill.description || '';
-
-                // Change modal title
-                document.querySelector('#addBillModal .modal-title').textContent = 'Edit Bill';
-
-                // Store bill ID for edit mode
-                const form = document.getElementById('addBillForm');
-                form.dataset.editBillId = billId;
-
-                // Change submit button text
-                const submitBtn = document.querySelector('#addBillModal .btn-primary');
-                submitBtn.textContent = 'Update Bill';
-
-                // Show the modal
-                const modalEl = document.getElementById('addBillModal');
-                const modal = new bootstrap.Modal(modalEl);
-                modal.show();
-
-            } catch (error) {
-                console.error('Error loading bill for edit:', error);
-                showAlert('Error loading bill: ' + error.message, 'danger');
-            }
+            showAlert('Editing bills is disabled in this view', 'warning');
+            return;
         }
 
         // Delete bill

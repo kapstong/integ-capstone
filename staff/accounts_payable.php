@@ -1662,9 +1662,6 @@ try {
                             <button class="btn btn-sm btn-outline-info" onclick="viewBill(${bill.id})" title="View Details">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button class="btn btn-sm btn-outline-primary" onclick="editBill(${bill.id})" title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </button>
                             <button class="btn btn-sm btn-outline-danger" onclick="deleteBill(${bill.id})" title="Delete">
                                 <i class="fas fa-trash"></i>
                             </button>
@@ -2465,7 +2462,6 @@ try {
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                <button type="button" class="btn btn-primary" onclick="editBill(${bill.id})">Edit Bill</button>
                             </div>
                         </div>
                     </div>
