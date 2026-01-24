@@ -371,7 +371,7 @@ header('Content-Type: application/javascript');
                 const pendingCount = disbursements.filter(d => d.status === 'pending').length;
 
                 document.getElementById('totalDisbursementsCount').textContent = totalDisbursements;
-                document.getElementById('totalDisbursementsAmount').innerHTML = '<span class="privacy-exempt amount-cell">₱' + totalAmount.toLocaleString() + '</span>';
+                document.getElementById('totalDisbursementsAmount').innerHTML = '<span class="amount-cell">₱' + totalAmount.toLocaleString() + '</span>';
                 document.getElementById('pendingDisbursementsCount').textContent = pendingCount;
 
             } catch (error) {
@@ -631,7 +631,7 @@ header('Content-Type: application/javascript');
                 <div class="col-md-6">
                     <p><strong>Reference:</strong> ${data.disbursement_number || 'N/A'}</p>
                     <p><strong>Payee:</strong> ${data.payee || 'N/A'}</p>
-                    <p><strong>Amount:</strong> <span class="privacy-exempt amount-cell">₱${parseFloat(data.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></p>
+                    <p><strong>Amount:</strong> <span class="amount-cell">₱${parseFloat(data.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></p>
                     <p><strong>Payment Method:</strong> ${getPaymentMethodBadge(data.payment_method)}</p>
                 </div>
                 <div class="col-md-6">
@@ -1119,7 +1119,7 @@ header('Content-Type: application/javascript');
                     '<input type="checkbox" class="disbursement-checkbox" value="' + d.id + '" onchange="toggleSelection(this)">' :
                     '<input type="checkbox" disabled title="You do not have delete permissions">';
 
-                return '<tr><td>' + checkbox + '</td><td>' + (d.disbursement_number || d.reference_number || d.id) + '</td><td>' + (d.payee || 'N/A') + '</td><td>' + getPaymentMethodBadge(d.payment_method) + '</td><td>' + formatDate(d.disbursement_date) + '</td><td><span class="privacy-exempt amount-cell">₱' + parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span></td><td>' + getStatusBadge(d.status || 'pending') + '</td><td>' + sourceBadge + '</td><td>' + actions + '</td></tr>';
+                return '<tr><td>' + checkbox + '</td><td>' + (d.disbursement_number || d.reference_number || d.id) + '</td><td>' + (d.payee || 'N/A') + '</td><td>' + getPaymentMethodBadge(d.payment_method) + '</td><td>' + formatDate(d.disbursement_date) + '</td><td><span class="amount-cell">₱' + parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span></td><td>' + getStatusBadge(d.status || 'pending') + '</td><td>' + sourceBadge + '</td><td>' + actions + '</td></tr>';
             }).join('');
 
             // Update header checkbox
