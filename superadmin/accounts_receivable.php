@@ -2157,6 +2157,9 @@ try {
         async function viewInvoice(id) {
             try {
                 const response = await fetch(`api/invoices.php?id=${id}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const invoice = await response.json();
                 if (invoice.error) {
                     throw new Error(invoice.error);
@@ -2267,6 +2270,9 @@ try {
                     },
                     body: JSON.stringify({ status: 'sent' })
                 });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
 
                 const result = await response.json();
 
@@ -2302,6 +2308,9 @@ try {
                 const response = await fetch(`api/invoices.php?id=${id}`, {
                     method: 'DELETE'
                 });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
 
                 const result = await response.json();
 
@@ -2323,6 +2332,9 @@ try {
         async function viewPayment(id) {
             try {
                 const response = await fetch(`api/payments.php?id=${id}&type=received`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const payment = await response.json();
 
                 if (payment.error) {
@@ -2413,6 +2425,8 @@ try {
                 const response = await fetch(`api/payments.php?id=${id}&type=received`, {
                     method: 'DELETE'
                 });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
 
                 const result = await response.json();
 
@@ -2434,6 +2448,9 @@ try {
         async function viewAdjustment(id) {
             try {
                 const response = await fetch(`api/adjustments.php?id=${id}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const adjustment = await response.json();
 
                 // Create adjustment details modal
@@ -2516,6 +2533,9 @@ try {
                 const response = await fetch(`api/adjustments.php?id=${id}`, {
                     method: 'DELETE'
                 });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
 
                 const result = await response.json();
 
