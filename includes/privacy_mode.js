@@ -540,12 +540,10 @@
         createPasswordModal();
         createEyeButton();
 
+        // Default to hidden on init to avoid revealing amounts due to stale localStorage.
+        // The server/session status (checked shortly after) will restore visibility if the session is unlocked.
+        hideAmounts(true);
         const storedVisibility = getStoredVisibility();
-        if (storedVisibility === '1') {
-            showAmounts();
-        } else {
-            hideAmounts(true);
-        }
 
         // Check if password was already entered in this session
         setTimeout(function() {
