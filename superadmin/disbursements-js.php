@@ -98,7 +98,7 @@ header('Content-Type: application/javascript');
 
                     if (!disbRef) disbRef = 'N/A';
                     const displayUser = log.display_user || log.full_name || log.username || 'System';
-                    return '<tr><td>' + log.formatted_date + '</td><td>' + displayUser + '</td><td><span class="badge bg-info">' + actionLabel + '</span></td><td>' + disbRef + '</td><td>' + (log.action_description || '') + '</td></tr>';
+                    return '<tr><td>' + escapeHtml(log.formatted_date) + '</td><td>' + escapeHtml(displayUser) + '</td><td><span class="badge bg-info">' + escapeHtml(actionLabel) + '</span></td><td>' + escapeHtml(disbRef) + '</td><td>' + escapeHtml(log.action_description || '') + '</td></tr>';
                 }).join('');
                 updateTabBadge('audit-tab', auditLogs.length);
 
@@ -397,7 +397,7 @@ header('Content-Type: application/javascript');
 
                 if (tbody && vouchers.length > 0) {
                     tbody.innerHTML = vouchers.map(v =>
-                        '<tr><td>' + v.file_name + '</td><td>Voucher</td><td>' + (v.disbursement_number || 'N/A') + '</td><td>' + formatDate(v.uploaded_at) + '</td><td><i class="fas fa-paperclip"></i> ' + v.original_name + '</td><td><button class="btn btn-sm btn-outline-primary">View</button><button class="btn btn-sm btn-outline-secondary">Download</button></td></tr>'
+                        '<tr><td>' + escapeHtml(v.file_name) + '</td><td>Voucher</td><td>' + escapeHtml(v.disbursement_number || 'N/A') + '</td><td>' + formatDate(v.uploaded_at) + '</td><td><i class="fas fa-paperclip"></i> ' + escapeHtml(v.original_name) + '</td><td><button class="btn btn-sm btn-outline-primary">View</button><button class="btn btn-sm btn-outline-secondary">Download</button></td></tr>'
                     ).join('');
                 }
             } catch (error) {
@@ -787,7 +787,7 @@ header('Content-Type: application/javascript');
 
             if (window.vendors) {
                 window.vendors.forEach(vendor => {
-                    vendorSelect.innerHTML += `<option value="${vendor.id}">${vendor.company_name}</option>`;
+                    vendorSelect.innerHTML += `<option value="${vendor.id}">${escapeHtml(vendor.company_name)}</option>`;
                 });
             }
         }
@@ -971,6 +971,17 @@ header('Content-Type: application/javascript');
             });
         }
 
+        // Escape HTML to prevent XSS when inserting untrusted content
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function getStatusBadge(status) {
             const key = String(status || '').toLowerCase().trim();
             const labels = {
@@ -1119,7 +1130,7 @@ header('Content-Type: application/javascript');
                     '<input type="checkbox" class="disbursement-checkbox" value="' + d.id + '" onchange="toggleSelection(this)">' :
                     '<input type="checkbox" disabled title="You do not have delete permissions">';
 
-                return '<tr><td>' + checkbox + '</td><td>' + (d.disbursement_number || d.reference_number || d.id) + '</td><td>' + (d.payee || 'N/A') + '</td><td>' + getPaymentMethodBadge(d.payment_method) + '</td><td>' + formatDate(d.disbursement_date) + '</td><td><span class="amount-cell">₱' + parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span></td><td>' + getStatusBadge(d.status || 'pending') + '</td><td>' + sourceBadge + '</td><td>' + actions + '</td></tr>';
+                return '<tr><td>' + checkbox + '</td><td>' + escapeHtml(d.disbursement_number || d.reference_number || d.id) + '</td><td>' + escapeHtml(d.payee || 'N/A') + '</td><td>' + getPaymentMethodBadge(d.payment_method) + '</td><td>' + formatDate(d.disbursement_date) + '</td><td><span class="amount-cell">₱' + parseFloat(d.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span></td><td>' + getStatusBadge(d.status || 'pending') + '</td><td>' + sourceBadge + '</td><td>' + actions + '</td></tr>';
             }).join('');
 
             // Update header checkbox
