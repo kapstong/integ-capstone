@@ -166,7 +166,8 @@ function generateBalanceSheet($db, $dateFrom, $dateTo, $format) {
             coa.account_name,
             coa.account_code,
             coa.account_type,
-            COALESCE(SUM(CASE WHEN jel.debit > 0 THEN jel.debit ELSE -jel.credit END), 0) as balance
+            COALESCE(SUM(CASE WHEN jel.debit > 0 THEN jel.debit ELSE -jel.credit END), 0) as balance,
+            COALESCE(SUM(CASE WHEN jel.debit > 0 THEN jel.debit ELSE -jel.credit END), 0) as account_balance
         FROM chart_of_accounts coa
         LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
         LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
@@ -186,7 +187,8 @@ function generateBalanceSheet($db, $dateFrom, $dateTo, $format) {
             coa.account_name,
             coa.account_code,
             coa.account_type,
-            COALESCE(SUM(CASE WHEN jel.credit > 0 THEN jel.credit ELSE -jel.debit END), 0) as balance
+            COALESCE(SUM(CASE WHEN jel.credit > 0 THEN jel.credit ELSE -jel.debit END), 0) as balance,
+            COALESCE(SUM(CASE WHEN jel.credit > 0 THEN jel.credit ELSE -jel.debit END), 0) as account_balance
         FROM chart_of_accounts coa
         LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
         LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
@@ -206,7 +208,8 @@ function generateBalanceSheet($db, $dateFrom, $dateTo, $format) {
             coa.account_name,
             coa.account_code,
             coa.account_type,
-            COALESCE(SUM(CASE WHEN jel.credit > 0 THEN jel.credit ELSE -jel.debit END), 0) as balance
+            COALESCE(SUM(CASE WHEN jel.credit > 0 THEN jel.credit ELSE -jel.debit END), 0) as balance,
+            COALESCE(SUM(CASE WHEN jel.credit > 0 THEN jel.credit ELSE -jel.debit END), 0) as account_balance
         FROM chart_of_accounts coa
         LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
         LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
@@ -231,6 +234,7 @@ function generateBalanceSheet($db, $dateFrom, $dateTo, $format) {
         'report_type' => 'Balance Sheet',
         'date_from' => $dateFrom,
         'date_to' => $dateTo,
+        'as_of_date' => $dateTo,
         'generated_at' => date('Y-m-d H:i:s'),
         'assets' => [
             'accounts' => $assets,
@@ -408,49 +412,185 @@ function calculateExpenses($db, $dateFrom, $dateTo) {
 }
 
 function generateCashFlowStatement($db, $dateFrom, $dateTo, $format) {
-    // Operating activities - simplified calculation
-    $stmt = $db->prepare("
-        SELECT
-            COALESCE(SUM(CASE WHEN jel.debit > 0 THEN jel.debit ELSE -jel.credit END), 0) as cash_flow
-        FROM journal_entry_lines jel
-        JOIN journal_entries je ON jel.journal_entry_id = je.id
-        JOIN chart_of_accounts coa ON jel.account_id = coa.id
-        WHERE coa.account_code LIKE 'CASH%'
-        AND je.entry_date BETWEEN ? AND ?
-    ");
-    $stmt->execute([$dateFrom, $dateTo]);
-    $operatingCashFlow = $stmt->fetch()['cash_flow'] ?? 0;
+    try {
+        // Get revenue accounts for operating activities
+        $stmt = $db->prepare("
+            SELECT
+                coa.account_name as name,
+                coa.account_code,
+                COALESCE(SUM(jel.credit - jel.debit), 0) as amount
+            FROM chart_of_accounts coa
+            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+            WHERE coa.account_type = 'revenue'
+            AND coa.is_active = 1
+            AND je.entry_date BETWEEN ? AND ?
+            GROUP BY coa.id, coa.account_name, coa.account_code
+            HAVING amount != 0
+            ORDER BY coa.account_code
+        ");
+        $stmt->execute([$dateFrom, $dateTo]);
+        $revenues = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $totalRevenue = array_sum(array_column($revenues, 'amount'));
 
-    // Calculate net profit for the period
-    $netProfit = calculateNetProfit($db, $dateFrom, $dateTo);
+        // Get expense accounts (operating expenses)
+        $stmt = $db->prepare("
+            SELECT
+                coa.account_name as name,
+                coa.account_code,
+                COALESCE(SUM(jel.debit - jel.credit), 0) as amount
+            FROM chart_of_accounts coa
+            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+            WHERE coa.account_type = 'expense'
+            AND coa.is_active = 1
+            AND je.entry_date BETWEEN ? AND ?
+            GROUP BY coa.id, coa.account_name, coa.account_code
+            HAVING amount != 0
+            ORDER BY coa.account_code
+        ");
+        $stmt->execute([$dateFrom, $dateTo]);
+        $expenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $totalExpenses = array_sum(array_column($expenses, 'amount'));
 
-    $report = [
-        'report_type' => 'Cash Flow Statement',
-        'date_from' => $dateFrom,
-        'date_to' => $dateTo,
-        'start_date' => $dateFrom,
-        'end_date' => $dateTo,
-        'generated_at' => date('Y-m-d H:i:s'),
-        'cash_flow' => [
+        // Group expenses by category for better reporting
+        $expensesByCategory = [];
+        foreach ($expenses as $expense) {
+            $category = substr($expense['account_code'], 0, 2); // Group by first 2 chars of code
+            if (!isset($expensesByCategory[$category])) {
+                $expensesByCategory[$category] = [
+                    'name' => $expense['name'],
+                    'subcategory' => $category,
+                    'amount' => 0,
+                    'sources' => ''
+                ];
+            }
+            $expensesByCategory[$category]['amount'] += $expense['amount'];
+        }
+
+        // Get investing activities (typically fixed asset changes)
+        $stmt = $db->prepare("
+            SELECT
+                coa.account_name,
+                COALESCE(SUM(CASE WHEN jel.debit > 0 THEN jel.debit ELSE -jel.credit END), 0) as amount
+            FROM chart_of_accounts coa
+            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+            WHERE coa.account_type = 'asset'
+            AND coa.account_code LIKE 'FIXED%'
+            AND coa.is_active = 1
+            AND je.entry_date BETWEEN ? AND ?
+            GROUP BY coa.id, coa.account_name
+            HAVING amount != 0
+            ORDER BY coa.account_code
+        ");
+        $stmt->execute([$dateFrom, $dateTo]);
+        $investingAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $totalInvesting = array_sum(array_column($investingAccounts, 'amount'));
+
+        // Get financing activities (loans, equity changes)
+        $stmt = $db->prepare("
+            SELECT
+                coa.account_name,
+                COALESCE(SUM(CASE WHEN jel.credit > 0 THEN jel.credit ELSE -jel.debit END), 0) as amount
+            FROM chart_of_accounts coa
+            LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
+            LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
+            WHERE (coa.account_type = 'liability' OR coa.account_type = 'equity')
+            AND coa.is_active = 1
+            AND je.entry_date BETWEEN ? AND ?
+            GROUP BY coa.id, coa.account_name
+            HAVING amount != 0
+            ORDER BY coa.account_code
+        ");
+        $stmt->execute([$dateFrom, $dateTo]);
+        $financingAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $totalFinancing = array_sum(array_column($financingAccounts, 'amount'));
+
+        // Calculate net cash flow
+        $operatingCashFlow = $totalRevenue - $totalExpenses;
+        $netCashFlow = $operatingCashFlow + $totalInvesting + $totalFinancing;
+
+        $report = [
+            'report_type' => 'Cash Flow Statement',
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'start_date' => $dateFrom,
+            'end_date' => $dateTo,
+            'generated_at' => date('Y-m-d H:i:s'),
             'operating_activities' => [
-                'net_profit' => $netProfit,
-                'adjustments' => 0, // Simplified
+                'revenue' => $revenues,
+                'total_revenue' => $totalRevenue,
+                'expenses_by_category' => array_values($expensesByCategory),
+                'expense_details' => $expenses,
+                'total_expenses' => $totalExpenses,
                 'amount' => $operatingCashFlow,
                 'net_cash_operating' => $operatingCashFlow
             ],
             'investing_activities' => [
-                'amount' => 0, // Simplified
-                'net_cash_investing' => 0 // Simplified
+                'accounts' => $investingAccounts,
+                'amount' => $totalInvesting,
+                'net_cash_investing' => $totalInvesting
             ],
             'financing_activities' => [
-                'amount' => 0, // Simplified
-                'net_cash_financing' => 0 // Simplified
-            ]
-        ],
-        'net_cash_flow' => $operatingCashFlow
-    ];
+                'accounts' => $financingAccounts,
+                'amount' => $totalFinancing,
+                'net_cash_financing' => $totalFinancing
+            ],
+            'cash_flow' => [
+                'operating_activities' => [
+                    'revenue' => $revenues,
+                    'total_revenue' => $totalRevenue,
+                    'expenses_by_category' => array_values($expensesByCategory),
+                    'expense_details' => $expenses,
+                    'total_expenses' => $totalExpenses,
+                    'amount' => $operatingCashFlow
+                ],
+                'investing_activities' => [
+                    'accounts' => $investingAccounts,
+                    'amount' => $totalInvesting
+                ],
+                'financing_activities' => [
+                    'accounts' => $financingAccounts,
+                    'amount' => $totalFinancing
+                ],
+                'net_change' => $netCashFlow
+            ],
+            'net_cash_flow' => $netCashFlow
+        ];
 
-    outputReport($report, $format, 'cash_flow_statement');
+        outputReport($report, $format, 'cash_flow_statement');
+    } catch (Exception $e) {
+        // Return error response
+        $report = [
+            'report_type' => 'Cash Flow Statement',
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'start_date' => $dateFrom,
+            'end_date' => $dateTo,
+            'generated_at' => date('Y-m-d H:i:s'),
+            'error' => 'Unable to generate report: ' . $e->getMessage(),
+            'operating_activities' => [
+                'revenue' => [],
+                'total_revenue' => 0,
+                'expenses_by_category' => [],
+                'expense_details' => [],
+                'total_expenses' => 0,
+                'amount' => 0
+            ],
+            'investing_activities' => [
+                'accounts' => [],
+                'amount' => 0
+            ],
+            'financing_activities' => [
+                'accounts' => [],
+                'amount' => 0
+            ],
+            'net_cash_flow' => 0
+        ];
+
+        outputReport($report, $format, 'cash_flow_statement');
+    }
 }
 
 function generateTrialBalance($db, $dateFrom, $dateTo, $format) {
@@ -793,9 +933,7 @@ function outputReport($report, $format, $filename) {
             outputCSV($report, $filename);
             break;
         case 'pdf':
-            // For now, return JSON with PDF note
-            $report['note'] = 'PDF format not yet implemented. Use JSON format.';
-            echo json_encode($report);
+            outputPDF($report, $filename);
             break;
         case 'json':
         default:
@@ -804,15 +942,58 @@ function outputReport($report, $format, $filename) {
     }
 }
 
+function outputPDF($report, $filename) {
+    try {
+        require_once __DIR__ . '/../includes/database.php';
+        require_once __DIR__ . '/../includes/pdf_generator.php';
+        
+        // Create a new PDF instance for this report
+        $pdfGenerator = PDFGenerator::getInstance();
+        $pdfGenerator->resetPDF(); // Reset to ensure fresh PDF
+        
+        // Generate appropriate PDF based on report type
+        switch ($filename) {
+            case 'balance_sheet':
+                $pdfGenerator->generateBalanceSheetPDF($report);
+                break;
+            case 'income_statement':
+                $pdfGenerator->generateIncomeStatementPDF($report);
+                break;
+            case 'cash_flow_statement':
+                $pdfGenerator->generateCashFlowPDF($report);
+                break;
+            case 'trial_balance':
+                $pdfGenerator->generateTrialBalancePDF($report);
+                break;
+            default:
+                // Fallback to financial report
+                $pdfGenerator->generateFinancialReportPDF($report['date_from'] ?? date('Y-m-01'), $report['date_to'] ?? date('Y-m-d'));
+        }
+    } catch (Exception $e) {
+        // Fallback to CSV if PDF generation fails
+        error_log('PDF Generation failed: ' . $e->getMessage());
+        outputCSV($report, $filename);
+    }
+}
+
 function outputCSV($report, $filename) {
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="' . $filename . '_' . date('Y-m-d') . '.csv"');
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
 
     $output = fopen('php://output', 'w');
 
     // Write report header
     fputcsv($output, ['Report Type', $report['report_type']]);
     fputcsv($output, ['Generated At', $report['generated_at']]);
+    if (isset($report['date_from']) && isset($report['date_to'])) {
+        fputcsv($output, ['Period', $report['date_from'] . ' to ' . $report['date_to']]);
+    }
+    if (isset($report['as_of_date'])) {
+        fputcsv($output, ['As of', $report['as_of_date']]);
+    }
     fputcsv($output, []);
 
     // Write report-specific data based on type
@@ -820,39 +1001,118 @@ function outputCSV($report, $filename) {
         case 'balance_sheet':
             fputcsv($output, ['ASSETS']);
             fputcsv($output, ['Account', 'Balance']);
-            foreach ($report['assets']['accounts'] as $account) {
-                fputcsv($output, [$account['account_name'], $account['balance']]);
+            if (isset($report['assets']['accounts'])) {
+                foreach ($report['assets']['accounts'] as $account) {
+                    fputcsv($output, [$account['account_name'], $account['account_balance'] ?? $account['balance'] ?? 0]);
+                }
             }
             fputcsv($output, ['Total Assets', $report['assets']['total']]);
             fputcsv($output, []);
 
             fputcsv($output, ['LIABILITIES']);
             fputcsv($output, ['Account', 'Balance']);
-            foreach ($report['liabilities']['accounts'] as $account) {
-                fputcsv($output, [$account['account_name'], $account['balance']]);
+            if (isset($report['liabilities']['accounts'])) {
+                foreach ($report['liabilities']['accounts'] as $account) {
+                    fputcsv($output, [$account['account_name'], $account['account_balance'] ?? $account['balance'] ?? 0]);
+                }
             }
             fputcsv($output, ['Total Liabilities', $report['liabilities']['total']]);
             fputcsv($output, []);
 
             fputcsv($output, ['EQUITY']);
             fputcsv($output, ['Account', 'Balance']);
-            foreach ($report['equity']['accounts'] as $account) {
-                fputcsv($output, [$account['account_name'], $account['balance']]);
+            if (isset($report['equity']['accounts'])) {
+                foreach ($report['equity']['accounts'] as $account) {
+                    fputcsv($output, [$account['account_name'], $account['account_balance'] ?? $account['balance'] ?? 0]);
+                }
             }
             fputcsv($output, ['Retained Earnings', $report['equity']['retained_earnings']]);
             fputcsv($output, ['Total Equity', $report['equity']['total']]);
             break;
 
+        case 'income_statement':
+            fputcsv($output, ['REVENUE']);
+            fputcsv($output, ['Account', 'Amount']);
+            if (isset($report['revenue']['accounts'])) {
+                foreach ($report['revenue']['accounts'] as $account) {
+                    fputcsv($output, [$account['account_name'], $account['amount'] ?? 0]);
+                }
+            }
+            fputcsv($output, ['Total Revenue', $report['revenue']['total']]);
+            fputcsv($output, []);
+
+            fputcsv($output, ['EXPENSES']);
+            fputcsv($output, ['Account', 'Amount']);
+            if (isset($report['expenses']['accounts'])) {
+                foreach ($report['expenses']['accounts'] as $account) {
+                    fputcsv($output, [$account['account_name'], $account['amount'] ?? 0]);
+                }
+            }
+            fputcsv($output, ['Total Expenses', $report['expenses']['total']]);
+            fputcsv($output, []);
+
+            fputcsv($output, ['Net Profit', $report['net_profit']]);
+            break;
+
+        case 'cash_flow_statement':
+            fputcsv($output, ['OPERATING ACTIVITIES']);
+            
+            fputcsv($output, ['Cash Inflows (Revenue)']);
+            fputcsv($output, ['Account', 'Amount']);
+            if (isset($report['operating_activities']['revenue'])) {
+                foreach ($report['operating_activities']['revenue'] as $account) {
+                    fputcsv($output, [$account['name'], $account['amount'] ?? 0]);
+                }
+            }
+            fputcsv($output, ['Total Revenue', $report['operating_activities']['total_revenue'] ?? 0]);
+            fputcsv($output, []);
+
+            fputcsv($output, ['Cash Outflows (Operating Expenses)']);
+            fputcsv($output, ['Category', 'Amount']);
+            if (isset($report['operating_activities']['expenses_by_category'])) {
+                foreach ($report['operating_activities']['expenses_by_category'] as $expense) {
+                    fputcsv($output, [$expense['name'], $expense['amount'] ?? 0]);
+                }
+            }
+            fputcsv($output, ['Total Operating Expenses', $report['operating_activities']['total_expenses'] ?? 0]);
+            fputcsv($output, []);
+
+            fputcsv($output, ['Net Cash from Operating Activities', $report['operating_activities']['amount'] ?? 0]);
+            fputcsv($output, []);
+
+            fputcsv($output, ['INVESTING ACTIVITIES']);
+            if (isset($report['investing_activities']['accounts'])) {
+                foreach ($report['investing_activities']['accounts'] as $account) {
+                    fputcsv($output, [$account['account_name'], $account['amount'] ?? 0]);
+                }
+            }
+            fputcsv($output, ['Net Cash from Investing Activities', $report['investing_activities']['amount'] ?? 0]);
+            fputcsv($output, []);
+
+            fputcsv($output, ['FINANCING ACTIVITIES']);
+            if (isset($report['financing_activities']['accounts'])) {
+                foreach ($report['financing_activities']['accounts'] as $account) {
+                    fputcsv($output, [$account['account_name'], $account['amount'] ?? 0]);
+                }
+            }
+            fputcsv($output, ['Net Cash from Financing Activities', $report['financing_activities']['amount'] ?? 0]);
+            fputcsv($output, []);
+
+            fputcsv($output, ['Net Change in Cash', $report['net_cash_flow'] ?? 0]);
+            break;
+
         case 'trial_balance':
             fputcsv($output, ['Account Code', 'Account Name', 'Debit Balance', 'Credit Balance', 'Balance']);
-            foreach ($report['accounts'] as $account) {
-                fputcsv($output, [
-                    $account['account_code'],
-                    $account['account_name'],
-                    $account['debit_balance'],
-                    $account['credit_balance'],
-                    $account['balance']
-                ]);
+            if (isset($report['accounts'])) {
+                foreach ($report['accounts'] as $account) {
+                    fputcsv($output, [
+                        $account['account_code'],
+                        $account['account_name'],
+                        $account['debit_balance'],
+                        $account['credit_balance'],
+                        $account['balance']
+                    ]);
+                }
             }
             fputcsv($output, []);
             fputcsv($output, ['Total Debits', $report['totals']['debit']]);
@@ -861,14 +1121,16 @@ function outputCSV($report, $filename) {
             break;
         case 'chart_of_accounts':
             fputcsv($output, ['Account Code', 'Account Name', 'Type', 'Category', 'Description']);
-            foreach ($report['accounts'] as $account) {
-                fputcsv($output, [
-                    $account['account_code'],
-                    $account['account_name'],
-                    $account['account_type'],
-                    $account['category'],
-                    $account['description']
-                ]);
+            if (isset($report['accounts'])) {
+                foreach ($report['accounts'] as $account) {
+                    fputcsv($output, [
+                        $account['account_code'],
+                        $account['account_name'],
+                        $account['account_type'],
+                        $account['category'],
+                        $account['description']
+                    ]);
+                }
             }
             fputcsv($output, []);
             fputcsv($output, ['Total Accounts', $report['total_accounts']]);

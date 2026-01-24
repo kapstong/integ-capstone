@@ -629,7 +629,8 @@ require_once '../includes/database.php';
                             <option value="annually">Annually</option>
                             <option value="custom">Custom Range</option>
                         </select>
-                        <button class="btn btn-outline-secondary me-2" onclick="exportIncomeStatement('csv')"><i class="fas fa-download me-2"></i>Export CSV</button>
+                        <button class="btn btn-outline-secondary me-2" onclick="exportIncomeStatement('csv')" title="Export as CSV"><i class="fas fa-file-csv me-2"></i>Export CSV</button>
+                        <button class="btn btn-outline-secondary me-2" onclick="exportIncomeStatement('pdf')" title="Export as PDF"><i class="fas fa-file-pdf me-2"></i>Export PDF</button>
                         <button class="btn btn-primary" onclick="generateIncomeStatement()"><i class="fas fa-sync me-2"></i>Generate Report</button>
                     </div>
                 </div>
@@ -703,7 +704,8 @@ require_once '../includes/database.php';
                                 </div>
                             </div>
                         </div>
-                        <button class="btn btn-outline-secondary me-2" onclick="exportBalanceSheet('csv')"><i class="fas fa-download me-2"></i>Export CSV</button>
+                        <button class="btn btn-outline-secondary me-2" onclick="exportBalanceSheet('csv')" title="Export as CSV"><i class="fas fa-file-csv me-2"></i>Export CSV</button>
+                        <button class="btn btn-outline-secondary me-2" onclick="exportBalanceSheet('pdf')" title="Export as PDF"><i class="fas fa-file-pdf me-2"></i>Export PDF</button>
                         <button class="btn btn-primary" onclick="generateBalanceSheet()"><i class="fas fa-sync me-2"></i>Generate Report</button>
                     </div>
                 </div>
@@ -756,7 +758,8 @@ require_once '../includes/database.php';
                                 </div>
                             </div>
                         </div>
-                        <button class="btn btn-outline-secondary me-2" onclick="exportCashFlow('csv')"><i class="fas fa-download me-2"></i>Export CSV</button>
+                        <button class="btn btn-outline-secondary me-2" onclick="exportCashFlow('csv')" title="Export as CSV"><i class="fas fa-file-csv me-2"></i>Export CSV</button>
+                        <button class="btn btn-outline-secondary me-2" onclick="exportCashFlow('pdf')" title="Export as PDF"><i class="fas fa-file-pdf me-2"></i>Export PDF</button>
                         <button class="btn btn-primary" onclick="generateCashFlow()"><i class="fas fa-sync me-2"></i>Generate Report</button>
                     </div>
                 </div>
@@ -1068,8 +1071,28 @@ require_once '../includes/database.php';
 
         // Export income statement
         function exportIncomeStatement(format) {
+            format = format || 'csv'; // default to CSV
+            
             if (!currentIncomeStatementData) {
                 showAlert('Please generate the report first', 'warning');
+                return;
+            }
+
+            if (format === 'pdf') {
+                // Export via API with PDF format
+                const dateFrom = currentIncomeStatementData.date_from;
+                const dateTo = currentIncomeStatementData.date_to;
+                const url = `../api/reports.php?type=income_statement&date_from=${dateFrom}&date_to=${dateTo}&format=pdf`;
+                
+                // Create and trigger download
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `income_statement_${dateFrom}_to_${dateTo}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showAlert('Income statement PDF download started', 'success');
                 return;
             }
 
@@ -1840,8 +1863,28 @@ require_once '../includes/database.php';
 
         // Export functions
         function exportBalanceSheet(format) {
+            format = format || 'csv'; // default to CSV
+            
             if (!currentBalanceSheetData) {
                 showAlert('Please generate the balance sheet first', 'warning');
+                return;
+            }
+
+            if (format === 'pdf') {
+                // Export via API with PDF format
+                const dateFrom = currentBalanceSheetData.date_from;
+                const dateTo = currentBalanceSheetData.as_of_date;
+                const url = `../api/reports.php?type=balance_sheet&date_from=${dateFrom}&date_to=${dateTo}&format=pdf`;
+                
+                // Create and trigger download
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `balance_sheet_${dateTo}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showAlert('Balance Sheet PDF download started', 'success');
                 return;
             }
 
@@ -1895,8 +1938,28 @@ require_once '../includes/database.php';
         }
 
         function exportCashFlow(format) {
+            format = format || 'csv'; // default to CSV
+            
             if (!currentCashFlowData) {
                 showAlert('Please generate the cash flow statement first', 'warning');
+                return;
+            }
+
+            if (format === 'pdf') {
+                // Export via API with PDF format
+                const dateFrom = currentCashFlowData.start_date;
+                const dateTo = currentCashFlowData.end_date;
+                const url = `../api/reports.php?type=cash_flow&date_from=${dateFrom}&date_to=${dateTo}&format=pdf`;
+                
+                // Create and trigger download
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `cash_flow_${dateFrom}_to_${dateTo}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showAlert('Cash Flow PDF download started', 'success');
                 return;
             }
 
@@ -1905,11 +1968,11 @@ require_once '../includes/database.php';
             csvContent += 'Cash Flow Statement\n';
             csvContent += `Period: ${currentCashFlowData.start_date} to ${currentCashFlowData.end_date}\n\n`;
 
-            // Operating Activities
+            // Operating Activities - use top-level structure
             csvContent += 'OPERATING ACTIVITIES\n\n';
             csvContent += 'Cash Inflows (Revenue)\n';
             csvContent += 'Account,Amount\n';
-            const operating = currentCashFlowData.cash_flow.operating_activities;
+            const operating = currentCashFlowData.operating_activities;
 
             if (operating.revenue && operating.revenue.length > 0) {
                 operating.revenue.forEach(rev => {
@@ -1937,27 +2000,29 @@ require_once '../includes/database.php';
 
             csvContent += `\n"Net Cash from Operating Activities","","","${operating.amount}"\n\n`;
 
-            // Investing Activities
+            // Investing Activities - use top-level structure
             csvContent += 'INVESTING ACTIVITIES\n';
             csvContent += 'Account,Amount\n';
-            if (currentCashFlowData.cash_flow.investing_activities.accounts) {
-                currentCashFlowData.cash_flow.investing_activities.accounts.forEach(account => {
+            const investing = currentCashFlowData.investing_activities;
+            if (investing.accounts) {
+                investing.accounts.forEach(account => {
                     csvContent += `"${account.account_name}","${account.amount || 0}"\n`;
                 });
             }
-            csvContent += `"Net Cash from Investing Activities","${currentCashFlowData.cash_flow.investing_activities.amount}"\n\n`;
+            csvContent += `"Net Cash from Investing Activities","${investing.amount}"\n\n`;
 
-            // Financing Activities
+            // Financing Activities - use top-level structure
             csvContent += 'FINANCING ACTIVITIES\n';
             csvContent += 'Account,Amount\n';
-            if (currentCashFlowData.cash_flow.financing_activities.accounts) {
-                currentCashFlowData.cash_flow.financing_activities.accounts.forEach(account => {
+            const financing = currentCashFlowData.financing_activities;
+            if (financing.accounts) {
+                financing.accounts.forEach(account => {
                     csvContent += `"${account.account_name}","${account.amount || 0}"\n`;
                 });
             }
-            csvContent += `"Net Cash from Financing Activities","${currentCashFlowData.cash_flow.financing_activities.amount}"\n\n`;
+            csvContent += `"Net Cash from Financing Activities","${financing.amount}"\n\n`;
 
-            csvContent += `"Net Change in Cash","${currentCashFlowData.cash_flow.net_change}"\n`;
+            csvContent += `"Net Change in Cash","${currentCashFlowData.net_cash_flow}"\n`;
 
             // Download CSV
             const encodedUri = encodeURI(csvContent);
@@ -1967,6 +2032,9 @@ require_once '../includes/database.php';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+
+            showAlert('Cash flow statement exported successfully', 'success');
+        }
 
             showAlert('Cash flow statement exported successfully', 'success');
         }

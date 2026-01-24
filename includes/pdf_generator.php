@@ -485,6 +485,312 @@ class PDFGenerator {
         $this->pdf = null;
         $this->initializePDF();
     }
+
+    /**
+     * Generate Balance Sheet PDF
+     */
+    public function generateBalanceSheetPDF($report) {
+        try {
+            $this->pdf->AddPage();
+
+            // Title
+            $this->pdf->SetFont('helvetica', 'B', 16);
+            $this->pdf->Cell(0, 10, 'BALANCE SHEET', 0, 1, 'C');
+            $this->pdf->SetFont('helvetica', '', 11);
+            $this->pdf->Cell(0, 8, 'As of: ' . date('F j, Y', strtotime($report['as_of_date'] ?? date('Y-m-d'))), 0, 1, 'C');
+            $this->pdf->Ln(5);
+
+            // Assets Section
+            $this->pdf->SetFont('helvetica', 'B', 12);
+            $this->pdf->Cell(0, 8, 'ASSETS', 0, 1, 'L');
+            $this->pdf->SetFont('helvetica', '', 10);
+
+            if (isset($report['assets']['accounts'])) {
+                foreach ($report['assets']['accounts'] as $account) {
+                    $this->pdf->Cell(100, 6, $account['account_name'], 0, 0);
+                    $this->pdf->Cell(0, 6, '₱' . number_format($account['account_balance'] ?? $account['balance'] ?? 0, 2), 0, 1, 'R');
+                }
+            }
+            $this->pdf->SetFont('helvetica', 'B', 10);
+            $this->pdf->Cell(100, 7, 'Total Assets', 0, 0);
+            $this->pdf->Cell(0, 7, '₱' . number_format($report['assets']['total'] ?? 0, 2), 0, 1, 'R');
+            $this->pdf->Ln(5);
+
+            // Liabilities Section
+            $this->pdf->SetFont('helvetica', 'B', 12);
+            $this->pdf->Cell(0, 8, 'LIABILITIES', 0, 1, 'L');
+            $this->pdf->SetFont('helvetica', '', 10);
+
+            if (isset($report['liabilities']['accounts'])) {
+                foreach ($report['liabilities']['accounts'] as $account) {
+                    $this->pdf->Cell(100, 6, $account['account_name'], 0, 0);
+                    $this->pdf->Cell(0, 6, '₱' . number_format($account['account_balance'] ?? $account['balance'] ?? 0, 2), 0, 1, 'R');
+                }
+            }
+            $this->pdf->SetFont('helvetica', 'B', 10);
+            $this->pdf->Cell(100, 7, 'Total Liabilities', 0, 0);
+            $this->pdf->Cell(0, 7, '₱' . number_format($report['liabilities']['total'] ?? 0, 2), 0, 1, 'R');
+            $this->pdf->Ln(5);
+
+            // Equity Section
+            $this->pdf->SetFont('helvetica', 'B', 12);
+            $this->pdf->Cell(0, 8, 'EQUITY', 0, 1, 'L');
+            $this->pdf->SetFont('helvetica', '', 10);
+
+            if (isset($report['equity']['accounts'])) {
+                foreach ($report['equity']['accounts'] as $account) {
+                    $this->pdf->Cell(100, 6, $account['account_name'], 0, 0);
+                    $this->pdf->Cell(0, 6, '₱' . number_format($account['account_balance'] ?? $account['balance'] ?? 0, 2), 0, 1, 'R');
+                }
+            }
+            $this->pdf->SetFont('helvetica', '', 10);
+            $this->pdf->Cell(100, 6, 'Retained Earnings', 0, 0);
+            $this->pdf->Cell(0, 6, '₱' . number_format($report['equity']['retained_earnings'] ?? 0, 2), 0, 1, 'R');
+            
+            $this->pdf->SetFont('helvetica', 'B', 10);
+            $this->pdf->Cell(100, 7, 'Total Equity', 0, 0);
+            $this->pdf->Cell(0, 7, '₱' . number_format($report['equity']['total'] ?? 0, 2), 0, 1, 'R');
+
+            // Timestamp
+            $this->pdf->Ln(5);
+            $this->pdf->SetFont('helvetica', 'I', 9);
+            $this->pdf->Cell(0, 6, 'Generated on ' . date('M j, Y H:i:s'), 0, 1, 'C');
+
+            $filename = 'balance_sheet_' . date('Y-m-d') . '.pdf';
+            return $this->outputPDF($filename);
+        } catch (Exception $e) {
+            throw new Exception('Failed to generate balance sheet PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generate Income Statement PDF
+     */
+    public function generateIncomeStatementPDF($report) {
+        try {
+            $this->pdf->AddPage();
+
+            // Title
+            $this->pdf->SetFont('helvetica', 'B', 16);
+            $this->pdf->Cell(0, 10, 'INCOME STATEMENT', 0, 1, 'C');
+            $this->pdf->SetFont('helvetica', '', 11);
+            $this->pdf->Cell(0, 8, 'Period: ' . date('F j, Y', strtotime($report['date_from'])) . ' to ' . date('F j, Y', strtotime($report['date_to'])), 0, 1, 'C');
+            $this->pdf->Ln(5);
+
+            // Revenue Section
+            $this->pdf->SetFont('helvetica', 'B', 12);
+            $this->pdf->Cell(0, 8, 'REVENUE', 0, 1, 'L');
+            $this->pdf->SetFont('helvetica', '', 10);
+
+            if (isset($report['revenue']['accounts'])) {
+                foreach ($report['revenue']['accounts'] as $account) {
+                    $this->pdf->Cell(100, 6, $account['account_name'], 0, 0);
+                    $this->pdf->Cell(0, 6, '₱' . number_format($account['amount'] ?? 0, 2), 0, 1, 'R');
+                }
+            }
+            $this->pdf->SetFont('helvetica', 'B', 10);
+            $this->pdf->Cell(100, 7, 'Total Revenue', 0, 0);
+            $this->pdf->Cell(0, 7, '₱' . number_format($report['revenue']['total'] ?? 0, 2), 0, 1, 'R');
+            $this->pdf->Ln(3);
+
+            // Expenses Section
+            $this->pdf->SetFont('helvetica', 'B', 12);
+            $this->pdf->Cell(0, 8, 'OPERATING EXPENSES', 0, 1, 'L');
+            $this->pdf->SetFont('helvetica', '', 10);
+
+            if (isset($report['expenses']['accounts'])) {
+                foreach ($report['expenses']['accounts'] as $account) {
+                    $this->pdf->Cell(100, 6, $account['account_name'], 0, 0);
+                    $this->pdf->Cell(0, 6, '₱' . number_format($account['amount'] ?? 0, 2), 0, 1, 'R');
+                }
+            }
+            $this->pdf->SetFont('helvetica', 'B', 10);
+            $this->pdf->Cell(100, 7, 'Total Expenses', 0, 0);
+            $this->pdf->Cell(0, 7, '₱' . number_format($report['expenses']['total'] ?? 0, 2), 0, 1, 'R');
+            $this->pdf->Ln(5);
+
+            // Net Profit
+            $this->pdf->SetFont('helvetica', 'B', 12);
+            $this->pdf->Cell(100, 8, 'NET PROFIT', 0, 0);
+            $this->pdf->Cell(0, 8, '₱' . number_format($report['net_profit'] ?? 0, 2), 0, 1, 'R');
+
+            // Timestamp
+            $this->pdf->Ln(10);
+            $this->pdf->SetFont('helvetica', 'I', 9);
+            $this->pdf->Cell(0, 6, 'Generated on ' . date('M j, Y H:i:s'), 0, 1, 'C');
+
+            $filename = 'income_statement_' . date('Y-m-d') . '.pdf';
+            return $this->outputPDF($filename);
+        } catch (Exception $e) {
+            throw new Exception('Failed to generate income statement PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generate Cash Flow Statement PDF
+     */
+    public function generateCashFlowPDF($report) {
+        try {
+            $this->pdf->AddPage();
+
+            // Title
+            $this->pdf->SetFont('helvetica', 'B', 16);
+            $this->pdf->Cell(0, 10, 'CASH FLOW STATEMENT', 0, 1, 'C');
+            $this->pdf->SetFont('helvetica', '', 11);
+            $this->pdf->Cell(0, 8, 'Period: ' . date('F j, Y', strtotime($report['start_date'])) . ' to ' . date('F j, Y', strtotime($report['end_date'])), 0, 1, 'C');
+            $this->pdf->Ln(5);
+
+            $operating = $report['operating_activities'] ?? [];
+            $investing = $report['investing_activities'] ?? [];
+            $financing = $report['financing_activities'] ?? [];
+
+            // Operating Activities
+            $this->pdf->SetFont('helvetica', 'B', 12);
+            $this->pdf->Cell(0, 8, 'OPERATING ACTIVITIES', 0, 1, 'L');
+            $this->pdf->SetFont('helvetica', '', 10);
+
+            // Revenue inflows
+            $this->pdf->SetFont('helvetica', 'B', 10);
+            $this->pdf->Cell(0, 6, 'Cash Inflows (Revenue):', 0, 1);
+            $this->pdf->SetFont('helvetica', '', 10);
+
+            if (isset($operating['revenue'])) {
+                foreach ($operating['revenue'] as $rev) {
+                    $this->pdf->Cell(110, 5, '  ' . $rev['name'], 0, 0);
+                    $this->pdf->Cell(0, 5, '₱' . number_format($rev['amount'] ?? 0, 2), 0, 1, 'R');
+                }
+            }
+            $this->pdf->SetFont('helvetica', 'B', 10);
+            $this->pdf->Cell(110, 6, '  Total Revenue', 0, 0);
+            $this->pdf->Cell(0, 6, '₱' . number_format($operating['total_revenue'] ?? 0, 2), 0, 1, 'R');
+
+            // Operating expenses
+            $this->pdf->SetFont('helvetica', 'B', 10);
+            $this->pdf->Cell(0, 6, 'Cash Outflows (Operating Expenses):', 0, 1);
+            $this->pdf->SetFont('helvetica', '', 10);
+
+            if (isset($operating['expenses_by_category'])) {
+                foreach ($operating['expenses_by_category'] as $expense) {
+                    $this->pdf->Cell(110, 5, '  ' . $expense['name'], 0, 0);
+                    $this->pdf->Cell(0, 5, '₱' . number_format($expense['amount'] ?? 0, 2), 0, 1, 'R');
+                }
+            }
+            $this->pdf->SetFont('helvetica', 'B', 10);
+            $this->pdf->Cell(110, 6, '  Total Operating Expenses', 0, 0);
+            $this->pdf->Cell(0, 6, '₱' . number_format($operating['total_expenses'] ?? 0, 2), 0, 1, 'R');
+            
+            $this->pdf->SetFont('helvetica', 'B', 10);
+            $this->pdf->Cell(110, 7, 'Net Cash from Operating Activities', 0, 0);
+            $this->pdf->Cell(0, 7, '₱' . number_format($operating['amount'] ?? 0, 2), 0, 1, 'R');
+            $this->pdf->Ln(3);
+
+            // Investing Activities
+            $this->pdf->SetFont('helvetica', 'B', 12);
+            $this->pdf->Cell(0, 8, 'INVESTING ACTIVITIES', 0, 1, 'L');
+            $this->pdf->SetFont('helvetica', '', 10);
+
+            if (isset($investing['accounts']) && count($investing['accounts']) > 0) {
+                foreach ($investing['accounts'] as $account) {
+                    $this->pdf->Cell(110, 6, '  ' . $account['account_name'], 0, 0);
+                    $this->pdf->Cell(0, 6, '₱' . number_format($account['amount'] ?? 0, 2), 0, 1, 'R');
+                }
+            } else {
+                $this->pdf->Cell(0, 6, 'No investing activities', 0, 1);
+            }
+            $this->pdf->SetFont('helvetica', 'B', 10);
+            $this->pdf->Cell(110, 7, 'Net Cash from Investing Activities', 0, 0);
+            $this->pdf->Cell(0, 7, '₱' . number_format($investing['amount'] ?? 0, 2), 0, 1, 'R');
+            $this->pdf->Ln(3);
+
+            // Financing Activities
+            $this->pdf->SetFont('helvetica', 'B', 12);
+            $this->pdf->Cell(0, 8, 'FINANCING ACTIVITIES', 0, 1, 'L');
+            $this->pdf->SetFont('helvetica', '', 10);
+
+            if (isset($financing['accounts']) && count($financing['accounts']) > 0) {
+                foreach ($financing['accounts'] as $account) {
+                    $this->pdf->Cell(110, 6, '  ' . $account['account_name'], 0, 0);
+                    $this->pdf->Cell(0, 6, '₱' . number_format($account['amount'] ?? 0, 2), 0, 1, 'R');
+                }
+            } else {
+                $this->pdf->Cell(0, 6, 'No financing activities', 0, 1);
+            }
+            $this->pdf->SetFont('helvetica', 'B', 10);
+            $this->pdf->Cell(110, 7, 'Net Cash from Financing Activities', 0, 0);
+            $this->pdf->Cell(0, 7, '₱' . number_format($financing['amount'] ?? 0, 2), 0, 1, 'R');
+            $this->pdf->Ln(5);
+
+            // Net Change in Cash
+            $this->pdf->SetFont('helvetica', 'B', 12);
+            $this->pdf->Cell(110, 8, 'Net Increase/(Decrease) in Cash', 0, 0);
+            $this->pdf->Cell(0, 8, '₱' . number_format($report['net_cash_flow'] ?? 0, 2), 0, 1, 'R');
+
+            // Timestamp
+            $this->pdf->Ln(10);
+            $this->pdf->SetFont('helvetica', 'I', 9);
+            $this->pdf->Cell(0, 6, 'Generated on ' . date('M j, Y H:i:s'), 0, 1, 'C');
+
+            $filename = 'cash_flow_' . date('Y-m-d') . '.pdf';
+            return $this->outputPDF($filename);
+        } catch (Exception $e) {
+            throw new Exception('Failed to generate cash flow PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generate Trial Balance PDF
+     */
+    public function generateTrialBalancePDF($report) {
+        try {
+            $this->pdf->AddPage();
+
+            // Title
+            $this->pdf->SetFont('helvetica', 'B', 16);
+            $this->pdf->Cell(0, 10, 'TRIAL BALANCE', 0, 1, 'C');
+            $this->pdf->SetFont('helvetica', '', 11);
+            $this->pdf->Cell(0, 8, 'As of: ' . date('F j, Y', strtotime($report['date_to'])), 0, 1, 'C');
+            $this->pdf->Ln(5);
+
+            // Table header
+            $this->pdf->SetFont('helvetica', 'B', 10);
+            $this->pdf->Cell(35, 7, 'Account Code', 1, 0, 'L');
+            $this->pdf->Cell(60, 7, 'Account Name', 1, 0, 'L');
+            $this->pdf->Cell(35, 7, 'Debit', 1, 0, 'R');
+            $this->pdf->Cell(35, 7, 'Credit', 1, 1, 'R');
+
+            // Table content
+            $this->pdf->SetFont('helvetica', '', 9);
+            if (isset($report['accounts'])) {
+                foreach ($report['accounts'] as $account) {
+                    $this->pdf->Cell(35, 6, $account['account_code'], 0, 0);
+                    $this->pdf->Cell(60, 6, substr($account['account_name'], 0, 40), 0, 0);
+                    $this->pdf->Cell(35, 6, number_format($account['debit_balance'] ?? 0, 2), 0, 0, 'R');
+                    $this->pdf->Cell(35, 6, number_format($account['credit_balance'] ?? 0, 2), 0, 1, 'R');
+                }
+            }
+
+            // Totals
+            $this->pdf->SetFont('helvetica', 'B', 10);
+            $this->pdf->Cell(95, 7, 'TOTALS:', 1, 0);
+            $this->pdf->Cell(35, 7, number_format($report['totals']['debit'] ?? 0, 2), 1, 0, 'R');
+            $this->pdf->Cell(35, 7, number_format($report['totals']['credit'] ?? 0, 2), 1, 1, 'R');
+
+            // Difference
+            $this->pdf->Ln(5);
+            $this->pdf->SetFont('helvetica', '', 10);
+            $this->pdf->Cell(0, 6, 'Difference: ' . number_format($report['totals']['difference'] ?? 0, 2), 0, 1);
+
+            // Timestamp
+            $this->pdf->Ln(10);
+            $this->pdf->SetFont('helvetica', 'I', 9);
+            $this->pdf->Cell(0, 6, 'Generated on ' . date('M j, Y H:i:s'), 0, 1, 'C');
+
+            $filename = 'trial_balance_' . date('Y-m-d') . '.pdf';
+            return $this->outputPDF($filename);
+        } catch (Exception $e) {
+            throw new Exception('Failed to generate trial balance PDF: ' . $e->getMessage());
+        }
+    }
 }
 ?>
 
