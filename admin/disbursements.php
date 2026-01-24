@@ -1014,16 +1014,19 @@ body {
 
             tbody.innerHTML = '';
 
-            // Filter only approved claims and sort by created_at descending
-            const approvedClaims = normalizedClaims.filter(claim => claim.status === 'Approved')
-                                        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            // Filter approved claims but exclude those that have already been paid/processed
+            const unprocessedApprovedClaims = normalizedClaims.filter(claim => {
+                const status = (claim.status || '').toLowerCase();
+                // Show only approved claims that haven't been paid yet
+                return status === 'approved' && status !== 'paid' && status !== 'processed';
+            }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-            if (approvedClaims.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No approved claims ready for payment processing</td></tr>';
+            if (unprocessedApprovedClaims.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">All approved claims have been processed and moved to Disbursement Records</td></tr>';
                 return;
             }
 
-            approvedClaims.forEach(claim => {
+            unprocessedApprovedClaims.forEach(claim => {
                 const amount = parseFloat(claim.total_amount || 0);
                 const statusBadge = claim.status === 'Approved' ? '<span class="badge bg-success">Approved</span>' : '<span class="badge bg-secondary">' + claim.status + '</span>';
 

@@ -1089,8 +1089,23 @@ body {
 
             tbody.innerHTML = '';
 
-            // Show all claims (not just approved) - let user decide which to process
-            const sortedClaims = normalizedClaims.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            // Filter out already processed/paid claims - only show pending/approved claims that haven't been processed to disbursements yet
+            const unprocessedClaims = normalizedClaims.filter(claim => {
+                const status = (claim.status || 'Pending').toLowerCase();
+                // Exclude claims that are already paid or fully processed
+                return status !== 'paid' && status !== 'processed' && status !== 'cancelled' && status !== 'rejected';
+            });
+
+            if (unprocessedClaims.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">All claims have been processed and moved to Disbursement Records</td></tr>';
+                if (window.updateTabBadge) {
+                    window.updateTabBadge('claims-tab', 0);
+                }
+                return;
+            }
+
+            // Show unprocessed claims - let user process which ones to disburse
+            const sortedClaims = unprocessedClaims.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
             sortedClaims.forEach(claim => {
                 const amount = parseFloat(claim.total_amount || claim.amount || 0);
