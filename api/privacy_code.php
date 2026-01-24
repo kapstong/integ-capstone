@@ -137,8 +137,8 @@ function handleVerifyCode($user) {
         $code_time = $_SESSION['privacy_code_time'] ?? 0;
         $current_time = time();
         
-        // Check if code expired (5 minutes = 300 seconds)
-        if ($current_time - $code_time > 300) {
+        // Check if code expired (2 minutes = 120 seconds)
+        if ($current_time - $code_time > 120) {
             unset($_SESSION['privacy_code']);
             unset($_SESSION['privacy_code_time']);
             http_response_code(400);

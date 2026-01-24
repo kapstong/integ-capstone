@@ -219,7 +219,7 @@
      * Start countdown timer for code expiration
      */
     function startCodeTimer() {
-        let secondsLeft = 300; // 5 minutes
+        let secondsLeft = 120; // 2 minutes
         const timerEl = document.getElementById('codeTimer');
 
         if (codeTimerInterval) {
