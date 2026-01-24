@@ -220,6 +220,11 @@ try {
         $incomeAmounts = [0, 0, 0, 0, 0, 0];
     }
 
+    // Annual budget total (for variance calculation)
+    $stmt = $db->prepare("SELECT COALESCE(SUM(bi.budgeted_amount), 0) as total FROM budget_items bi JOIN budgets b ON bi.budget_id = b.id WHERE b.budget_year = YEAR(CURDATE())");
+    $stmt->execute();
+    $annualBudgetTotal = (float)$stmt->fetch()['total'];
+
 } catch (Exception $e) {
     // Handle database errors gracefully
     Logger::getInstance()->logDatabaseError('Dashboard metrics calculation', $e->getMessage());
@@ -246,6 +251,7 @@ try {
     $paidBills = 0;
     $overdueBills = 0;
     $dbError = $e->getMessage();
+    $annualBudgetTotal = 0;
 }
 ?>
 <!DOCTYPE html>
@@ -1156,6 +1162,67 @@ body {
                                 </div>
                             </div>
 
+                            <!-- Forecasting (moved from Budget Management) -->
+                            <div class="row mt-4">
+                                <div class="col-lg-6">
+                                    <div class="card h-100">
+                                        <div class="card-header d-flex align-items-center">
+                                            <i class="fas fa-crystal-ball text-primary me-3 fa-lg"></i>
+                                            <div>
+                                                <h6 class="mb-0">Forecasting</h6>
+                                                <small class="text-muted">Projected spend and variance based on historical cash flow</small>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row mb-3">
+                                                <div class="col-6">
+                                                    <div class="card forecast-card">
+                                                        <div class="card-body">
+                                                            <h6>Projected Year-End Spend</h6>
+                                                            <h3 id="projectedYearEnd">Loading...</h3>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div class="card forecast-card">
+                                                        <div class="card-body">
+                                                            <h6>Expected Variance</h6>
+                                                            <h3 id="expectedVariance">Loading...</h3>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="chart-container mb-3">
+                                                <canvas id="forecastChart"></canvas>
+                                            </div>
+                                            <div>
+                                                <button id="refreshForecastBtn" class="btn btn-outline-secondary"><i class="fas fa-rotate me-2"></i>Refresh Forecast</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6">
+                                    <div class="card h-100">
+                                        <div class="card-header d-flex align-items-center">
+                                            <i class="fas fa-list text-secondary me-3 fa-lg"></i>
+                                            <div>
+                                                <h6 class="mb-0">Forecast Drivers</h6>
+                                                <small class="text-muted">Key items influencing the forecast</small>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="table-responsive">
+                                                <table class="table table-striped">
+                                                    <tbody id="forecastDriversBody">
+                                                        <tr><td colspan="4" class="text-center text-muted">Loading forecast drivers...</td></tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Reports Tab -->
                             <div class="tab-pane fade" id="reports" role="tabpanel" aria-labelledby="reports-tab" style="padding-bottom: 100px;">
                                 <div class="row g-3">
@@ -1211,6 +1278,71 @@ body {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../includes/alert-modal.js"></script>
+    <script src="../includes/forecasting.js"></script>
+    <script>
+        async function loadDashboardForecast() {
+            try {
+                const apiPath = '../api/budgets.php?action=forecast&months=48';
+                const resp = await fetch(apiPath);
+                const data = await resp.json();
+                if (data.error) return console.warn('Forecast API:', data.error);
+                const history = data.history || [];
+                const avgMonthly = data.summary && data.summary.average_monthly ? data.summary.average_monthly : (history.length ? history.reduce((s,x)=>s+(x.value||0),0)/history.length : 0);
+                const now = new Date();
+                const monthsRemaining = 12 - (now.getMonth() + 1);
+                // Compute year-to-date from history
+                const ytd = history.reduce((s, h) => {
+                    const d = new Date(h.date);
+                    if (d.getFullYear() === now.getFullYear() && (d.getMonth() + 1) <= (now.getMonth() + 1)) return s + (h.value || 0);
+                    return s;
+                }, 0);
+                const projectedYearEnd = Math.round(ytd + avgMonthly * monthsRemaining);
+                document.getElementById('projectedYearEnd').textContent = '₱' + projectedYearEnd.toLocaleString();
+                const variance = Math.round(projectedYearEnd - (annualBudgetTotal || 0));
+                document.getElementById('expectedVariance').textContent = (variance >=0 ? '₱' : '-₱') + Math.abs(variance).toLocaleString();
+
+                // Use TF model if available to get forecasted months
+                let tfres = { forecast: [] };
+                if (window.forecasting && window.forecasting.tfForecast) {
+                    try { tfres = await window.forecasting.tfForecast(history, 12); } catch (e) { console.warn('TF forecast failed', e); }
+                }
+
+                // Build labels and data for chart (history + forecast)
+                const labels = [];
+                const histValues = [];
+                history.forEach(h => { labels.push(new Date(h.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })); histValues.push(h.value || 0); });
+                const forecastValues = [];
+                (tfres.forecast || []).forEach(f => { labels.push(new Date(f.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })); forecastValues.push(f.value || 0); });
+
+                // Render Chart
+                const ctx = document.getElementById('forecastChart').getContext('2d');
+                if (window._forecastChart) window._forecastChart.destroy();
+                window._forecastChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: 'History', data: histValues, borderColor: 'rgba(54,162,235,1)', backgroundColor: 'rgba(54,162,235,0.1)', tension: 0.3 },
+                            { label: 'Forecast', data: Array(history.length).fill(null).concat(forecastValues), borderColor: 'rgba(255,159,64,1)', backgroundColor: 'rgba(255,159,64,0.05)', tension: 0.3 }
+                        ]
+                    },
+                    options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { callback: v => '₱' + Number(v).toLocaleString() } } } }
+                });
+
+                // Let forecasting.js populate drivers table if available
+                if (window.forecasting && window.forecasting.renderForecast) {
+                    window.forecasting.renderForecast({ method: tfres.method || 'server', history: history, forecast: tfres.forecast || [], details: tfres.details, training: tfres.training });
+                }
+
+            } catch (e) { console.error('Failed to load forecast', e); }
+        }
+
+        document.addEventListener('DOMContentLoaded', function(){
+            const btn = document.getElementById('refreshForecastBtn');
+            if (btn) btn.addEventListener('click', loadDashboardForecast);
+            loadDashboardForecast();
+        });
+    </script>
     <script>
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('show');
@@ -1271,6 +1403,7 @@ body {
             const budgetActualData = <?php echo json_encode($budgetActualData); ?>;
             const incomeLabels = <?php echo json_encode($incomeLabels); ?>;
             const incomeAmounts = <?php echo json_encode($incomeAmounts); ?>;
+            const annualBudgetTotal = <?php echo json_encode($annualBudgetTotal ?? 0); ?>;
 
             // Initialize Revenue vs Expenses Chart
             const revenueExpensesCtx = document.getElementById('revenueExpensesChart').getContext('2d');

@@ -678,11 +678,7 @@ $db = Database::getInstance()->getConnection();
                     <i class="fas fa-exclamation-triangle me-2"></i>Budget Alerts
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="forecasting-tab" data-bs-toggle="tab" data-bs-target="#forecasting" type="button" role="tab">
-                    <i class="fas fa-crystal-ball me-2"></i>Forecasting
-                </button>
-            </li>
+            
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="adjustments-tab" data-bs-toggle="tab" data-bs-target="#adjustments" type="button" role="tab">
                     <i class="fas fa-sliders-h me-2"></i>Budget Adjustments
@@ -1064,61 +1060,7 @@ $db = Database::getInstance()->getConnection();
                 </div>
             </div>
 
-            <!-- Forecasting Tab -->
-            <div class="tab-pane fade" id="forecasting" role="tabpanel" aria-labelledby="forecasting-tab">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">Budget Forecasting</h6>
-                    <button id="refreshForecastBtn" class="btn btn-outline-secondary"><i class="fas fa-rotate me-2"></i>Refresh Forecast</button>
-                </div>
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <div class="card forecast-card black-forecast">
-                            <div class="card-body">
-                                <h6>Projected Year-End Spend</h6>
-                                <h3 class="mb-2">Not available</h3>
-                                <p class="mb-0">Based on current run rate and seasonality.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card forecast-card black-forecast">
-                            <div class="card-body">
-                                <h6>Expected Variance</h6>
-                                <h3 class="mb-2">Not available</h3>
-                                <p class="mb-0">Favorable due to staffing optimization.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Forecast Drivers</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-striped">
-                                        <thead>
-                                            <tr>
-                                                <th>Driver</th>
-                                                <th>Trend</th>
-                                                <th>Impact</th>
-                                                <th>Notes</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="forecastDriversBody">
-                                              <tr>
-                                                  <td colspan="4" class="text-center text-muted">No forecast driver data available.</td>
-                                              </tr>
-                                          </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- Forecasting removed (moved to Dashboard) -->
 
             <!-- Budget Adjustments Tab -->
             <div class="tab-pane fade" id="adjustments" role="tabpanel" aria-labelledby="adjustments-tab">
@@ -1279,7 +1221,6 @@ $db = Database::getInstance()->getConnection();
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../includes/alert-modal.js"></script>
-    <script src="../includes/forecasting.js"></script>
     <script>
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('show');
