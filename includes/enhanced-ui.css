@@ -543,6 +543,18 @@ html {
     backdrop-filter: blur(4px);
 }
 
+/* Ensure Bootstrap modals and backdrops appear above custom overlays (e.g., loading screen, alerts)
+   Some custom components use very high z-index values; raise modal z-index to remain on top. */
+.modal-backdrop {
+    z-index: 11040 !important;
+}
+.modal {
+    z-index: 11050 !important;
+}
+.modal.show {
+    z-index: 11050 !important;
+}
+
 /* ========================================
    ENHANCED BADGES & ALERTS
    ======================================== */
