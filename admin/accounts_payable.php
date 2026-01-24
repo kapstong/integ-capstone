@@ -1408,7 +1408,7 @@ try {
             }
 
             const method = isEditMode ? 'PUT' : 'POST';
-            const apiUrl = isEditMode ? `api/bills.php?id=${editBillId}` : 'api/bills.php';
+            const apiUrl = isEditMode ? `../api/bills.php?id=${editBillId}` : '../api/bills.php';
 
             try {
                 const response = await fetch(apiUrl, {
@@ -2347,7 +2347,7 @@ try {
         // Load bills for a specific vendor (for payment dropdown)
         async function loadBillsForVendor(vendorId) {
             try {
-                const response = await fetch(`api/bills.php?vendor_id=${vendorId}&status=draft,approved,overdue`);
+                const response = await fetch(`../api/bills.php?vendor_id=${vendorId}&status=draft,approved,overdue`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2375,7 +2375,7 @@ try {
         // View bill details
         async function viewBill(billId) {
             try {
-                const response = await fetch(`api/bills.php?id=${billId}`);
+                const response = await fetch(`../api/bills.php?id=${billId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2494,7 +2494,7 @@ try {
         // Edit bill
         async function editBill(billId) {
             try {
-                const response = await fetch(`api/bills.php?id=${billId}`);
+                const response = await fetch(`../api/bills.php?id=${billId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2554,7 +2554,7 @@ try {
                 'Are you sure you want to delete this bill? This action cannot be undone.',
                 async () => {
             try {
-                const response = await fetch(`api/bills.php?id=${billId}`, {
+                const response = await fetch(`../api/bills.php?id=${billId}`, {
                     method: 'DELETE'
                 });
 
