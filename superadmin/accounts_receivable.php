@@ -2262,41 +2262,41 @@ try {
                 'Send Invoice',
                 'Are you sure you want to mark this invoice as sent? This will send notification emails.',
                 async () => {
-            try {
-                const response = await fetch(`api/invoices.php?id=${id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ status: 'sent' })
-                });
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    try {
+                        const response = await fetch(`api/invoices.php?id=${id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ status: 'sent' })
+                        });
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        const result = await response.json();
+
+                        if (result.success || result === true) {
+                            showAlert('Invoice sent successfully! Notifications will be sent.', 'success');
+
+                            // Close any open modals
+                            const openModals = document.querySelectorAll('.modal.show');
+                            openModals.forEach(modalEl => {
+                                const modal = bootstrap.Modal.getInstance(modalEl);
+                                if (modal) modal.hide();
+                            });
+
+                            // Reload invoices to show updated status
+                            loadInvoices();
+                        } else {
+                            throw new Error(result.error || 'Failed to send invoice');
+                        }
+                    } catch (error) {
+                        console.error('Error sending invoice:', error);
+                        showAlert('Error sending invoice: ' + error.message, 'danger');
+                    }
                 }
-
-                const result = await response.json();
-
-                if (result.success || result === true) {
-                    showAlert('Invoice sent successfully! Notifications will be sent.', 'success');
-
-                    // Close any open modals
-                    const openModals = document.querySelectorAll('.modal.show');
-                    openModals.forEach(modalEl => {
-                        const modal = bootstrap.Modal.getInstance(modalEl);
-                        if (modal) modal.hide();
-                    });
-
-                    // Reload invoices to show updated status
-                    loadInvoices();
-                } else {
-                    throw new Error(result.error || 'Failed to send invoice');
-                }
-            } catch (error) {
-                console.error('Error sending invoice:', error);
-                showAlert('Error sending invoice: ' + error.message, 'danger');
-            }
-            }
-        );
+            );
         }
 
         async function deleteInvoice(id) {
@@ -2304,28 +2304,28 @@ try {
                 'Delete Invoice',
                 'Are you sure you want to delete this invoice? This action cannot be undone.',
                 async () => {
-            try {
-                const response = await fetch(`api/invoices.php?id=${id}`, {
-                    method: 'DELETE'
-                });
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                    try {
+                        const response = await fetch(`api/invoices.php?id=${id}`, {
+                            method: 'DELETE'
+                        });
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
 
-                const result = await response.json();
+                        const result = await response.json();
 
-                if (result.success || result === true) {
-                    showAlert('Invoice deleted successfully', 'success');
-                    loadInvoices(); // Reload invoices list
-                } else {
-                    throw new Error(result.error || 'Failed to delete invoice');
+                        if (result.success || result === true) {
+                            showAlert('Invoice deleted successfully', 'success');
+                            loadInvoices(); // Reload invoices list
+                        } else {
+                            throw new Error(result.error || 'Failed to delete invoice');
+                        }
+                    } catch (error) {
+                        console.error('Error deleting invoice:', error);
+                        showAlert('Error deleting invoice: ' + error.message, 'danger');
+                    }
                 }
-            } catch (error) {
-                console.error('Error deleting invoice:', error);
-                showAlert('Error deleting invoice: ' + error.message, 'danger');
-            }
-            }
-        );
+            );
         }
 
         // Payment action functions
@@ -2421,27 +2421,28 @@ try {
                 'Delete Payment',
                 'Are you sure you want to delete this payment? This action cannot be undone.',
                 async () => {
-            try {
-                const response = await fetch(`api/payments.php?id=${id}&type=received`, {
-                    method: 'DELETE'
-                });
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    try {
+                        const response = await fetch(`api/payments.php?id=${id}&type=received`, {
+                            method: 'DELETE'
+                        });
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
 
-                const result = await response.json();
+                        const result = await response.json();
 
-                if (result.success || result === true) {
-                    showAlert('Payment deleted successfully', 'success');
-                    loadPayments(); // Reload payments list
-                } else {
-                    throw new Error(result.error || 'Failed to delete payment');
+                        if (result.success || result === true) {
+                            showAlert('Payment deleted successfully', 'success');
+                            loadPayments(); // Reload payments list
+                        } else {
+                            throw new Error(result.error || 'Failed to delete payment');
+                        }
+                    } catch (error) {
+                        console.error('Error deleting payment:', error);
+                        showAlert('Error deleting payment: ' + error.message, 'danger');
+                    }
                 }
-            } catch (error) {
-                console.error('Error deleting payment:', error);
-                showAlert('Error deleting payment: ' + error.message, 'danger');
-            }
-            }
-        );
+            );
         }
 
         // Adjustment action functions
@@ -2529,28 +2530,28 @@ try {
                 'Delete Adjustment',
                 'Are you sure you want to delete this adjustment? This action cannot be undone.',
                 async () => {
-            try {
-                const response = await fetch(`api/adjustments.php?id=${id}`, {
-                    method: 'DELETE'
-                });
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                    try {
+                        const response = await fetch(`api/adjustments.php?id=${id}`, {
+                            method: 'DELETE'
+                        });
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
 
-                const result = await response.json();
+                        const result = await response.json();
 
-                if (result.success) {
-                    showAlert('Adjustment deleted successfully', 'success');
-                    loadAdjustments(); // Reload adjustments list
-                } else {
-                    throw new Error(result.error || 'Failed to delete adjustment');
+                        if (result.success) {
+                            showAlert('Adjustment deleted successfully', 'success');
+                            loadAdjustments(); // Reload adjustments list
+                        } else {
+                            throw new Error(result.error || 'Failed to delete adjustment');
+                        }
+                    } catch (error) {
+                        console.error('Error deleting adjustment:', error);
+                        showAlert('Error deleting adjustment: ' + error.message, 'danger');
+                    }
                 }
-            } catch (error) {
-                console.error('Error deleting adjustment:', error);
-                showAlert('Error deleting adjustment: ' + error.message, 'danger');
-            }
-            }
-        );
+            );
         }
 
         // Loading and utility functions
