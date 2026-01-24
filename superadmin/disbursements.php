@@ -422,11 +422,6 @@ body {
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="processing-tab" data-bs-toggle="tab" data-bs-target="#processing" type="button" role="tab">
-                    <i class="fas fa-credit-card me-2"></i>Payment Processing
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="claims-tab" data-bs-toggle="tab" data-bs-target="#claims" type="button" role="tab">
                     <i class="fas fa-receipt me-2"></i>Claims Processing
                     <span class="badge bg-success ms-2 d-none" data-tab-badge="claims">0</span>
@@ -538,46 +533,6 @@ body {
                         <tbody id="disbursementsTableBody">
                         </tbody>
                     </table>
-                </div>
-            </div>
-
-            <!-- Payment Processing Tab -->
-            <div class="tab-pane fade" id="processing" role="tabpanel" aria-labelledby="processing-tab">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">Process Payments and Settlements</h6>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#processPaymentModal">
-                        <i class="fas fa-plus me-2"></i>Process Payment
-                    </button>
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Payment Methods</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-grid gap-2">
-                                    <button class="btn btn-outline-primary payment-method-btn"><i class="fas fa-money-bill-wave me-2"></i>Cash</button>
-                                    <button class="btn btn-outline-primary payment-method-btn"><i class="fas fa-university me-2"></i>Bank Transfer</button>
-                                    <button class="btn btn-outline-primary payment-method-btn"><i class="fas fa-credit-card me-2"></i>Check</button>
-                                    <button class="btn btn-outline-primary payment-method-btn"><i class="fas fa-mobile-alt me-2"></i>E-wallet</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Payment Processing</h6>
-                            </div>
-                            <div class="card-body">
-                                <p>Select a payment method and fill in the details to process a payment.</p>
-                                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#processPaymentModal">
-                                    <i class="fas fa-play me-2"></i>Start Processing
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -929,63 +884,6 @@ body {
     </div>
 
     <!-- Process Payment Modal -->
-    <div class="modal fade" id="processPaymentModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Process Payment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="paymentType">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="processPayee" class="form-label">Payee *</label>
-                            <input type="text" class="form-control" id="processPayee" placeholder="Supplier/Vendor Name" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="paymentDate" class="form-label">Payment Date *</label>
-                            <input type="date" class="form-control" id="paymentDate" required>
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="paymentMethodModal" class="form-label">Payment Method *</label>
-                            <select class="form-select" id="paymentMethodModal" required>
-                                <option value="">Select Method</option>
-                                <option value="cash">Cash</option>
-                                <option value="check">Check</option>
-                                <option value="bank_transfer">Bank Transfer</option>
-                                <option value="ewallet">E-wallet</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="processAmount" class="form-label">Amount *</label>
-                            <input type="number" class="form-control" id="processAmount" step="0.01" placeholder="0.00" required>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="paymentReference" class="form-label">Reference Number</label>
-                        <input type="text" class="form-control" id="paymentReference" placeholder="Check # or Transaction ID">
-                    </div>
-                    <div class="mb-3">
-                        <label for="processDescription" class="form-label">Description</label>
-                        <textarea class="form-control" id="processDescription" rows="3" placeholder="Payment description"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Attachments</label>
-                        <input type="file" class="form-control" id="paymentAttachments" multiple>
-                        <small class="form-text text-muted">Upload invoice, receipt, or approval documents</small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="processPayment()">Process Payment</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../includes/alert-modal.js"></script>
     <script src="disbursements-js.php"></script>
