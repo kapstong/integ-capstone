@@ -1135,7 +1135,7 @@ $db = Database::getInstance()->getConnection();
             <div class="tab-pane fade" id="reports" role="tabpanel" aria-labelledby="reports-tab">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">Budget Reports & Analytics</h6>
-                    <button class="btn btn-outline-secondary"><i class="fas fa-download me-2"></i>Export Reports</button>
+                    <button class="btn btn-outline-secondary" id="exportReportsBtn"><i class="fas fa-download me-2"></i>Export Reports</button>
                 </div>
                 <div class="row">
                     <div class="col-md-6">
@@ -1145,7 +1145,8 @@ $db = Database::getInstance()->getConnection();
                             </div>
                             <div class="card-body">
                                 <p>Detailed variance breakdown by department and category with month-over-month trends.</p>
-                                <button class="btn btn-primary">Generate Report</button>
+                                <button class="btn btn-primary" id="generateBudgetVsActualBtn">Generate Report</button>
+                                <button class="btn btn-outline-secondary ms-2" id="downloadBudgetVsActualBtn">Download PDF</button>
                             </div>
                         </div>
                     </div>
@@ -1156,7 +1157,8 @@ $db = Database::getInstance()->getConnection();
                             </div>
                             <div class="card-body">
                                 <p>Summarizes HR3 claim volumes, approvals, and budget impact across departments.</p>
-                                <button class="btn btn-primary">Generate Report</button>
+                                <button class="btn btn-primary" id="generateClaimsImpactBtn">Generate Report</button>
+                                <button class="btn btn-outline-secondary ms-2" id="downloadClaimsImpactBtn">Download PDF</button>
                             </div>
                         </div>
                     </div>
@@ -1169,7 +1171,8 @@ $db = Database::getInstance()->getConnection();
                             </div>
                             <div class="card-body">
                                 <p>Highlights departments trending over budget with recommended actions.</p>
-                                <button class="btn btn-primary">Generate Report</button>
+                                <button class="btn btn-primary" id="generateDeptPerformanceBtn">Generate Report</button>
+                                <button class="btn btn-outline-secondary ms-2" id="downloadDeptPerformanceBtn">Download PDF</button>
                             </div>
                         </div>
                     </div>
@@ -1180,7 +1183,28 @@ $db = Database::getInstance()->getConnection();
                             </div>
                             <div class="card-body">
                                 <p>Rolling 90-day forecast with risk flags for claims-heavy departments.</p>
-                                <button class="btn btn-primary">Generate Report</button>
+                                <button class="btn btn-primary" id="generateForecastBtn">Generate Report</button>
+                                <button class="btn btn-outline-secondary ms-2" id="downloadForecastBtn">Download PDF</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Report Results Section -->
+                <div class="row mt-4" id="reportResults" style="display: none;">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 id="reportTitle">Report Results</h6>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-secondary me-2" id="printReportBtn"><i class="fas fa-print me-2"></i>Print</button>
+                                    <button class="btn btn-sm btn-outline-secondary" id="closeReportBtn"><i class="fas fa-times me-2"></i>Close</button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="reportContent">
+                                    <!-- Report content will be loaded here -->
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2773,6 +2797,494 @@ $db = Database::getInstance()->getConnection();
                 }
             }, 10000); // Check every 10 seconds
         }
+
+        // Report Generation Functions
+        function showReportResults(title, content) {
+            const resultsSection = document.getElementById('reportResults');
+            const reportTitle = document.getElementById('reportTitle');
+            const reportContent = document.getElementById('reportContent');
+            
+            if (resultsSection && reportTitle && reportContent) {
+                reportTitle.textContent = title;
+                reportContent.innerHTML = content;
+                resultsSection.style.display = 'block';
+                
+                // Scroll to results
+                resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function hideReportResults() {
+            const resultsSection = document.getElementById('reportResults');
+            if (resultsSection) {
+                resultsSection.style.display = 'none';
+            }
+        }
+
+        function generateBudgetVsActualReport() {
+            const content = `
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>Budget vs Actual Report - ${new Date().toLocaleDateString()}</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Department</th>
+                                                <th>Budget</th>
+                                                <th>Actual</th>
+                                                <th>Variance</th>
+                                                <th>Variance %</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${currentTrackingData.map(item => `
+                                                <tr>
+                                                    <td>${item.category}</td>
+                                                    <td>PHP ${parseFloat(item.budget_amount || 0).toLocaleString()}</td>
+                                                    <td>PHP ${parseFloat(item.actual_amount || 0).toLocaleString()}</td>
+                                                    <td class="${(item.actual_amount || 0) > (item.budget_amount || 0) ? 'variance-positive' : 'variance-negative'}">PHP ${Math.abs((item.actual_amount || 0) - (item.budget_amount || 0)).toLocaleString()}</td>
+                                                    <td class="${(item.actual_amount || 0) > (item.budget_amount || 0) ? 'variance-positive' : 'variance-negative'}">${((item.actual_amount || 0) > (item.budget_amount || 0) ? '+' : '')}${(((item.actual_amount || 0) - (item.budget_amount || 0)) / (item.budget_amount || 1) * 100).toFixed(1)}%</td>
+                                                    <td>${getVarianceStatusBadge(((item.actual_amount || 0) - (item.budget_amount || 0)) / (item.budget_amount || 1) * 100)}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-3">
+                                    <h6>Summary</h6>
+                                    <p>Total Budget: PHP ${currentTrackingData.reduce((sum, item) => sum + (item.budget_amount || 0), 0).toLocaleString()}</p>
+                                    <p>Total Actual: PHP ${currentTrackingData.reduce((sum, item) => sum + (item.actual_amount || 0), 0).toLocaleString()}</p>
+                                    <p>Total Variance: PHP ${Math.abs(currentTrackingData.reduce((sum, item) => sum + (item.actual_amount || 0) - (item.budget_amount || 0), 0)).toLocaleString()}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            showReportResults('Budget vs Actual Report', content);
+        }
+
+        function generateClaimsImpactReport() {
+            const content = `
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>HR3 Claims Impact Report - ${new Date().toLocaleDateString()}</h6>
+                            </div>
+                            <div class="card-body">
+                                ${currentHr3ClaimsBreakdown ? `
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Department</th>
+                                                    <th>Claims Count</th>
+                                                    <th>Total Amount</th>
+                                                    <th>Average Claim</th>
+                                                    <th>Budget Impact</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${Object.entries(currentHr3ClaimsBreakdown.summary.department_breakdown || {}).map(([dept, data]) => {
+                                                    const remaining = getAllocationRemaining(dept);
+                                                    const status = getClaimsBudgetStatus(remaining, data.total_amount);
+                                                    return `
+                                                        <tr>
+                                                            <td>${dept}</td>
+                                                            <td>${data.claim_count || 0}</td>
+                                                            <td>PHP ${parseFloat(data.total_amount || 0).toLocaleString()}</td>
+                                                            <td>PHP ${((data.total_amount || 0) / (data.claim_count || 1)).toLocaleString()}</td>
+                                                            <td>${remaining == null ? 'N/A' : `PHP ${parseFloat(remaining || 0).toLocaleString()}`}</td>
+                                                            <td><span class="badge ${status.className}">${status.label}</span></td>
+                                                        </tr>
+                                                    `;
+                                                }).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="mt-3">
+                                        <h6>Claims Summary</h6>
+                                        <p>Total Claims: ${currentHr3ClaimsBreakdown.summary.total_claims || 0}</p>
+                                        <p>Total Amount: PHP ${parseFloat(currentHr3ClaimsBreakdown.summary.total_amount || 0).toLocaleString()}</p>
+                                        <p>Average Claim: PHP ${((currentHr3ClaimsBreakdown.summary.total_amount || 0) / (currentHr3ClaimsBreakdown.summary.total_claims || 1)).toLocaleString()}</p>
+                                    </div>
+                                ` : `
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-info-circle fa-2x mb-3"></i>
+                                        <p>No HR3 claims data available</p>
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            showReportResults('HR3 Claims Impact Report', content);
+        }
+
+        function generateDepartmentPerformanceReport() {
+            const content = `
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>Department Performance Report - ${new Date().toLocaleDateString()}</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Department</th>
+                                                <th>Total Budget</th>
+                                                <th>Utilized</th>
+                                                <th>Remaining</th>
+                                                <th>Utilization %</th>
+                                                <th>Status</th>
+                                                <th>Recommendations</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${currentAllocations.map(allocation => {
+                                                const progressPercent = allocation.total_amount > 0 ? (allocation.utilized_amount / allocation.total_amount) * 100 : 0;
+                                                const statusBadge = getAllocationStatusBadge(progressPercent);
+                                                const recommendations = progressPercent > 90 
+                                                    ? 'Consider budget increase or expense review'
+                                                    : progressPercent > 75 
+                                                        ? 'Monitor closely, approaching limit'
+                                                        : 'Budget utilization on track';
+                                                
+                                                return `
+                                                    <tr>
+                                                        <td><strong>${allocation.department}</strong></td>
+                                                        <td>PHP ${parseFloat(allocation.total_amount || 0).toLocaleString()}</td>
+                                                        <td>PHP ${parseFloat(allocation.utilized_amount || 0).toLocaleString()}</td>
+                                                        <td>PHP ${parseFloat(allocation.remaining || 0).toLocaleString()}</td>
+                                                        <td>${progressPercent.toFixed(1)}%</td>
+                                                        <td>${statusBadge}</td>
+                                                        <td>${recommendations}</td>
+                                                    </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-3">
+                                    <h6>Performance Summary</h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="card bg-danger text-white">
+                                                <div class="card-body text-center">
+                                                    <h4>${currentAllocations.filter(a => (a.utilized_amount / a.total_amount) * 100 > 90).length}</h4>
+                                                    <p>Over Budget</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card bg-warning text-dark">
+                                                <div class="card-body text-center">
+                                                    <h4>${currentAllocations.filter(a => (a.utilized_amount / a.total_amount) * 100 > 75 && (a.utilized_amount / a.total_amount) * 100 <= 90).length}</h4>
+                                                    <p>Approaching Limit</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card bg-success text-white">
+                                                <div class="card-body text-center">
+                                                    <h4>${currentAllocations.filter(a => (a.utilized_amount / a.total_amount) * 100 <= 75).length}</h4>
+                                                    <p>On Track</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            showReportResults('Department Performance Report', content);
+        }
+
+        function generateForecastSnapshot() {
+            const content = `
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card forecast-card">
+                            <div class="card-header">
+                                <h6>90-Day Budget Forecast - ${new Date().toLocaleDateString()}</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h5 class="text-white">Forecast Summary</h5>
+                                        <div class="row text-white">
+                                            <div class="col-md-6">
+                                                <div class="card bg-white text-dark mb-3">
+                                                    <div class="card-body">
+                                                        <h6>Projected Expenses</h6>
+                                                        <h4>PHP ${(currentTrackingData.reduce((sum, item) => sum + (item.actual_amount || 0), 0) * 3).toLocaleString()}</h4>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="card bg-white text-dark mb-3">
+                                                    <div class="card-body">
+                                                        <h6>Available Budget</h6>
+                                                        <h4>PHP ${(currentTrackingData.reduce((sum, item) => sum + (item.budget_amount || 0), 0) * 3).toLocaleString()}</h4>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h5 class="text-white">Risk Assessment</h5>
+                                        <div class="card bg-white text-dark">
+                                            <div class="card-body">
+                                                <h6>High Risk Departments</h6>
+                                                ${currentAllocations.filter(a => (a.utilized_amount / a.total_amount) * 100 > 80).map(allocation => `
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span>${allocation.department}</span>
+                                                        <span class="badge bg-danger">${((allocation.utilized_amount / allocation.total_amount) * 100).toFixed(1)}%</span>
+                                                    </div>
+                                                `).join('')}
+                                                ${currentAllocations.filter(a => (a.utilized_amount / a.total_amount) * 100 > 80).length === 0 ? '<p class="text-muted">No high-risk departments identified</p>' : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-12">
+                                        <div class="card bg-white text-dark">
+                                            <div class="card-body">
+                                                <h6>Forecast Assumptions</h6>
+                                                <ul class="list-unstyled">
+                                                    <li><i class="fas fa-check-circle text-success me-2"></i>Current spending trends continue</li>
+                                                    <li><i class="fas fa-check-circle text-success me-2"></i>HR3 claims processed at current rate</li>
+                                                    <li><i class="fas fa-check-circle text-success me-2"></i>No major budget adjustments</li>
+                                                    <li><i class="fas fa-check-circle text-success me-2"></i>Seasonal variations accounted for</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            showReportResults('Forecast Snapshot', content);
+        }
+
+        function downloadPDF(title) {
+            // Create a simple PDF-like print view
+            const printWindow = window.open('', '_blank');
+            const reportContent = document.getElementById('reportContent');
+            
+            if (reportContent) {
+                printWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>${title}</title>
+                            <style>
+                                body { font-family: Arial, sans-serif; margin: 40px; }
+                                h1 { color: #333; border-bottom: 2px solid #333; padding-bottom: 10px; }
+                                .header { text-align: center; margin-bottom: 30px; }
+                                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                                th { background-color: #f2f2f2; }
+                                .summary { background-color: #f9f9f9; padding: 15px; margin: 20px 0; }
+                                .footer { text-align: center; margin-top: 40px; color: #666; font-size: 12px; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="header">
+                                <h1>${title}</h1>
+                                <p>Generated on ${new Date().toLocaleString()}</p>
+                            </div>
+                            ${reportContent.innerHTML}
+                            <div class="footer">
+                                <p>Financial Management System - Budget Management Module</p>
+                            </div>
+                        </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                printWindow.print();
+            } else {
+                alert('No report content available to download.');
+            }
+        }
+
+        function printReport() {
+            const reportContent = document.getElementById('reportContent');
+            if (reportContent) {
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>Print Report</title>
+                            <style>
+                                body { font-family: Arial, sans-serif; margin: 40px; }
+                                h1 { color: #333; border-bottom: 2px solid #333; padding-bottom: 10px; }
+                                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                                th { background-color: #f2f2f2; }
+                                @media print {
+                                    body { margin: 0; padding: 20px; }
+                                    .no-print { display: none !important; }
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <h1>${document.getElementById('reportTitle').textContent}</h1>
+                            <p>Generated on ${new Date().toLocaleString()}</p>
+                            ${reportContent.innerHTML}
+                        </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                printWindow.print();
+            }
+        }
+
+        // Event Listeners for Report Buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            // Budget vs Actual Report
+            const generateBudgetVsActualBtn = document.getElementById('generateBudgetVsActualBtn');
+            if (generateBudgetVsActualBtn) {
+                generateBudgetVsActualBtn.addEventListener('click', generateBudgetVsActualReport);
+            }
+
+            const downloadBudgetVsActualBtn = document.getElementById('downloadBudgetVsActualBtn');
+            if (downloadBudgetVsActualBtn) {
+                downloadBudgetVsActualBtn.addEventListener('click', () => downloadPDF('Budget vs Actual Report'));
+            }
+
+            // HR3 Claims Impact Report
+            const generateClaimsImpactBtn = document.getElementById('generateClaimsImpactBtn');
+            if (generateClaimsImpactBtn) {
+                generateClaimsImpactBtn.addEventListener('click', generateClaimsImpactReport);
+            }
+
+            const downloadClaimsImpactBtn = document.getElementById('downloadClaimsImpactBtn');
+            if (downloadClaimsImpactBtn) {
+                downloadClaimsImpactBtn.addEventListener('click', () => downloadPDF('HR3 Claims Impact Report'));
+            }
+
+            // Department Performance Report
+            const generateDeptPerformanceBtn = document.getElementById('generateDeptPerformanceBtn');
+            if (generateDeptPerformanceBtn) {
+                generateDeptPerformanceBtn.addEventListener('click', generateDepartmentPerformanceReport);
+            }
+
+            const downloadDeptPerformanceBtn = document.getElementById('downloadDeptPerformanceBtn');
+            if (downloadDeptPerformanceBtn) {
+                downloadDeptPerformanceBtn.addEventListener('click', () => downloadPDF('Department Performance Report'));
+            }
+
+            // Forecast Snapshot
+            const generateForecastBtn = document.getElementById('generateForecastBtn');
+            if (generateForecastBtn) {
+                generateForecastBtn.addEventListener('click', generateForecastSnapshot);
+            }
+
+            const downloadForecastBtn = document.getElementById('downloadForecastBtn');
+            if (downloadForecastBtn) {
+                downloadForecastBtn.addEventListener('click', () => downloadPDF('Forecast Snapshot'));
+            }
+
+            // Export Reports Button
+            const exportReportsBtn = document.getElementById('exportReportsBtn');
+            if (exportReportsBtn) {
+                exportReportsBtn.addEventListener('click', function() {
+                    // Show all reports in a combined view
+                    const combinedContent = `
+                        <div class="container-fluid">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <h2>Combined Budget Reports</h2>
+                                    <p class="text-muted">Generated on ${new Date().toLocaleString()}</p>
+                                </div>
+                            </div>
+                            <div class="row mt-4">
+                                <div class="col-md-12">
+                                    <h4>Budget vs Actual Summary</h4>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Category</th>
+                                                    <th>Budget</th>
+                                                    <th>Actual</th>
+                                                    <th>Variance</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${currentTrackingData.slice(0, 5).map(item => `
+                                                    <tr>
+                                                        <td>${item.category}</td>
+                                                        <td>PHP ${parseFloat(item.budget_amount || 0).toLocaleString()}</td>
+                                                        <td>PHP ${parseFloat(item.actual_amount || 0).toLocaleString()}</td>
+                                                        <td class="${(item.actual_amount || 0) > (item.budget_amount || 0) ? 'variance-positive' : 'variance-negative'}">PHP ${Math.abs((item.actual_amount || 0) - (item.budget_amount || 0)).toLocaleString()}</td>
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-4">
+                                <div class="col-md-6">
+                                    <h4>Department Performance</h4>
+                                    <div class="list-group">
+                                        ${currentAllocations.slice(0, 5).map(allocation => `
+                                            <div class="list-group-item d-flex justify-content-between">
+                                                <span>${allocation.department}</span>
+                                                <span class="badge bg-${(allocation.utilized_amount / allocation.total_amount) * 100 > 90 ? 'danger' : (allocation.utilized_amount / allocation.total_amount) * 100 > 75 ? 'warning' : 'success'}">${((allocation.utilized_amount / allocation.total_amount) * 100).toFixed(1)}%</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h4>Claims Summary</h4>
+                                    ${currentHr3ClaimsBreakdown ? `
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <p>Total Claims: ${currentHr3ClaimsBreakdown.summary.total_claims || 0}</p>
+                                                <p>Total Amount: PHP ${parseFloat(currentHr3ClaimsBreakdown.summary.total_amount || 0).toLocaleString()}</p>
+                                                <p>Average: PHP ${((currentHr3ClaimsBreakdown.summary.total_amount || 0) / (currentHr3ClaimsBreakdown.summary.total_claims || 1)).toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                    ` : '<p class="text-muted">No claims data available</p>'}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    showReportResults('Combined Budget Reports', combinedContent);
+                });
+            }
+
+            // Print Report Button
+            const printReportBtn = document.getElementById('printReportBtn');
+            if (printReportBtn) {
+                printReportBtn.addEventListener('click', printReport);
+            }
+
+            // Close Report Button
+            const closeReportBtn = document.getElementById('closeReportBtn');
+            if (closeReportBtn) {
+                closeReportBtn.addEventListener('click', hideReportResults);
+            }
+        });
     </script>
 
     
