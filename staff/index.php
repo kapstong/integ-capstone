@@ -1092,7 +1092,7 @@ body {
                 }, 0);
                 const projectedYearEnd = Math.round(ytd + avgMonthly * monthsRemaining);
                 document.getElementById('projectedYearEnd').textContent = '₱' + projectedYearEnd.toLocaleString();
-                const variance = Math.round(projectedYearEnd - (annualBudgetTotal || 0));
+                const variance = Math.round(projectedYearEnd - (typeof annualBudgetTotal !== 'undefined' ? annualBudgetTotal : 0));
                 document.getElementById('expectedVariance').textContent = (variance >=0 ? '₱' : '-₱') + Math.abs(variance).toLocaleString();
 
                 let tfres = { forecast: [] };
