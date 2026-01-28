@@ -424,15 +424,17 @@ $db = Database::getInstance()->getConnection();
         }
 
         .modal {
-            z-index: 3000;
+            z-index: 5000;
+            pointer-events: auto;
         }
 
         .modal-backdrop {
-            z-index: 2990;
+            z-index: 4990;
+            pointer-events: none;
         }
 
         .modal-backdrop.show {
-            opacity: 0.25;
+            opacity: 0.15;
         }
 
         .modal-dialog,
@@ -2367,6 +2369,13 @@ $db = Database::getInstance()->getConnection();
                     if (modalEl.parentElement !== document.body) {
                         document.body.appendChild(modalEl);
                     }
+                    setTimeout(() => {
+                        document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
+                            backdrop.style.pointerEvents = 'none';
+                            backdrop.style.opacity = '0.15';
+                            backdrop.style.zIndex = '4990';
+                        });
+                    }, 0);
                 });
             });
 

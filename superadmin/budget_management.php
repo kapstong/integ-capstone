@@ -424,15 +424,17 @@ $db = Database::getInstance()->getConnection();
         }
 
         .modal {
-            z-index: 3000;
+            z-index: 5000;
+            pointer-events: auto;
         }
 
         .modal-backdrop {
-            z-index: 2990;
+            z-index: 4990;
+            pointer-events: none;
         }
 
         .modal-backdrop.show {
-            opacity: 0.25;
+            opacity: 0.15;
         }
 
         .modal-dialog,
@@ -883,6 +885,11 @@ $db = Database::getInstance()->getConnection();
                                     <span class="badge bg-danger">100% - Red</span>
                                 </div>
                             </div>
+                        </div>
+                        <div class="d-flex justify-content-end mt-3">
+                            <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#allocationApiClientModal">
+                                <i class="fas fa-key me-2"></i>Generate API Client
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -2366,6 +2373,13 @@ $db = Database::getInstance()->getConnection();
                     if (modalEl.parentElement !== document.body) {
                         document.body.appendChild(modalEl);
                     }
+                    setTimeout(() => {
+                        document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
+                            backdrop.style.pointerEvents = 'none';
+                            backdrop.style.opacity = '0.15';
+                            backdrop.style.zIndex = '4990';
+                        });
+                    }, 0);
                 });
             });
 
@@ -3395,6 +3409,41 @@ $db = Database::getInstance()->getConnection();
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary" id="allocationRequestAdjustment">Request Adjustment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Allocation API Client Modal -->
+    <div class="modal fade" id="allocationApiClientModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Generate Allocation API Client</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="allocationApiClientForm">
+                        <div class="mb-3">
+                            <label for="apiClientDepartment" class="form-label">Department *</label>
+                            <select class="form-select" id="apiClientDepartment" required>
+                                <option value="">Loading departments...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Client ID</label>
+                            <input type="text" class="form-control" id="apiClientId" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Client Secret</label>
+                            <input type="text" class="form-control" id="apiClientSecret" readonly>
+                            <small class="text-muted">Copy and store this secret securely. It is shown once.</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" form="allocationApiClientForm">Generate</button>
                 </div>
             </div>
         </div>
