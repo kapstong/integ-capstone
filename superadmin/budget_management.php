@@ -429,6 +429,7 @@ $db = Database::getInstance()->getConnection();
 
         .modal-backdrop {
             z-index: 2000;
+            pointer-events: none;
         }
 
         .modal-dialog,
