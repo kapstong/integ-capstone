@@ -16,6 +16,8 @@ This API provides department budget allocations and alert status. It supports mu
 
 ## Base URL
 - `/api/budgets.php`
+- Single gateway endpoint:
+  - `GET|POST /api/budget_exchange.php`
 - Integration endpoints:
   - `POST /api/oauth/token.php`
   - `POST /api/integrations/budget_allocation.php`
@@ -49,6 +51,24 @@ utilization_pct = (utilized_total / allocated_amount) * 100
 If your department only tracks one spend source, treat the other as 0.
 
 ## Endpoints
+
+### 0) Single gateway endpoint (recommended for departments)
+Use this one endpoint for both retrieving and pushing allocations.
+
+- **GET** `/api/budget_exchange.php?action=allocations` (OAuth bearer required)
+- **POST** `/api/budget_exchange.php` (OAuth bearer required)
+```
+{
+  "action": "allocate",
+  "department_id": 3,
+  "budget_name": "External Allocation 2026",
+  "allocated_amount": 1250000,
+  "period": "Yearly",
+  "start_date": "2026-01-01",
+  "end_date": "2026-12-31",
+  "description": "Department-provided allocation"
+}
+```
 
 ### 1) Get budget allocations
 **GET** `/api/budgets.php?action=allocations`
@@ -253,7 +273,7 @@ Response:
 ```
 
 ### 3) Push Budget Allocation (Department System)
-**POST** `/api/integrations/budget_allocation.php`
+**POST** `/api/integrations/budget_allocation.php` or `/api/budget_exchange.php`
 Header:
 ```
 Authorization: Bearer <access_token>
