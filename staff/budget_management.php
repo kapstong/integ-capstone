@@ -424,11 +424,18 @@ $db = Database::getInstance()->getConnection();
         }
 
         .modal {
-            z-index: 1065;
+            z-index: 2005;
         }
 
         .modal-backdrop {
-            z-index: 1060;
+            z-index: 2000;
+        }
+
+        .modal-dialog,
+        .modal-content {
+            position: relative;
+            z-index: 2010;
+            pointer-events: auto;
         }
 
         .modal-header {
