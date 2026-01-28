@@ -1449,13 +1449,16 @@ body {
                 const payrollId = payroll.approval_id || payroll.payroll_id || payroll.payrollId || payroll.id || '';
                 const totalAmount = parseFloat(payroll.total_amount || payroll.net_pay || 0);
                 const submittedAt = payroll.submitted_at ? new Date(payroll.submitted_at).toLocaleString() : 'N/A';
-                const rawStatus = payroll.status || '';
+                const rawStatus = (payroll.status || '').toString();
                 let statusText = payroll.display_status || rawStatus || 'Unknown';
-                if (['approved', 'rejected'].includes(String(rawStatus).toLowerCase())) {
-                    statusText = rawStatus;
+                const rawKey = rawStatus.toLowerCase();
+                if (rawKey === 'approved') {
+                    statusText = 'Processed';
+                } else if (rawKey === 'rejected') {
+                    statusText = 'Rejected';
                 }
                 const statusKey = String(statusText).toLowerCase();
-                const canApprove = Boolean(payroll.can_approve) || ['processed', 'success', 'pending', 'pending approval', 'for approval'].includes(statusKey);
+                const canApprove = Boolean(payroll.can_approve) || ['pending', 'pending approval', 'for approval'].includes(statusKey);
 
                 const row = document.createElement('tr');
                 row.dataset.payrollId = payrollId;
