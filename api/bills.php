@@ -637,7 +637,7 @@ function getActiveBudgetItem($db, $accountId) {
     return $budget[0] ?? null;
 }
 
-function enforceBudgetLimit($db, $accountId, $amount) {
+function enforceBudgetLimit($db, $accountId, $amount, $context = []) {
     $budget = getActiveBudgetItem($db, $accountId);
     if (!$budget) {
         return;
@@ -645,7 +645,8 @@ function enforceBudgetLimit($db, $accountId, $amount) {
 
     $remaining = floatval($budget['budgeted_amount']) - floatval($budget['actual_amount']);
     if ($amount > $remaining) {
-        throw new Exception('Bill exceeds available budget for the selected account.');
+        createBudgetApprovalTask($db, $accountId, $amount, $remaining, $context);
+        throw new Exception('Bill exceeds available budget for the selected account. Approval required.');
     }
 }
 
@@ -663,6 +664,46 @@ function applyBudgetActual($db, $accountId, $amount) {
          WHERE id = ?",
         [$amount, $amount, $budget['id']]
     );
+}
+
+function findApproverId($db) {
+    $stmt = $db->prepare("
+        SELECT id FROM users
+        WHERE status = 'active' AND role IN ('superadmin', 'admin')
+        ORDER BY FIELD(role, 'superadmin', 'admin'), last_login DESC
+        LIMIT 1
+    ");
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row['id'] ?? null;
+}
+
+function createBudgetApprovalTask($db, $accountId, $amount, $remaining, $context = []) {
+    try {
+        $assigneeId = findApproverId($db);
+        $title = 'Budget approval required';
+        $details = [
+            'account_id' => $accountId,
+            'amount' => (float) $amount,
+            'remaining' => (float) $remaining,
+            'context' => $context
+        ];
+
+        $stmt = $db->prepare("
+            INSERT INTO tasks (title, description, priority, status, assigned_to, created_by, category, created_at)
+            VALUES (?, ?, 'high', 'pending', ?, ?, 'budget', NOW())
+        ");
+        $stmt->execute([
+            $title,
+            json_encode($details),
+            $assigneeId,
+            $_SESSION['user']['id'] ?? 1
+        ]);
+    } catch (Exception $e) {
+        Logger::getInstance()->error('Failed to create budget approval task', [
+            'error' => $e->getMessage()
+        ]);
+    }
 }
 
 /**
@@ -729,7 +770,10 @@ function postBillJournalEntry($db, $billId, $subtotal, $taxAmount) {
         $budgetTotals[$line['account_id']] = ($budgetTotals[$line['account_id']] ?? 0) + $line['amount'];
     }
     foreach ($budgetTotals as $accountId => $amount) {
-        enforceBudgetLimit($db, $accountId, $amount);
+        enforceBudgetLimit($db, $accountId, $amount, [
+            'type' => 'bill',
+            'bill_id' => $billId
+        ]);
     }
 
     // Insert expense lines and apply budget actuals

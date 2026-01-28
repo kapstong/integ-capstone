@@ -955,9 +955,10 @@ $db = Database::getInstance()->getConnection();
                     <div>
                         <select class="form-select form-select-sm me-2" style="width: auto;" id="alertsFilter">
                             <option value="all">All Alerts</option>
-                            <option value="critical">Critical</option>
-                            <option value="high">High</option>
-                            <option value="medium">Medium</option>
+                            <option value="red">Red (100%)</option>
+                            <option value="orange">Orange (90%)</option>
+                            <option value="light_orange">Light Orange (80%)</option>
+                            <option value="yellow">Yellow (70%)</option>
                         </select>
                         <button class="btn btn-outline-secondary" onclick="loadAlerts()"><i class="fas fa-sync me-2"></i>Refresh</button>
                     </div>
@@ -966,29 +967,29 @@ $db = Database::getInstance()->getConnection();
                     <div class="col-md-3">
                         <div class="reports-card alert-card">
                             <i class="fas fa-exclamation-triangle fa-2x mb-3 text-danger"></i>
-                            <h6>Critical Alerts</h6>
-                            <h3 id="criticalCount">0</h3>
+                            <h6>Red (100%)</h6>
+                            <h3 id="redCount">0</h3>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="reports-card alert-card">
                             <i class="fas fa-exclamation-circle fa-2x mb-3 text-warning"></i>
-                            <h6>High Priority</h6>
-                            <h3 id="highCount">0</h3>
+                            <h6>Orange (90%)</h6>
+                            <h3 id="orangeCount">0</h3>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="reports-card alert-card">
-                            <i class="fas fa-info-circle fa-2x mb-3 text-info"></i>
-                            <h6>Medium Alerts</h6>
-                            <h3 id="mediumCount">0</h3>
+                            <i class="fas fa-info-circle fa-2x mb-3 text-warning"></i>
+                            <h6>Light Orange (80%)</h6>
+                            <h3 id="lightOrangeCount">0</h3>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="reports-card alert-card">
                             <i class="fas fa-bell fa-2x mb-3 text-secondary"></i>
-                            <h6>Total Alerts</h6>
-                            <h3 id="totalAlerts">0</h3>
+                            <h6>Yellow (70%)</h6>
+                            <h3 id="yellowCount">0</h3>
                         </div>
                     </div>
                 </div>
@@ -1039,9 +1040,9 @@ $db = Database::getInstance()->getConnection();
                                                 <th>Department</th>
                                                 <th>Budget Year</th>
                                                 <th>Budgeted Amount</th>
-                                                <th>Actual Amount</th>
-                                                <th>Over Amount</th>
-                                                <th>Over %</th>
+                                        <th>Utilized Amount</th>
+                                        <th>Utilization %</th>
+                                        <th>Over Amount</th>
                                                 <th>Severity</th>
                                                 <th>Alert Date</th>
                                                 <th>Action</th>
@@ -2644,6 +2645,7 @@ $db = Database::getInstance()->getConnection();
                 currentAlerts = data.alerts || [];
                 renderAlertsTable();
                 updateAlertsCards();
+                showThresholdToast();
 
             } catch (error) {
                 console.error('Error loading alerts:', error);
@@ -2671,9 +2673,10 @@ $db = Database::getInstance()->getConnection();
 
             filteredAlerts.forEach(alert => {
                 const severityClass = {
-                    'critical': 'bg-danger text-white',
-                    'high': 'bg-warning text-dark',
-                    'medium': 'bg-info text-white'
+                    'red': 'bg-danger text-white',
+                    'orange': 'bg-warning text-dark',
+                    'light_orange': 'bg-warning text-dark',
+                    'yellow': 'bg-warning text-dark'
                 }[alert.severity] || 'bg-secondary';
 
                 const row = `
@@ -2681,10 +2684,10 @@ $db = Database::getInstance()->getConnection();
                         <td><strong>${alert.department}</strong></td>
                         <td>${alert.budget_year}</td>
                         <td>PHP ${parseFloat(alert.budgeted_amount).toLocaleString()}</td>
-                        <td>PHP ${parseFloat(alert.actual_amount).toLocaleString()}</td>
+                        <td>PHP ${parseFloat(alert.utilized_amount).toLocaleString()}</td>
+                        <td>${parseFloat(alert.utilization_percent).toFixed(1)}%</td>
                         <td class="variance-positive">PHP ${parseFloat(alert.over_amount).toLocaleString()}</td>
-                        <td class="variance-positive">${parseFloat(alert.over_percent).toFixed(1)}%</td>
-                        <td><span class="badge ${severityClass}">${alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)}</span></td>
+                        <td><span class="badge ${severityClass}">${alert.severity_label || alert.severity}</span></td>
                         <td>${alert.alert_date}</td>
                         <td>
                             <button class="btn btn-sm btn-outline-primary" onclick="viewAlertDetails(${alert.id})">View Details</button>
@@ -2697,14 +2700,39 @@ $db = Database::getInstance()->getConnection();
 
         // Update alerts cards
         function updateAlertsCards() {
-            const criticalCount = currentAlerts.filter(a => a.severity === 'critical').length;
-            const highCount = currentAlerts.filter(a => a.severity === 'high').length;
-            const mediumCount = currentAlerts.filter(a => a.severity === 'medium').length;
+            const redCount = currentAlerts.filter(a => a.severity === 'red').length;
+            const orangeCount = currentAlerts.filter(a => a.severity === 'orange').length;
+            const lightOrangeCount = currentAlerts.filter(a => a.severity === 'light_orange').length;
+            const yellowCount = currentAlerts.filter(a => a.severity === 'yellow').length;
 
-            document.getElementById('criticalCount').textContent = criticalCount;
-            document.getElementById('highCount').textContent = highCount;
-            document.getElementById('mediumCount').textContent = mediumCount;
-            document.getElementById('totalAlerts').textContent = currentAlerts.length;
+            const redEl = document.getElementById('redCount');
+            const orangeEl = document.getElementById('orangeCount');
+            const lightOrangeEl = document.getElementById('lightOrangeCount');
+            const yellowEl = document.getElementById('yellowCount');
+
+            if (redEl) redEl.textContent = redCount;
+            if (orangeEl) orangeEl.textContent = orangeCount;
+            if (lightOrangeEl) lightOrangeEl.textContent = lightOrangeCount;
+            if (yellowEl) yellowEl.textContent = yellowCount;
+        }
+
+        function showThresholdToast() {
+            if (!currentAlerts.length) {
+                return;
+            }
+            const severityPriority = { red: 4, orange: 3, light_orange: 2, yellow: 1 };
+            const topAlert = currentAlerts.reduce((best, alert) => {
+                if (!best) return alert;
+                return (severityPriority[alert.severity] || 0) > (severityPriority[best.severity] || 0) ? alert : best;
+            }, null);
+
+            if (!topAlert) {
+                return;
+            }
+
+            const message = `${topAlert.department} is at ${parseFloat(topAlert.utilization_percent).toFixed(1)}% of budget (${topAlert.severity_label || topAlert.severity}).`;
+            const alertType = topAlert.severity === 'red' ? 'danger' : (topAlert.severity === 'orange' ? 'warning' : 'info');
+            showAlert(message, alertType);
         }
 
         // View alert details
@@ -2717,17 +2745,17 @@ $db = Database::getInstance()->getConnection();
 
             const modalEl = document.getElementById('alertDetailsModal');
             if (!modalEl) {
-                showAlert(`Alert Details: ${alert.department} is ${alert.over_percent.toFixed(1)}% over budget`, 'warning');
+                showAlert(`Alert Details: ${alert.department} is at ${alert.utilization_percent.toFixed(1)}% of budget`, 'warning');
                 return;
             }
 
             modalEl.querySelector('#alertDepartment').textContent = alert.department;
             modalEl.querySelector('#alertYear').textContent = alert.budget_year;
             modalEl.querySelector('#alertBudgeted').textContent = `PHP ${parseFloat(alert.budgeted_amount || 0).toLocaleString()}`;
-            modalEl.querySelector('#alertActual').textContent = `PHP ${parseFloat(alert.actual_amount || 0).toLocaleString()}`;
+            modalEl.querySelector('#alertActual').textContent = `PHP ${parseFloat(alert.utilized_amount || 0).toLocaleString()}`;
             modalEl.querySelector('#alertOverAmount').textContent = `PHP ${parseFloat(alert.over_amount || 0).toLocaleString()}`;
-            modalEl.querySelector('#alertOverPercent').textContent = `${parseFloat(alert.over_percent || 0).toFixed(1)}%`;
-            modalEl.querySelector('#alertSeverity').textContent = alert.severity || 'N/A';
+            modalEl.querySelector('#alertOverPercent').textContent = `${parseFloat(alert.utilization_percent || 0).toFixed(1)}%`;
+            modalEl.querySelector('#alertSeverity').textContent = alert.severity_label || alert.severity || 'N/A';
             modalEl.querySelector('#alertDate').textContent = alert.alert_date || 'N/A';
 
             new bootstrap.Modal(modalEl).show();
@@ -3703,7 +3731,7 @@ $db = Database::getInstance()->getConnection();
                             <div id="alertBudgeted" class="fw-semibold"></div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Actual Amount</label>
+                            <label class="form-label">Utilized Amount</label>
                             <div id="alertActual" class="fw-semibold"></div>
                         </div>
                         <div class="col-md-6 mb-3">
@@ -3711,7 +3739,7 @@ $db = Database::getInstance()->getConnection();
                             <div id="alertOverAmount" class="fw-semibold"></div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Over Percent</label>
+                            <label class="form-label">Utilization Percent</label>
                             <div id="alertOverPercent" class="fw-semibold"></div>
                         </div>
                         <div class="col-md-6 mb-3">

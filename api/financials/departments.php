@@ -22,6 +22,7 @@ if (!isset($_SESSION['user'])) {
 $auth = new Auth();
 $db = Database::getInstance()->getConnection();
 $method = $_SERVER['REQUEST_METHOD'];
+$hasDeptEmail = hasDepartmentEmailColumn($db);
 
 try {
     switch ($method) {
@@ -70,7 +71,7 @@ function handleGet($auth, $db) {
             // Get all departments with additional info
             $stmt = $db->query("
                 SELECT
-                    d.*,
+                    d.*" . ($GLOBALS['hasDeptEmail'] ? ", d.department_email" : "") . ",
                     ra.account_code as revenue_account_code,
                     ra.account_name as revenue_account_name,
                     ea.account_code as expense_account_code,
@@ -101,7 +102,7 @@ function handleGet($auth, $db) {
 
             $stmt = $db->prepare("
                 SELECT
-                    d.*,
+                    d.*" . ($GLOBALS['hasDeptEmail'] ? ", d.department_email" : "") . ",
                     ra.account_code as revenue_account_code,
                     ra.account_name as revenue_account_name,
                     ea.account_code as expense_account_code,
@@ -259,11 +260,11 @@ function handlePost($auth, $db) {
             $stmt = $db->prepare("
                 INSERT INTO departments
                 (dept_code, dept_name, dept_type, category, description,
-                 parent_dept_id, revenue_account_id, expense_account_id, is_active)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 parent_dept_id, revenue_account_id, expense_account_id, is_active" . ($GLOBALS['hasDeptEmail'] ? ", department_email" : "") . ")
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?" . ($GLOBALS['hasDeptEmail'] ? ", ?" : "") . ")
             ");
 
-            $stmt->execute([
+            $params = [
                 $data['dept_code'],
                 $data['dept_name'],
                 $data['dept_type'],
@@ -273,7 +274,11 @@ function handlePost($auth, $db) {
                 $data['revenue_account_id'] ?? null,
                 $data['expense_account_id'] ?? null,
                 $data['is_active'] ?? 1
-            ]);
+            ];
+            if ($GLOBALS['hasDeptEmail']) {
+                $params[] = $data['department_email'] ?? null;
+            }
+            $stmt->execute($params);
 
             $deptId = $db->lastInsertId();
 
@@ -393,19 +398,23 @@ function handlePut($auth, $db) {
             parent_dept_id = ?,
             revenue_account_id = ?,
             expense_account_id = ?,
-            is_active = ?
+            is_active = ?" . ($GLOBALS['hasDeptEmail'] ? ", department_email = ?" : "") . "
         WHERE id = ?
     ");
 
-    $stmt->execute([
+    $params = [
         $data['dept_name'],
         $data['description'] ?? '',
         $data['parent_dept_id'] ?? null,
         $data['revenue_account_id'] ?? null,
         $data['expense_account_id'] ?? null,
-        $data['is_active'] ?? 1,
-        $id
-    ]);
+        $data['is_active'] ?? 1
+    ];
+    if ($GLOBALS['hasDeptEmail']) {
+        $params[] = $data['department_email'] ?? null;
+    }
+    $params[] = $id;
+    $stmt->execute($params);
 
     Logger::getInstance()->logUserAction(
         'Updated department',
@@ -448,6 +457,22 @@ function handleDelete($auth, $db) {
     );
 
     echo json_encode(['success' => true, 'message' => 'Department deactivated successfully']);
+}
+
+function hasDepartmentEmailColumn($db) {
+    try {
+        $stmt = $db->prepare("
+            SELECT COUNT(*) AS cnt
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'departments'
+              AND COLUMN_NAME = 'department_email'
+        ");
+        $stmt->execute();
+        return ((int) ($stmt->fetch(PDO::FETCH_ASSOC)['cnt'] ?? 0)) > 0;
+    } catch (Exception $e) {
+        return false;
+    }
 }
 ?>
 

@@ -4,6 +4,7 @@
 require_once '../includes/database.php';
 require_once '../includes/logger.php';
 require_once '../includes/coa_validation.php';
+require_once '../includes/budget_alerts.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -301,42 +302,7 @@ function getTrackingData($db) {
 }
 
 function getAlerts($db) {
-    // Get departments/categories that are over budget
-    $stmt = $db->prepare("
-        SELECT
-            d.dept_name as department,
-            SUM(bi.budgeted_amount) as budgeted_amount,
-            SUM(bi.actual_amount) as actual_amount,
-            b.budget_year
-        FROM budget_items bi
-        JOIN budgets b ON bi.budget_id = b.id
-        LEFT JOIN departments d ON bi.department_id = d.id
-        WHERE b.status IN ('approved', 'active')
-        GROUP BY bi.department_id, d.dept_name, b.budget_year
-        HAVING SUM(bi.actual_amount) > SUM(bi.budgeted_amount)
-        ORDER BY (SUM(bi.actual_amount) - SUM(bi.budgeted_amount)) DESC
-    ");
-    $stmt->execute();
-    $overBudgetItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $alerts = [];
-    foreach ($overBudgetItems as $item) {
-        $overAmount = $item['actual_amount'] - $item['budgeted_amount'];
-        $overPercent = $item['budgeted_amount'] > 0 ? ($overAmount / $item['budgeted_amount']) * 100 : 0;
-
-        $alerts[] = [
-            'id' => count($alerts) + 1,
-            'department' => $item['department'] ?: 'Unassigned',
-            'budget_year' => $item['budget_year'],
-            'budgeted_amount' => (float)$item['budgeted_amount'],
-            'actual_amount' => (float)$item['actual_amount'],
-            'over_amount' => (float)$overAmount,
-            'over_percent' => (float)$overPercent,
-            'severity' => $overPercent > 50 ? 'critical' : ($overPercent > 20 ? 'high' : 'medium'),
-            'alert_date' => date('Y-m-d H:i:s')
-        ];
-    }
-
+    $alerts = calculateBudgetAlerts($db);
     echo json_encode(['alerts' => $alerts]);
 }
 
