@@ -890,7 +890,7 @@ $db = Database::getInstance()->getConnection();
                 <div class="card">
                     <div class="card-header">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h6>Department Allocations - FY 2025</h6>
+                            <h6>Department Allocations</h6>
                             <button class="btn btn-outline-secondary btn-sm" onclick="loadAllocations()">
                                 <i class="fas fa-sync me-2"></i>Refresh
                             </button>

@@ -6,12 +6,19 @@ This document describes how each department can integrate with the Budget Alloca
 This API provides department budget allocations and alert status. It supports multiple budget periods and rolls over unused budget based on the parent budget configuration.
 
 ## Access & Authorization
+### Admin / Super Admin (UI)
 - Required roles: Admin or Super Admin.
 - If staff users are allowed to submit budget actions, the actions must be approved by Admin/Super Admin before becoming effective.
-- The API currently uses session-based authentication. Requests must include a valid session cookie from a logged-in Admin/Super Admin user.
+
+### External Department Integrations (OAuth)
+- Use OAuth Client Credentials to obtain a Bearer token.
+- Department tokens are scoped to a single department.
 
 ## Base URL
 - `/api/budgets.php`
+- Integration endpoints:
+  - `POST /api/oauth/token.php`
+  - `POST /api/integrations/budget_allocation.php`
 
 ## Supported Periods
 - Monthly
@@ -206,6 +213,63 @@ If you want a dedicated department email, add this column:
 ```
 ALTER TABLE departments
   ADD COLUMN department_email VARCHAR(255) NULL;
+```
+
+## OAuth Integration Flow (External Departments)
+
+### 1) Register a Department Client (Admin/Super Admin)
+**POST** `/api/integrations/budget_allocation.php`
+```
+{
+  "action": "register",
+  "department_id": 3
+}
+```
+Response:
+```
+{
+  "success": true,
+  "client_id": "...",
+  "client_secret": "..."
+}
+```
+
+### 2) Obtain Access Token (Client Credentials)
+**POST** `/api/oauth/token.php`
+```
+{
+  "grant_type": "client_credentials",
+  "client_id": "...",
+  "client_secret": "..."
+}
+```
+Response:
+```
+{
+  "access_token": "...",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}
+```
+
+### 3) Push Budget Allocation (Department System)
+**POST** `/api/integrations/budget_allocation.php`
+Header:
+```
+Authorization: Bearer <access_token>
+```
+Body:
+```
+{
+  "action": "allocate",
+  "department_id": 3,
+  "budget_name": "External Allocation 2026",
+  "allocated_amount": 1250000,
+  "period": "Yearly",
+  "start_date": "2026-01-01",
+  "end_date": "2026-12-31",
+  "description": "Department-provided allocation"
+}
 ```
 
 ## Required Data per Department (Minimum)
