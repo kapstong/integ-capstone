@@ -353,6 +353,13 @@ body {
             vertical-align: middle;
             color: #495057;
         }
+        .payroll-row-clickable {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .payroll-row-clickable:hover {
+            background-color: #f0f4f8;
+        }
         .btn {
             border-radius: 8px;
             font-weight: 600;
@@ -1391,6 +1398,8 @@ body {
                 row.dataset.submittedBy = payroll.submitted_by || '';
                 row.dataset.employeeCount = payroll.employee_count || '';
                 row.dataset.payrollData = JSON.stringify(payroll);
+                row.style.cursor = 'pointer';
+                row.className = 'payroll-row-clickable';
                 row.innerHTML = `
                     <td><strong>${payroll.period_display || payroll.payroll_period || 'N/A'}</strong></td>
                     <td><strong class="text-success">PHP ${totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
@@ -1398,7 +1407,7 @@ body {
                     <td>${payroll.submitted_by || 'N/A'}</td>
                     <td>${submittedAt}</td>
                     <td>${statusText ? `<span class="badge ${canApprove ? 'bg-info' : 'bg-secondary'}">${statusText}</span>` : ''}</td>
-                    <td>
+                    <td onclick="event.stopPropagation();">
                         <button class="btn btn-info btn-sm me-2" onclick="viewPayrollDetails(this, '${payrollId}')">
                             <i class="fas fa-eye me-1"></i>View
                         </button>
@@ -1412,6 +1421,10 @@ body {
                         ` : ''}
                     </td>
                 `;
+                row.addEventListener('click', function(e) {
+                    if (e.target.closest('button') || e.target.closest('td:last-child')) return;
+                    viewPayrollDetails(this.querySelector('button'), payrollId);
+                });
                 tbody.appendChild(row);
             });
         };
