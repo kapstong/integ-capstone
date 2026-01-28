@@ -2754,12 +2754,16 @@ $db = Database::getInstance()->getConnection();
 
         function populateDepartmentDropdowns(departments) {
             const departmentSelects = [
-                'budgetDepartment', 'allocationDepartment', 'adjustmentDepartment', 'editBudgetDepartment'
+                'budgetDepartment', 'allocationDepartment', 'adjustmentDepartment', 'editBudgetDepartment', 'apiClientDepartment'
             ];
 
             departmentSelects.forEach(selectId => {
                 const select = document.getElementById(selectId);
                 if (select) {
+                    if (!departments || departments.length === 0) {
+                        select.innerHTML = '<option value="">No departments found</option>';
+                        return;
+                    }
                     select.innerHTML = '<option value="">Select Department</option>';
                     departments.forEach(dept => {
                         if (dept.is_active == 1 || dept.is_active === undefined) {
@@ -3425,10 +3429,15 @@ $db = Database::getInstance()->getConnection();
                 <div class="modal-body">
                     <form id="allocationApiClientForm">
                         <div class="mb-3">
-                            <label for="apiClientDepartment" class="form-label">Department *</label>
-                            <select class="form-select" id="apiClientDepartment" required>
+                            <label for="apiClientDepartment" class="form-label">Department</label>
+                            <select class="form-select" id="apiClientDepartment">
                                 <option value="">Loading departments...</option>
                             </select>
+                            <small class="text-muted">Select a department, or enter a new one below.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="apiClientDepartmentName" class="form-label">New Department Name (Optional)</label>
+                            <input type="text" class="form-control" id="apiClientDepartmentName" placeholder="e.g., HR4">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Client ID</label>
@@ -3511,6 +3520,51 @@ $db = Database::getInstance()->getConnection();
 <script src="../includes/tab_persistence.js?v=1"></script>
 </body>
 </html>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const apiClientForm = document.getElementById('allocationApiClientForm');
+        if (!apiClientForm) {
+            return;
+        }
+        apiClientForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const departmentId = document.getElementById('apiClientDepartment')?.value || '';
+            const departmentName = document.getElementById('apiClientDepartmentName')?.value.trim() || '';
+
+            if (!departmentId && !departmentName) {
+                alert('Please select a department or enter a new department name.');
+                return;
+            }
+
+            try {
+                const response = await fetch('../api/integrations/budget_allocation.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'register',
+                        department_id: departmentId || undefined,
+                        department_name: departmentName || undefined
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) {
+                    alert(data.error || 'Failed to generate client credentials.');
+                    return;
+                }
+
+                const clientIdInput = document.getElementById('apiClientId');
+                const clientSecretInput = document.getElementById('apiClientSecret');
+                if (clientIdInput) clientIdInput.value = data.client_id || '';
+                if (clientSecretInput) clientSecretInput.value = data.client_secret || '';
+                if (typeof loadDepartments === 'function') {
+                    loadDepartments();
+                }
+            } catch (error) {
+                alert('Failed to generate client credentials.');
+            }
+        });
+    });
+</script>
     <script src="../includes/inactivity_timeout.js?v=3"></script>
 <script src="../includes/navbar_datetime.js"></script>
 <script src="../includes/tab_persistence.js?v=1"></script>

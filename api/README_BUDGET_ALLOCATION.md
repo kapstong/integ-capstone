@@ -245,6 +245,13 @@ ALTER TABLE departments
   "department_id": 3
 }
 ```
+If you don't have a department created yet, you can pass a name instead:
+```
+{
+  "action": "register",
+  "department_name": "HR4"
+}
+```
 Response:
 ```
 {
@@ -283,6 +290,19 @@ Body:
 {
   "action": "allocate",
   "department_id": 3,
+  "budget_name": "External Allocation 2026",
+  "allocated_amount": 1250000,
+  "period": "Yearly",
+  "start_date": "2026-01-01",
+  "end_date": "2026-12-31",
+  "description": "Department-provided allocation"
+}
+```
+You can also send a department name instead of ID:
+```
+{
+  "action": "allocate",
+  "department_name": "HR4",
   "budget_name": "External Allocation 2026",
   "allocated_amount": 1250000,
   "period": "Yearly",

@@ -64,10 +64,14 @@ try {
         }
 
         $departmentId = (int) ($input['department_id'] ?? 0);
-        if (!$departmentId) {
+        $departmentName = trim((string) ($input['department_name'] ?? ''));
+        if (!$departmentId && $departmentName === '') {
             http_response_code(400);
-            echo json_encode(['error' => 'department_id is required']);
+            echo json_encode(['error' => 'department_id or department_name is required']);
             exit;
+        }
+        if (!$departmentId && $departmentName !== '') {
+            $departmentId = getOrCreateDepartment($db, $departmentName);
         }
 
         $clientId = bin2hex(random_bytes(16));
@@ -96,9 +100,13 @@ try {
         }
 
         $departmentId = (int) ($input['department_id'] ?? 0);
+        $departmentName = trim((string) ($input['department_name'] ?? ''));
+        if (!$departmentId && $departmentName !== '') {
+            $departmentId = getOrCreateDepartment($db, $departmentName);
+        }
         if (!$departmentId) {
             http_response_code(400);
-            echo json_encode(['error' => 'department_id is required']);
+            echo json_encode(['error' => 'department_id or department_name is required']);
             exit;
         }
 
@@ -268,6 +276,46 @@ function getOrCreateDefaultCategory($db, $departmentId) {
         VALUES (?, 'External Allocation', 'expense', ?, 1)
     ");
     $insert->execute([$categoryCode, $departmentId]);
+    return (int) $db->lastInsertId();
+}
+
+function getOrCreateDepartment($db, $departmentName) {
+    $name = trim($departmentName);
+    if ($name === '') {
+        throw new Exception('department_name is required');
+    }
+
+    $stmt = $db->prepare("SELECT id FROM departments WHERE dept_name = ? LIMIT 1");
+    $stmt->execute([$name]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($row) {
+        return (int) $row['id'];
+    }
+
+    $code = strtoupper(preg_replace('/[^A-Z0-9]+/', '_', $name));
+    $code = trim($code, '_');
+    if ($code === '') {
+        $code = 'DEPT';
+    }
+
+    $codeBase = $code;
+    $suffix = 1;
+    $codeStmt = $db->prepare("SELECT COUNT(*) FROM departments WHERE dept_code = ?");
+    while (true) {
+        $codeStmt->execute([$code]);
+        if ((int) $codeStmt->fetchColumn() === 0) {
+            break;
+        }
+        $code = $codeBase . '_' . $suffix;
+        $suffix++;
+    }
+
+    $insert = $db->prepare("
+        INSERT INTO departments
+        (dept_code, dept_name, dept_type, category, description, is_active, company_id)
+        VALUES (?, ?, 'cost_center', 'admin', 'External integration', 1, 1)
+    ");
+    $insert->execute([$code, $name]);
     return (int) $db->lastInsertId();
 }
 
