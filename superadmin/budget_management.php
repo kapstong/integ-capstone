@@ -820,11 +820,49 @@ $db = Database::getInstance()->getConnection();
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#allocateFundsModal"><i class="fas fa-plus me-2"></i>Allocate Funds</button>
                     </div>
                 </div>
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="reports-card tracking-card">
+                            <i class="fas fa-sack-dollar fa-2x mb-3 text-primary"></i>
+                            <h6>Total Allocated</h6>
+                            <h3 id="allocationSummaryTotal">Loading...</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="reports-card tracking-card">
+                            <i class="fas fa-arrow-up-right-dots fa-2x mb-3 text-warning"></i>
+                            <h6>Utilized</h6>
+                            <h3 id="allocationSummaryUtilized">Loading...</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="reports-card tracking-card">
+                            <i class="fas fa-wallet fa-2x mb-3 text-success"></i>
+                            <h6>Remaining</h6>
+                            <h3 id="allocationSummaryRemaining">Loading...</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="reports-card tracking-card">
+                            <i class="fas fa-gauge-high fa-2x mb-3 text-info"></i>
+                            <h6>Utilization Rate</h6>
+                            <h3 id="allocationSummaryRate">Loading...</h3>
+                        </div>
+                    </div>
+                </div>
                 <div class="row">
                     <div class="col-md-12">
                         <div class="card">
                             <div class="card-header">
-                                <h6>Department Allocations - FY 2025</h6>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6>Department Allocations - FY 2025</h6>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <span class="badge bg-warning text-dark">70% - Yellow</span>
+                                        <span class="badge bg-warning text-dark">80% - Light Orange</span>
+                                        <span class="badge bg-warning text-dark">90% - Orange</span>
+                                        <span class="badge bg-danger">100% - Red</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -836,7 +874,7 @@ $db = Database::getInstance()->getConnection();
                                                 <th>Reserved</th>
                                                 <th>Utilized</th>
                                                 <th>Remaining</th>
-                                                <th>Progress</th>
+                                                <th>Utilization %</th>
                                                 <th>Status</th>
                                                 <th>Actions</th>
                                             </tr>
@@ -1384,6 +1422,7 @@ $db = Database::getInstance()->getConnection();
 
                 currentAllocations = data.allocations || [];
                 renderAllocationsTable();
+                updateAllocationSummary();
                 renderClaimsSummary();
                 renderClaimsOverBudget();
 
@@ -1408,7 +1447,7 @@ $db = Database::getInstance()->getConnection();
 
             currentAllocations.forEach(allocation => {
                 const progressPercent = allocation.total_amount > 0 ? (allocation.utilized_amount / allocation.total_amount) * 100 : 0;
-                const progressClass = progressPercent > 90 ? 'budget-over' : progressPercent > 75 ? 'budget-on-track' : 'budget-under';
+                const progressClass = progressPercent >= 100 ? 'budget-over' : progressPercent >= 70 ? 'budget-on-track' : 'budget-under';
                 const statusBadge = getAllocationStatusBadge(progressPercent);
                 const reservedLabel = allocation.reserved_amount != null
                     ? `PHP ${parseFloat(allocation.reserved_amount || 0).toLocaleString()}`
@@ -1425,6 +1464,7 @@ $db = Database::getInstance()->getConnection();
                             <div class="budget-progress ${progressClass}">
                                 <div class="budget-progress-bar" style="width: ${Math.min(progressPercent, 100)}%"></div>
                             </div>
+                            <small class="text-muted">${progressPercent.toFixed(1)}%</small>
                         </td>
                         <td>${statusBadge}</td>
                         <td>
@@ -1434,6 +1474,23 @@ $db = Database::getInstance()->getConnection();
                 `;
                 tbody.innerHTML += row;
             });
+        }
+
+        function updateAllocationSummary() {
+            const totalAllocated = currentAllocations.reduce((sum, item) => sum + (parseFloat(item.total_amount) || 0), 0);
+            const totalUtilized = currentAllocations.reduce((sum, item) => sum + (parseFloat(item.utilized_amount) || 0), 0);
+            const totalRemaining = currentAllocations.reduce((sum, item) => sum + (parseFloat(item.remaining) || 0), 0);
+            const utilizationRate = totalAllocated > 0 ? (totalUtilized / totalAllocated) * 100 : 0;
+
+            const totalEl = document.getElementById('allocationSummaryTotal');
+            const utilizedEl = document.getElementById('allocationSummaryUtilized');
+            const remainingEl = document.getElementById('allocationSummaryRemaining');
+            const rateEl = document.getElementById('allocationSummaryRate');
+
+            if (totalEl) totalEl.textContent = `PHP ${totalAllocated.toLocaleString()}`;
+            if (utilizedEl) utilizedEl.textContent = `PHP ${totalUtilized.toLocaleString()}`;
+            if (remainingEl) remainingEl.textContent = `PHP ${totalRemaining.toLocaleString()}`;
+            if (rateEl) rateEl.textContent = `${utilizationRate.toFixed(1)}%`;
         }
 
         function renderAdjustmentsTable() {
@@ -2171,13 +2228,19 @@ $db = Database::getInstance()->getConnection();
         }
 
         function getAllocationStatusBadge(progressPercent) {
-            if (progressPercent > 90) {
-                return '<span class="badge bg-danger">Over Budget</span>';
-            } else if (progressPercent > 75) {
-                return '<span class="badge bg-warning">On Track</span>';
-            } else {
-                return '<span class="badge bg-success">Under Budget</span>';
+            if (progressPercent >= 100) {
+                return '<span class="badge bg-danger">Red (100%)</span>';
             }
+            if (progressPercent >= 90) {
+                return '<span class="badge bg-warning text-dark">Orange (90%)</span>';
+            }
+            if (progressPercent >= 80) {
+                return '<span class="badge bg-warning text-dark">Light Orange (80%)</span>';
+            }
+            if (progressPercent >= 70) {
+                return '<span class="badge bg-warning text-dark">Yellow (70%)</span>';
+            }
+            return '<span class="badge bg-success">Good</span>';
         }
 
         function getVarianceStatusBadge(variancePercent) {
