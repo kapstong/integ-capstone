@@ -1475,6 +1475,8 @@ body {
                 const rawStatus = (payroll.status || '').toString();
                 let statusText = payroll.display_status || rawStatus || 'Unknown';
                 const rawKey = rawStatus.toLowerCase();
+                // If payroll already approved/processed in external system, skip showing it here
+                if (rawKey === 'approved' || rawKey === 'processed') return;
                 // Do not display 'approved'/'processed' status here — leave blank
                 if (rawKey === 'approved' || rawKey === 'processed') {
                     statusText = '';

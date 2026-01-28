@@ -1452,6 +1452,8 @@ body {
                 const rawStatus = (payroll.status || '').toString();
                 let statusText = payroll.display_status || rawStatus || 'Unknown';
                 const rawKey = rawStatus.toLowerCase();
+                // Skip payroll batches that are already approved/processed
+                if (rawKey === 'approved' || rawKey === 'processed') return;
                 if (rawKey === 'approved' || rawKey === 'processed') {
                     statusText = '';
                 } else if (rawKey === 'rejected') {
