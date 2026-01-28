@@ -1148,7 +1148,9 @@ class HR4Integration extends BaseIntegration {
             return ['success' => false, 'error' => 'Invalid payroll approval request'];
         }
 
-        $statusValue = $action === 'approve' ? 'approved' : 'rejected';
+        // Do not mark payroll as 'approved' locally — mark as 'processed'
+        // since approval is recorded at Disbursement Records instead.
+        $statusValue = $action === 'approve' ? 'processed' : 'rejected';
 
         // Try to update external HR4 system, but don't fail if it's not available
         $externalUpdateSuccess = false;
