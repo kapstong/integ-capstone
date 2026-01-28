@@ -424,11 +424,11 @@ $db = Database::getInstance()->getConnection();
         }
 
         .modal {
-            z-index: 1055;
+            z-index: 3000;
         }
 
         .modal-backdrop {
-            z-index: 1050;
+            z-index: 2990;
         }
 
         .modal-backdrop.show {
@@ -436,7 +436,8 @@ $db = Database::getInstance()->getConnection();
         }
 
         .modal-dialog,
-        .modal-content {
+        .modal-content,
+        .modal * {
             pointer-events: auto;
         }
 
@@ -2360,6 +2361,14 @@ $db = Database::getInstance()->getConnection();
 
         // Event listeners for dynamic functionality
         document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.modal').forEach((modalEl) => {
+                modalEl.addEventListener('show.bs.modal', () => {
+                    if (modalEl.parentElement !== document.body) {
+                        document.body.appendChild(modalEl);
+                    }
+                });
+            });
+
             // Handle create budget form submission
             const createBudgetForm = document.getElementById('createBudgetForm');
             if (createBudgetForm) {
