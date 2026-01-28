@@ -1518,7 +1518,7 @@ body {
                     <td>${payroll.employee_count || 'N/A'}</td>
                     <td>${payroll.submitted_by || 'N/A'}</td>
                     <td>${submittedAt}</td>
-                    <td><span class="badge ${canApprove ? 'bg-info' : 'bg-secondary'}">${statusText}</span></td>
+                    <td>${statusText ? `<span class="badge ${canApprove ? 'bg-info' : 'bg-secondary'}">${statusText}</span>` : ''}</td>
                     <td>${actionsHtml}</td>
                 `;
                 tbody.appendChild(row);
