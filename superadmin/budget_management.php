@@ -814,14 +814,17 @@ $db = Database::getInstance()->getConnection();
             </div>
             <!-- Budget Allocation Tab -->
             <div class="tab-pane fade" id="allocation" role="tabpanel" aria-labelledby="allocation-tab">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">Budget Allocation & Distribution</h6>
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
                     <div>
-                        <button class="btn btn-outline-secondary me-2"><i class="fas fa-lock me-2"></i>Lock Allocations</button>
+                        <h6 class="mb-1">Budget Allocation Hub</h6>
+                        <small class="text-muted">Manage allocations by department with live utilization alerts.</small>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-outline-secondary"><i class="fas fa-lock me-2"></i>Lock Allocations</button>
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#allocateFundsModal"><i class="fas fa-plus me-2"></i>Allocate Funds</button>
                     </div>
                 </div>
-                <div class="row mb-4">
+                <div class="row g-3 mb-4">
                     <div class="col-md-3">
                         <div class="reports-card tracking-card">
                             <i class="fas fa-sack-dollar fa-2x mb-3 text-primary"></i>
@@ -851,43 +854,66 @@ $db = Database::getInstance()->getConnection();
                         </div>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h6>Department Allocations - FY 2025</h6>
-                                    <div class="d-flex flex-wrap gap-2">
-                                        <span class="badge bg-warning text-dark">70% - Yellow</span>
-                                        <span class="badge bg-warning text-dark">80% - Light Orange</span>
-                                        <span class="badge bg-warning text-dark">90% - Orange</span>
-                                        <span class="badge bg-danger">100% - Red</span>
-                                    </div>
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label">Search Department</label>
+                                <input type="text" id="allocationSearch" class="form-control" placeholder="Type department name">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Status Filter</label>
+                                <select id="allocationStatusFilter" class="form-select">
+                                    <option value="all">All Statuses</option>
+                                    <option value="red">Red (100%)</option>
+                                    <option value="orange">Orange (90%)</option>
+                                    <option value="light_orange">Light Orange (80%)</option>
+                                    <option value="yellow">Yellow (70%)</option>
+                                    <option value="good">Good (&lt;70%)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">Threshold Guide</label>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span class="badge bg-warning text-dark">70% - Yellow</span>
+                                    <span class="badge bg-warning text-dark">80% - Light Orange</span>
+                                    <span class="badge bg-warning text-dark">90% - Orange</span>
+                                    <span class="badge bg-danger">100% - Red</span>
                                 </div>
                             </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-striped">
-                                        <thead>
-                                            <tr>
-                                                <th>Department</th>
-                                                <th>Allocated</th>
-                                                <th>Reserved</th>
-                                                <th>Utilized</th>
-                                                <th>Remaining</th>
-                                                <th>Utilization %</th>
-                                                <th>Status</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="allocationTableBody">
-                                              <tr>
-                                                  <td colspan="8" class="text-center text-muted">Loading allocations...</td>
-                                              </tr>
-                                          </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6>Department Allocations - FY 2025</h6>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="loadAllocations()">
+                                <i class="fas fa-sync me-2"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Department</th>
+                                        <th>Allocated</th>
+                                        <th>Reserved</th>
+                                        <th>Utilized</th>
+                                        <th>Remaining</th>
+                                        <th>Utilization %</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="allocationTableBody">
+                                      <tr>
+                                          <td colspan="8" class="text-center text-muted">Loading allocations...</td>
+                                      </tr>
+                                  </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -1441,12 +1467,14 @@ $db = Database::getInstance()->getConnection();
             }
             tbody.innerHTML = '';
 
-            if (currentAllocations.length === 0) {
+            const filteredAllocations = getFilteredAllocations();
+
+            if (filteredAllocations.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No allocations found.</td></tr>';
                 return;
             }
 
-            currentAllocations.forEach(allocation => {
+            filteredAllocations.forEach(allocation => {
                 const progressPercent = allocation.total_amount > 0 ? (allocation.utilized_amount / allocation.total_amount) * 100 : 0;
                 const progressClass = progressPercent >= 100 ? 'budget-over' : progressPercent >= 70 ? 'budget-on-track' : 'budget-under';
                 const statusBadge = getAllocationStatusBadge(progressPercent);
@@ -1478,9 +1506,10 @@ $db = Database::getInstance()->getConnection();
         }
 
         function updateAllocationSummary() {
-            const totalAllocated = currentAllocations.reduce((sum, item) => sum + (parseFloat(item.total_amount) || 0), 0);
-            const totalUtilized = currentAllocations.reduce((sum, item) => sum + (parseFloat(item.utilized_amount) || 0), 0);
-            const totalRemaining = currentAllocations.reduce((sum, item) => sum + (parseFloat(item.remaining) || 0), 0);
+            const filteredAllocations = getFilteredAllocations();
+            const totalAllocated = filteredAllocations.reduce((sum, item) => sum + (parseFloat(item.total_amount) || 0), 0);
+            const totalUtilized = filteredAllocations.reduce((sum, item) => sum + (parseFloat(item.utilized_amount) || 0), 0);
+            const totalRemaining = filteredAllocations.reduce((sum, item) => sum + (parseFloat(item.remaining) || 0), 0);
             const utilizationRate = totalAllocated > 0 ? (totalUtilized / totalAllocated) * 100 : 0;
 
             const totalEl = document.getElementById('allocationSummaryTotal');
@@ -1492,6 +1521,40 @@ $db = Database::getInstance()->getConnection();
             if (utilizedEl) utilizedEl.textContent = `PHP ${totalUtilized.toLocaleString()}`;
             if (remainingEl) remainingEl.textContent = `PHP ${totalRemaining.toLocaleString()}`;
             if (rateEl) rateEl.textContent = `${utilizationRate.toFixed(1)}%`;
+        }
+
+        function getFilteredAllocations() {
+            const searchInput = document.getElementById('allocationSearch');
+            const statusSelect = document.getElementById('allocationStatusFilter');
+            const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            const statusFilter = statusSelect ? statusSelect.value : 'all';
+
+            return currentAllocations.filter(allocation => {
+                const nameMatch = !query || (allocation.department || '').toLowerCase().includes(query);
+                const progressPercent = allocation.total_amount > 0 ? (allocation.utilized_amount / allocation.total_amount) * 100 : 0;
+                const statusKey = getAllocationStatusKey(progressPercent);
+
+                if (statusFilter === 'all') {
+                    return nameMatch;
+                }
+                return nameMatch && statusKey === statusFilter;
+            });
+        }
+
+        function getAllocationStatusKey(progressPercent) {
+            if (progressPercent >= 100) {
+                return 'red';
+            }
+            if (progressPercent >= 90) {
+                return 'orange';
+            }
+            if (progressPercent >= 80) {
+                return 'light_orange';
+            }
+            if (progressPercent >= 70) {
+                return 'yellow';
+            }
+            return 'good';
         }
 
         function renderAdjustmentsTable() {
@@ -2886,6 +2949,22 @@ $db = Database::getInstance()->getConnection();
             if (trackingPeriodSelect) {
                 trackingPeriodSelect.addEventListener('change', function() {
                     loadTrackingData();
+                });
+            }
+
+            const allocationSearch = document.getElementById('allocationSearch');
+            if (allocationSearch) {
+                allocationSearch.addEventListener('input', function() {
+                    renderAllocationsTable();
+                    updateAllocationSummary();
+                });
+            }
+
+            const allocationStatusFilter = document.getElementById('allocationStatusFilter');
+            if (allocationStatusFilter) {
+                allocationStatusFilter.addEventListener('change', function() {
+                    renderAllocationsTable();
+                    updateAllocationSummary();
                 });
             }
 
