@@ -423,6 +423,14 @@ $db = Database::getInstance()->getConnection();
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
 
+        .modal {
+            z-index: 1065;
+        }
+
+        .modal-backdrop {
+            z-index: 1060;
+        }
+
         .modal-header {
             background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
             border-bottom: 1px solid #e9ecef;
