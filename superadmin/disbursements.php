@@ -1475,9 +1475,9 @@ body {
                 const rawStatus = (payroll.status || '').toString();
                 let statusText = payroll.display_status || rawStatus || 'Unknown';
                 const rawKey = rawStatus.toLowerCase();
-                // Treat external 'approved' as already processed since Disbursement Records will record payment
-                if (rawKey === 'approved') {
-                    statusText = 'Processed';
+                // Do not display 'approved'/'processed' status here — leave blank
+                if (rawKey === 'approved' || rawKey === 'processed') {
+                    statusText = '';
                 } else if (rawKey === 'rejected') {
                     statusText = 'Rejected';
                 }

@@ -1452,8 +1452,8 @@ body {
                 const rawStatus = (payroll.status || '').toString();
                 let statusText = payroll.display_status || rawStatus || 'Unknown';
                 const rawKey = rawStatus.toLowerCase();
-                if (rawKey === 'approved') {
-                    statusText = 'Processed';
+                if (rawKey === 'approved' || rawKey === 'processed') {
+                    statusText = '';
                 } else if (rawKey === 'rejected') {
                     statusText = 'Rejected';
                 }
