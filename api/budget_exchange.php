@@ -43,27 +43,31 @@ try {
         )
     ");
 
-    $tokenData = validateBearerToken($db);
-    if (!$tokenData) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Invalid or expired token']);
-        exit;
-    }
-
     $method = $_SERVER['REQUEST_METHOD'];
     if ($method === 'GET') {
+        $tokenData = validateBearerToken($db);
         $action = $_GET['action'] ?? 'allocations';
         if ($action !== 'allocations') {
             http_response_code(400);
             echo json_encode(['error' => 'Invalid action']);
             exit;
         }
-        $departmentId = (int) $tokenData['department_id'];
-        echo json_encode(['allocations' => getAllocationsForDepartment($db, $departmentId)]);
+        if ($tokenData) {
+            $departmentId = (int) $tokenData['department_id'];
+            echo json_encode(['allocations' => getAllocationsForDepartment($db, $departmentId)]);
+            exit;
+        }
+        echo json_encode(['allocations' => getAllocations($db)]);
         exit;
     }
 
     if ($method === 'POST') {
+        $tokenData = validateBearerToken($db);
+        if (!$tokenData) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Invalid or expired token']);
+            exit;
+        }
         $input = json_decode(file_get_contents('php://input'), true);
         if (!$input) {
             $input = $_POST;
@@ -242,6 +246,49 @@ function getAllocationsForDepartment($db, $departmentId) {
         ORDER BY d.dept_name
     ");
     $stmt->execute([$departmentId]);
+    $rawAllocations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $allocations = [];
+    foreach ($rawAllocations as $alloc) {
+        $remaining = $alloc['total_amount'] - $alloc['utilized_amount'];
+        $allocations[] = [
+            'id' => count($allocations) + 1,
+            'department' => $alloc['department'] ?: 'Unassigned',
+            'department_id' => $alloc['department_id'],
+            'total_amount' => (float) $alloc['total_amount'],
+            'utilized_amount' => (float) $alloc['utilized_amount'],
+            'reserved_amount' => (float) $alloc['reserved_amount'],
+            'remaining' => (float) $remaining
+        ];
+    }
+
+    return $allocations;
+}
+
+function getAllocations($db) {
+    $stmt = $db->prepare("
+        SELECT
+            d.dept_name as department,
+            bi.department_id,
+            SUM(bi.budgeted_amount) as total_amount,
+            SUM(bi.actual_amount) as utilized_amount,
+            COALESCE(SUM(
+                CASE
+                    WHEN ba.status = 'pending' THEN ba.amount
+                    ELSE 0
+                END
+            ), 0) as reserved_amount
+        FROM budget_items bi
+        JOIN budgets b ON bi.budget_id = b.id
+        LEFT JOIN departments d ON bi.department_id = d.id
+        LEFT JOIN budget_adjustments ba ON ba.budget_id = b.id
+            AND ba.department_id = bi.department_id
+            AND ba.status = 'pending'
+        WHERE b.status IN ('draft', 'pending', 'approved', 'active')
+        GROUP BY bi.department_id, d.dept_name
+        ORDER BY d.dept_name
+    ");
+    $stmt->execute();
     $rawAllocations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $allocations = [];
