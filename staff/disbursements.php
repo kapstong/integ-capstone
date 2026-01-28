@@ -353,6 +353,13 @@ body {
             vertical-align: middle;
             color: #495057;
         }
+        .payroll-row-clickable {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .payroll-row-clickable:hover {
+            background-color: #f0f4f8;
+        }
         .btn {
             border-radius: 8px;
             font-weight: 600;
@@ -861,6 +868,26 @@ body {
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary" onclick="saveDisbursement()">Save Disbursement</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payroll Details Modal -->
+    <div class="modal fade" id="payrollDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="payrollDetailsTitle">Payroll Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="payrollDetailsBody">
+                    <div class="text-center">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Loading payroll details...
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -1468,6 +1495,9 @@ body {
                 row.dataset.amount = totalAmount;
                 row.dataset.submittedBy = payroll.submitted_by || '';
                 row.dataset.employeeCount = payroll.employee_count || '';
+                row.dataset.payrollData = JSON.stringify(payroll);
+                row.style.cursor = 'pointer';
+                row.className = 'payroll-row-clickable';
                 row.innerHTML = `
                     <td><strong>${payroll.period_display || payroll.payroll_period || 'N/A'}</strong></td>
                     <td><strong class="text-success">PHP ${totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
@@ -1475,7 +1505,10 @@ body {
                     <td>${payroll.submitted_by || 'N/A'}</td>
                     <td>${submittedAt}</td>
                     <td>${statusText ? `<span class="badge ${canApprove ? 'bg-info' : 'bg-secondary'}">${statusText}</span>` : ''}</td>
-                    <td>
+                    <td onclick="event.stopPropagation();">
+                        <button class="btn btn-info btn-sm me-2" onclick="viewPayrollDetails(this, '${payrollId}')">
+                            <i class="fas fa-eye me-1"></i>View
+                        </button>
                         ${canApprove ? `
                             <button class="btn btn-success btn-sm me-2" onclick="updatePayrollApproval(this, '${payrollId}', 'approve')">
                                 <i class="fas fa-check me-1"></i>Approve
@@ -1483,9 +1516,13 @@ body {
                             <button class="btn btn-danger btn-sm" onclick="updatePayrollApproval(this, '${payrollId}', 'reject')">
                                 <i class="fas fa-times me-1"></i>Reject
                             </button>
-                        ` : '<span class="text-muted">N/A</span>'}
+                        ` : ''}
                     </td>
                 `;
+                row.addEventListener('click', function(e) {
+                    if (e.target.closest('button') || e.target.closest('td:last-child')) return;
+                    viewPayrollDetails(this.querySelector('button'), payrollId);
+                });
                 tbody.appendChild(row);
             });
         };
@@ -1611,6 +1648,242 @@ body {
                     btn.innerHTML = originalText;
                 }
             }
+        };
+
+        window.viewPayrollDetails = async function(buttonEl, payrollId) {
+            const modal = new bootstrap.Modal(document.getElementById('payrollDetailsModal'));
+            const bodyDiv = document.getElementById('payrollDetailsBody');
+            
+            // Get the row to access stored payroll data
+            const row = buttonEl.closest('tr');
+            let payrollData = null;
+            
+            if (row && row.dataset.payrollData) {
+                try {
+                    payrollData = JSON.parse(row.dataset.payrollData);
+                } catch (e) {
+                    console.error('Error parsing payroll data:', e);
+                }
+            }
+
+            // If we don't have data from the row, fetch it from the API
+            if (!payrollData) {
+                bodyDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Loading payroll details...</div>';
+                try {
+                    const response = await fetch('../api/integrations.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams({
+                            action: 'execute',
+                            integration_name: 'hr4',
+                            action_name: 'getPayrollData',
+                            id: payrollId
+                        }),
+                        credentials: 'include'
+                    });
+
+                    const result = await response.json();
+                    if (result.success && result.result && Array.isArray(result.result)) {
+                        // Find the specific payroll entry
+                        payrollData = result.result.find(p => 
+                            (p.approval_id == payrollId) || 
+                            (p.payroll_id == payrollId) || 
+                            (p.payrollId == payrollId) || 
+                            (p.id == payrollId)
+                        );
+                    }
+                } catch (error) {
+                    bodyDiv.innerHTML = '<div class="alert alert-danger">Error loading payroll details: ' + error.message + '</div>';
+                    modal.show();
+                    return;
+                }
+            }
+
+            if (!payrollData) {
+                bodyDiv.innerHTML = '<div class="alert alert-warning">No detailed payroll information found</div>';
+                modal.show();
+                return;
+            }
+
+            // Build the detailed view
+            const period = payrollData.period_display || payrollData.payroll_period || 'N/A';
+            const totalAmount = parseFloat(payrollData.total_amount || payrollData.net_pay || 0);
+            const employeeCount = payrollData.employee_count || 0;
+            const submittedBy = payrollData.submitted_by || 'N/A';
+            const submittedAt = payrollData.submitted_at ? new Date(payrollData.submitted_at).toLocaleString() : 'N/A';
+            const status = payrollData.status || payrollData.display_status || 'N/A';
+
+            // Build employee breakdown if available
+            let employeeHtml = '';
+            if (payrollData.employees && Array.isArray(payrollData.employees)) {
+                employeeHtml = `
+                    <div class="card mt-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Employee Breakdown</h6>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Employee Name</th>
+                                        <th>Employee ID</th>
+                                        <th>Position</th>
+                                        <th>Gross Pay</th>
+                                        <th>Deductions</th>
+                                        <th>Net Pay</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${payrollData.employees.map(emp => `
+                                        <tr>
+                                            <td>${emp.employee_name || emp.name || 'N/A'}</td>
+                                            <td>${emp.employee_id || emp.emp_id || 'N/A'}</td>
+                                            <td>${emp.position || emp.job_title || 'N/A'}</td>
+                                            <td class="text-end">PHP ${parseFloat(emp.gross_pay || emp.salary || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                            <td class="text-end">PHP ${parseFloat(emp.deductions || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                            <td class="text-end"><strong>PHP ${parseFloat(emp.net_pay || emp.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Build department breakdown if available
+            let deptHtml = '';
+            if (payrollData.departments && Array.isArray(payrollData.departments)) {
+                deptHtml = `
+                    <div class="card mt-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Department Breakdown</h6>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Department</th>
+                                        <th>Employees</th>
+                                        <th>Total Payroll</th>
+                                        <th>Total Deductions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${payrollData.departments.map(dept => `
+                                        <tr>
+                                            <td>${dept.department || dept.department_name || 'N/A'}</td>
+                                            <td class="text-center">${dept.employee_count || 0}</td>
+                                            <td class="text-end">PHP ${parseFloat(dept.total_payroll || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                            <td class="text-end">PHP ${parseFloat(dept.total_deductions || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Build deduction breakdown if available
+            let deductionHtml = '';
+            if (payrollData.deduction_breakdown && typeof payrollData.deduction_breakdown === 'object') {
+                deductionHtml = `
+                    <div class="card mt-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Deduction Breakdown</h6>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Deduction Type</th>
+                                        <th class="text-end">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${Object.entries(payrollData.deduction_breakdown).map(([key, value]) => `
+                                        <tr>
+                                            <td>${key.replace(/_/g, ' ').toUpperCase()}</td>
+                                            <td class="text-end">PHP ${parseFloat(value || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Update modal title and body
+            document.getElementById('payrollDetailsTitle').textContent = `Payroll Details - ${period}`;
+            
+            bodyDiv.innerHTML = `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Payroll Period</h6>
+                                <p class="card-text"><strong>${period}</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Status</h6>
+                                <p class="card-text"><span class="badge bg-info">${status}</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Total Amount</h6>
+                                <p class="card-text"><strong class="text-success">PHP ${totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Number of Employees</h6>
+                                <p class="card-text"><strong>${employeeCount}</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Submitted By</h6>
+                                <p class="card-text"><strong>${submittedBy}</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Submitted At</h6>
+                                <p class="card-text"><strong>${submittedAt}</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                ${employeeHtml}
+                ${deptHtml}
+                ${deductionHtml}
+            `;
+
+            modal.show();
         };
 
         // Auto-load payroll data on page load
