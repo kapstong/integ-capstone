@@ -57,7 +57,8 @@ try {
 
     if ($action === 'register') {
         session_start();
-        if (!isset($_SESSION['user']) || !in_array($_SESSION['user']['role'] ?? '', ['admin', 'superadmin', 'super_admin'], true)) {
+        $roleName = $_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? '');
+        if (!isset($_SESSION['user']) || !in_array($roleName, ['admin', 'superadmin', 'super_admin'], true)) {
             http_response_code(403);
             echo json_encode(['error' => 'Admin or Super Admin required']);
             exit;
