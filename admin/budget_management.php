@@ -1263,6 +1263,34 @@ function getVarianceStatusBadge(variancePercent) {
 }
 </script>
 <script>
+        function getStatusBadge(status) {
+            var statusMap = {
+                'draft': 'bg-info',
+                'pending': 'bg-warning',
+                'approved': 'bg-success',
+                'active': 'bg-primary',
+                'closed': 'bg-secondary',
+                'completed': 'bg-secondary',
+                'rejected': 'bg-danger'
+            };
+            var badgeClass = statusMap[status] || 'bg-secondary';
+            return '<span class="badge ' + badgeClass + '">' + (status ? status.charAt(0).toUpperCase() + status.slice(1) : 'N/A') + '</span>';
+        }
+
+        function getVarianceStatusBadge(variancePercent) {
+            if (variancePercent < 0) return '<span class="badge bg-danger">Over</span>';
+            if (variancePercent > 10) return '<span class="badge bg-success">Under</span>';
+            return '<span class="badge bg-warning text-dark">On Track</span>';
+        }
+
+        function getAllocationStatusBadge(progressPercent) {
+            if (progressPercent >= 100) return '<span class="badge bg-danger">Red (100%)</span>';
+            if (progressPercent >= 90) return '<span class="badge bg-warning text-dark">Orange (90%)</span>';
+            if (progressPercent >= 80) return '<span class="badge bg-warning text-dark">Light Orange (80%)</span>';
+            if (progressPercent >= 70) return '<span class="badge bg-warning text-dark">Yellow (70%)</span>';
+            return '<span class="badge bg-success">Good</span>';
+        }
+
     let currentAllocations = [];
 
     function getAllocationStatusKey(progressPercent) {
