@@ -524,14 +524,7 @@ body {
             <div class="tab-pane fade" id="claims" role="tabpanel" aria-labelledby="claims-tab">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">HR3 Claims Processing - From HR3 API</h6>
-                    <div class="d-flex align-items-center gap-2">
-                        <select id="hr3ClaimsPeriod" class="form-select form-select-sm" style="width: auto;">
-                            <option value="monthly" selected>Monthly</option>
-                            <option value="quarterly">Quarterly</option>
-                            <option value="semi-annually">Semi-Annually</option>
-                            <option value="annually">Annually</option>
-                            <option value="yearly">Yearly</option>
-                        </select>
+                    <div>
                         <button class="btn btn-success" onclick="loadClaims()">
                             <i class="fas fa-sync me-2"></i>Load Claims
                         </button>
@@ -973,8 +966,7 @@ body {
             }
 
             try {
-                const period = (document.getElementById('hr3ClaimsPeriod')?.value || 'monthly');
-                const response = await fetch(`../api/integrations.php?action=execute&integration_name=hr3&action_name=getApprovedClaims&period=${encodeURIComponent(period)}`, {
+                const response = await fetch('../api/integrations.php?action=execute&integration_name=hr3&action_name=getApprovedClaims', {
                     method: 'GET',
                     credentials: 'include' // Include cookies for session
                 });
