@@ -1363,21 +1363,30 @@ class HR4Integration extends BaseIntegration {
 
         try {
             $approver = $params['approver'] ?? $params['approved_by'] ?? $params['user_name'] ?? '';
+            $approverId = null;
+            if (isset($params['approver_id']) && is_numeric($params['approver_id'])) {
+                $approverId = (int)$params['approver_id'];
+            } elseif (isset($params['approved_by_id']) && is_numeric($params['approved_by_id'])) {
+                $approverId = (int)$params['approved_by_id'];
+            } elseif (is_numeric($approver)) {
+                $approverId = (int)$approver;
+            }
+            $approverValue = $approverId !== null ? $approverId : $approver;
             $rejectionReason = $params['rejection_reason'] ?? $params['reason'] ?? '';
             $payload = [
                 'incentive_ids' => [(int)$incentiveId]
             ];
 
             if ($action === 'approve') {
-                $payload['approved_by'] = $approver;
+                $payload['approved_by'] = $approverValue;
                 if (!empty($params['notes'])) {
                     $payload['notes'] = $params['notes'];
                 }
             } elseif ($action === 'reject') {
-                $payload['rejected_by'] = $approver;
+                $payload['rejected_by'] = $approverValue;
                 $payload['rejection_reason'] = $rejectionReason;
             } else {
-                $payload['paid_by'] = $approver;
+                $payload['paid_by'] = $approverValue;
             }
 
             $resolvedEndpoint = $endpoint;

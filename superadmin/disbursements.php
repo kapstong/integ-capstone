@@ -1026,6 +1026,7 @@ body {
         // Wait for DOM to be fully loaded before defining functions
     window.addEventListener('DOMContentLoaded', function() {
         window.payrollApproverName = "<?php echo htmlspecialchars($_SESSION['user']['full_name'] ?? $_SESSION['user']['username'] ?? 'Finance Department', ENT_QUOTES); ?>";
+        window.payrollApproverId = <?php echo (int)($_SESSION['user']['id'] ?? 0); ?>;
         window.payrollExpenseAccountId = <?php echo json_encode($payrollExpenseAccountId); ?>;
         // Auto-load HR3 claims when Claims Processing tab is activated
         const claimsTab = document.getElementById('claims-tab');
@@ -1665,6 +1666,7 @@ body {
                         approval_id: resolvedPayrollId,
                         approval_action: action,
                         approver: window.payrollApproverName || 'Finance Department',
+                        approver_id: window.payrollApproverId || 0,
                         rejection_reason: rejectionReason,
                         params: JSON.stringify({
                             id: resolvedPayrollId,
@@ -1922,7 +1924,8 @@ body {
                     action_name: 'updateIncentiveStatus',
                     id: incentiveId,
                     approval_action: 'paid',
-                    approver: window.payrollApproverName || 'Finance Department'
+                    approver: window.payrollApproverName || 'Finance Department',
+                    approver_id: window.payrollApproverId || 0
                 })
             });
 
@@ -1973,6 +1976,7 @@ body {
                         id: resolvedIncentiveId,
                         approval_action: action,
                         approver: window.payrollApproverName || 'Finance Department',
+                        approver_id: window.payrollApproverId || 0,
                         rejection_reason: rejectionReason,
                         params: JSON.stringify({
                             id: resolvedIncentiveId,
