@@ -1260,186 +1260,6 @@ $db = Database::getInstance()->getConnection();
             const tbody = document.querySelector('#planning .table tbody');
             if (!tbody) {
             }
-            tbody.innerHTML = '';
-
-            if (currentBudgets.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No budgets found. Create your first budget.</td></tr>';
-            }
-
-            currentBudgets.forEach(budget => {
-                const statusBadge = getStatusBadge(budget.status || 'draft');
-                const ownerName = budget.approved_by_name || budget.created_by_name || 'N/A';
-                const utilizedLabel = budget.utilized_amount != null
-                    ? `PHP ${parseFloat(budget.utilized_amount || 0).toLocaleString()}`
-                    : 'N/A';
-                const row = `
-                    <tr>
-                        <td>${budget.name}</td>
-                        <td>${formatBudgetPeriod(budget.start_date, budget.end_date)}</td>
-                        <td>${ownerName}</td>
-                        <td>PHP ${parseFloat(budget.total_amount || 0).toLocaleString()}</td>
-                        <td>${utilizedLabel}</td>
-                        <td>${statusBadge}</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick="viewBudget(${budget.id})">View</button>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="editBudget(${budget.id})">Edit</button>
-                        </td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
-        }
-
-        // Load allocations
-        async function loadAllocations() {
-            try {
-                const response = await fetch('../api/budgets.php?action=allocations');
-                const data = await response.json();
-
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                currentAllocations = data.allocations || [];
-                renderAllocationsTable();
-                updateAllocationSummary();
-
-            } catch (error) {
-                console.error('Error loading allocations:', error);
-                showAlert('Error loading allocations: ' + error.message, 'danger');
-            }
-        }
-
-        // Render allocations table
-        function renderAllocationsTable() {
-            const tbody = document.getElementById('allocationTableBody');
-            if (!tbody) {
-            }
-            tbody.innerHTML = '';
-
-            const filteredAllocations = getFilteredAllocations();
-
-            if (filteredAllocations.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No allocations found.</td></tr>';
-            }
-
-            filteredAllocations.forEach(allocation => {
-                const progressPercent = allocation.total_amount > 0 ? (allocation.utilized_amount / allocation.total_amount) * 100 : 0;
-                const progressClass = progressPercent >= 100 ? 'budget-over' : progressPercent >= 70 ? 'budget-on-track' : 'budget-under';
-                const statusBadge = getAllocationStatusBadge(progressPercent);
-                const reservedLabel = allocation.reserved_amount != null
-                    ? `PHP ${parseFloat(allocation.reserved_amount || 0).toLocaleString()}`
-                    : 'N/A';
-
-                const row = `
-                    <tr>
-                        <td><strong>${allocation.department}</strong></td>
-                        <td>PHP ${parseFloat(allocation.total_amount || 0).toLocaleString()}</td>
-                        <td>${reservedLabel}</td>
-                        <td>PHP ${parseFloat(allocation.utilized_amount || 0).toLocaleString()}</td>
-                        <td>PHP ${parseFloat(allocation.remaining || 0).toLocaleString()}</td>
-                        <td>
-                            <div class="budget-progress ${progressClass}">
-                                <div class="budget-progress-bar" style="width: ${Math.min(progressPercent, 100)}%"></div>
-                            </div>
-                            <small class="text-muted">${progressPercent.toFixed(1)}%</small>
-                        </td>
-                        <td>${statusBadge}</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick="adjustAllocation(${allocation.id})">Adjust</button>
-                        </td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
-        }
-
-        function updateAllocationSummary() {
-            const filteredAllocations = getFilteredAllocations();
-            const totalAllocated = filteredAllocations.reduce((sum, item) => sum + (parseFloat(item.total_amount) || 0), 0);
-            const totalUtilized = filteredAllocations.reduce((sum, item) => sum + (parseFloat(item.utilized_amount) || 0), 0);
-            const totalRemaining = filteredAllocations.reduce((sum, item) => sum + (parseFloat(item.remaining) || 0), 0);
-            const utilizationRate = totalAllocated > 0 ? (totalUtilized / totalAllocated) * 100 : 0;
-
-            const totalEl = document.getElementById('allocationSummaryTotal');
-            const utilizedEl = document.getElementById('allocationSummaryUtilized');
-            const remainingEl = document.getElementById('allocationSummaryRemaining');
-            const rateEl = document.getElementById('allocationSummaryRate');
-
-            if (totalEl) totalEl.textContent = `PHP ${totalAllocated.toLocaleString()}`;
-            if (utilizedEl) utilizedEl.textContent = `PHP ${totalUtilized.toLocaleString()}`;
-            if (remainingEl) remainingEl.textContent = `PHP ${totalRemaining.toLocaleString()}`;
-            if (rateEl) rateEl.textContent = `${utilizationRate.toFixed(1)}%`;
-        }
-
-        function getFilteredAllocations() {
-            const searchInput = document.getElementById('allocationSearch');
-            const statusSelect = document.getElementById('allocationStatusFilter');
-            const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
-            const statusFilter = statusSelect ? statusSelect.value : 'all';
-
-            return currentAllocations.filter(allocation => {
-                const nameMatch = !query || (allocation.department || '').toLowerCase().includes(query);
-                const progressPercent = allocation.total_amount > 0 ? (allocation.utilized_amount / allocation.total_amount) * 100 : 0;
-                const statusKey = getAllocationStatusKey(progressPercent);
-
-                if (statusFilter === 'all') {
-                    return nameMatch;
-                }
-                return nameMatch && statusKey === statusFilter;
-            });
-        }
-
-        function getAllocationStatusKey(progressPercent) {
-            if (progressPercent >= 100) {
-                return 'red';
-            }
-            if (progressPercent >= 90) {
-                return 'orange';
-            }
-            if (progressPercent >= 80) {
-                return 'light_orange';
-            }
-            if (progressPercent >= 70) {
-                return 'yellow';
-            }
-            return 'good';
-        }
-            tbody.innerHTML = '';
-
-            if (currentAdjustments.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No adjustment requests available.</td></tr>';
-            }
-
-            currentAdjustments.forEach(adjustment => {
-                const statusBadge = getStatusBadge(adjustment.status || 'pending');
-                const statusValue = (adjustment.status || 'pending').toLowerCase();
-                const actionButtons = statusValue === 'pending'
-                    ? `
-                        <button class="btn btn-sm btn-outline-success me-1" onclick="approveAdjustment(${adjustment.id})">Approve</button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="rejectAdjustment(${adjustment.id})">Reject</button>
-                      `
-                    : `
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editAdjustment(${adjustment.id})">Edit</button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAdjustment(${adjustment.id})">Delete</button>
-                      `;
-                const row = `
-                    <tr>
-                        <td>${adjustment.id}</td>
-                        <td>${adjustment.department_name || 'Unassigned'}</td>
-                        <td>${adjustment.requested_by_name || 'N/A'}</td>
-                        <td>${adjustment.adjustment_type}</td>
-                        <td>PHP ${parseFloat(adjustment.amount || 0).toLocaleString()}</td>
-                        <td>${adjustment.reason || ''}</td>
-                        <td>${statusBadge}</td>
-                        <td>
-                            ${actionButtons}
-                        </td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
-        }
 
         // Load tracking data
         async function loadTrackingData() {
@@ -1447,7 +1267,7 @@ $db = Database::getInstance()->getConnection();
                 const trackingPeriodSelect = document.querySelector('#tracking select');
                 const period = trackingPeriodSelect ? trackingPeriodSelect.value : 'year_to_date';
                 const trackingParams = new URLSearchParams({ action: 'tracking', period });
-                const response = await fetch(`../api/budgets.php?${trackingParams.toString()}`);
+                const response = await fetch('../api/budgets.php?\' + (trackingParams.toString()) + \'');
                 const data = await response.json();
 
                 if (data.error) {
@@ -1479,17 +1299,7 @@ $db = Database::getInstance()->getConnection();
                 const varianceClass = variance >= 0 ? 'variance-positive' : 'variance-negative';
                 const statusBadge = getVarianceStatusBadge(variancePercent);
 
-                const row = `
-                    <tr>
-                        <td>${item.category}</td>
-                        <td>PHP ${parseFloat(item.budget_amount || 0).toLocaleString()}</td>
-                        <td>PHP ${parseFloat(item.actual_amount || 0).toLocaleString()}</td>
-                        <td class="${varianceClass}">PHP ${Math.abs(variance).toLocaleString()}</td>
-                        <td class="${varianceClass}">${variancePercent >= 0 ? '+' : ''}${variancePercent.toFixed(1)}%</td>
-                        <td>${statusBadge}</td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
+                
             });
         }
 
@@ -1500,10 +1310,10 @@ $db = Database::getInstance()->getConnection();
             // Update the cards with real data
             const cards = document.querySelectorAll('#tracking .reports-card h3');
             if (cards.length >= 4) {
-                cards[0].textContent = `PHP ${parseFloat(summary.total_budget || 0).toLocaleString()}`;
-                cards[1].textContent = `PHP ${parseFloat(summary.actual_spent || 0).toLocaleString()}`;
-                cards[2].textContent = `${parseFloat(summary.variance_percent || 0).toFixed(1)}%`;
-                cards[3].textContent = `PHP ${parseFloat(summary.remaining || 0).toLocaleString()}`;
+                cards[0].textContent = 'PHP \' + (parseFloat(summary.total_budget || 0).toLocaleString()) + \'';
+                cards[1].textContent = 'PHP \' + (parseFloat(summary.actual_spent || 0).toLocaleString()) + \'';
+                cards[2].textContent = '\' + (parseFloat(summary.variance_percent || 0).toFixed(1)) + \'%';
+                cards[3].textContent = 'PHP \' + (parseFloat(summary.remaining || 0).toLocaleString()) + \'';
 
                 // Update variance color
                 const varianceCard = cards[2].closest('.reports-card');
@@ -1527,7 +1337,7 @@ $db = Database::getInstance()->getConnection();
 
             const modalEl = document.getElementById('viewBudgetModal');
             if (!modalEl) {
-                showAlert(`Viewing budget: ${budget.name}`, 'info');
+                showAlert('Viewing budget: \' + (budget.name) + \'', 'info');
             }
 
             modalEl.querySelector('#viewBudgetName').textContent = budget.name || 'N/A';
@@ -1535,7 +1345,7 @@ $db = Database::getInstance()->getConnection();
             modalEl.querySelector('#viewBudgetDepartment').textContent = budget.department || 'Unassigned';
             modalEl.querySelector('#viewBudgetVendor').textContent = budget.vendor_name || 'N/A';
             modalEl.querySelector('#viewBudgetStatus').innerHTML = getStatusBadge(budget.status || 'draft');
-            modalEl.querySelector('#viewBudgetAmount').textContent = `PHP ${parseFloat(budget.total_amount || 0).toLocaleString()}`;
+            modalEl.querySelector('#viewBudgetAmount').textContent = 'PHP \' + (parseFloat(budget.total_amount || 0).toLocaleString()) + \'';
             modalEl.querySelector('#viewBudgetOwner').textContent = budget.approved_by_name || budget.created_by_name || 'N/A';
             modalEl.querySelector('#viewBudgetDescription').textContent = budget.description || 'N/A';
 
@@ -1551,7 +1361,7 @@ $db = Database::getInstance()->getConnection();
 
             const modalEl = document.getElementById('editBudgetModal');
             if (!modalEl) {
-                showAlert(`Editing budget: ${budget.name}`, 'info');
+                showAlert('Editing budget: \' + (budget.name) + \'', 'info');
             }
 
             modalEl.querySelector('#editBudgetId').value = budget.id;
@@ -1560,182 +1370,6 @@ $db = Database::getInstance()->getConnection();
             modalEl.querySelector('#editEndDate').value = budget.end_date || '';
             modalEl.querySelector('#editTotalAmount').value = budget.total_amount || '';
             modalEl.querySelector('#editBudgetDescription').value = budget.description || '';
-
-            setSelectValue(
-                modalEl.querySelector('#editBudgetDepartment'),
-                budget.department_id,
-                budget.department || 'Unassigned'
-            );
-            setSelectValue(
-                modalEl.querySelector('#editBudgetVendor'),
-                budget.vendor_id,
-                budget.vendor_name || 'N/A'
-            );
-
-            new bootstrap.Modal(modalEl).show();
-        }
-
-        // Adjust allocation
-        function adjustAllocation(allocationId) {
-            const allocation = currentAllocations.find(a => a.id == allocationId);
-            if (!allocation) {
-                showAlert('Allocation not found', 'warning');
-            }
-
-            const modalEl = document.getElementById('allocationDetailModal');
-            if (!modalEl) {
-                showAlert(`Adjusting allocation for: ${allocation.department}`, 'info');
-            }
-
-            modalEl.querySelector('#allocationDepartment').textContent = allocation.department || 'Unassigned';
-            modalEl.querySelector('#allocationTotal').textContent = `PHP ${parseFloat(allocation.total_amount || 0).toLocaleString()}`;
-            modalEl.querySelector('#allocationReserved').textContent = `PHP ${parseFloat(allocation.reserved_amount || 0).toLocaleString()}`;
-            modalEl.querySelector('#allocationUtilized').textContent = `PHP ${parseFloat(allocation.utilized_amount || 0).toLocaleString()}`;
-            modalEl.querySelector('#allocationRemaining').textContent = `PHP ${parseFloat(allocation.remaining || 0).toLocaleString()}`;
-
-            const requestBtn = modalEl.querySelector('#allocationRequestAdjustment');
-            if (requestBtn) {
-                requestBtn.setAttribute('data-department-id', allocation.department_id || '');
-                requestBtn.setAttribute('data-department-name', allocation.department || '');
-            }
-
-            new bootstrap.Modal(modalEl).show();
-        }
-
-        function setSelectValue(select, value, label) {
-            if (!select) {
-            }
-
-            const stringValue = value != null ? String(value) : '';
-            if (stringValue && !select.querySelector(`option[value="${stringValue}"]`)) {
-                const option = document.createElement('option');
-                option.value = stringValue;
-                option.textContent = label || stringValue;
-                select.appendChild(option);
-            }
-            select.value = stringValue;
-        }
-
-        async function updateBudget(budgetId, formData) {
-            try {
-                const response = await fetch(`../api/budgets.php?id=${budgetId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                });
-
-                const data = await response.json();
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                showAlert('Budget updated successfully', 'success');
-                loadBudgets();
-                loadAllocations();
-                loadTrackingData();
-                loadAlerts();
-                loadAuditTrail();
-
-                const modalEl = document.getElementById('editBudgetModal');
-                if (modalEl) {
-                    const modal = bootstrap.Modal.getInstance(modalEl);
-                    if (modal) modal.hide();
-                }
-            } catch (error) {
-                console.error('Error updating budget:', error);
-                showAlert('Error updating budget: ' + error.message, 'danger');
-            }
-        }
-
-                showAlert(`Adjustment ${status}`, 'success');
-                loadAllocations();
-                loadBudgets();
-                loadTrackingData();
-                loadAlerts();
-                loadAuditTrail();
-
-            } catch (error) {
-                console.error('Error updating adjustment:', error);
-                showAlert('Error updating adjustment: ' + error.message, 'danger');
-            }
-        }
-
-            form.dataset.adjustmentId = adjustment.id;
-
-            const modalTitle = modalEl.querySelector('.modal-title');
-            if (modalTitle) {
-                modalTitle.textContent = 'Edit Budget Adjustment';
-            }
-
-            const budget = currentBudgets.find(item => item.id == adjustment.budget_id);
-            const department = currentDepartments.find(item => item.id == adjustment.department_id);
-            const vendor = vendors.find(item => item.id == adjustment.vendor_id);
-
-            setSelectValue(
-                document.getElementById('adjustmentBudget'),
-                adjustment.budget_id,
-                budget ? budget.name : `Budget #${adjustment.budget_id}`
-            );
-            setSelectValue(
-                document.getElementById('adjustmentDepartment'),
-                adjustment.department_id,
-                department ? department.dept_name : 'Unassigned'
-            );
-            setSelectValue(
-                document.getElementById('adjustmentVendor'),
-                adjustment.vendor_id,
-                vendor ? vendor.company_name : 'N/A'
-            );
-
-            document.getElementById('adjustmentType').value = adjustment.adjustment_type || '';
-            document.getElementById('adjustmentAmount').value = adjustment.amount || '';
-            document.getElementById('adjustmentReason').value = adjustment.reason || '';
-            document.getElementById('expectedDate').value = adjustment.effective_date || '';
-
-            const requestedByInput = document.getElementById('requestedBy');
-            if (requestedByInput) {
-                requestedByInput.value = adjustment.requested_by_name || requestedByInput.value;
-            }
-
-            new bootstrap.Modal(modalEl).show();
-        }
-
-            form.reset();
-            delete form.dataset.adjustmentId;
-
-            const modalTitle = modalEl.querySelector('.modal-title');
-            if (modalTitle) {
-                modalTitle.textContent = 'Request Budget Adjustment';
-            }
-        }
-
-                showAlert('Adjustment updated successfully', 'success');
-                loadAllocations();
-                loadBudgets();
-                loadTrackingData();
-                loadAlerts();
-                loadAuditTrail();
-            } catch (error) {
-                console.error('Error updating adjustment:', error);
-                showAlert('Error updating adjustment: ' + error.message, 'danger');
-            }
-        }
-
-                showAlert('Adjustment deleted successfully', 'success');
-                loadAllocations();
-                loadBudgets();
-                loadTrackingData();
-                loadAlerts();
-                loadAuditTrail();
-            } catch (error) {
-                console.error('Error deleting adjustment:', error);
-                showAlert('Error deleting adjustment: ' + error.message, 'danger');
-            }
-            }
-        );
-        }
 
         // Utility functions
         function getStatusBadge(status) {
@@ -1750,7 +1384,7 @@ $db = Database::getInstance()->getConnection();
             };
 
             const badgeClass = statusMap[status] || 'bg-secondary';
-            return `<span class="badge ${badgeClass}">${status.charAt(0).toUpperCase() + status.slice(1)}</span>`;
+            return '<span class="badge \' + (badgeClass) + \'">\' + (status.charAt(0).toUpperCase() + status.slice(1)) + \'</span>';
         }
 
         function getAllocationStatusBadge(progressPercent) {
@@ -1793,21 +1427,20 @@ $db = Database::getInstance()->getConnection();
             const endYear = end.getFullYear();
 
             if (startYear === endYear) {
-                return `${startMonth}-${endMonth} ${startYear}`;
+                return '\' + (startMonth) + \'-\' + (endMonth) + \' \' + (startYear) + \'';
             } else {
-                return `${startMonth} ${startYear} - ${endMonth} ${endYear}`;
+                return '\' + (startMonth) + \' \' + (startYear) + \' - \' + (endMonth) + \' \' + (endYear) + \'';
             }
         }
 
         function showAlert(message, type = 'info') {
             // Create alert element
             const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.className = 'alert alert-\' + (type) + \' alert-dismissible fade show position-fixed';
             alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-            alertDiv.innerHTML = `
-                ${message}
+            alertDiv.innerHTML = '
+                \' + (message) + \'
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
 
             document.body.appendChild(alertDiv);
 
@@ -1987,14 +1620,6 @@ $db = Database::getInstance()->getConnection();
                 showAlert('Error loading accounts: ' + error.message, 'danger');
             }
         }
-
-                currentAdjustments = data.adjustments || [];
-                renderAdjustmentsTable();
-
-            } catch (error) {
-                console.error('Error loading adjustments:', error);
-                showAlert('Error loading adjustments: ' + error.message, 'danger');
-            }
         }
 
         function parseAuditValues(values) {
@@ -2014,28 +1639,28 @@ $db = Database::getInstance()->getConnection();
                 case 'budgets': {
                     const name = (newValues && (newValues.budget_name || newValues.name)) ||
                         (oldValues && (oldValues.budget_name || oldValues.name));
-                    return name ? `Budget: ${name}` : `Budget #${recordId}`;
+                    return name ? 'Budget: \' + (name) + \'' : 'Budget #\' + (recordId) + \'';
                 }
                 case 'budget_items':
-                    return `Budget Item #${recordId}`;
+                    return 'Budget Item #\' + (recordId) + \'';
                 case 'budget_adjustments':
-                    return `Adjustment #${recordId}`;
+                    return 'Adjustment #\' + (recordId) + \'';
                 case 'budget_categories': {
                     const name = (newValues && newValues.category_name) || (oldValues && oldValues.category_name);
-                    return name ? `Category: ${name}` : `Category #${recordId}`;
+                    return name ? 'Category: \' + (name) + \'' : 'Category #\' + (recordId) + \'';
                 }
                 case 'hr3_integrations':
                     return 'HR3 Claims';
                 default:
-                    return log.table_name ? `${log.table_name} #${recordId}` : `Record #${recordId}`;
+                    return log.table_name ? '\' + (log.table_name) + \' #\' + (recordId) + \'' : 'Record #\' + (recordId) + \'';
             }
         }
 
         function formatAuditDetails(log, targetLabel, newValues) {
             const actionLabel = log.action ? log.action.charAt(0).toUpperCase() + log.action.slice(1) : 'Action';
-            let detail = log.action_description || `${actionLabel} ${targetLabel}`;
+            let detail = log.action_description || '\' + (actionLabel) + \' \' + (targetLabel) + \'';
             if (newValues && newValues.reason) {
-                detail += ` - ${newValues.reason}`;
+                detail += ' - \' + (newValues.reason) + \'';
             }
             return detail;
         }
@@ -2046,7 +1671,7 @@ $db = Database::getInstance()->getConnection();
                 source = log.table_name === 'hr3_integrations' ? 'HR3 API' : 'Budget Management UI';
             }
             const origin = (newValues && newValues.origin) || (oldValues && oldValues.origin);
-            return origin ? `${source} (${origin})` : source;
+            return origin ? '\' + (source) + \' (\' + (origin) + \')' : source;
         }
 
         async function loadAuditTrail() {
@@ -2060,11 +1685,10 @@ $db = Database::getInstance()->getConnection();
                 const tables = [
                     'budgets',
                     'budget_items',
-                    'budget_adjustments',
-                    'budget_categories',
+                                        'budget_categories',
                     'hr3_integrations'
                 ];
-                const response = await fetch(`../api/audit.php?table_name=${encodeURIComponent(tables.join(','))}`);
+                const response = await fetch('../api/audit.php?table_name=\' + (encodeURIComponent(tables.join(\',\'))) + \'');
                 const logs = await response.json();
 
                 if (!Array.isArray(logs) || logs.length === 0) {
@@ -2080,17 +1704,17 @@ $db = Database::getInstance()->getConnection();
                     const timestamp = log.formatted_date || new Date(log.created_at).toLocaleString();
                     const user = log.full_name || log.username || 'Unknown';
 
-                    return `
+                    return '
                         <tr>
-                            <td>${timestamp}</td>
-                            <td>${user}</td>
-                            <td>${log.action || 'N/A'}</td>
-                            <td>${targetLabel}</td>
-                            <td>${details}</td>
-                            <td>${source}</td>
-                            <td>${log.ip_address || 'N/A'}</td>
+                            <td>\' + (timestamp) + \'</td>
+                            <td>\' + (user) + \'</td>
+                            <td>\' + (log.action || \'N/A\') + \'</td>
+                            <td>\' + (targetLabel) + \'</td>
+                            <td>\' + (details) + \'</td>
+                            <td>\' + (source) + \'</td>
+                            <td>\' + (log.ip_address || \'N/A\') + \'</td>
                         </tr>
-                    `;
+
                 }).join('');
 
             } catch (error) {
@@ -2172,7 +1796,7 @@ $db = Database::getInstance()->getConnection();
                 }
                 select.innerHTML = '<option value="">Select Budget</option>';
                 budgets.forEach(budget => {
-                    select.innerHTML += `<option value="${budget.id}">${budget.name}</option>`;
+                    select.innerHTML += '<option value="\' + (budget.id) + \'">\' + (budget.name) + \'</option>';
                 });
             });
         }
@@ -2223,22 +1847,7 @@ $db = Database::getInstance()->getConnection();
                     'yellow': 'bg-warning text-dark'
                 }[alert.severity] || 'bg-secondary';
 
-                const row = `
-                    <tr>
-                        <td><strong>${alert.department}</strong></td>
-                        <td>${alert.budget_year}</td>
-                        <td>PHP ${parseFloat(alert.budgeted_amount).toLocaleString()}</td>
-                        <td>PHP ${parseFloat(alert.utilized_amount).toLocaleString()}</td>
-                        <td>${parseFloat(alert.utilization_percent).toFixed(1)}%</td>
-                        <td class="variance-positive">PHP ${parseFloat(alert.over_amount).toLocaleString()}</td>
-                        <td><span class="badge ${severityClass}">${alert.severity_label || alert.severity}</span></td>
-                        <td>${alert.alert_date}</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick="viewAlertDetails(${alert.id})">View Details</button>
-                        </td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
+                
             });
         }
 
@@ -2272,7 +1881,7 @@ $db = Database::getInstance()->getConnection();
             if (!topAlert) {
             }
 
-            const message = `${topAlert.department} is at ${parseFloat(topAlert.utilization_percent).toFixed(1)}% of budget (${topAlert.severity_label || topAlert.severity}).`;
+            const message = '\' + (topAlert.department) + \' is at \' + (parseFloat(topAlert.utilization_percent).toFixed(1)) + \'% of budget (\' + (topAlert.severity_label || topAlert.severity) + \').';
             const alertType = topAlert.severity === 'red' ? 'danger' : (topAlert.severity === 'orange' ? 'warning' : 'info');
             showAlert(message, alertType);
         }
@@ -2285,15 +1894,15 @@ $db = Database::getInstance()->getConnection();
 
             const modalEl = document.getElementById('alertDetailsModal');
             if (!modalEl) {
-                showAlert(`Alert Details: ${alert.department} is at ${alert.utilization_percent.toFixed(1)}% of budget`, 'warning');
+                showAlert('Alert Details: \' + (alert.department) + \' is at \' + (alert.utilization_percent.toFixed(1)) + \'% of budget', 'warning');
             }
 
             modalEl.querySelector('#alertDepartment').textContent = alert.department;
             modalEl.querySelector('#alertYear').textContent = alert.budget_year;
-            modalEl.querySelector('#alertBudgeted').textContent = `PHP ${parseFloat(alert.budgeted_amount || 0).toLocaleString()}`;
-            modalEl.querySelector('#alertActual').textContent = `PHP ${parseFloat(alert.utilized_amount || 0).toLocaleString()}`;
-            modalEl.querySelector('#alertOverAmount').textContent = `PHP ${parseFloat(alert.over_amount || 0).toLocaleString()}`;
-            modalEl.querySelector('#alertOverPercent').textContent = `${parseFloat(alert.utilization_percent || 0).toFixed(1)}%`;
+            modalEl.querySelector('#alertBudgeted').textContent = 'PHP \' + (parseFloat(alert.budgeted_amount || 0).toLocaleString()) + \'';
+            modalEl.querySelector('#alertActual').textContent = 'PHP \' + (parseFloat(alert.utilized_amount || 0).toLocaleString()) + \'';
+            modalEl.querySelector('#alertOverAmount').textContent = 'PHP \' + (parseFloat(alert.over_amount || 0).toLocaleString()) + \'';
+            modalEl.querySelector('#alertOverPercent').textContent = '\' + (parseFloat(alert.utilization_percent || 0).toFixed(1)) + \'%';
             modalEl.querySelector('#alertSeverity').textContent = alert.severity_label || alert.severity || 'N/A';
             modalEl.querySelector('#alertDate').textContent = alert.alert_date || 'N/A';
 
