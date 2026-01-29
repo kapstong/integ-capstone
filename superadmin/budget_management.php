@@ -1630,8 +1630,6 @@ $db = Database::getInstance()->getConnection();
                     }
                 });
             }
-                });
-            }
 
             // Handle tracking period change
             const trackingPeriodSelect = document.querySelector('#tracking select');
@@ -1654,6 +1652,7 @@ $db = Database::getInstance()->getConnection();
                     loadAuditTrail();
                 });
             }
+        });
         // Load vendors for dropdowns
         async function loadVendors() {
             try {
@@ -2154,7 +2153,6 @@ $db = Database::getInstance()->getConnection();
     <script src="../includes/inactivity_timeout.js?v=3"></script>
 <script src="../includes/navbar_datetime.js"></script>
 
-    </div>
 <script src="../includes/tab_persistence.js?v=1"></script>
 </body>
 </html>
