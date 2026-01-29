@@ -94,7 +94,9 @@ try {
 
     if ($action === 'allocate') {
         $tokenData = validateBearerToken($db);
-        if (!$tokenData) {
+        $roleName = $_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? '');
+        $isAdminSession = isset($_SESSION['user']) && in_array($roleName, ['admin', 'superadmin', 'super_admin'], true);
+        if (!$tokenData && !$isAdminSession) {
             http_response_code(401);
             echo json_encode(['error' => 'Invalid or expired token']);
             exit;
@@ -111,7 +113,7 @@ try {
             exit;
         }
 
-        if ((int) $tokenData['department_id'] !== $departmentId) {
+        if ($tokenData && (int) $tokenData['department_id'] !== $departmentId) {
             http_response_code(403);
             echo json_encode(['error' => 'Token not authorized for this department']);
             exit;

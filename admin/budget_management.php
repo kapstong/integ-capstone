@@ -826,6 +826,7 @@ $db = Database::getInstance()->getConnection();
                     </div>
                     <div class="d-flex flex-wrap gap-2">
                         <button class="btn btn-outline-secondary"><i class="fas fa-lock me-2"></i>Lock Allocations</button>
+                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#pushAllocationModal"><i class="fas fa-paper-plane me-2"></i>Push Allocation</button>
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#allocateFundsModal"><i class="fas fa-plus me-2"></i>Allocate Funds</button>
                     </div>
                 </div>
@@ -2736,7 +2737,7 @@ $db = Database::getInstance()->getConnection();
 
         function populateDepartmentDropdowns(departments) {
             const departmentSelects = [
-                'budgetDepartment', 'allocationDepartment', 'adjustmentDepartment', 'editBudgetDepartment'
+                'budgetDepartment', 'allocationDepartment', 'adjustmentDepartment', 'editBudgetDepartment', 'pushAllocationDepartment'
             ];
 
             departmentSelects.forEach(selectId => {
@@ -2812,6 +2813,61 @@ $db = Database::getInstance()->getConnection();
                 console.error('Error loading alerts:', error);
                 showAlert('Error loading alerts: ' + error.message, 'danger');
             }
+        }
+
+        const pushAllocationForm = document.getElementById('pushAllocationForm');
+        if (pushAllocationForm) {
+            pushAllocationForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const departmentId = document.getElementById('pushAllocationDepartment')?.value || '';
+                const departmentName = document.getElementById('pushAllocationDepartmentName')?.value.trim() || '';
+                const amount = parseFloat(document.getElementById('pushAllocationAmount')?.value || '0');
+
+                if (!departmentId && !departmentName) {
+                    showAlert('Please select a department or enter a new department name.', 'warning');
+                    return;
+                }
+                if (!amount || amount <= 0) {
+                    showAlert('Please enter a valid allocation amount.', 'warning');
+                    return;
+                }
+
+                const payload = {
+                    action: 'allocate',
+                    department_id: departmentId || undefined,
+                    department_name: departmentName || undefined,
+                    budget_name: document.getElementById('pushAllocationBudgetName')?.value || undefined,
+                    allocated_amount: amount,
+                    period: document.getElementById('pushAllocationPeriod')?.value || 'Yearly',
+                    start_date: document.getElementById('pushAllocationStartDate')?.value || undefined,
+                    end_date: document.getElementById('pushAllocationEndDate')?.value || undefined,
+                    description: document.getElementById('pushAllocationDescription')?.value || undefined
+                };
+
+                try {
+                    const response = await fetch('../api/integrations/budget_allocation.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await response.json();
+                    if (!response.ok || data.error) {
+                        showAlert(data.error || 'Failed to push allocation.', 'danger');
+                        return;
+                    }
+                    showAlert('Allocation pushed successfully.', 'success');
+                    loadAllocations();
+                    loadBudgets();
+                    const modalEl = document.getElementById('pushAllocationModal');
+                    if (modalEl) {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    }
+                    pushAllocationForm.reset();
+                } catch (error) {
+                    showAlert('Failed to push allocation.', 'danger');
+                }
+            });
         }
 
         // Render alerts table
@@ -3880,6 +3936,69 @@ $db = Database::getInstance()->getConnection();
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary" id="allocationRequestAdjustment">Request Adjustment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Push Allocation Modal -->
+    <div class="modal fade" id="pushAllocationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Push Allocation (API)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="pushAllocationForm">
+                        <div class="mb-3">
+                            <label for="pushAllocationDepartment" class="form-label">Department</label>
+                            <select class="form-select" id="pushAllocationDepartment">
+                                <option value="">Select Department</option>
+                            </select>
+                            <small class="text-muted">Select a department, or enter a new one below.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="pushAllocationDepartmentName" class="form-label">New Department Name (Optional)</label>
+                            <input type="text" class="form-control" id="pushAllocationDepartmentName" placeholder="e.g., HR3">
+                        </div>
+                        <div class="mb-3">
+                            <label for="pushAllocationBudgetName" class="form-label">Budget Name</label>
+                            <input type="text" class="form-control" id="pushAllocationBudgetName" placeholder="External Allocation 2026">
+                        </div>
+                        <div class="mb-3">
+                            <label for="pushAllocationAmount" class="form-label">Allocated Amount *</label>
+                            <input type="number" class="form-control" id="pushAllocationAmount" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="pushAllocationPeriod" class="form-label">Period</label>
+                            <select class="form-select" id="pushAllocationPeriod">
+                                <option value="Monthly">Monthly</option>
+                                <option value="Quarterly">Quarterly</option>
+                                <option value="Semi-Annually">Semi-Annually</option>
+                                <option value="Annually">Annually</option>
+                                <option value="Yearly" selected>Yearly</option>
+                            </select>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="pushAllocationStartDate" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="pushAllocationStartDate">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="pushAllocationEndDate" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="pushAllocationEndDate">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="pushAllocationDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="pushAllocationDescription" rows="3" placeholder="Department-provided allocation"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" form="pushAllocationForm">Push Allocation</button>
                 </div>
             </div>
         </div>
