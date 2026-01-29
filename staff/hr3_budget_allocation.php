@@ -22,6 +22,14 @@ $departmentCode = $_GET['department_code'] ?? 'hr3_budget';
     <div class="flex items-center gap-2">
       <label class="text-sm text-gray-600">Department</label>
       <input id="deptInput" class="border rounded px-2 py-1 text-sm" value="<?php echo htmlspecialchars($departmentCode); ?>">
+      <label class="text-sm text-gray-600">Period</label>
+      <select id="periodInput" class="border rounded px-2 py-1 text-sm">
+        <option value="monthly" selected>Monthly</option>
+        <option value="quarterly">Quarterly</option>
+        <option value="semi-annually">Semi-Annually</option>
+        <option value="annually">Annually</option>
+        <option value="yearly">Yearly</option>
+      </select>
       <button class="px-3 py-1 bg-gray-800 text-white rounded text-sm" onclick="reloadDept()">Load</button>
     </div>
   </div>
@@ -81,14 +89,17 @@ let deletePeriod = '';
 
 function reloadDept() {
   const dept = document.getElementById('deptInput').value || 'hr3_budget';
+  const period = document.getElementById('periodInput').value || 'monthly';
   const url = new URL(window.location.href);
   url.searchParams.set('department_code', dept);
+  url.searchParams.set('period', period);
   window.location.href = url.toString();
 }
 
 async function loadData() {
   const dept = document.getElementById('deptInput').value || 'hr3_budget';
-  const res = await fetch(`${apiBase}?department_code=${encodeURIComponent(dept)}`);
+  const period = document.getElementById('periodInput').value || 'monthly';
+  const res = await fetch(`${apiBase}?department_code=${encodeURIComponent(dept)}&period=${encodeURIComponent(period)}`);
   const payload = await res.json();
   const data = payload.data || {};
   const periods = data.periods || [];
