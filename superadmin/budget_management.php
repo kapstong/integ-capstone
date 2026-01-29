@@ -2111,7 +2111,7 @@ $db = Database::getInstance()->getConnection();
                     select.innerHTML = '<option value="">Select Vendor</option>';
                     vendors.forEach(vendor => {
                         if (vendor.status === 'active') {
-                            select.innerHTML += `<option value="${vendor.id}">${vendor.company_name}</option>`;
+                            select.innerHTML += '<option value=\"' + vendor.id + '\">' + vendor.company_name + '</option>';
                         }
                     });
                 }
@@ -2132,7 +2132,7 @@ $db = Database::getInstance()->getConnection();
                     select.innerHTML = '<option value="">Select Department</option>';
                     departments.forEach(dept => {
                         if (dept.is_active == 1 || dept.is_active === undefined) {
-                            select.innerHTML += `<option value="${dept.id}">${dept.dept_name}</option>`;
+                            select.innerHTML += '<option value=\"' + dept.id + '\">' + dept.dept_name + '</option>';
                         }
                     });
                 }
@@ -2145,7 +2145,7 @@ $db = Database::getInstance()->getConnection();
             }
             select.innerHTML = '<option value="">Select Category</option>';
             categories.forEach(category => {
-                select.innerHTML += `<option value="${category.id}">${category.category_name} (${category.category_type})</option>`;
+                select.innerHTML += '<option value=\"' + category.id + '\">' + category.category_name + ' (' + category.category_type + ')</option>';
             });
         }
 
@@ -2156,7 +2156,7 @@ $db = Database::getInstance()->getConnection();
             select.innerHTML = '<option value="">Select Account</option>';
             accounts.forEach(account => {
                 if (account.is_active == 1 || account.is_active === undefined) {
-                    select.innerHTML += `<option value="${account.id}">${account.account_code} - ${account.account_name}</option>`;
+                    select.innerHTML += '<option value=\"' + account.id + '\">' + account.account_code + ' - ' + account.account_name + '</option>';
                 }
             });
         }
