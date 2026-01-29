@@ -700,11 +700,6 @@ $db = Database::getInstance()->getConnection();
             </li>
             
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="adjustments-tab" data-bs-toggle="tab" data-bs-target="#adjustments" type="button" role="tab">
-                    <i class="fas fa-sliders-h me-2"></i>Budget Adjustments
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button" role="tab">
                     <i class="fas fa-chart-bar me-2"></i>Reports & Analytics
                 </button>
@@ -723,7 +718,6 @@ $db = Database::getInstance()->getConnection();
             <div class="tab-pane fade show active" id="planning" role="tabpanel" aria-labelledby="planning-tab">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">Budget Planning & Setup</h6>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBudgetModal"><i class="fas fa-plus me-2"></i>Create Budget</button>
                 </div>
                 <div class="row mb-4">
                     <div class="col-md-12">
@@ -825,9 +819,7 @@ $db = Database::getInstance()->getConnection();
                         <small class="text-muted">Manage allocations by department with live utilization alerts.</small>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
-                        <button class="btn btn-outline-secondary"><i class="fas fa-lock me-2"></i>Lock Allocations</button>
-                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#pushAllocationModal"><i class="fas fa-paper-plane me-2"></i>Push Allocation</button>
-                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#allocateFundsModal"><i class="fas fa-plus me-2"></i>Allocate Funds</button>
+                        
                     </div>
                 </div>
                 <div class="row g-3 mb-4">
@@ -877,15 +869,6 @@ $db = Database::getInstance()->getConnection();
                                     <option value="yellow">Yellow (70%)</option>
                                     <option value="good">Good (&lt;70%)</option>
                                 </select>
-                            </div>
-                            <div class="col-md-5">
-                                <label class="form-label">Threshold Guide</label>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <span class="badge bg-warning text-dark">70% - Yellow</span>
-                                    <span class="badge bg-warning text-dark">80% - Light Orange</span>
-                                    <span class="badge bg-warning text-dark">90% - Orange</span>
-                                    <span class="badge bg-danger">100% - Red</span>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -968,39 +951,6 @@ $db = Database::getInstance()->getConnection();
                         </div>
                     </div>
                 </div>
-                <div class="row mb-4">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Claims vs Budget</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-striped">
-                                        <thead>
-                                            <tr>
-                                                <th>Department</th>
-                                                <th>Claims Approved</th>
-                                                <th>Claims Pending</th>
-                                                <th>Claims Amount</th>
-                                                <th>Budget Remaining</th>
-                                                <th>Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="claimsBudgetBody">
-                                            <tr>
-                                                <td colspan="6" class="text-center text-muted">Loading claims...</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div class="d-flex justify-content-end">
-                                    <button class="btn btn-outline-primary btn-sm"><i class="fas fa-link me-2"></i>View HR3 Claims Feed</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
                 <div class="row">
                     <div class="col-md-12">
                         <div class="card">
@@ -1078,36 +1028,85 @@ $db = Database::getInstance()->getConnection();
                         </div>
                     </div>
                 </div>
-                <div class="row mb-4">
+                <div class="row">
                     <div class="col-md-12">
                         <div class="card">
                             <div class="card-header">
-                                <h6>HR3 Claims Over Budget Queue</h6>
+                                <h6>Departments Over Budget</h6>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
-                                    <table class="table table-striped">
+                                    <table class="table table-striped" id="alertsTable">
                                         <thead>
                                             <tr>
-                                                <th>Claim ID</th>
-                                                <th>Employee</th>
                                                 <th>Department</th>
-                                                <th>Amount</th>
-                                                <th>Budget Remaining</th>
-                                                <th>Action Needed</th>
+                                                <th>Budget Year</th>
+                                                <th>Budgeted Amount</th>
+                                        <th>Utilized Amount</th>
+                                        <th>Utilization %</th>
+                                        <th>Over Amount</th>
+                                                <th>Severity</th>
+                                                <th>Alert Date</th>
+                                                <th>Action</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="claimsOverBudgetBody">
+                                        <tbody id="alertsTableBody">
                                             <tr>
-                                                <td colspan="6" class="text-center text-muted">Loading claims...</td>
+                                                <td colspan="9" class="text-center text-muted">Loading alerts...</td>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="d-flex justify-content-end">
-                                    <button class="btn btn-outline-primary btn-sm"><i class="fas fa-link me-2"></i>Open HR3 Claims Review</button>
-                                </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Forecasting removed (moved to Dashboard) -->
+
+            
+            <div class="tab-pane fade" id="alerts" role="tabpanel" aria-labelledby="alerts-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">Budget Alerts & Notifications</h6>
+                    <div>
+                        <select class="form-select form-select-sm me-2" style="width: auto;" id="alertsFilter">
+                            <option value="all">All Alerts</option>
+                            <option value="red">Red (100%)</option>
+                            <option value="orange">Orange (90%)</option>
+                            <option value="light_orange">Light Orange (80%)</option>
+                            <option value="yellow">Yellow (70%)</option>
+                        </select>
+                        <button class="btn btn-outline-secondary" onclick="loadAlerts()"><i class="fas fa-sync me-2"></i>Refresh</button>
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="reports-card alert-card">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-3 text-danger"></i>
+                            <h6>Red (100%)</h6>
+                            <h3 id="redCount">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="reports-card alert-card">
+                            <i class="fas fa-exclamation-circle fa-2x mb-3 text-warning"></i>
+                            <h6>Orange (90%)</h6>
+                            <h3 id="orangeCount">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="reports-card alert-card">
+                            <i class="fas fa-info-circle fa-2x mb-3 text-warning"></i>
+                            <h6>Light Orange (80%)</h6>
+                            <h3 id="lightOrangeCount">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="reports-card alert-card">
+                            <i class="fas fa-bell fa-2x mb-3 text-secondary"></i>
+                            <h6>Yellow (70%)</h6>
+                            <h3 id="yellowCount">0</h3>
                         </div>
                     </div>
                 </div>
@@ -1148,75 +1147,6 @@ $db = Database::getInstance()->getConnection();
 
             <!-- Forecasting removed (moved to Dashboard) -->
 
-            <!-- Budget Adjustments Tab -->
-            <div class="tab-pane fade" id="adjustments" role="tabpanel" aria-labelledby="adjustments-tab">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">Budget Adjustments</h6>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#adjustmentRequestModal"><i class="fas fa-plus me-2"></i>Request Adjustment</button>
-                </div>
-                <div class="row mb-4">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Active Adjustment Requests</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-striped">
-                                        <thead>
-                                            <tr>
-                                                <th>Request ID</th>
-                                                <th>Department</th>
-                                                <th>Requested By</th>
-                                                <th>Type</th>
-                                                <th>Amount</th>
-                                                <th>Reason</th>
-                                                <th>Status</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="adjustmentsTableBody">
-                                              <tr>
-                                                  <td colspan="8" class="text-center text-muted">No adjustment requests available.</td>
-                                              </tr>
-                                          </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Adjustment Guidelines</h6>
-                            </div>
-                            <div class="card-body">
-                                <ul class="list-unstyled mb-0">
-                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Provide clear financial justification.</li>
-                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Attach supporting HR3 claim data if applicable.</li>
-                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Allow 3-5 business days for review.</li>
-                                    <li><i class="fas fa-check text-success me-2"></i>Approved adjustments update allocations automatically.</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Recent Approvals</h6>
-                            </div>
-                            <div class="card-body">
-                                <ul class="list-unstyled mb-0">
-                                      <li class=\"text-muted\">No recent approvals available.</li>
-                                  </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Reports & Analytics Tab -->
             <div class="tab-pane fade" id="reports" role="tabpanel" aria-labelledby="reports-tab">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1236,18 +1166,7 @@ $db = Database::getInstance()->getConnection();
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>HR3 Claims Impact Report</h6>
-                            </div>
-                            <div class="card-body">
-                                <p>Summarizes HR3 claim volumes, approvals, and budget impact across departments.</p>
-                                <button class="btn btn-primary" id="generateClaimsImpactBtn">Generate Report</button>
-                                <button class="btn btn-outline-secondary ms-2" id="downloadClaimsImpactBtn">Download PDF</button>
-                            </div>
-                        </div>
-                    </div>
+                      
                 </div>
                 <div class="row mt-3">
                     <div class="col-md-6">
@@ -1262,18 +1181,7 @@ $db = Database::getInstance()->getConnection();
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Forecast Snapshot</h6>
-                            </div>
-                            <div class="card-body">
-                                <p>Rolling 90-day forecast with risk flags for claims-heavy departments.</p>
-                                <button class="btn btn-primary" id="generateForecastBtn">Generate Report</button>
-                                <button class="btn btn-outline-secondary ms-2" id="downloadForecastBtn">Download PDF</button>
-                            </div>
-                        </div>
-                    </div>
+                      
                 </div>
                 
                 <!-- Report Results Section -->
@@ -1364,13 +1272,11 @@ $db = Database::getInstance()->getConnection();
         let currentBudgets = [];
         let currentAllocations = [];
         let currentTrackingData = [];
-        let currentAdjustments = [];
         let currentDepartments = [];
         let currentCategories = [];
         let currentAccounts = [];
         let vendors = [];
         let currentAlerts = [];
-        let currentHr3ClaimsBreakdown = null;
 
         // Initialize sidebar state on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -1401,12 +1307,10 @@ $db = Database::getInstance()->getConnection();
             loadAllocations();
             loadTrackingData();
             loadAlerts();
-            loadAdjustments();
             loadDepartments();
             loadCategories();
             loadAccounts();
             loadVendors();
-            loadClaimsData();
             loadAuditTrail();
         });
 
@@ -1586,12 +1490,6 @@ $db = Database::getInstance()->getConnection();
             }
             return 'good';
         }
-
-        function renderAdjustmentsTable() {
-            const tbody = document.getElementById('adjustmentsTableBody');
-            if (!tbody) {
-                return;
-            }
             tbody.innerHTML = '';
 
             if (currentAdjustments.length === 0) {
@@ -1754,11 +1652,6 @@ $db = Database::getInstance()->getConnection();
             return allocation ? allocation.remaining : null;
         }
 
-        function getClaimsBudgetStatus(remaining, totalAmount) {
-            if (remaining == null) {
-                return { label: 'Unknown', className: 'bg-secondary' };
-            }
-
             if (remaining <= 0) {
                 return { label: 'Over Budget', className: 'bg-danger' };
             }
@@ -1769,12 +1662,6 @@ $db = Database::getInstance()->getConnection();
 
             return { label: 'Within Limit', className: 'bg-success' };
         }
-
-        function renderClaimsSummary() {
-            const tbody = document.getElementById('claimsBudgetBody');
-            if (!tbody) {
-                return;
-            }
 
             if (!currentHr3ClaimsBreakdown || !currentHr3ClaimsBreakdown.summary) {
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No claims data available.</td></tr>';
@@ -1811,12 +1698,6 @@ $db = Database::getInstance()->getConnection();
                 tbody.innerHTML += row;
             });
         }
-
-        function renderClaimsOverBudget() {
-            const tbody = document.getElementById('claimsOverBudgetBody');
-            if (!tbody) {
-                return;
-            }
 
             if (!currentHr3ClaimsBreakdown || !Array.isArray(currentHr3ClaimsBreakdown.claims)) {
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No claims data available.</td></tr>';
@@ -1859,32 +1740,12 @@ $db = Database::getInstance()->getConnection();
         }
 
 // Create budget
-        async function createBudget(formData) {
-            try {
-                const response = await fetch('../api/budgets.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formData)
-                });
-
-                const data = await response.json();
-
-                if (data.error) {
-                    throw new Error(data.error);
-                }
 
                 showAlert('Budget created successfully', 'success');
                 loadBudgets(); // Refresh the list
                 loadAuditTrail();
 
                 // Close modal
-                const modalEl = document.getElementById('createBudgetModal');
-                if (modalEl) {
-                    const modal = bootstrap.Modal.getInstance(modalEl);
-                    if (modal) modal.hide();
-                }
 
             } catch (error) {
                 console.error('Error creating budget:', error);
@@ -1892,65 +1753,22 @@ $db = Database::getInstance()->getConnection();
             }
         }
 
-        async function createBudgetItem(formData) {
-            try {
-                const response = await fetch('../api/budgets.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formData)
-                });
-
-                const data = await response.json();
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
                 showAlert('Allocation saved', 'success');
                 loadBudgets();
                 loadAllocations();
                 loadTrackingData();
                 loadAlerts();
                 loadAuditTrail();
-
-                const modalEl = document.getElementById('allocateFundsModal');
-                if (modalEl) {
-                    const modal = bootstrap.Modal.getInstance(modalEl);
-                    if (modal) modal.hide();
-                }
             } catch (error) {
                 console.error('Error saving allocation:', error);
                 showAlert('Error saving allocation: ' + error.message, 'danger');
             }
         }
 
-        async function requestAdjustment(formData) {
-            try {
-                const response = await fetch('../api/budgets.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formData)
-                });
-
-                const data = await response.json();
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
                 showAlert('Adjustment request submitted', 'success');
-                loadAdjustments();
                 loadAllocations();
                 loadBudgets();
                 loadAuditTrail();
-
-                const modalEl = document.getElementById('adjustmentRequestModal');
-                if (modalEl) {
-                    const modal = bootstrap.Modal.getInstance(modalEl);
-                    if (modal) modal.hide();
-                }
             } catch (error) {
                 console.error('Error requesting adjustment:', error);
                 showAlert('Error requesting adjustment: ' + error.message, 'danger');
@@ -2095,35 +1913,7 @@ $db = Database::getInstance()->getConnection();
             }
         }
 
-        async function approveAdjustment(adjustmentId) {
-            await updateAdjustmentStatus(adjustmentId, 'approved');
-        }
-
-        async function rejectAdjustment(adjustmentId) {
-            await updateAdjustmentStatus(adjustmentId, 'rejected');
-        }
-
-        async function updateAdjustmentStatus(adjustmentId, status) {
-            try {
-                const response = await fetch('../api/budgets.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        action: 'adjustment_status',
-                        adjustment_id: adjustmentId,
-                        status
-                    })
-                });
-
-                const data = await response.json();
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
                 showAlert(`Adjustment ${status}`, 'success');
-                loadAdjustments();
                 loadAllocations();
                 loadBudgets();
                 loadTrackingData();
@@ -2136,29 +1926,11 @@ $db = Database::getInstance()->getConnection();
             }
         }
 
-        function editAdjustment(adjustmentId) {
-            const adjustment = currentAdjustments.find(item => item.id == adjustmentId);
-            if (!adjustment) {
-                showAlert('Adjustment not found', 'warning');
-                return;
-            }
-
-            const modalEl = document.getElementById('adjustmentRequestModal');
-            const form = document.getElementById('adjustmentRequestForm');
-            if (!modalEl || !form) {
-                showAlert('Adjustment form not available', 'warning');
-                return;
-            }
-
             form.dataset.adjustmentId = adjustment.id;
 
             const modalTitle = modalEl.querySelector('.modal-title');
             if (modalTitle) {
                 modalTitle.textContent = 'Edit Budget Adjustment';
-            }
-            const submitButton = modalEl.querySelector('button[type="submit"][form="adjustmentRequestForm"]');
-            if (submitButton) {
-                submitButton.textContent = 'Update Adjustment';
             }
 
             const budget = currentBudgets.find(item => item.id == adjustment.budget_id);
@@ -2194,13 +1966,6 @@ $db = Database::getInstance()->getConnection();
             new bootstrap.Modal(modalEl).show();
         }
 
-        function resetAdjustmentForm() {
-            const modalEl = document.getElementById('adjustmentRequestModal');
-            const form = document.getElementById('adjustmentRequestForm');
-            if (!modalEl || !form) {
-                return;
-            }
-
             form.reset();
             delete form.dataset.adjustmentId;
 
@@ -2208,66 +1973,21 @@ $db = Database::getInstance()->getConnection();
             if (modalTitle) {
                 modalTitle.textContent = 'Request Budget Adjustment';
             }
-            const submitButton = modalEl.querySelector('button[type="submit"][form="adjustmentRequestForm"]');
-            if (submitButton) {
-                submitButton.textContent = 'Submit Request';
-            }
         }
 
-        async function updateAdjustment(adjustmentId, formData) {
-            try {
-                const response = await fetch(`api/budgets.php?id=${adjustmentId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        action: 'adjustment_update',
-                        ...formData
-                    })
-                });
-
-                const data = await response.json();
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
                 showAlert('Adjustment updated successfully', 'success');
-                loadAdjustments();
                 loadAllocations();
                 loadBudgets();
                 loadTrackingData();
                 loadAlerts();
                 loadAuditTrail();
-
-                const modalEl = document.getElementById('adjustmentRequestModal');
-                if (modalEl) {
-                    const modal = bootstrap.Modal.getInstance(modalEl);
-                    if (modal) modal.hide();
-                }
             } catch (error) {
                 console.error('Error updating adjustment:', error);
                 showAlert('Error updating adjustment: ' + error.message, 'danger');
             }
         }
 
-        async function deleteAdjustment(adjustmentId) {
-            showConfirmDialog(
-                'Delete Adjustment',
-                'Are you sure you want to delete this adjustment? This action cannot be undone.',
-                async () => {
-            try {
-                const response = await fetch(`api/budgets.php?action=adjustment&id=${adjustmentId}`, {
-                    method: 'DELETE'
-                });
-
-                const data = await response.json();
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
                 showAlert('Adjustment deleted successfully', 'success');
-                loadAdjustments();
                 loadAllocations();
                 loadBudgets();
                 loadTrackingData();
@@ -2381,25 +2101,6 @@ $db = Database::getInstance()->getConnection();
             });
 
             // Handle create budget form submission
-            const createBudgetForm = document.getElementById('createBudgetForm');
-            if (createBudgetForm) {
-                createBudgetForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-
-                    const formData = new FormData(this);
-                    const budgetData = {
-                        name: formData.get('budgetName'),
-                        department_id: formData.get('department_id') || null,
-                        vendor_id: formData.get('vendor_id') || null,
-                        start_date: formData.get('startDate'),
-                        end_date: formData.get('endDate'),
-                        total_amount: parseFloat(formData.get('totalAmount')),
-                        description: formData.get('budgetDescription')
-                    };
-
-                    createBudget(budgetData);
-                });
-            }
 
             const editBudgetForm = document.getElementById('editBudgetForm');
             if (editBudgetForm) {
@@ -2439,57 +2140,8 @@ $db = Database::getInstance()->getConnection();
                     if (allocationModal) {
                         allocationModal.hide();
                     }
-
-                    const adjustmentModal = document.getElementById('adjustmentRequestModal');
-                    if (adjustmentModal) {
-                        new bootstrap.Modal(adjustmentModal).show();
-                    }
                 });
             }
-
-            const allocateFundsForm = document.getElementById('allocateFundsForm');
-            if (allocateFundsForm) {
-                allocateFundsForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-
-                    const formData = new FormData(this);
-                    const itemData = {
-                        action: 'item',
-                        budget_id: formData.get('budget_id'),
-                        category_id: formData.get('category_id'),
-                        department_id: formData.get('department_id') || null,
-                        account_id: formData.get('account_id') || null,
-                        vendor_id: formData.get('vendor_id') || null,
-                        budgeted_amount: parseFloat(formData.get('budgeted_amount')),
-                        notes: formData.get('notes')
-                    };
-
-                    createBudgetItem(itemData);
-                });
-            }
-
-            const adjustmentRequestForm = document.getElementById('adjustmentRequestForm');
-            if (adjustmentRequestForm) {
-                adjustmentRequestForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-
-                    const formData = new FormData(this);
-                    const adjustmentData = {
-                        budget_id: formData.get('budget_id'),
-                        adjustment_type: formData.get('adjustmentType'),
-                        amount: parseFloat(formData.get('adjustmentAmount')),
-                        department_id: formData.get('department_id'),
-                        vendor_id: formData.get('vendor_id') || null,
-                        reason: formData.get('adjustmentReason'),
-                        effective_date: formData.get('expectedDate') || null
-                    };
-
-                    const adjustmentId = this.dataset.adjustmentId;
-                    if (adjustmentId) {
-                        updateAdjustment(adjustmentId, adjustmentData);
-                    } else {
-                        requestAdjustment({ action: 'adjustment', ...adjustmentData });
-                    }
                 });
             }
 
@@ -2506,11 +2158,6 @@ $db = Database::getInstance()->getConnection();
                 trackingRefreshButton.addEventListener('click', function() {
                     loadTrackingData();
                 });
-            }
-
-            const adjustmentModal = document.getElementById('adjustmentRequestModal');
-            if (adjustmentModal) {
-                adjustmentModal.addEventListener('hidden.bs.modal', resetAdjustmentForm);
             }
 
             const auditTab = document.getElementById('audit-tab');
@@ -2593,15 +2240,6 @@ $db = Database::getInstance()->getConnection();
                 showAlert('Error loading accounts: ' + error.message, 'danger');
             }
         }
-
-        async function loadAdjustments() {
-            try {
-                const response = await fetch('../api/budgets.php?action=adjustments');
-                const data = await response.json();
-
-                if (data.error) {
-                    throw new Error(data.error);
-                }
 
                 currentAdjustments = data.adjustments || [];
                 renderAdjustmentsTable();
@@ -2814,19 +2452,6 @@ $db = Database::getInstance()->getConnection();
                 showAlert('Error loading alerts: ' + error.message, 'danger');
             }
         }
-
-        const pushAllocationForm = document.getElementById('pushAllocationForm');
-        if (pushAllocationForm) {
-            pushAllocationForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                const departmentId = document.getElementById('pushAllocationDepartment')?.value || '';
-                const departmentName = document.getElementById('pushAllocationDepartmentName')?.value.trim() || '';
-                const amount = parseFloat(document.getElementById('pushAllocationAmount')?.value || '0');
-
-                if (!departmentId && !departmentName) {
-                    showAlert('Please select a department or enter a new department name.', 'warning');
-                    return;
-                }
                 if (!amount || amount <= 0) {
                     showAlert('Please enter a valid allocation amount.', 'warning');
                     return;
@@ -2858,12 +2483,6 @@ $db = Database::getInstance()->getConnection();
                     showAlert('Allocation pushed successfully.', 'success');
                     loadAllocations();
                     loadBudgets();
-                    const modalEl = document.getElementById('pushAllocationModal');
-                    if (modalEl) {
-                        const modal = bootstrap.Modal.getInstance(modalEl);
-                        if (modal) modal.hide();
-                    }
-                    pushAllocationForm.reset();
                 } catch (error) {
                     showAlert('Failed to push allocation.', 'danger');
                 }
@@ -2987,25 +2606,6 @@ $db = Database::getInstance()->getConnection();
         // Event listeners for dynamic functionality
         document.addEventListener('DOMContentLoaded', function() {
             // Handle create budget form submission
-            const createBudgetForm = document.getElementById('createBudgetForm');
-            if (createBudgetForm) {
-                createBudgetForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-
-                    const formData = new FormData(this);
-                    const budgetData = {
-                        name: formData.get('budgetName'),
-                        department_id: formData.get('department_id') || null,
-                        vendor_id: formData.get('vendor_id') || null,
-                        start_date: formData.get('startDate'),
-                        end_date: formData.get('endDate'),
-                        total_amount: parseFloat(formData.get('totalAmount')),
-                        description: formData.get('budgetDescription')
-                    };
-
-                    createBudget(budgetData);
-                });
-            }
 
             // Handle tracking period change
             const trackingPeriodSelect = document.querySelector('#tracking select');
@@ -3131,66 +2731,6 @@ $db = Database::getInstance()->getConnection();
             showReportResults('Budget vs Actual Report', content);
         }
 
-        function generateClaimsImpactReport() {
-            const content = `
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>HR3 Claims Impact Report - ${new Date().toLocaleDateString()}</h6>
-                            </div>
-                            <div class="card-body">
-                                ${currentHr3ClaimsBreakdown ? `
-                                    <div class="table-responsive">
-                                        <table class="table table-striped">
-                                            <thead>
-                                                <tr>
-                                                    <th>Department</th>
-                                                    <th>Claims Count</th>
-                                                    <th>Total Amount</th>
-                                                    <th>Average Claim</th>
-                                                    <th>Budget Impact</th>
-                                                    <th>Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                ${Object.entries(currentHr3ClaimsBreakdown.summary.department_breakdown || {}).map(([dept, data]) => {
-                                                    const remaining = getAllocationRemaining(dept);
-                                                    const status = getClaimsBudgetStatus(remaining, data.total_amount);
-                                                    return `
-                                                        <tr>
-                                                            <td>${dept}</td>
-                                                            <td>${data.claim_count || 0}</td>
-                                                            <td>PHP ${parseFloat(data.total_amount || 0).toLocaleString()}</td>
-                                                            <td>PHP ${((data.total_amount || 0) / (data.claim_count || 1)).toLocaleString()}</td>
-                                                            <td>${remaining == null ? 'N/A' : `PHP ${parseFloat(remaining || 0).toLocaleString()}`}</td>
-                                                            <td><span class="badge ${status.className}">${status.label}</span></td>
-                                                        </tr>
-                                                    `;
-                                                }).join('')}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div class="mt-3">
-                                        <h6>Claims Summary</h6>
-                                        <p>Total Claims: ${currentHr3ClaimsBreakdown.summary.total_claims || 0}</p>
-                                        <p>Total Amount: PHP ${parseFloat(currentHr3ClaimsBreakdown.summary.total_amount || 0).toLocaleString()}</p>
-                                        <p>Average Claim: PHP ${((currentHr3ClaimsBreakdown.summary.total_amount || 0) / (currentHr3ClaimsBreakdown.summary.total_claims || 1)).toLocaleString()}</p>
-                                    </div>
-                                ` : `
-                                    <div class="text-center text-muted py-4">
-                                        <i class="fas fa-info-circle fa-2x mb-3"></i>
-                                        <p>No HR3 claims data available</p>
-                                    </div>
-                                `}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            showReportResults('HR3 Claims Impact Report', content);
-        }
-
         function generateDepartmentPerformanceReport() {
             const content = `
                 <div class="row">
@@ -3273,76 +2813,6 @@ $db = Database::getInstance()->getConnection();
                 </div>
             `;
             showReportResults('Department Performance Report', content);
-        }
-
-        function generateForecastSnapshot() {
-            const content = `
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card forecast-card">
-                            <div class="card-header">
-                                <h6>90-Day Budget Forecast - ${new Date().toLocaleDateString()}</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <h5 class="text-white">Forecast Summary</h5>
-                                        <div class="row text-white">
-                                            <div class="col-md-6">
-                                                <div class="card bg-white text-dark mb-3">
-                                                    <div class="card-body">
-                                                        <h6>Projected Expenses</h6>
-                                                        <h4>PHP ${(currentTrackingData.reduce((sum, item) => sum + (item.actual_amount || 0), 0) * 3).toLocaleString()}</h4>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="card bg-white text-dark mb-3">
-                                                    <div class="card-body">
-                                                        <h6>Available Budget</h6>
-                                                        <h4>PHP ${(currentTrackingData.reduce((sum, item) => sum + (item.budget_amount || 0), 0) * 3).toLocaleString()}</h4>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h5 class="text-white">Risk Assessment</h5>
-                                        <div class="card bg-white text-dark">
-                                            <div class="card-body">
-                                                <h6>High Risk Departments</h6>
-                                                ${currentAllocations.filter(a => (a.utilized_amount / a.total_amount) * 100 > 80).map(allocation => `
-                                                    <div class="d-flex justify-content-between mb-2">
-                                                        <span>${allocation.department}</span>
-                                                        <span class="badge bg-danger">${((allocation.utilized_amount / allocation.total_amount) * 100).toFixed(1)}%</span>
-                                                    </div>
-                                                `).join('')}
-                                                ${currentAllocations.filter(a => (a.utilized_amount / a.total_amount) * 100 > 80).length === 0 ? '<p class="text-muted">No high-risk departments identified</p>' : ''}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row mt-3">
-                                    <div class="col-md-12">
-                                        <div class="card bg-white text-dark">
-                                            <div class="card-body">
-                                                <h6>Forecast Assumptions</h6>
-                                                <ul class="list-unstyled">
-                                                    <li><i class="fas fa-check-circle text-success me-2"></i>Current spending trends continue</li>
-                                                    <li><i class="fas fa-check-circle text-success me-2"></i>HR3 claims processed at current rate</li>
-                                                    <li><i class="fas fa-check-circle text-success me-2"></i>No major budget adjustments</li>
-                                                    <li><i class="fas fa-check-circle text-success me-2"></i>Seasonal variations accounted for</li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            showReportResults('Forecast Snapshot', content);
         }
 
         function downloadPDF(title) {
@@ -3430,17 +2900,6 @@ $db = Database::getInstance()->getConnection();
                 downloadBudgetVsActualBtn.addEventListener('click', () => downloadPDF('Budget vs Actual Report'));
             }
 
-            // HR3 Claims Impact Report
-            const generateClaimsImpactBtn = document.getElementById('generateClaimsImpactBtn');
-            if (generateClaimsImpactBtn) {
-                generateClaimsImpactBtn.addEventListener('click', generateClaimsImpactReport);
-            }
-
-            const downloadClaimsImpactBtn = document.getElementById('downloadClaimsImpactBtn');
-            if (downloadClaimsImpactBtn) {
-                downloadClaimsImpactBtn.addEventListener('click', () => downloadPDF('HR3 Claims Impact Report'));
-            }
-
             // Department Performance Report
             const generateDeptPerformanceBtn = document.getElementById('generateDeptPerformanceBtn');
             if (generateDeptPerformanceBtn) {
@@ -3450,17 +2909,6 @@ $db = Database::getInstance()->getConnection();
             const downloadDeptPerformanceBtn = document.getElementById('downloadDeptPerformanceBtn');
             if (downloadDeptPerformanceBtn) {
                 downloadDeptPerformanceBtn.addEventListener('click', () => downloadPDF('Department Performance Report'));
-            }
-
-            // Forecast Snapshot
-            const generateForecastBtn = document.getElementById('generateForecastBtn');
-            if (generateForecastBtn) {
-                generateForecastBtn.addEventListener('click', generateForecastSnapshot);
-            }
-
-            const downloadForecastBtn = document.getElementById('downloadForecastBtn');
-            if (downloadForecastBtn) {
-                downloadForecastBtn.addEventListener('click', () => downloadPDF('Forecast Snapshot'));
             }
 
             // Export Reports Button
@@ -3551,77 +2999,7 @@ $db = Database::getInstance()->getConnection();
     
 
     <!-- Create Budget Modal -->
-    <div class="modal fade" id="createBudgetModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Create New Budget</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="createBudgetForm">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="budgetName" class="form-label">Budget Name *</label>
-                                    <input type="text" class="form-control" id="budgetName" name="budgetName" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="budgetDepartment" class="form-label">Department</label>
-                                    <select class="form-select" id="budgetDepartment" name="department_id">
-                                        <option value="">Loading departments...</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="startDate" class="form-label">Start Date *</label>
-                                    <input type="date" class="form-control" id="startDate" name="startDate" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="endDate" class="form-label">End Date *</label>
-                                    <input type="date" class="form-control" id="endDate" name="endDate" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="totalAmount" class="form-label">Total Budget Amount *</label>
-                                    <input type="number" class="form-control" id="totalAmount" name="totalAmount" step="0.01" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="budgetVendor" class="form-label">Primary Vendor (Optional)</label>
-                                    <select class="form-select" id="budgetVendor" name="vendor_id">
-                                        <option value="">Loading vendors...</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="budgetDescription" class="form-label">Description</label>
-                            <textarea class="form-control" id="budgetDescription" name="budgetDescription" rows="3"></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" form="createBudgetForm">Create Budget</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Allocate Funds Modal -->
-    <div class="modal fade" id="allocateFundsModal" tabindex="-1">
+     tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
@@ -3629,320 +3007,8 @@ $db = Database::getInstance()->getConnection();
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="allocateFundsForm">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="allocationBudget" class="form-label">Budget *</label>
-                                    <select class="form-select" id="allocationBudget" name="budget_id" required>
-                                        <option value="">Loading budgets...</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="allocationCategory" class="form-label">Category *</label>
-                                    <select class="form-select" id="allocationCategory" name="category_id" required>
-                                        <option value="">Loading categories...</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="allocationDepartment" class="form-label">Department</label>
-                                    <select class="form-select" id="allocationDepartment" name="department_id">
-                                        <option value="">Loading departments...</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="allocationAccount" class="form-label">Account</label>
-                                    <select class="form-select" id="allocationAccount" name="account_id">
-                                        <option value="">Loading accounts...</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="allocationVendor" class="form-label">Vendor (Optional)</label>
-                                    <select class="form-select" id="allocationVendor" name="vendor_id">
-                                        <option value="">Loading vendors...</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="allocationAmount" class="form-label">Allocated Amount *</label>
-                                    <input type="number" class="form-control" id="allocationAmount" name="budgeted_amount" step="0.01" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="allocationNotes" class="form-label">Notes</label>
-                            <textarea class="form-control" id="allocationNotes" name="notes" rows="3"></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" form="allocateFundsForm">Save Allocation</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Adjustment Request Modal -->
-    <div class="modal fade" id="adjustmentRequestModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Request Budget Adjustment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="adjustmentRequestForm">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="adjustmentBudget" class="form-label">Budget *</label>
-                                    <select class="form-select" id="adjustmentBudget" name="budget_id" required>
-                                        <option value="">Loading budgets...</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="adjustmentType" class="form-label">Adjustment Type *</label>
-                                    <select class="form-select" id="adjustmentType" name="adjustmentType" required>
-                                        <option value="">Select Type</option>
-                                        <option value="increase">Increase Budget</option>
-                                        <option value="decrease">Decrease Budget</option>
-                                        <option value="transfer">Transfer Funds</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="adjustmentAmount" class="form-label">Amount *</label>
-                                    <input type="number" class="form-control" id="adjustmentAmount" name="adjustmentAmount" step="0.01" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="adjustmentDepartment" class="form-label">Department *</label>
-                                    <select class="form-select" id="adjustmentDepartment" name="department_id" required>
-                                        <option value="">Loading departments...</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="adjustmentVendor" class="form-label">Related Vendor</label>
-                                    <select class="form-select" id="adjustmentVendor" name="vendor_id">
-                                        <option value="">Loading vendors...</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="adjustmentReason" class="form-label">Reason for Adjustment *</label>
-                            <textarea class="form-control" id="adjustmentReason" name="adjustmentReason" rows="4" required placeholder="Please provide detailed reason for this budget adjustment"></textarea>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="requestedBy" class="form-label">Requested By</label>
-                                    <input type="text" class="form-control" id="requestedBy" name="requestedBy" value="Admin" readonly>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="expectedDate" class="form-label">Effective Date</label>
-                                    <input type="date" class="form-control" id="expectedDate" name="expectedDate">
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" form="adjustmentRequestForm">Submit Request</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- View Budget Modal -->
-    <div class="modal fade" id="viewBudgetModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Budget Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Budget Name</label>
-                            <div id="viewBudgetName" class="fw-semibold"></div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Period</label>
-                            <div id="viewBudgetPeriod" class="fw-semibold"></div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Department</label>
-                            <div id="viewBudgetDepartment" class="fw-semibold"></div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Vendor</label>
-                            <div id="viewBudgetVendor" class="fw-semibold"></div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Status</label>
-                            <div id="viewBudgetStatus"></div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Total Amount</label>
-                            <div id="viewBudgetAmount" class="fw-semibold"></div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Owner</label>
-                            <div id="viewBudgetOwner" class="fw-semibold"></div>
-                        </div>
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label">Description</label>
-                            <div id="viewBudgetDescription" class="fw-semibold"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Budget Modal -->
-    <div class="modal fade" id="editBudgetModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Budget</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="editBudgetForm">
-                        <input type="hidden" id="editBudgetId" name="budget_id">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="editBudgetName" class="form-label">Budget Name *</label>
-                                    <input type="text" class="form-control" id="editBudgetName" name="budgetName" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="editBudgetDepartment" class="form-label">Department</label>
-                                    <select class="form-select" id="editBudgetDepartment" name="department_id">
-                                        <option value="">Select Department</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="editStartDate" class="form-label">Start Date *</label>
-                                    <input type="date" class="form-control" id="editStartDate" name="startDate" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="editEndDate" class="form-label">End Date *</label>
-                                    <input type="date" class="form-control" id="editEndDate" name="endDate" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="editTotalAmount" class="form-label">Total Budget Amount *</label>
-                                    <input type="number" class="form-control" id="editTotalAmount" name="totalAmount" step="0.01" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="editBudgetVendor" class="form-label">Primary Vendor (Optional)</label>
-                                    <select class="form-select" id="editBudgetVendor" name="vendor_id">
-                                        <option value="">Select Vendor</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="editBudgetDescription" class="form-label">Description</label>
-                            <textarea class="form-control" id="editBudgetDescription" name="budgetDescription" rows="3"></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" form="editBudgetForm">Save Changes</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Allocation Details Modal -->
-    <div class="modal fade" id="allocationDetailModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Allocation Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Department</label>
-                            <div id="allocationDepartment" class="fw-semibold"></div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Total Allocated</label>
-                            <div id="allocationTotal" class="fw-semibold"></div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Reserved Amount</label>
-                            <div id="allocationReserved" class="fw-semibold"></div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Utilized Amount</label>
-                            <div id="allocationUtilized" class="fw-semibold"></div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Remaining</label>
-                            <div id="allocationRemaining" class="fw-semibold"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" id="allocationRequestAdjustment">Request Adjustment</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Push Allocation Modal -->
-    <div class="modal fade" id="pushAllocationModal" tabindex="-1">
+                    <!-- Adjustment Request Modal -->
+     tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -3950,61 +3016,7 @@ $db = Database::getInstance()->getConnection();
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="pushAllocationForm">
-                        <div class="mb-3">
-                            <label for="pushAllocationDepartment" class="form-label">Department</label>
-                            <select class="form-select" id="pushAllocationDepartment">
-                                <option value="">Select Department</option>
-                            </select>
-                            <small class="text-muted">Select a department, or enter a new one below.</small>
-                        </div>
-                        <div class="mb-3">
-                            <label for="pushAllocationDepartmentName" class="form-label">New Department Name (Optional)</label>
-                            <input type="text" class="form-control" id="pushAllocationDepartmentName" placeholder="e.g., HR3">
-                        </div>
-                        <div class="mb-3">
-                            <label for="pushAllocationBudgetName" class="form-label">Budget Name</label>
-                            <input type="text" class="form-control" id="pushAllocationBudgetName" placeholder="External Allocation 2026">
-                        </div>
-                        <div class="mb-3">
-                            <label for="pushAllocationAmount" class="form-label">Allocated Amount *</label>
-                            <input type="number" class="form-control" id="pushAllocationAmount" step="0.01" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="pushAllocationPeriod" class="form-label">Period</label>
-                            <select class="form-select" id="pushAllocationPeriod">
-                                <option value="Monthly">Monthly</option>
-                                <option value="Quarterly">Quarterly</option>
-                                <option value="Semi-Annually">Semi-Annually</option>
-                                <option value="Annually">Annually</option>
-                                <option value="Yearly" selected>Yearly</option>
-                            </select>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="pushAllocationStartDate" class="form-label">Start Date</label>
-                                <input type="date" class="form-control" id="pushAllocationStartDate">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="pushAllocationEndDate" class="form-label">End Date</label>
-                                <input type="date" class="form-control" id="pushAllocationEndDate">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="pushAllocationDescription" class="form-label">Description</label>
-                            <textarea class="form-control" id="pushAllocationDescription" rows="3" placeholder="Department-provided allocation"></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary" form="pushAllocationForm">Push Allocation</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Alert Details Modal -->
+                    <!-- Alert Details Modal -->
     <div class="modal fade" id="alertDetailsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
