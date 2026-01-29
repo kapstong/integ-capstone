@@ -1259,13 +1259,11 @@ $db = Database::getInstance()->getConnection();
         function renderBudgetsTable() {
             const tbody = document.querySelector('#planning .table tbody');
             if (!tbody) {
-                return;
             }
             tbody.innerHTML = '';
 
             if (currentBudgets.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No budgets found. Create your first budget.</td></tr>';
-                return;
             }
 
             currentBudgets.forEach(budget => {
@@ -1316,7 +1314,6 @@ $db = Database::getInstance()->getConnection();
         function renderAllocationsTable() {
             const tbody = document.getElementById('allocationTableBody');
             if (!tbody) {
-                return;
             }
             tbody.innerHTML = '';
 
@@ -1324,7 +1321,6 @@ $db = Database::getInstance()->getConnection();
 
             if (filteredAllocations.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No allocations found.</td></tr>';
-                return;
             }
 
             filteredAllocations.forEach(allocation => {
@@ -1413,7 +1409,6 @@ $db = Database::getInstance()->getConnection();
 
             if (currentAdjustments.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No adjustment requests available.</td></tr>';
-                return;
             }
 
             currentAdjustments.forEach(adjustment => {
@@ -1476,7 +1471,6 @@ $db = Database::getInstance()->getConnection();
 
             if (currentTrackingData.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No tracking data available.</td></tr>';
-                return;
             }
 
             currentTrackingData.forEach(item => {
@@ -1529,13 +1523,11 @@ $db = Database::getInstance()->getConnection();
             const budget = currentBudgets.find(b => b.id == budgetId);
             if (!budget) {
                 showAlert('Budget not found', 'warning');
-                return;
             }
 
             const modalEl = document.getElementById('viewBudgetModal');
             if (!modalEl) {
                 showAlert(`Viewing budget: ${budget.name}`, 'info');
-                return;
             }
 
             modalEl.querySelector('#viewBudgetName').textContent = budget.name || 'N/A';
@@ -1555,13 +1547,11 @@ $db = Database::getInstance()->getConnection();
             const budget = currentBudgets.find(b => b.id == budgetId);
             if (!budget) {
                 showAlert('Budget not found', 'warning');
-                return;
             }
 
             const modalEl = document.getElementById('editBudgetModal');
             if (!modalEl) {
                 showAlert(`Editing budget: ${budget.name}`, 'info');
-                return;
             }
 
             modalEl.querySelector('#editBudgetId').value = budget.id;
@@ -1590,13 +1580,11 @@ $db = Database::getInstance()->getConnection();
             const allocation = currentAllocations.find(a => a.id == allocationId);
             if (!allocation) {
                 showAlert('Allocation not found', 'warning');
-                return;
             }
 
             const modalEl = document.getElementById('allocationDetailModal');
             if (!modalEl) {
                 showAlert(`Adjusting allocation for: ${allocation.department}`, 'info');
-                return;
             }
 
             modalEl.querySelector('#allocationDepartment').textContent = allocation.department || 'Unassigned';
@@ -1616,7 +1604,6 @@ $db = Database::getInstance()->getConnection();
 
         function setSelectValue(select, value, label) {
             if (!select) {
-                return;
             }
 
             const stringValue = value != null ? String(value) : '';
@@ -1860,7 +1847,6 @@ $db = Database::getInstance()->getConnection();
                     const budgetId = formData.get('budget_id');
                     if (!budgetId) {
                         showAlert('Budget ID is missing', 'warning');
-                        return;
                     }
 
                     const budgetData = {
@@ -1942,7 +1928,6 @@ $db = Database::getInstance()->getConnection();
                 
                 if (!response.ok) {
                     currentDepartments = [];
-                    return;
                 }
                 
                 const text = await response.text();
@@ -1950,7 +1935,6 @@ $db = Database::getInstance()->getConnection();
                 // Check if response is valid JSON
                 if (!text || (!text.startsWith('{') && !text.startsWith('['))) {
                     currentDepartments = [];
-                    return;
                 }
                 
                 const data = JSON.parse(text);
@@ -2068,7 +2052,6 @@ $db = Database::getInstance()->getConnection();
         async function loadAuditTrail() {
             const tbody = document.getElementById('auditTrailBody');
             if (!tbody) {
-                return;
             }
 
             tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Loading audit trail...</td></tr>';
@@ -2086,7 +2069,6 @@ $db = Database::getInstance()->getConnection();
 
                 if (!Array.isArray(logs) || logs.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No audit records available.</td></tr>';
-                    return;
                 }
 
                 tbody.innerHTML = logs.map(log => {
@@ -2146,7 +2128,6 @@ $db = Database::getInstance()->getConnection();
                 if (select) {
                     if (!departments || departments.length === 0) {
                         select.innerHTML = '<option value="">No departments found</option>';
-                        return;
                     }
                     select.innerHTML = '<option value="">Select Department</option>';
                     departments.forEach(dept => {
@@ -2161,7 +2142,6 @@ $db = Database::getInstance()->getConnection();
         function populateCategoryDropdowns(categories) {
             const select = document.getElementById('allocationCategory');
             if (!select) {
-                return;
             }
             select.innerHTML = '<option value="">Select Category</option>';
             categories.forEach(category => {
@@ -2172,7 +2152,6 @@ $db = Database::getInstance()->getConnection();
         function populateAccountDropdowns(accounts) {
             const select = document.getElementById('allocationAccount');
             if (!select) {
-                return;
             }
             select.innerHTML = '<option value="">Select Account</option>';
             accounts.forEach(account => {
@@ -2190,7 +2169,6 @@ $db = Database::getInstance()->getConnection();
             budgetSelects.forEach(selectId => {
                 const select = document.getElementById(selectId);
                 if (!select) {
-                    return;
                 }
                 select.innerHTML = '<option value="">Select Budget</option>';
                 budgets.forEach(budget => {
@@ -2227,7 +2205,6 @@ $db = Database::getInstance()->getConnection();
 
             if (currentAlerts.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No budget alerts at this time.</td></tr>';
-                return;
             }
 
             // Apply filter if selected
@@ -2285,7 +2262,6 @@ $db = Database::getInstance()->getConnection();
 
         function showThresholdToast() {
             if (!currentAlerts.length) {
-                return;
             }
             const severityPriority = { red: 4, orange: 3, light_orange: 2, yellow: 1 };
             const topAlert = currentAlerts.reduce((best, alert) => {
@@ -2294,7 +2270,6 @@ $db = Database::getInstance()->getConnection();
             }, null);
 
             if (!topAlert) {
-                return;
             }
 
             const message = `${topAlert.department} is at ${parseFloat(topAlert.utilization_percent).toFixed(1)}% of budget (${topAlert.severity_label || topAlert.severity}).`;
@@ -2306,13 +2281,11 @@ $db = Database::getInstance()->getConnection();
             const alert = currentAlerts.find(a => a.id == alertId);
             if (!alert) {
                 showAlert('Alert not found', 'warning');
-                return;
             }
 
             const modalEl = document.getElementById('alertDetailsModal');
             if (!modalEl) {
                 showAlert(`Alert Details: ${alert.department} is at ${alert.utilization_percent.toFixed(1)}% of budget`, 'warning');
-                return;
             }
 
             modalEl.querySelector('#alertDepartment').textContent = alert.department;
@@ -2455,73 +2428,3 @@ $db = Database::getInstance()->getConnection();
 <script src="../includes/tab_persistence.js?v=1"></script>
 </body>
 </html>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const apiClientForm = document.getElementById('allocationApiClientForm');
-        if (!apiClientForm) {
-            return;
-        }
-        apiClientForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const departmentId = document.getElementById('apiClientDepartment')?.value || '';
-            const departmentName = document.getElementById('apiClientDepartmentName')?.value.trim() || '';
-
-            if (!departmentId && !departmentName) {
-                alert('Please select a department or enter a new department name.');
-                return;
-            }
-
-            try {
-                const response = await fetch('../api/integrations/budget_allocation.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'register',
-                        department_id: departmentId || undefined,
-                        department_name: departmentName || undefined
-                    })
-                });
-                const data = await response.json();
-                if (!response.ok || data.error) {
-                    alert(data.error || 'Failed to generate client credentials.');
-                    return;
-                }
-
-                const clientIdInput = document.getElementById('apiClientId');
-                const clientSecretInput = document.getElementById('apiClientSecret');
-                if (clientIdInput) clientIdInput.value = data.client_id || '';
-                if (clientSecretInput) clientSecretInput.value = data.client_secret || '';
-                if (typeof loadDepartments === 'function') {
-                    loadDepartments();
-                }
-            } catch (error) {
-                alert('Failed to generate client credentials.');
-            }
-        });
-                const data = await response.json();
-                if (!response.ok || data.error) {
-                    alert(data.error || 'Failed to push allocation.');
-                    return;
-                }
-                alert('Allocation pushed successfully.');
-                loadAllocations();
-                loadBudgets();
-                if (typeof loadDepartments === 'function') {
-                    loadDepartments();
-                }
-            } catch (error) {
-                alert('Failed to push allocation.');
-            }
-        });
-    });
-</script>
-    <script src="../includes/inactivity_timeout.js?v=3"></script>
-<script src="../includes/navbar_datetime.js"></script>
-<script src="../includes/tab_persistence.js?v=1"></script>
-</body>
-                            </div>
-                            </div>
-
-
-
-
