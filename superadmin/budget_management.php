@@ -1434,13 +1434,10 @@ $db = Database::getInstance()->getConnection();
         }
 
         function showAlert(message, type = 'info') {
-            // Create alert element
             const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-' + (type) + ' alert-dismissible fade show position-fixed';
+            alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show position-fixed';
             alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-            alertDiv.innerHTML = '
-                ' + (message) + '
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            alertDiv.innerHTML = message + '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>';
 
             document.body.appendChild(alertDiv);
 
@@ -1534,8 +1531,6 @@ $db = Database::getInstance()->getConnection();
                     loadAuditTrail();
                 });
             }
-        });
-
         // Load vendors for dropdowns
         async function loadVendors() {
             try {
@@ -1704,16 +1699,15 @@ $db = Database::getInstance()->getConnection();
                     const timestamp = log.formatted_date || new Date(log.created_at).toLocaleString();
                     const user = log.full_name || log.username || 'Unknown';
 
-                    return '
-                        <tr>
-                            <td>' + (timestamp) + '</td>
-                            <td>' + (user) + '</td>
-                            <td>' + (log.action || 'N/A') + '</td>
-                            <td>' + (targetLabel) + '</td>
-                            <td>' + (details) + '</td>
-                            <td>' + (source) + '</td>
-                            <td>' + (log.ip_address || 'N/A') + '</td>
-                        </tr>
+                    return '<tr>' +
+                        '<td>' + timestamp + '</td>' +
+                        '<td>' + user + '</td>' +
+                        '<td>' + (log.action || 'N/A') + '</td>' +
+                        '<td>' + targetLabel + '</td>' +
+                        '<td>' + details + '</td>' +
+                        '<td>' + source + '</td>' +
+                        '<td>' + (log.ip_address || 'N/A') + '</td>' +
+                        '</tr>';
 
                 }).join('');
 
