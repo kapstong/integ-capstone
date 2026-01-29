@@ -1,4 +1,6 @@
 {
   "api_url": "https://hr4.atierahotelandrestaurant.com/payroll_approval_api.php",
-  "api_key": ""
+  "api_key": "",
+  "incentives_api_url": "https://hr4.atierahotelandrestaurant.com/api_incentives.php",
+  "incentives_update_url": "https://hr4.atierahotelandrestaurant.com/api_incentives.php"
 }
