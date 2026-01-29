@@ -2231,29 +2231,29 @@ $db = Database::getInstance()->getConnection();
                 'Delete Adjustment',
                 'Are you sure you want to delete this adjustment? This action cannot be undone.',
                 async () => {
-            try {
-                const response = await fetch(`api/budgets.php?action=adjustment&id=${adjustmentId}`, {
-                    method: 'DELETE'
-                });
+                    try {
+                        const response = await fetch(`api/budgets.php?action=adjustment&id=${adjustmentId}`, {
+                            method: 'DELETE'
+                        });
 
-                const data = await response.json();
-                if (data.error) {
-                    throw new Error(data.error);
+                        const data = await response.json();
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+
+                        showAlert('Adjustment deleted successfully', 'success');
+                        loadAdjustments();
+                        loadAllocations();
+                        loadBudgets();
+                        loadTrackingData();
+                        loadAlerts();
+                        loadAuditTrail();
+                    } catch (error) {
+                        console.error('Error deleting adjustment:', error);
+                        showAlert('Error deleting adjustment: ' + error.message, 'danger');
+                    }
                 }
-
-                showAlert('Adjustment deleted successfully', 'success');
-                loadAdjustments();
-                loadAllocations();
-                loadBudgets();
-                loadTrackingData();
-                loadAlerts();
-                loadAuditTrail();
-            } catch (error) {
-                console.error('Error deleting adjustment:', error);
-                showAlert('Error deleting adjustment: ' + error.message, 'danger');
-            }
-            }
-        );
+            );
         }
 
         // Utility functions
