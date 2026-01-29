@@ -1267,7 +1267,7 @@ $db = Database::getInstance()->getConnection();
                 const trackingPeriodSelect = document.querySelector('#tracking select');
                 const period = trackingPeriodSelect ? trackingPeriodSelect.value : 'year_to_date';
                 const trackingParams = new URLSearchParams({ action: 'tracking', period });
-                const response = await fetch('../api/budgets.php?\' + (trackingParams.toString()) + \'');
+                const response = await fetch('../api/budgets.php?' + trackingParams.toString());
                 const data = await response.json();
 
                 if (data.error) {
@@ -1310,10 +1310,10 @@ $db = Database::getInstance()->getConnection();
             // Update the cards with real data
             const cards = document.querySelectorAll('#tracking .reports-card h3');
             if (cards.length >= 4) {
-                cards[0].textContent = 'PHP \' + (parseFloat(summary.total_budget || 0).toLocaleString()) + \'';
-                cards[1].textContent = 'PHP \' + (parseFloat(summary.actual_spent || 0).toLocaleString()) + \'';
-                cards[2].textContent = '\' + (parseFloat(summary.variance_percent || 0).toFixed(1)) + \'%';
-                cards[3].textContent = 'PHP \' + (parseFloat(summary.remaining || 0).toLocaleString()) + \'';
+                cards[0].textContent = 'PHP ' + (parseFloat(summary.total_budget || 0).toLocaleString()) + '';
+                cards[1].textContent = 'PHP ' + (parseFloat(summary.actual_spent || 0).toLocaleString()) + '';
+                cards[2].textContent = '' + (parseFloat(summary.variance_percent || 0).toFixed(1)) + '%';
+                cards[3].textContent = 'PHP ' + (parseFloat(summary.remaining || 0).toLocaleString()) + '';
 
                 // Update variance color
                 const varianceCard = cards[2].closest('.reports-card');
@@ -1337,7 +1337,7 @@ $db = Database::getInstance()->getConnection();
 
             const modalEl = document.getElementById('viewBudgetModal');
             if (!modalEl) {
-                showAlert('Viewing budget: \' + (budget.name) + \'', 'info');
+                showAlert('Viewing budget: ' + (budget.name) + '', 'info');
             }
 
             modalEl.querySelector('#viewBudgetName').textContent = budget.name || 'N/A';
@@ -1345,7 +1345,7 @@ $db = Database::getInstance()->getConnection();
             modalEl.querySelector('#viewBudgetDepartment').textContent = budget.department || 'Unassigned';
             modalEl.querySelector('#viewBudgetVendor').textContent = budget.vendor_name || 'N/A';
             modalEl.querySelector('#viewBudgetStatus').innerHTML = getStatusBadge(budget.status || 'draft');
-            modalEl.querySelector('#viewBudgetAmount').textContent = 'PHP \' + (parseFloat(budget.total_amount || 0).toLocaleString()) + \'';
+            modalEl.querySelector('#viewBudgetAmount').textContent = 'PHP ' + (parseFloat(budget.total_amount || 0).toLocaleString()) + '';
             modalEl.querySelector('#viewBudgetOwner').textContent = budget.approved_by_name || budget.created_by_name || 'N/A';
             modalEl.querySelector('#viewBudgetDescription').textContent = budget.description || 'N/A';
 
@@ -1361,7 +1361,7 @@ $db = Database::getInstance()->getConnection();
 
             const modalEl = document.getElementById('editBudgetModal');
             if (!modalEl) {
-                showAlert('Editing budget: \' + (budget.name) + \'', 'info');
+                showAlert('Editing budget: ' + (budget.name) + '', 'info');
             }
 
             modalEl.querySelector('#editBudgetId').value = budget.id;
@@ -1384,7 +1384,7 @@ $db = Database::getInstance()->getConnection();
             };
 
             const badgeClass = statusMap[status] || 'bg-secondary';
-            return '<span class="badge \' + (badgeClass) + \'">\' + (status.charAt(0).toUpperCase() + status.slice(1)) + \'</span>';
+            return '<span class="badge ' + (badgeClass) + '">' + (status.charAt(0).toUpperCase() + status.slice(1)) + '</span>';
         }
 
         function getAllocationStatusBadge(progressPercent) {
@@ -1427,19 +1427,19 @@ $db = Database::getInstance()->getConnection();
             const endYear = end.getFullYear();
 
             if (startYear === endYear) {
-                return '\' + (startMonth) + \'-\' + (endMonth) + \' \' + (startYear) + \'';
+                return '' + (startMonth) + '-' + (endMonth) + ' ' + (startYear) + '';
             } else {
-                return '\' + (startMonth) + \' \' + (startYear) + \' - \' + (endMonth) + \' \' + (endYear) + \'';
+                return '' + (startMonth) + ' ' + (startYear) + ' - ' + (endMonth) + ' ' + (endYear) + '';
             }
         }
 
         function showAlert(message, type = 'info') {
             // Create alert element
             const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-\' + (type) + \' alert-dismissible fade show position-fixed';
+            alertDiv.className = 'alert alert-' + (type) + ' alert-dismissible fade show position-fixed';
             alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
             alertDiv.innerHTML = '
-                \' + (message) + \'
+                ' + (message) + '
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 
             document.body.appendChild(alertDiv);
@@ -1639,28 +1639,28 @@ $db = Database::getInstance()->getConnection();
                 case 'budgets': {
                     const name = (newValues && (newValues.budget_name || newValues.name)) ||
                         (oldValues && (oldValues.budget_name || oldValues.name));
-                    return name ? 'Budget: \' + (name) + \'' : 'Budget #\' + (recordId) + \'';
+                    return name ? 'Budget: ' + (name) + '' : 'Budget #' + (recordId) + '';
                 }
                 case 'budget_items':
-                    return 'Budget Item #\' + (recordId) + \'';
+                    return 'Budget Item #' + (recordId) + '';
                 case 'budget_adjustments':
-                    return 'Adjustment #\' + (recordId) + \'';
+                    return 'Adjustment #' + (recordId) + '';
                 case 'budget_categories': {
                     const name = (newValues && newValues.category_name) || (oldValues && oldValues.category_name);
-                    return name ? 'Category: \' + (name) + \'' : 'Category #\' + (recordId) + \'';
+                    return name ? 'Category: ' + (name) + '' : 'Category #' + (recordId) + '';
                 }
                 case 'hr3_integrations':
                     return 'HR3 Claims';
                 default:
-                    return log.table_name ? '\' + (log.table_name) + \' #\' + (recordId) + \'' : 'Record #\' + (recordId) + \'';
+                    return log.table_name ? '' + (log.table_name) + ' #' + (recordId) + '' : 'Record #' + (recordId) + '';
             }
         }
 
         function formatAuditDetails(log, targetLabel, newValues) {
             const actionLabel = log.action ? log.action.charAt(0).toUpperCase() + log.action.slice(1) : 'Action';
-            let detail = log.action_description || '\' + (actionLabel) + \' \' + (targetLabel) + \'';
+            let detail = log.action_description || '' + (actionLabel) + ' ' + (targetLabel) + '';
             if (newValues && newValues.reason) {
-                detail += ' - \' + (newValues.reason) + \'';
+                detail += ' - ' + (newValues.reason) + '';
             }
             return detail;
         }
@@ -1671,7 +1671,7 @@ $db = Database::getInstance()->getConnection();
                 source = log.table_name === 'hr3_integrations' ? 'HR3 API' : 'Budget Management UI';
             }
             const origin = (newValues && newValues.origin) || (oldValues && oldValues.origin);
-            return origin ? '\' + (source) + \' (\' + (origin) + \')' : source;
+            return origin ? '' + (source) + ' (' + (origin) + ')' : source;
         }
 
         async function loadAuditTrail() {
@@ -1688,7 +1688,7 @@ $db = Database::getInstance()->getConnection();
                                         'budget_categories',
                     'hr3_integrations'
                 ];
-                const response = await fetch('../api/audit.php?table_name=\' + (encodeURIComponent(tables.join(\',\'))) + \'');
+                const response = await fetch('../api/audit.php?table_name=' + encodeURIComponent(tables.join(',')));
                 const logs = await response.json();
 
                 if (!Array.isArray(logs) || logs.length === 0) {
@@ -1706,13 +1706,13 @@ $db = Database::getInstance()->getConnection();
 
                     return '
                         <tr>
-                            <td>\' + (timestamp) + \'</td>
-                            <td>\' + (user) + \'</td>
-                            <td>\' + (log.action || \'N/A\') + \'</td>
-                            <td>\' + (targetLabel) + \'</td>
-                            <td>\' + (details) + \'</td>
-                            <td>\' + (source) + \'</td>
-                            <td>\' + (log.ip_address || \'N/A\') + \'</td>
+                            <td>' + (timestamp) + '</td>
+                            <td>' + (user) + '</td>
+                            <td>' + (log.action || 'N/A') + '</td>
+                            <td>' + (targetLabel) + '</td>
+                            <td>' + (details) + '</td>
+                            <td>' + (source) + '</td>
+                            <td>' + (log.ip_address || 'N/A') + '</td>
                         </tr>
 
                 }).join('');
@@ -1796,7 +1796,7 @@ $db = Database::getInstance()->getConnection();
                 }
                 select.innerHTML = '<option value="">Select Budget</option>';
                 budgets.forEach(budget => {
-                    select.innerHTML += '<option value="\' + (budget.id) + \'">\' + (budget.name) + \'</option>';
+                    select.innerHTML += '<option value="' + (budget.id) + '">' + (budget.name) + '</option>';
                 });
             });
         }
@@ -1881,7 +1881,7 @@ $db = Database::getInstance()->getConnection();
             if (!topAlert) {
             }
 
-            const message = '\' + (topAlert.department) + \' is at \' + (parseFloat(topAlert.utilization_percent).toFixed(1)) + \'% of budget (\' + (topAlert.severity_label || topAlert.severity) + \').';
+            const message = '' + (topAlert.department) + ' is at ' + (parseFloat(topAlert.utilization_percent).toFixed(1)) + '% of budget (' + (topAlert.severity_label || topAlert.severity) + ').';
             const alertType = topAlert.severity === 'red' ? 'danger' : (topAlert.severity === 'orange' ? 'warning' : 'info');
             showAlert(message, alertType);
         }
@@ -1894,15 +1894,15 @@ $db = Database::getInstance()->getConnection();
 
             const modalEl = document.getElementById('alertDetailsModal');
             if (!modalEl) {
-                showAlert('Alert Details: \' + (alert.department) + \' is at \' + (alert.utilization_percent.toFixed(1)) + \'% of budget', 'warning');
+                showAlert('Alert Details: ' + (alert.department) + ' is at ' + (alert.utilization_percent.toFixed(1)) + '% of budget', 'warning');
             }
 
             modalEl.querySelector('#alertDepartment').textContent = alert.department;
             modalEl.querySelector('#alertYear').textContent = alert.budget_year;
-            modalEl.querySelector('#alertBudgeted').textContent = 'PHP \' + (parseFloat(alert.budgeted_amount || 0).toLocaleString()) + \'';
-            modalEl.querySelector('#alertActual').textContent = 'PHP \' + (parseFloat(alert.utilized_amount || 0).toLocaleString()) + \'';
-            modalEl.querySelector('#alertOverAmount').textContent = 'PHP \' + (parseFloat(alert.over_amount || 0).toLocaleString()) + \'';
-            modalEl.querySelector('#alertOverPercent').textContent = '\' + (parseFloat(alert.utilization_percent || 0).toFixed(1)) + \'%';
+            modalEl.querySelector('#alertBudgeted').textContent = 'PHP ' + (parseFloat(alert.budgeted_amount || 0).toLocaleString()) + '';
+            modalEl.querySelector('#alertActual').textContent = 'PHP ' + (parseFloat(alert.utilized_amount || 0).toLocaleString()) + '';
+            modalEl.querySelector('#alertOverAmount').textContent = 'PHP ' + (parseFloat(alert.over_amount || 0).toLocaleString()) + '';
+            modalEl.querySelector('#alertOverPercent').textContent = '' + (parseFloat(alert.utilization_percent || 0).toFixed(1)) + '%';
             modalEl.querySelector('#alertSeverity').textContent = alert.severity_label || alert.severity || 'N/A';
             modalEl.querySelector('#alertDate').textContent = alert.alert_date || 'N/A';
 
