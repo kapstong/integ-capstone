@@ -961,7 +961,7 @@ $db = Database::getInstance()->getConnection();
                 </div>
                 
                                 <div class="d-flex justify-content-end">
-                                    <button class="btn btn-outline-primary btn-sm"><i class="fas fa-link me-2"></i>View HR3 Claims Feed</button>
+                                    <a class="btn btn-outline-primary btn-sm" href="hr3_budget_allocation.php"><i class="fas fa-link me-2"></i>View HR3 Budget Allocation</a>
                                 </div>
                             </div>
                         </div>
