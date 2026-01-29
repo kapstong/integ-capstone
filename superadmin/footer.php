@@ -52,6 +52,33 @@ function toggleSidebar() {
     })();
 });
 </script>
+<script>
+// Guard against modal triggers pointing to missing elements
+window.safeModal = function(elOrId, options) {
+    const el = typeof elOrId === 'string' ? document.getElementById(elOrId) : elOrId;
+    if (!el || !window.bootstrap || !bootstrap.Modal) {
+        return null;
+    }
+    return bootstrap.Modal.getOrCreateInstance(el, options);
+};
+
+document.addEventListener('click', function(event) {
+    const trigger = event.target.closest('[data-bs-toggle="modal"]');
+    if (!trigger) {
+        return;
+    }
+    const target = trigger.getAttribute('data-bs-target') || trigger.getAttribute('href');
+    if (!target) {
+        return;
+    }
+    const modalEl = document.querySelector(target);
+    if (!modalEl) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        console.warn('Modal target not found:', target);
+    }
+}, true);
+</script>
 <script src="../includes/tab_persistence.js?v=1"></script>
 </body>
 </html>

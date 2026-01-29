@@ -526,7 +526,16 @@ class HR3Integration extends BaseIntegration {
      */
     public function getApprovedClaims($config, $params = []) {
         try {
-            $ch = curl_init($config['api_url']);
+            $apiUrl = $config['api_url'];
+            if (!empty($params)) {
+                $query = http_build_query($params);
+                if ($query !== '') {
+                    $separator = strpos($apiUrl, '?') === false ? '?' : '&';
+                    $apiUrl .= $separator . $query;
+                }
+            }
+
+            $ch = curl_init($apiUrl);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 30);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
