@@ -1709,7 +1709,6 @@ $db = Database::getInstance()->getConnection();
                 showAlert('Error loading accounts: ' + error.message, 'danger');
             }
         }
-        }
 
         function parseAuditValues(values) {
             if (!values) {
