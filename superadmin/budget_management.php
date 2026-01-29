@@ -881,6 +881,64 @@ $db = Database::getInstance()->getConnection();
                         </div>
                     </div>
                 </div>
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">HR3 Claims Summary</h6>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="loadHr3Claims()">
+                                    <i class="fas fa-sync me-2"></i>Refresh
+                                </button>
+                                <a class="btn btn-outline-primary btn-sm" href="hr3_budget_allocation.php">
+                                    <i class="fas fa-link me-2"></i>Open Full View
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Department Code</label>
+                                <input type="text" id="hr3DeptInput" class="form-control" value="hr3_budget">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Period</label>
+                                <select id="hr3PeriodInput" class="form-select">
+                                    <option value="monthly" selected>Monthly</option>
+                                    <option value="quarterly">Quarterly</option>
+                                    <option value="semi-annually">Semi-Annually</option>
+                                    <option value="annually">Annually</option>
+                                    <option value="yearly">Yearly</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                <button class="btn btn-primary btn-sm" onclick="loadHr3Claims()">
+                                    <i class="fas fa-cloud-download-alt me-2"></i>Load
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Period</th>
+                                        <th>Total</th>
+                                        <th>Allocated</th>
+                                        <th>Spent</th>
+                                        <th>Remaining</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="hr3ClaimsTableBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted">Loading HR3 claims...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <small class="text-muted">Edits push to HR3 and can be applied to local budgets.</small>
+                    </div>
+                </div>
                 <div class="card">
                     <div class="card-header">
                         <div class="d-flex justify-content-between align-items-center">
@@ -1226,6 +1284,7 @@ $db = Database::getInstance()->getConnection();
             // Load initial data
             loadBudgets();
             loadAllocations();
+            loadHr3Claims();
             loadTrackingData();
             loadAlerts();
             loadDepartments();
@@ -1325,6 +1384,157 @@ $db = Database::getInstance()->getConnection();
             if (totalEl) totalEl.textContent = 'PHP ' + totalAllocated.toLocaleString();
             if (remainingEl) remainingEl.textContent = 'PHP ' + totalRemaining.toLocaleString();
             if (rateEl) rateEl.textContent = utilizationRate.toFixed(1) + '%';
+        }
+
+        const hr3ClaimsApi = '../api/hr/claims_summary.php';
+        const hr3AllocationApi = '../api/integrations/budget_allocation.php';
+
+        function getHr3Filters() {
+            const dept = (document.getElementById('hr3DeptInput')?.value || 'hr3_budget').trim();
+            const period = document.getElementById('hr3PeriodInput')?.value || 'monthly';
+            return { dept, period };
+        }
+
+        function renderHr3ClaimsTable(periods, dept) {
+            const tbody = document.getElementById('hr3ClaimsTableBody');
+            if (!tbody) {
+                return;
+            }
+            if (!Array.isArray(periods) || periods.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No HR3 data found.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = periods.map(row => {
+                const periodLabel = row.period || row.label || 'period';
+                const total = Number(row.total_budget || row.total || 0);
+                const allocated = Number(row.allocated || 0);
+                const spent = Number(row.spent || 0);
+                const remaining = Number(row.remaining || (total - spent));
+                return '<tr>' +
+                    '<td class="text-capitalize">' + periodLabel + '</td>' +
+                    '<td>PHP ' + total.toLocaleString() + '</td>' +
+                    '<td>PHP ' + allocated.toLocaleString() + '</td>' +
+                    '<td>PHP ' + spent.toLocaleString() + '</td>' +
+                    '<td>PHP ' + remaining.toLocaleString() + '</td>' +
+                    '<td>' +
+                    '<button class="btn btn-sm btn-outline-primary me-2" onclick="openHr3EditModal(\'' + dept + '\',\'' + periodLabel + '\',' + total + ',' + allocated + ',' + spent + ')">Edit</button>' +
+                    '<button class="btn btn-sm btn-outline-success" onclick="applyHr3Allocation(\'' + dept + '\',\'' + periodLabel + '\',' + total + ',' + allocated + ')">Apply to Budget</button>' +
+                    '</td>' +
+                    '</tr>';
+            }).join('');
+        }
+
+        async function loadHr3Claims() {
+            const tbody = document.getElementById('hr3ClaimsTableBody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading HR3 claims...</td></tr>';
+            }
+            try {
+                const filters = getHr3Filters();
+                const res = await fetch(hr3ClaimsApi + '?department_code=' + encodeURIComponent(filters.dept) + '&period=' + encodeURIComponent(filters.period));
+                const payload = await res.json();
+                const data = payload.data || payload || {};
+                let periods = [];
+                if (Array.isArray(data.periods)) {
+                    periods = data.periods;
+                } else if (data.total_budget || data.allocated || data.spent) {
+                    periods = [{
+                        period: data.period || filters.period,
+                        total_budget: data.total_budget || data.total || 0,
+                        allocated: data.allocated || 0,
+                        spent: data.spent || 0,
+                        remaining: data.remaining
+                    }];
+                }
+                renderHr3ClaimsTable(periods, filters.dept);
+            } catch (error) {
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Error loading HR3 claims.</td></tr>';
+                }
+                console.error('HR3 claims error:', error);
+            }
+        }
+
+        function openHr3EditModal(dept, period, total, allocated, spent) {
+            document.getElementById('hr3EditDept').value = dept;
+            document.getElementById('hr3EditPeriod').value = period;
+            document.getElementById('hr3EditTotal').value = total;
+            document.getElementById('hr3EditAllocated').value = allocated;
+            document.getElementById('hr3EditSpent').value = spent;
+            const applyCheckbox = document.getElementById('hr3EditApply');
+            if (applyCheckbox) {
+                applyCheckbox.checked = true;
+            }
+            const modalEl = document.getElementById('hr3EditModal');
+            if (modalEl) {
+                new bootstrap.Modal(modalEl).show();
+            }
+        }
+
+        async function saveHr3Edit() {
+            const dept = document.getElementById('hr3EditDept').value;
+            const period = document.getElementById('hr3EditPeriod').value;
+            const total = parseFloat(document.getElementById('hr3EditTotal').value || 0);
+            const allocated = parseFloat(document.getElementById('hr3EditAllocated').value || 0);
+            const spent = parseFloat(document.getElementById('hr3EditSpent').value || 0);
+            const applyToBudget = document.getElementById('hr3EditApply')?.checked;
+
+            try {
+                await fetch(hr3ClaimsApi, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        department_code: dept,
+                        period: period,
+                        total_budget: total,
+                        allocated: allocated,
+                        spent: spent
+                    })
+                });
+                if (applyToBudget) {
+                    await applyHr3Allocation(dept, period, total, allocated, false);
+                }
+                loadHr3Claims();
+            } catch (error) {
+                showAlert('Failed to save HR3 allocation: ' + error.message, 'danger');
+            }
+        }
+
+        async function applyHr3Allocation(dept, period, total, allocated, showToast = true) {
+            const amount = Number(total || 0) || Number(allocated || 0);
+            if (!amount) {
+                if (showToast) {
+                    showAlert('No allocation amount available for HR3 ' + period + '.', 'warning');
+                }
+                return;
+            }
+            const year = new Date().getFullYear();
+            try {
+                const response = await fetch(hr3AllocationApi, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'allocate',
+                        department_name: dept,
+                        allocated_amount: amount,
+                        period: period,
+                        budget_name: 'HR3 ' + period + ' Allocation ' + year,
+                        description: 'HR3 claims summary sync (' + period + ')'
+                    })
+                });
+                const result = await response.json();
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                if (showToast) {
+                    showAlert('HR3 allocation applied to local budget.', 'success');
+                }
+                loadAllocations();
+            } catch (error) {
+                if (showToast) {
+                    showAlert('Failed to apply HR3 allocation: ' + error.message, 'danger');
+                }
+            }
         }
 
         // Render budgets table
@@ -2095,6 +2305,40 @@ $db = Database::getInstance()->getConnection();
     
 
     <!-- Create Budget Modal -->
+    <div class="modal fade" id="hr3EditModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit HR3 Allocation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="hr3EditDept">
+                    <input type="hidden" id="hr3EditPeriod">
+                    <div class="mb-3">
+                        <label class="form-label">Total</label>
+                        <input type="number" step="0.01" id="hr3EditTotal" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Allocated</label>
+                        <input type="number" step="0.01" id="hr3EditAllocated" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Spent</label>
+                        <input type="number" step="0.01" id="hr3EditSpent" class="form-control">
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="hr3EditApply" checked>
+                        <label class="form-check-label" for="hr3EditApply">Apply to local budget after saving</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveHr3Edit()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Alert Details Modal -->
     <div class="modal fade" id="alertDetailsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
