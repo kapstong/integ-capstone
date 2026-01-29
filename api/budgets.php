@@ -90,6 +90,17 @@ function handleGet($db, $logger) {
 }
 
 function getBudgets($db) {
+    $source = isset($_GET['source']) ? $_GET['source'] : 'external';
+    if ($source === 'internal') {
+        getInternalBudgets($db);
+        return;
+    }
+
+    $externalBudgets = fetchExternalBudgetRequests($db);
+    echo json_encode(['budgets' => $externalBudgets]);
+}
+
+function getInternalBudgets($db) {
     // Get all budgets
     $stmt = $db->prepare("
         SELECT b.*,
@@ -266,6 +277,138 @@ function fetchExternalAllocations($db) {
     } catch (Exception $e) {
         return [];
     }
+}
+
+function fetchExternalBudgetRequests($db) {
+    try {
+        $stmt = $db->prepare("
+            SELECT system_code, system_name, api_endpoint, api_key, configuration
+            FROM system_integrations
+            WHERE is_active = 1
+              AND api_endpoint IS NOT NULL
+              AND api_endpoint <> ''
+        ");
+        $stmt->execute();
+        $systems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $budgets = [];
+        foreach ($systems as $system) {
+            $endpoint = trim($system['api_endpoint'] ?? '');
+            if ($endpoint === '') {
+                continue;
+            }
+
+            $config = [];
+            if (!empty($system['configuration'])) {
+                $decoded = json_decode($system['configuration'], true);
+                if (is_array($decoded)) {
+                    $config = $decoded;
+                }
+            }
+
+            $requestEndpoint = $config['budget_request_endpoint'] ?? $endpoint;
+            $departmentCode = $config['department_code'] ?? $system['system_code'];
+            $url = buildExternalBudgetRequestUrl($requestEndpoint, $departmentCode, $config);
+
+            $response = httpGetJson($url, $system['api_key'] ?? null);
+            $requests = normalizeExternalBudgetRequests($response);
+
+            foreach ($requests as $request) {
+                $budgets[] = formatExternalBudgetRequest($request, $system, $departmentCode);
+            }
+        }
+
+        return $budgets;
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+function buildExternalBudgetRequestUrl($endpoint, $departmentCode, $config = []) {
+    $parsed = parse_url($endpoint);
+    $query = [];
+    if (!empty($parsed['query'])) {
+        parse_str($parsed['query'], $query);
+    }
+
+    $actionKey = $config['budget_request_action_key'] ?? 'action';
+    $actionValue = $config['budget_request_action_value'] ?? 'budget_requests';
+    if (!isset($query[$actionKey]) && $actionKey !== '') {
+        $query[$actionKey] = $actionValue;
+    }
+
+    if (!isset($query['department_code']) && $departmentCode !== '') {
+        $query['department_code'] = $departmentCode;
+    }
+
+    $base = $endpoint;
+    if (!empty($parsed['query'])) {
+        $base = substr($endpoint, 0, strpos($endpoint, '?'));
+    }
+
+    return $base . '?' . http_build_query($query);
+}
+
+function normalizeExternalBudgetRequests($response) {
+    if (empty($response)) {
+        return [];
+    }
+
+    if (isset($response['budgets']) && is_array($response['budgets'])) {
+        return $response['budgets'];
+    }
+
+    if (isset($response['requests']) && is_array($response['requests'])) {
+        return $response['requests'];
+    }
+
+    if (is_array($response) && array_keys($response) === range(0, count($response) - 1)) {
+        return $response;
+    }
+
+    return [$response];
+}
+
+function formatExternalBudgetRequest($request, $system, $departmentCode) {
+    $requestId = $request['id'] ?? $request['request_id'] ?? null;
+    $status = $request['status'] ?? $request['request_status'] ?? 'pending';
+    $total = $request['total_budgeted']
+        ?? $request['total_amount']
+        ?? $request['amount']
+        ?? 0;
+
+    $startDate = $request['start_date'] ?? $request['period_start'] ?? null;
+    $endDate = $request['end_date'] ?? $request['period_end'] ?? null;
+    $year = $request['budget_year'] ?? ($startDate ? date('Y', strtotime($startDate)) : date('Y'));
+
+    $departmentName = $request['department_name']
+        ?? $request['department']
+        ?? $system['system_name']
+        ?? $departmentCode;
+
+    $budgetName = $request['budget_name'] ?? $request['name'] ?? 'External Budget Request';
+    $createdBy = $request['requested_by'] ?? $request['created_by'] ?? $request['owner'] ?? null;
+
+    return [
+        'id' => $requestId ? ('EXT-' . $system['system_code'] . '-' . $requestId) : null,
+        'budget_name' => $budgetName,
+        'name' => $budgetName,
+        'description' => $request['description'] ?? '',
+        'budget_year' => $year,
+        'total_budgeted' => (float)$total,
+        'total_amount' => (float)$total,
+        'start_date' => $startDate ?: ($year . '-01-01'),
+        'end_date' => $endDate ?: ($year . '-12-31'),
+        'status' => $status,
+        'department_name' => $departmentName,
+        'department' => $departmentName,
+        'created_by_name' => $createdBy,
+        'approved_by_name' => $request['approved_by'] ?? null,
+        'is_external' => true,
+        'external_source' => $system['system_code'],
+        'external_request_id' => $requestId,
+        'external_department_code' => $departmentCode
+    ];
 }
 
 function httpGetJson($url, $apiKey = null) {
