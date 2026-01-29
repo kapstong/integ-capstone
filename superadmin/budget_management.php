@@ -1853,6 +1853,7 @@ $db = Database::getInstance()->getConnection();
         function populateCategoryDropdowns(categories) {
             const select = document.getElementById('allocationCategory');
             if (!select) {
+                return;
             }
             select.innerHTML = '<option value="">Select Category</option>';
             categories.forEach(category => {
@@ -1863,6 +1864,7 @@ $db = Database::getInstance()->getConnection();
         function populateAccountDropdowns(accounts) {
             const select = document.getElementById('allocationAccount');
             if (!select) {
+                return;
             }
             select.innerHTML = '<option value="">Select Account</option>';
             accounts.forEach(account => {
@@ -1959,6 +1961,7 @@ $db = Database::getInstance()->getConnection();
 
         function showThresholdToast() {
             if (!currentAlerts.length) {
+                return;
             }
             const severityPriority = { red: 4, orange: 3, light_orange: 2, yellow: 1 };
             const topAlert = currentAlerts.reduce((best, alert) => {
@@ -1967,6 +1970,7 @@ $db = Database::getInstance()->getConnection();
             }, null);
 
             if (!topAlert) {
+                return;
             }
 
             const message = '' + (topAlert.department) + ' is at ' + (parseFloat(topAlert.utilization_percent).toFixed(1)) + '% of budget (' + (topAlert.severity_label || topAlert.severity) + ').';

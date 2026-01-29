@@ -1241,6 +1241,28 @@ $db = Database::getInstance()->getConnection();
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../includes/alert-modal.js"></script>
 <script>
+
+function getStatusBadge(status) {
+    var statusMap = {
+        'draft': 'bg-info',
+        'pending': 'bg-warning',
+        'approved': 'bg-success',
+        'active': 'bg-primary',
+        'closed': 'bg-secondary',
+        'completed': 'bg-secondary',
+        'rejected': 'bg-danger'
+    };
+    var badgeClass = statusMap[status] || 'bg-secondary';
+    return '<span class="badge ' + badgeClass + '">' + (status ? status.charAt(0).toUpperCase() + status.slice(1) : 'N/A') + '</span>';
+}
+
+function getVarianceStatusBadge(variancePercent) {
+    if (variancePercent < 0) return '<span class="badge bg-danger">Over</span>';
+    if (variancePercent > 10) return '<span class="badge bg-success">Under</span>';
+    return '<span class="badge bg-warning text-dark">On Track</span>';
+}
+</script>
+<script>
     let currentAllocations = [];
 
     function getAllocationStatusKey(progressPercent) {
