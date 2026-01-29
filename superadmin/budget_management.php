@@ -1465,6 +1465,35 @@ $db = Database::getInstance()->getConnection();
             modalEl.querySelector('#editTotalAmount').value = budget.total_amount || '';
             modalEl.querySelector('#editBudgetDescription').value = budget.description || '';
 
+            setSelectValue(
+                modalEl.querySelector('#editBudgetDepartment'),
+                budget.department_id,
+                budget.department || 'Unassigned'
+            );
+            setSelectValue(
+                modalEl.querySelector('#editBudgetVendor'),
+                budget.vendor_id,
+                budget.vendor_name || 'N/A'
+            );
+
+            new bootstrap.Modal(modalEl).show();
+        }
+
+        function setSelectValue(select, value, label) {
+            if (!select) {
+                return;
+            }
+
+            const stringValue = value != null ? String(value) : '';
+            if (stringValue && !select.querySelector('option[value="' + stringValue + '"]')) {
+                const option = document.createElement('option');
+                option.value = stringValue;
+                option.textContent = label || stringValue;
+                select.appendChild(option);
+            }
+            select.value = stringValue;
+        }
+
         // Utility functions
         function getStatusBadge(status) {
             const statusMap = {
