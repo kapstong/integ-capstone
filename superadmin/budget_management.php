@@ -1255,6 +1255,78 @@ $db = Database::getInstance()->getConnection();
             }
         }
 
+        async function loadAllocations() {
+            try {
+                const response = await fetch('../api/budgets.php?action=allocations');
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                currentAllocations = data.allocations || [];
+                renderAllocationsTable();
+                updateAllocationSummary();
+            } catch (error) {
+                console.error('Error loading allocations:', error);
+                showAlert('Error loading allocations: ' + error.message, 'danger');
+            }
+        }
+
+        function getFilteredAllocations() {
+            const search = (document.getElementById('allocationSearch')?.value || '').toLowerCase();
+            const statusFilter = document.getElementById('allocationStatusFilter')?.value || 'all';
+
+            return currentAllocations.filter(allocation => {
+                const nameMatch = (allocation.department || '').toLowerCase().includes(search);
+                if (!nameMatch) return false;
+                if (statusFilter === 'all') return true;
+                const progressPercent = allocation.total_amount > 0 ? (allocation.utilized_amount / allocation.total_amount) * 100 : 0;
+                return getAllocationStatusKey(progressPercent) === statusFilter;
+            });
+        }
+
+        function renderAllocationsTable() {
+            const tbody = document.getElementById('allocationTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const filteredAllocations = getFilteredAllocations();
+            if (filteredAllocations.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No allocations found.</td></tr>';
+                return;
+            }
+
+            filteredAllocations.forEach(allocation => {
+                const progressPercent = allocation.total_amount > 0 ? (allocation.utilized_amount / allocation.total_amount) * 100 : 0;
+                const statusBadge = getAllocationStatusBadge(progressPercent);
+                const row = '<tr>' +
+                    '<td>' + (allocation.department || 'Unassigned') + '</td>' +
+                    '<td>PHP ' + (parseFloat(allocation.total_amount || 0).toLocaleString()) + '</td>' +
+                    '<td>PHP ' + (parseFloat(allocation.reserved_amount || 0).toLocaleString()) + '</td>' +
+                    '<td>PHP ' + (parseFloat(allocation.utilized_amount || 0).toLocaleString()) + '</td>' +
+                    '<td>PHP ' + (parseFloat(allocation.remaining || 0).toLocaleString()) + '</td>' +
+                    '<td>' + (progressPercent.toFixed(1)) + '%</td>' +
+                    '<td>' + statusBadge + '</td>' +
+                    '<td><button class="btn btn-sm btn-outline-primary" onclick="adjustAllocation(' + allocation.id + ')">Adjust</button></td>' +
+                    '</tr>';
+                tbody.innerHTML += row;
+            });
+        }
+
+        function updateAllocationSummary() {
+            const filteredAllocations = getFilteredAllocations();
+            const totalAllocated = filteredAllocations.reduce((sum, item) => sum + (parseFloat(item.total_amount) || 0), 0);
+            const totalUtilized = filteredAllocations.reduce((sum, item) => sum + (parseFloat(item.utilized_amount) || 0), 0);
+            const totalRemaining = filteredAllocations.reduce((sum, item) => sum + (parseFloat(item.remaining) || 0), 0);
+            const utilizationRate = totalAllocated > 0 ? (totalUtilized / totalAllocated) * 100 : 0;
+
+            const totalEl = document.getElementById('allocationSummaryTotal');
+            const remainingEl = document.getElementById('allocationSummaryRemaining');
+            const rateEl = document.getElementById('allocationSummaryRate');
+            if (totalEl) totalEl.textContent = 'PHP ' + totalAllocated.toLocaleString();
+            if (remainingEl) remainingEl.textContent = 'PHP ' + totalRemaining.toLocaleString();
+            if (rateEl) rateEl.textContent = utilizationRate.toFixed(1) + '%';
+        }
+
         // Render budgets table
         function renderBudgetsTable() {
             const tbody = document.querySelector('#planning .table tbody');
@@ -1787,6 +1859,7 @@ $db = Database::getInstance()->getConnection();
             budgetSelects.forEach(selectId => {
                 const select = document.getElementById(selectId);
                 if (!select) {
+                    return;
                 }
                 select.innerHTML = '<option value="">Select Budget</option>';
                 budgets.forEach(budget => {
