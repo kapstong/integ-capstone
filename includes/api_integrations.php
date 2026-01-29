@@ -1359,18 +1359,26 @@ class HR4Integration extends BaseIntegration {
 
         $externalUpdateSuccess = false;
         $externalError = null;
+        $externalMessage = null;
 
         try {
             $approver = $params['approver'] ?? $params['approved_by'] ?? $params['user_name'] ?? '';
+            $rejectionReason = $params['rejection_reason'] ?? $params['reason'] ?? '';
             $payload = [
-                'action' => $action,
-                'approval_action' => $action,
-                'id' => $incentiveId,
-                'incentive_id' => $incentiveId,
-                'approver' => $approver,
-                'notes' => $params['notes'] ?? '',
-                'reason' => $params['rejection_reason'] ?? ''
+                'incentive_ids' => [(int)$incentiveId]
             ];
+
+            if ($action === 'approve') {
+                $payload['approved_by'] = $approver;
+                if (!empty($params['notes'])) {
+                    $payload['notes'] = $params['notes'];
+                }
+            } elseif ($action === 'reject') {
+                $payload['rejected_by'] = $approver;
+                $payload['rejection_reason'] = $rejectionReason;
+            } else {
+                $payload['paid_by'] = $approver;
+            }
 
             $resolvedEndpoint = $endpoint;
             if (stripos($endpoint, 'api_incentives.php') !== false) {
@@ -1395,12 +1403,19 @@ class HR4Integration extends BaseIntegration {
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
+            $result = $response !== '' ? json_decode($response, true) : null;
             if ($httpCode === 200) {
-                $result = json_decode($response, true);
                 if ($result !== null &&
                     ((isset($result['status']) && strtolower($result['status']) === 'success') ||
                      (isset($result['success']) && $result['success']))) {
                     $externalUpdateSuccess = true;
+                } else {
+                    $externalMessage = is_array($result) ? ($result['message'] ?? $result['error'] ?? null) : null;
+                }
+            } else {
+                $externalMessage = is_array($result) ? ($result['message'] ?? $result['error'] ?? null) : null;
+                if (!$externalMessage && $response) {
+                    $externalMessage = $response;
                 }
             }
         } catch (Exception $e) {
@@ -1431,6 +1446,7 @@ class HR4Integration extends BaseIntegration {
         return [
             'success' => $externalUpdateSuccess,
             'message' => $externalUpdateSuccess ? 'Incentive updated successfully' : 'Incentive update failed',
+            'error' => $externalUpdateSuccess ? null : ($externalMessage ?? $externalError ?? 'HR4 incentives update failed'),
             'external_sync' => $externalUpdateSuccess
         ];
     }
