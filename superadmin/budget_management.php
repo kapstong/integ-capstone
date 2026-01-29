@@ -1331,7 +1331,29 @@ $db = Database::getInstance()->getConnection();
         function renderBudgetsTable() {
             const tbody = document.querySelector('#planning .table tbody');
             if (!tbody) {
+                return;
             }
+            tbody.innerHTML = '';
+
+            if (currentBudgets.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No budgets found.</td></tr>';
+                return;
+            }
+
+            currentBudgets.forEach(budget => {
+                const statusBadge = getStatusBadge(budget.status || 'draft');
+                const ownerName = budget.approved_by_name || budget.created_by_name || 'N/A';
+                const row = '<tr>' +
+                    '<td>' + (budget.name || '') + '</td>' +
+                    '<td>' + formatBudgetPeriod(budget.start_date, budget.end_date) + '</td>' +
+                    '<td>' + ownerName + '</td>' +
+                    '<td>PHP ' + (parseFloat(budget.total_amount || 0).toLocaleString()) + '</td>' +
+                    '<td>' + statusBadge + '</td>' +
+                    '<td><button class="btn btn-sm btn-outline-primary" onclick="viewBudget(' + budget.id + ')">View</button></td>' +
+                    '</tr>';
+                tbody.innerHTML += row;
+            });
+        }
 
         // Load tracking data
         async function loadTrackingData() {

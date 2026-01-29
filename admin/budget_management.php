@@ -1240,5 +1240,108 @@ $db = Database::getInstance()->getConnection();
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../includes/alert-modal.js"></script>
+<script>
+    let currentAllocations = [];
+
+    function getAllocationStatusKey(progressPercent) {
+        if (progressPercent >= 100) return 'red';
+        if (progressPercent >= 90) return 'orange';
+        if (progressPercent >= 80) return 'light_orange';
+        if (progressPercent >= 70) return 'yellow';
+        return 'good';
+    }
+
+    function getAllocationStatusBadge(progressPercent) {
+        if (progressPercent >= 100) return '<span class="badge bg-danger">Red (100%)</span>';
+        if (progressPercent >= 90) return '<span class="badge bg-warning text-dark">Orange (90%)</span>';
+        if (progressPercent >= 80) return '<span class="badge bg-warning text-dark">Light Orange (80%)</span>';
+        if (progressPercent >= 70) return '<span class="badge bg-warning text-dark">Yellow (70%)</span>';
+        return '<span class="badge bg-success">Good</span>';
+    }
+
+    function getFilteredAllocations() {
+        const search = (document.getElementById('allocationSearch')?.value || '').toLowerCase();
+        const statusFilter = document.getElementById('allocationStatusFilter')?.value || 'all';
+        return currentAllocations.filter(allocation => {
+            const nameMatch = (allocation.department || '').toLowerCase().includes(search);
+            if (!nameMatch) return false;
+            if (statusFilter === 'all') return true;
+            const progressPercent = allocation.total_amount > 0 ? (allocation.utilized_amount / allocation.total_amount) * 100 : 0;
+            return getAllocationStatusKey(progressPercent) === statusFilter;
+        });
+    }
+
+    function renderAllocationsTable() {
+        const tbody = document.getElementById('allocationTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        const filteredAllocations = getFilteredAllocations();
+        if (filteredAllocations.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No allocations found.</td></tr>';
+            return;
+        }
+        filteredAllocations.forEach(allocation => {
+            const progressPercent = allocation.total_amount > 0 ? (allocation.utilized_amount / allocation.total_amount) * 100 : 0;
+            const statusBadge = getAllocationStatusBadge(progressPercent);
+            const row = '<tr>' +
+                '<td>' + (allocation.department || 'Unassigned') + '</td>' +
+                '<td>PHP ' + (parseFloat(allocation.total_amount || 0).toLocaleString()) + '</td>' +
+                '<td>PHP ' + (parseFloat(allocation.reserved_amount || 0).toLocaleString()) + '</td>' +
+                '<td>PHP ' + (parseFloat(allocation.utilized_amount || 0).toLocaleString()) + '</td>' +
+                '<td>PHP ' + (parseFloat(allocation.remaining || 0).toLocaleString()) + '</td>' +
+                '<td>' + (progressPercent.toFixed(1)) + '%</td>' +
+                '<td>' + statusBadge + '</td>' +
+                '<td><button class="btn btn-sm btn-outline-primary">Adjust</button></td>' +
+                '</tr>';
+            tbody.innerHTML += row;
+        });
+    }
+
+    function updateAllocationSummary() {
+        const filteredAllocations = getFilteredAllocations();
+        const totalAllocated = filteredAllocations.reduce((sum, item) => sum + (parseFloat(item.total_amount) || 0), 0);
+        const totalUtilized = filteredAllocations.reduce((sum, item) => sum + (parseFloat(item.utilized_amount) || 0), 0);
+        const totalRemaining = filteredAllocations.reduce((sum, item) => sum + (parseFloat(item.remaining) || 0), 0);
+        const utilizationRate = totalAllocated > 0 ? (totalUtilized / totalAllocated) * 100 : 0;
+
+        const totalEl = document.getElementById('allocationSummaryTotal');
+        const remainingEl = document.getElementById('allocationSummaryRemaining');
+        const rateEl = document.getElementById('allocationSummaryRate');
+        if (totalEl) totalEl.textContent = 'PHP ' + totalAllocated.toLocaleString();
+        if (remainingEl) remainingEl.textContent = 'PHP ' + totalRemaining.toLocaleString();
+        if (rateEl) rateEl.textContent = utilizationRate.toFixed(1) + '%';
+    }
+
+    async function loadAllocations() {
+        try {
+            const response = await fetch('../api/budgets.php?action=allocations');
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+            currentAllocations = data.allocations || [];
+            renderAllocationsTable();
+            updateAllocationSummary();
+        } catch (error) {
+            if (typeof showAlert === 'function') {
+                showAlert('Error loading allocations: ' + error.message, 'danger');
+            }
+        }
+    }
+
+    async function loadTrackingData() {
+        const tbody = document.getElementById('trackingBudgetBody');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Tracking data unavailable.</td></tr>';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadAllocations();
+        const allocationSearch = document.getElementById('allocationSearch');
+        if (allocationSearch) allocationSearch.addEventListener('input', () => { renderAllocationsTable(); updateAllocationSummary(); });
+        const allocationStatusFilter = document.getElementById('allocationStatusFilter');
+        if (allocationStatusFilter) allocationStatusFilter.addEventListener('change', () => { renderAllocationsTable(); updateAllocationSummary(); });
+        loadTrackingData();
+    });
+</script>
 </body>
 </html>
