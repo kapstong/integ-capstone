@@ -812,7 +812,7 @@ $db = Database::getInstance()->getConnection();
                 </div>
             </div>
             <!-- Budget Allocation Tab -->
-            <div class="tab-pane fade" id="allocation" role="tabpanel" aria-labelledby="allocation-tab">
+            <div class="tab-pane fade" id="allocation" role="tabpanel" aria-labelledby="allocation-tab" data-privacy-exempt>
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
                     <div>
                         <h6 class="mb-1">Budget Allocation Hub</h6>
