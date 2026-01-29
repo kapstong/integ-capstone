@@ -1091,6 +1091,64 @@ class HR4Integration extends BaseIntegration {
     }
 
     /**
+     * Get incentive data from HR4
+     */
+    public function getIncentiveData($config, $params = []) {
+        try {
+            $url = $config['incentives_api_url'] ?? $config['incentive_api_url'] ?? $config['api_url'] ?? '';
+            if ($url === '') {
+                throw new Exception('HR4 incentives API URL is not configured');
+            }
+
+            $params['_ts'] = $params['_ts'] ?? time();
+            $query = http_build_query($params);
+            if ($query !== '') {
+                $separator = strpos($url, '?') === false ? '?' : '&';
+                $url .= $separator . $query;
+            }
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+            $headers = ['Content-Type: application/json'];
+            if (!empty($config['api_key'])) {
+                $headers[] = 'Authorization: Bearer ' . $this->generateAuthToken($config);
+            }
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($curlError) {
+                throw new Exception('cURL Error: ' . $curlError);
+            }
+
+            if ($httpCode !== 200) {
+                throw new Exception('HR4 incentives API returned HTTP status code: ' . $httpCode);
+            }
+
+            $result = json_decode($response, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new Exception('HR4 incentives API returned invalid JSON response');
+            }
+
+            if (isset($result['status']) && strtolower($result['status']) === 'success' && isset($result['data'])) {
+                return $this->parseHR4IncentivesData($result);
+            }
+
+            throw new Exception('HR4 incentives API response is not in expected format');
+        } catch (Exception $e) {
+            Logger::getInstance()->error('HR4 getIncentiveData failed: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Parse HR4 payroll approval data format into our expected payroll data format
      */
     private function parseHR4ApprovalData($apiResponse) {
@@ -1138,6 +1196,45 @@ class HR4Integration extends BaseIntegration {
                 'deductions' => 0,
                 'net_pay' => $totalAmount,
                 'amount' => $totalAmount
+            ];
+        }
+
+        return $parsedData;
+    }
+
+    /**
+     * Parse HR4 incentives data format into our expected incentives data format
+     */
+    private function parseHR4IncentivesData($apiResponse) {
+        if (!isset($apiResponse['data']) || !is_array($apiResponse['data'])) {
+            throw new Exception('HR4 incentives API response missing data array');
+        }
+
+        $parsedData = [];
+        foreach ($apiResponse['data'] as $entry) {
+            $statusRaw = strtolower(trim((string)($entry['status'] ?? '')));
+            $displayStatus = $entry['display_status'] ?? ($statusRaw !== '' ? ucfirst($statusRaw) : '');
+
+            $parsedData[] = [
+                'incentive_id' => $entry['id'] ?? null,
+                'employee_id' => $entry['employee_id'] ?? null,
+                'employee_code' => $entry['employee_code'] ?? '',
+                'employee_name' => $entry['employee_name'] ?? trim(($entry['first_name'] ?? '') . ' ' . ($entry['last_name'] ?? '')),
+                'department' => $entry['department'] ?? '',
+                'position' => $entry['position'] ?? '',
+                'period_display' => $entry['period_display'] ?? '',
+                'amount' => floatval($entry['incentive_amount'] ?? 0),
+                'performance_rating' => $entry['performance_rating'] ?? '',
+                'category' => $entry['category'] ?? '',
+                'processed_by_name' => $entry['processed_by_name'] ?? '',
+                'processed_date' => $entry['processed_date'] ?? '',
+                'approved_by' => $entry['approved_by'] ?? null,
+                'approved_date' => $entry['approved_date'] ?? null,
+                'paid_date' => $entry['paid_date'] ?? null,
+                'status' => $entry['status'] ?? '',
+                'display_status' => $displayStatus,
+                'notes' => $entry['notes'] ?? '',
+                'can_approve' => in_array($statusRaw, ['pending', 'pending finance', 'for approval'], true)
             ];
         }
 
@@ -1240,6 +1337,100 @@ class HR4Integration extends BaseIntegration {
             'success' => true,
             'message' => 'Payroll ' . $statusValue . ' successfully' .
                         ($externalUpdateSuccess ? '' : ' (external sync pending)'),
+            'external_sync' => $externalUpdateSuccess
+        ];
+    }
+
+    /**
+     * Update incentive approval status in HR4
+     */
+    public function updateIncentiveStatus($config, $params = []) {
+        $incentiveId = $params['id'] ?? $params['incentive_id'] ?? null;
+        $action = strtolower($params['approval_action'] ?? $params['action'] ?? '');
+
+        if (!$incentiveId || !in_array($action, ['approve', 'reject', 'paid'], true)) {
+            return ['success' => false, 'error' => 'Invalid incentive approval request'];
+        }
+
+        $endpoint = $config['incentives_update_url'] ?? $config['incentive_update_url'] ?? '';
+        if ($endpoint === '') {
+            return ['success' => false, 'error' => 'HR4 incentives update URL is not configured'];
+        }
+
+        $externalUpdateSuccess = false;
+        $externalError = null;
+
+        try {
+            $approver = $params['approver'] ?? $params['approved_by'] ?? $params['user_name'] ?? '';
+            $payload = [
+                'action' => $action,
+                'approval_action' => $action,
+                'id' => $incentiveId,
+                'incentive_id' => $incentiveId,
+                'approver' => $approver,
+                'notes' => $params['notes'] ?? '',
+                'reason' => $params['rejection_reason'] ?? ''
+            ];
+
+            $resolvedEndpoint = $endpoint;
+            if (stripos($endpoint, 'api_incentives.php') !== false) {
+                $actionPath = $action === 'approve' ? 'approve' : ($action === 'reject' ? 'reject' : 'paid');
+                $resolvedEndpoint = rtrim($endpoint, '/') . '/' . $actionPath;
+            }
+
+            $ch = curl_init($resolvedEndpoint);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            $headers = ['Content-Type: application/json'];
+            if (!empty($config['api_key'])) {
+                $headers[] = 'Authorization: Bearer ' . $this->generateAuthToken($config);
+            }
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200) {
+                $result = json_decode($response, true);
+                if ($result !== null &&
+                    ((isset($result['status']) && strtolower($result['status']) === 'success') ||
+                     (isset($result['success']) && $result['success']))) {
+                    $externalUpdateSuccess = true;
+                }
+            }
+        } catch (Exception $e) {
+            $externalError = $e->getMessage();
+        }
+
+        if (class_exists('Logger')) {
+            Logger::getInstance()->logUserAction(
+                'incentive_' . $action,
+                'payroll',
+                $incentiveId,
+                null,
+                ['action' => $action, 'external_sync' => $externalUpdateSuccess]
+            );
+        }
+
+        if (!$externalUpdateSuccess) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->warning('HR4 incentive approval external sync failed', [
+                    'incentive_id' => $incentiveId,
+                    'action' => $action,
+                    'error' => $externalError,
+                    'proceeding_locally' => false
+                ]);
+            }
+        }
+
+        return [
+            'success' => $externalUpdateSuccess,
+            'message' => $externalUpdateSuccess ? 'Incentive updated successfully' : 'Incentive update failed',
             'external_sync' => $externalUpdateSuccess
         ];
     }

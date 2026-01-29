@@ -436,6 +436,11 @@ body {
                 </button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="incentives-tab" data-bs-toggle="tab" data-bs-target="#incentives" type="button" role="tab">
+                    <i class="fas fa-gift me-2"></i>Incentives Processing
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="vouchers-tab" data-bs-toggle="tab" data-bs-target="#vouchers" type="button" role="tab">
                     <i class="fas fa-file-invoice me-2"></i>Vouchers & Documentation
                 </button>
@@ -585,6 +590,41 @@ body {
                             <tr>
                                 <td colspan="7" class="text-center">
                                     <div class="text-muted">Click "Load Payroll" to fetch payroll data from HR4 system</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Incentives Processing Tab -->
+            <div class="tab-pane fade" id="incentives" role="tabpanel" aria-labelledby="incentives-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">HR4 Incentives Processing</h6>
+                    <div>
+                        <button class="btn btn-success" onclick="loadIncentives(this)">
+                            <i class="fas fa-sync me-2"></i>Load Incentives
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped" id="incentivesTable">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Department</th>
+                                <th>Position</th>
+                                <th>Period</th>
+                                <th>Incentive Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="incentivesTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <div class="text-muted">Click "Load Incentives" to fetch incentives from HR4 system</div>
                                 </td>
                             </tr>
                         </tbody>
@@ -1790,6 +1830,264 @@ body {
 
         // Auto-load payroll data on page load
         window.loadPayroll();
+    });
+    </script>
+
+    <!-- HR4 Incentives Processing Functions -->
+    <script>
+    window.addEventListener('DOMContentLoaded', function() {
+        window.loadIncentives = async function(buttonEl) {
+            window.showTableLoading('incentivesTableBody', 'Loading incentives...');
+
+            const btn = buttonEl && buttonEl.closest ? buttonEl.closest('button') : null;
+            const originalText = btn ? btn.innerHTML : '';
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading Incentives...';
+            }
+
+            try {
+                const response = await fetch('../api/integrations.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'execute',
+                        integration_name: 'hr4',
+                        action_name: 'getIncentiveData',
+                        params: JSON.stringify({ _ts: Date.now() })
+                    }),
+                    credentials: 'include'
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.result) {
+                    window.displayHR4Incentives(result.result);
+                } else if (result.success && (!result.result || result.result.length === 0)) {
+                    window.displayHR4Incentives([]);
+                } else {
+                    window.showAlert('Error loading incentives: ' + (result.error || 'No incentives data found'), 'danger');
+                }
+            } catch (error) {
+                console.error('HR4 incentives loading error:', error);
+                window.showAlert('Error loading incentives: ' + error.message, 'danger');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            }
+        };
+
+        window.displayHR4Incentives = function(incentivesData) {
+            const tbody = document.getElementById('incentivesTableBody');
+
+            if (!incentivesData || incentivesData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No incentives data found in HR4 system</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+
+            incentivesData.forEach(incentive => {
+                const incentiveId = incentive.incentive_id || incentive.id || '';
+                const amount = parseFloat(incentive.amount || incentive.incentive_amount || 0);
+                const statusRaw = (incentive.status || '').toString();
+                const statusKey = statusRaw.toLowerCase();
+                const displayStatus = incentive.display_status || statusRaw || 'Unknown';
+
+                if (statusKey === 'approved' || statusKey === 'paid') return;
+
+                const canApprove = Boolean(incentive.can_approve) || ['pending', 'pending finance', 'for approval'].includes(statusKey);
+
+                const row = document.createElement('tr');
+                row.dataset.incentiveId = incentiveId;
+                row.dataset.period = incentive.period_display || '';
+                row.dataset.amount = amount;
+                row.dataset.employeeName = incentive.employee_name || '';
+
+                let actionsHtml = '';
+                if (canApprove) {
+                    actionsHtml = `
+                        <button class="btn btn-success btn-sm me-2" onclick="updateIncentiveApproval(this, '${incentiveId}', 'approve')">
+                            <i class="fas fa-check me-1"></i>Approve
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="updateIncentiveApproval(this, '${incentiveId}', 'reject')">
+                            <i class="fas fa-times me-1"></i>Reject
+                        </button>
+                    `;
+                } else {
+                    actionsHtml = `
+                        <button class="btn btn-info btn-sm" onclick="viewIncentiveDetails(this, '${incentiveId}')">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </button>
+                    `;
+                }
+
+                row.innerHTML = `
+                    <td><strong>${incentive.employee_name || 'N/A'}</strong></td>
+                    <td>${incentive.department || 'N/A'}</td>
+                    <td>${incentive.position || 'N/A'}</td>
+                    <td>${incentive.period_display || 'N/A'}</td>
+                    <td><strong class="text-success">PHP ${amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+                    <td>${displayStatus ? `<span class="badge ${canApprove ? 'bg-info' : 'bg-secondary'}">${displayStatus}</span>` : ''}</td>
+                    <td>${actionsHtml}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        };
+
+        async function createIncentiveDisbursement(row) {
+            const incentiveId = row?.dataset?.incentiveId || '';
+            const period = row?.dataset?.period || 'Incentive';
+            const amount = parseFloat(row?.dataset?.amount || 0);
+            const employeeName = row?.dataset?.employeeName || 'Employee';
+
+            if (!incentiveId || !amount) {
+                return;
+            }
+
+            const disbursementData = {
+                payee: `HR4 Incentive - ${employeeName}`,
+                payment_date: new Date().toISOString().split('T')[0],
+                amount: amount,
+                payment_method: 'bank_transfer',
+                reference_number: incentiveId,
+                description: `HR4 incentive for ${employeeName} (${period})`,
+                account_id: window.payrollExpenseAccountId || null
+            };
+
+            const response = await fetch('../api/disbursements.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    action: 'process_payment',
+                    ...disbursementData
+                })
+            });
+
+            const rawText = await response.text();
+            let result = null;
+            try {
+                result = rawText ? JSON.parse(rawText) : null;
+            } catch (parseError) {}
+
+            if (!response.ok) {
+                const errorMessage = result?.error || rawText || `HTTP ${response.status}`;
+                throw new Error(errorMessage);
+            }
+
+            if (!result?.success) {
+                const errorMessage = result?.error || rawText || 'Failed to record incentive disbursement';
+                throw new Error(errorMessage);
+            }
+
+            await markIncentivePaid(incentiveId);
+            loadDisbursements();
+        }
+
+        async function markIncentivePaid(incentiveId) {
+            if (!incentiveId) return;
+            const response = await fetch('../api/integrations.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                credentials: 'include',
+                body: new URLSearchParams({
+                    action: 'execute',
+                    integration_name: 'hr4',
+                    action_name: 'updateIncentiveStatus',
+                    id: incentiveId,
+                    approval_action: 'paid',
+                    approver: window.payrollApproverName || 'Finance Department'
+                })
+            });
+
+            if (!response.ok) {
+                const responseText = await response.text();
+                throw new Error(responseText || `HTTP ${response.status}`);
+            }
+        }
+
+        window.updateIncentiveApproval = async function(buttonEl, incentiveId, action) {
+            const btn = buttonEl && buttonEl.closest ? buttonEl.closest('button') : null;
+            const originalText = btn ? btn.innerHTML : '';
+            const row = buttonEl && buttonEl.closest ? buttonEl.closest('tr') : null;
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Updating...';
+            }
+
+            try {
+                let rejectionReason = '';
+                if (action === 'reject') {
+                    rejectionReason = prompt('Provide rejection reason (required for reject):', '');
+                    if (rejectionReason === null || rejectionReason.trim() === '') {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = originalText;
+                        }
+                        return;
+                    }
+                }
+
+                const response = await fetch('../api/integrations.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    credentials: 'include',
+                    body: new URLSearchParams({
+                        action: 'execute',
+                        integration_name: 'hr4',
+                        action_name: 'updateIncentiveStatus',
+                        id: incentiveId,
+                        approval_action: action,
+                        approver: window.payrollApproverName || 'Finance Department',
+                        rejection_reason: rejectionReason,
+                        params: JSON.stringify({
+                            id: incentiveId,
+                            action: action,
+                            rejection_reason: rejectionReason
+                        })
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success && (result.result?.success !== false)) {
+                    if (action === 'approve') {
+                        try {
+                            await createIncentiveDisbursement(row);
+                        } catch (error) {
+                            window.showAlert('Incentive approved, but failed to record disbursement.', 'warning');
+                        }
+                    }
+                    window.loadIncentives();
+                } else {
+                    window.showAlert('Error updating incentive: ' + (result.error || result.result?.error || 'Unknown error'), 'danger');
+                }
+            } catch (error) {
+                window.showAlert('Error: ' + error.message, 'danger');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            }
+        };
+
+        window.viewIncentiveDetails = function(buttonEl, incentiveId) {
+            window.showAlert('Incentive ID: ' + incentiveId + ' is already processed and approved.', 'info');
+        };
     });
     </script>
 
