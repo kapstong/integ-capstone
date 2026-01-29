@@ -195,6 +195,7 @@ function getAllocations($db) {
 
     if (isset($_GET['include_external']) && $_GET['include_external'] === '1') {
         $externalAllocations = fetchExternalAllocations($db);
+        $allocations = filterInternalAllocations($allocations, $externalAllocations);
         foreach ($externalAllocations as $external) {
             $allocations[] = $external;
         }
@@ -231,9 +232,7 @@ function fetchExternalAllocations($db) {
             }
 
             $departmentCode = $config['department_code'] ?? $system['system_code'];
-            $url = $endpoint;
-            $separator = strpos($url, '?') === false ? '?' : '&';
-            $url .= $separator . 'department_code=' . urlencode($departmentCode);
+            $url = buildExternalAllocationUrl($endpoint, $departmentCode);
 
             $response = httpGetJson($url, $system['api_key'] ?? null);
             if (!$response || !is_array($response)) {
@@ -246,16 +245,20 @@ function fetchExternalAllocations($db) {
             $allocated = (float)($periodData['allocated'] ?? $response['allocated'] ?? $total);
             $remaining = $total - $spent;
 
+            $displayName = $config['display_name'] ?? $config['department_label'] ?? $system['system_name'] ?? $departmentCode;
+            $displayName = normalizeDisplayName($displayName);
+
             $allocations[] = [
                 'id' => count($allocations) + 1000,
-                'department' => $system['system_name'] ?: $departmentCode,
+                'department' => $displayName,
                 'department_id' => null,
                 'total_amount' => $total,
                 'utilized_amount' => $spent,
                 'reserved_amount' => 0,
                 'remaining' => $remaining,
                 'is_external' => true,
-                'external_source' => $system['system_code']
+                'external_source' => $system['system_code'],
+                'external_department_code' => $departmentCode
             ];
         }
 
@@ -315,6 +318,74 @@ function selectPreferredPeriod($response) {
     }
 
     return $response['periods'][0] ?? $response;
+}
+
+function buildExternalAllocationUrl($endpoint, $departmentCode) {
+    $parsed = parse_url($endpoint);
+    $query = [];
+    if (!empty($parsed['query'])) {
+        parse_str($parsed['query'], $query);
+    }
+
+    if (!isset($query['department_code']) && $departmentCode !== '') {
+        $query['department_code'] = $departmentCode;
+    }
+
+    $base = $endpoint;
+    if (!empty($parsed['query'])) {
+        $base = substr($endpoint, 0, strpos($endpoint, '?'));
+    }
+
+    return $base . '?' . http_build_query($query);
+}
+
+function normalizeDisplayName($name) {
+    $trimmed = trim((string)$name);
+    if ($trimmed === '') {
+        return $trimmed;
+    }
+
+    if (stripos($trimmed, ' budget') !== false) {
+        $trimmed = preg_replace('/\s+budget\b/i', '', $trimmed);
+    }
+
+    return trim($trimmed);
+}
+
+function filterInternalAllocations($allocations, $externalAllocations) {
+    if (empty($externalAllocations)) {
+        return $allocations;
+    }
+
+    $externalKeys = [];
+    foreach ($externalAllocations as $external) {
+        $key = normalizeAllocationKey($external['external_department_code'] ?? $external['department'] ?? '');
+        if ($key !== '') {
+            $externalKeys[$key] = true;
+        }
+    }
+
+    if (empty($externalKeys)) {
+        return $allocations;
+    }
+
+    $filtered = [];
+    foreach ($allocations as $allocation) {
+        $internalKey = normalizeAllocationKey($allocation['department'] ?? '');
+        if ($internalKey !== '' && isset($externalKeys[$internalKey])) {
+            continue;
+        }
+        $filtered[] = $allocation;
+    }
+
+    return $filtered;
+}
+
+function normalizeAllocationKey($value) {
+    $key = strtolower(trim((string)$value));
+    $key = preg_replace('/\s+/', '', $key);
+    $key = preg_replace('/[_-]+/', '', $key);
+    return $key;
 }
 
 function getForecastData($db) {
