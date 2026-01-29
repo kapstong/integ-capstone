@@ -1364,7 +1364,7 @@ function getVarianceStatusBadge(variancePercent) {
 
     async function loadAllocations() {
         try {
-            const response = await fetch('../api/budgets.php?action=allocations');
+            const response = await fetch('../api/budgets.php?action=allocations&include_external=1');
             const data = await response.json();
             if (data.error) throw new Error(data.error);
             currentAllocations = data.allocations || [];

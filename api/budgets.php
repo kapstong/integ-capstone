@@ -193,7 +193,128 @@ function getAllocations($db) {
         ];
     }
 
+    if (isset($_GET['include_external']) && $_GET['include_external'] === '1') {
+        $externalAllocations = fetchExternalAllocations($db);
+        foreach ($externalAllocations as $external) {
+            $allocations[] = $external;
+        }
+    }
+
     echo json_encode(['allocations' => $allocations]);
+}
+
+function fetchExternalAllocations($db) {
+    try {
+        $stmt = $db->prepare("
+            SELECT system_code, system_name, api_endpoint, api_key, configuration
+            FROM system_integrations
+            WHERE is_active = 1
+              AND api_endpoint IS NOT NULL
+              AND api_endpoint <> ''
+        ");
+        $stmt->execute();
+        $systems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $allocations = [];
+        foreach ($systems as $system) {
+            $endpoint = trim($system['api_endpoint'] ?? '');
+            if ($endpoint === '') {
+                continue;
+            }
+
+            $config = [];
+            if (!empty($system['configuration'])) {
+                $decoded = json_decode($system['configuration'], true);
+                if (is_array($decoded)) {
+                    $config = $decoded;
+                }
+            }
+
+            $departmentCode = $config['department_code'] ?? $system['system_code'];
+            $url = $endpoint;
+            $separator = strpos($url, '?') === false ? '?' : '&';
+            $url .= $separator . 'department_code=' . urlencode($departmentCode);
+
+            $response = httpGetJson($url, $system['api_key'] ?? null);
+            if (!$response || !is_array($response)) {
+                continue;
+            }
+
+            $periodData = selectPreferredPeriod($response);
+            $total = (float)($periodData['total_budget'] ?? $response['total_budget'] ?? 0);
+            $spent = (float)($periodData['spent'] ?? $response['spent'] ?? 0);
+            $allocated = (float)($periodData['allocated'] ?? $response['allocated'] ?? $total);
+            $remaining = $total - $spent;
+
+            $allocations[] = [
+                'id' => count($allocations) + 1000,
+                'department' => $system['system_name'] ?: $departmentCode,
+                'department_id' => null,
+                'total_amount' => $total,
+                'utilized_amount' => $spent,
+                'reserved_amount' => 0,
+                'remaining' => $remaining,
+                'is_external' => true,
+                'external_source' => $system['system_code']
+            ];
+        }
+
+        return $allocations;
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+function httpGetJson($url, $apiKey = null) {
+    $ch = curl_init();
+    if ($ch === false) {
+        return null;
+    }
+
+    $headers = [];
+    if (!empty($apiKey)) {
+        $headers[] = 'X-API-Key: ' . $apiKey;
+    }
+
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_FAILONERROR, false);
+
+    $raw = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($raw === false || $status >= 400) {
+        return null;
+    }
+
+    $decoded = json_decode($raw, true);
+    return is_array($decoded) ? $decoded : null;
+}
+
+function selectPreferredPeriod($response) {
+    if (!isset($response['periods']) || !is_array($response['periods'])) {
+        return $response;
+    }
+
+    $preferred = ['yearly', 'annually', 'semi-annually', 'quarterly', 'monthly'];
+    $index = [];
+    foreach ($response['periods'] as $period) {
+        if (!isset($period['period'])) {
+            continue;
+        }
+        $index[strtolower($period['period'])] = $period;
+    }
+
+    foreach ($preferred as $periodKey) {
+        if (isset($index[$periodKey])) {
+            return $index[$periodKey];
+        }
+    }
+
+    return $response['periods'][0] ?? $response;
 }
 
 function getForecastData($db) {
