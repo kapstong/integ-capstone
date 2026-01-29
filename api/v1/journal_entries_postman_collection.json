@@ -175,13 +175,13 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/journal_entries.php?reference=JE-2025-0001",
+          "raw": "{{base_url}}/journal_entries.php?reference=JE-2025-1001-0001",
           "host": ["{{base_url}}"],
           "path": ["journal_entries.php"],
           "query": [
             {
               "key": "reference",
-              "value": "JE-2025-0001",
+              "value": "JE-2025-1001-0001",
               "description": "Entry number/reference"
             }
           ]

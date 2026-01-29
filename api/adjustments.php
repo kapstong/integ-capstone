@@ -393,9 +393,12 @@ function createAdjustmentJournalEntry($db, $adjustmentId, $data, $isPayable) {
     $entryDate = $data['adjustment_date'] ?? date('Y-m-d');
     $description = "Adjustment {$data['adjustment_type']} #" . $adjustmentId;
 
-    $stmt = $db->query("SELECT COUNT(*) as count FROM journal_entries WHERE YEAR(created_at) = YEAR(CURDATE())");
-    $count = $stmt->fetch()['count'] + 1;
-    $entryNumber = 'JE-' . date('Y') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+    require_once __DIR__ . '/../includes/journal_entry_number.php';
+    $entryNumber = generateJournalEntryNumber(
+        $db,
+        $isPayable ? getAccountIdByCode($db, '2001') : getAccountIdByCode($db, '1002'),
+        $entryDate
+    );
 
     $db->execute(
         "INSERT INTO journal_entries (entry_number, entry_date, description, reference, total_debit, total_credit, status, created_by)

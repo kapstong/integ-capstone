@@ -480,10 +480,9 @@ function createJournalEntry($db, $client) {
     $db->beginTransaction();
 
     try {
-        // Generate entry number
-        $stmt = $db->query("SELECT COUNT(*) as count FROM journal_entries WHERE YEAR(created_at) = YEAR(CURDATE())");
-        $count = $stmt->fetch()['count'] + 1;
-        $entryNumber = 'JE-' . date('Y') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+        require_once __DIR__ . '/../../includes/journal_entry_number.php';
+        $primaryAccountId = $lines[0]['account_id'] ?? null;
+        $entryNumber = generateJournalEntryNumber($db, $primaryAccountId, $data['entry_date'] ?? date('Y-m-d'));
 
         // Allow custom entry number if provided
         if (isset($data['entry_number']) && !empty($data['entry_number'])) {

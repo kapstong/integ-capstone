@@ -345,10 +345,8 @@ abstract class BaseIntegration {
                 throw new Exception('Invalid journal entry parameters');
             }
 
-            // Generate journal entry number
-            $countStmt = $db->query("SELECT COUNT(*) as count FROM journal_entries WHERE YEAR(created_at) = YEAR(CURDATE())");
-            $count = ($countStmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0) + 1;
-            $entryNumber = 'JE-' . date('Y') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+            require_once __DIR__ . '/journal_entry_number.php';
+            $entryNumber = generateJournalEntryNumber($db, $debitAccountId, $date);
 
             // Create journal entry header
             $stmt = $db->prepare("
@@ -1733,6 +1731,25 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
         return $fallback->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    private function getRevenueAccountId($db) {
+        // Prefer a configured revenue account code
+        $revenueAccount = $this->getAccountId('4001');
+        if ($revenueAccount) {
+            return $revenueAccount;
+        }
+
+        // Fallback: first active revenue account
+        $stmt = $db->query("
+            SELECT id
+            FROM chart_of_accounts
+            WHERE account_type = 'revenue' AND is_active = 1
+            ORDER BY account_code ASC
+            LIMIT 1
+        ");
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row['id'] ?? null;
+    }
+
     private function insertPaymentReceived($database, $db, $data) {
         $stmt = $database->query("SELECT COUNT(*) as count FROM payments_received WHERE YEAR(created_at) = YEAR(CURDATE())");
         $count = $stmt->fetch()['count'] + 1;
@@ -1773,14 +1790,14 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
         );
 
         $cashAccount = $this->getAccountId('1001');
-        $arAccount = $this->getAccountId('1002');
+        $revenueAccount = $this->getRevenueAccountId($db);
         $journalEntryId = null;
-        if ($cashAccount && $arAccount) {
+        if ($cashAccount && $revenueAccount) {
             $result = $this->createJournalEntry([
                 'date' => $data['payment_date'],
                 'description' => 'Core 1 payment ' . $paymentNumber,
                 'debit_account_id' => $cashAccount,
-                'credit_account_id' => $arAccount,
+                'credit_account_id' => $revenueAccount,
                 'amount' => $data['amount'],
                 'reference_number' => $paymentNumber,
                 'source_system' => 'HOTEL_CORE1'
@@ -1797,8 +1814,8 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
     private function createCore1JournalEntryFromPayment($existingRow, $payment) {
         try {
             $cashAccount = $this->getAccountId('1001');
-            $arAccount = $this->getAccountId('1002');
-            if (!$cashAccount || !$arAccount) {
+            $revenueAccount = $this->getRevenueAccountId(Database::getInstance()->getConnection());
+            if (!$cashAccount || !$revenueAccount) {
                 throw new Exception('Missing required chart of accounts for Core 1');
             }
 
@@ -1817,7 +1834,7 @@ class Core1HotelPaymentsIntegration extends BaseIntegration {
                 'date' => $date,
                 'description' => $description,
                 'debit_account_id' => $cashAccount,
-                'credit_account_id' => $arAccount,
+                'credit_account_id' => $revenueAccount,
                 'amount' => $amount,
                 'reference_number' => $reference ?: ('CORE1_PAY_' . ($payment['id'] ?? time())),
                 'source_system' => 'HOTEL_CORE1'

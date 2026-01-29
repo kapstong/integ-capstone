@@ -710,24 +710,6 @@ function createBudgetApprovalTask($db, $accountId, $amount, $remaining, $context
  * Post journal entry for bill
  */
 function postBillJournalEntry($db, $billId, $subtotal, $taxAmount) {
-    // Generate journal entry number
-    $stmt = $db->query("SELECT COUNT(*) as count FROM journal_entries WHERE YEAR(created_at) = YEAR(CURDATE())");
-    $count = $stmt->fetch()['count'] + 1;
-    $entryNumber = 'JE-' . date('Y') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
-
-    $entryId = $db->insert(
-        "INSERT INTO journal_entries (entry_number, entry_date, description, total_debit, total_credit, status, created_by, posted_by, posted_at)
-         VALUES (?, CURDATE(), ?, ?, ?, 'posted', ?, ?, NOW())",
-        [
-            $entryNumber,
-            "Bill $billId - Vendor purchase",
-            $subtotal + $taxAmount,
-            $subtotal + $taxAmount,
-            1, // System user
-            1  // System user
-        ]
-    );
-
     $totalAmount = $subtotal + $taxAmount;
     $items = $db->select(
         "SELECT account_id, line_total FROM bill_items WHERE bill_id = ?",
@@ -763,6 +745,24 @@ function postBillJournalEntry($db, $billId, $subtotal, $taxAmount) {
     } else {
         $expenseLines[] = ['account_id' => $fallbackExpenseId, 'amount' => $totalAmount];
     }
+
+    // Generate journal entry number (use primary expense account)
+    require_once __DIR__ . '/../includes/journal_entry_number.php';
+    $primaryExpenseId = $expenseLines[0]['account_id'] ?? $fallbackExpenseId;
+    $entryNumber = generateJournalEntryNumber($db, $primaryExpenseId, date('Y-m-d'));
+
+    $entryId = $db->insert(
+        "INSERT INTO journal_entries (entry_number, entry_date, description, total_debit, total_credit, status, created_by, posted_by, posted_at)
+         VALUES (?, CURDATE(), ?, ?, ?, 'posted', ?, ?, NOW())",
+        [
+            $entryNumber,
+            "Bill $billId - Vendor purchase",
+            $subtotal + $taxAmount,
+            $subtotal + $taxAmount,
+            1, // System user
+            1  // System user
+        ]
+    );
 
     // Budget checks (by account)
     $budgetTotals = [];

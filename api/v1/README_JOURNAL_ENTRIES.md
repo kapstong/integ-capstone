@@ -70,7 +70,7 @@ curl -X GET "https://your-domain.com/api/v1/journal_entries.php?status=posted&da
   "data": [
     {
       "id": 123,
-      "entry_number": "JE-2025-0001",
+      "entry_number": "JE-2025-1001-0001",
       "entry_date": "2025-01-15",
       "description": "Monthly revenue recognition",
       "total_debit": 5000.00,
@@ -142,7 +142,7 @@ curl -X GET "https://your-domain.com/api/v1/journal_entries.php?id=123" \
   "success": true,
   "data": {
     "id": 123,
-    "entry_number": "JE-2025-0001",
+    "entry_number": "JE-2025-1001-0001",
     "entry_date": "2025-01-15",
     "description": "Monthly revenue recognition",
     "total_debit": 5000.00,
@@ -204,7 +204,7 @@ GET /api/v1/journal_entries.php?reference={entry_number}
 
 **Example Request:**
 ```bash
-curl -X GET "https://your-domain.com/api/v1/journal_entries.php?reference=JE-2025-0001" \
+curl -X GET "https://your-domain.com/api/v1/journal_entries.php?reference=JE-2025-1001-0001" \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -375,7 +375,7 @@ curl -X POST "https://your-domain.com/api/v1/journal_entries.php" \
   "success": true,
   "data": {
     "id": 124,
-    "entry_number": "JE-2025-0124",
+    "entry_number": "JE-2025-1001-0124",
     "total_debit": 1500.00,
     "total_credit": 1500.00,
     "status": "draft"

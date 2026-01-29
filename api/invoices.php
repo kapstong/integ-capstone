@@ -395,10 +395,10 @@ try {
  * Post journal entry for invoice
  */
 function postInvoiceJournalEntry($db, $invoiceId, $subtotal, $taxAmount, $customerId) {
-    // Generate journal entry number
-    $stmt = $db->query("SELECT COUNT(*) as count FROM journal_entries WHERE YEAR(created_at) = YEAR(CURDATE())");
-    $count = $stmt->fetch()['count'] + 1;
-    $entryNumber = 'JE-' . date('Y') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+    require_once __DIR__ . '/../includes/journal_entry_number.php';
+    $arAccountIdRow = $db->select("SELECT id FROM chart_of_accounts WHERE account_code = '1002' LIMIT 1");
+    $arAccountId = $arAccountIdRow[0]['id'] ?? null;
+    $entryNumber = generateJournalEntryNumber($db, $arAccountId, date('Y-m-d'));
 
     $entryId = $db->insert(
         "INSERT INTO journal_entries (entry_number, entry_date, description, total_debit, total_credit, status, created_by, posted_by, posted_at)

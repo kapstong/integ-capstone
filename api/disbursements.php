@@ -771,11 +771,6 @@ function handleDelete($db) {
 }
 
 function createDisbursementJournalEntry($db, $disbursementId, $data) {
-    // Get next journal entry number
-    $stmt = $db->query("SELECT MAX(CAST(SUBSTRING_INDEX(entry_number, '-', -1) AS UNSIGNED)) as max_num FROM journal_entries WHERE entry_number LIKE 'JE-%'");
-    $maxNum = $stmt->fetch()['max_num'] ?? 0;
-    $entryNumber = 'JE-' . str_pad($maxNum + 1, 6, '0', STR_PAD_LEFT);
-
     $entryDate = $data['disbursement_date'] ?? $data['payment_date'];
     $description = "Disbursement: Payment to " . ($data['payee'] ?? 'vendor') . " - " . ($data['reference_number'] ?? 'N/A');
 
@@ -802,6 +797,9 @@ function createDisbursementJournalEntry($db, $disbursementId, $data) {
         $debitDescription = 'Expense - Disbursement';
         $creditDescription = 'Cash - Disbursement';
     }
+
+    require_once __DIR__ . '/../includes/journal_entry_number.php';
+    $entryNumber = generateJournalEntryNumber($db, $debitAccountId, $entryDate);
 
     // Insert journal entry header
     $stmt = $db->prepare("
