@@ -107,7 +107,13 @@ try {
     $balanceStmt = $db->prepare("
         SELECT
             coa.account_type,
-            SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as balance
+            SUM(
+                CASE
+                    WHEN coa.account_type IN ('asset','expense')
+                        THEN COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)
+                    ELSE COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)
+                END
+            ) as balance
         FROM chart_of_accounts coa
         LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
         LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id
@@ -127,7 +133,7 @@ try {
     $totalExpenses = 0;
 
     foreach ($balanceQuery as $row) {
-        $balance = intval($row['balance']);
+        $balance = floatval($row['balance']);
         switch ($row['account_type']) {
             case 'asset':
                 $totalAssets += $balance;
@@ -150,7 +156,7 @@ try {
     $netProfit = $totalRevenue - $totalExpenses;
 
     // Calculate balances for Financial Statements (use selected financial date)
-    $finBalanceStmt = $db->prepare("\n        SELECT\n            coa.account_type,\n            SUM(COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)) as balance\n        FROM chart_of_accounts coa\n        LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id\n        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id\n            AND (je.status = 'posted' OR je.status IS NULL OR je.status = '')\n            AND je.entry_date <= ?\n        WHERE coa.is_active = 1\n        GROUP BY coa.id, coa.account_type\n    ");
+    $finBalanceStmt = $db->prepare("\n        SELECT\n            coa.account_type,\n            SUM(\n                CASE\n                    WHEN coa.account_type IN ('asset','expense')\n                        THEN COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)\n                    ELSE COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)\n                END\n            ) as balance\n        FROM chart_of_accounts coa\n        LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id\n        LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id\n            AND (je.status = 'posted' OR je.status IS NULL OR je.status = '')\n            AND je.entry_date <= ?\n        WHERE coa.is_active = 1\n        GROUP BY coa.id, coa.account_type\n    ");
     $finBalanceStmt->execute([$financialDateTo]);
     $finBalanceQuery = $finBalanceStmt->fetchAll();
 
@@ -161,7 +167,7 @@ try {
     $finTotalExpenses = 0;
 
     foreach ($finBalanceQuery as $row) {
-        $balance = intval($row['balance']);
+        $balance = floatval($row['balance']);
         switch ($row['account_type']) {
             case 'asset':
                 $finTotalAssets += $balance;
@@ -193,7 +199,13 @@ try {
             coa.account_type,
             coa.description,
             coa.category,
-            COALESCE(SUM(jel.debit - jel.credit), 0) as balance
+            COALESCE(SUM(
+                CASE
+                    WHEN coa.account_type IN ('asset','expense')
+                        THEN COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)
+                    ELSE COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)
+                END
+            ), 0) as balance
         FROM chart_of_accounts coa
         LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
         LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id AND je.status = 'posted'
@@ -211,7 +223,13 @@ try {
             coa.account_type,
             coa.description,
             coa.category,
-            COALESCE(SUM(jel.debit - jel.credit), 0) as balance
+            COALESCE(SUM(
+                CASE
+                    WHEN coa.account_type IN ('asset','expense')
+                        THEN COALESCE(jel.debit, 0) - COALESCE(jel.credit, 0)
+                    ELSE COALESCE(jel.credit, 0) - COALESCE(jel.debit, 0)
+                END
+            ), 0) as balance
         FROM chart_of_accounts coa
         LEFT JOIN journal_entry_lines jel ON coa.id = jel.account_id
         LEFT JOIN journal_entries je ON jel.journal_entry_id = je.id 
