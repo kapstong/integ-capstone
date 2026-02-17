@@ -925,4 +925,15 @@ header('Content-Type: application/javascript');
         );
         }
 
+        // Ensure key handlers are available on window for inline onclick usage
+        window.processPayment = window.processPayment || processPayment;
+        window.showFilters = window.showFilters || showFilters;
+        window.applyFilters = window.applyFilters || applyFilters;
+        window.clearFilters = window.clearFilters || clearFilters;
+        window.showAddDisbursementModal = window.showAddDisbursementModal || showAddDisbursementModal;
+        window.saveDisbursement = window.saveDisbursement || saveDisbursement;
+        window.refreshVouchers = window.refreshVouchers || refreshVouchers;
+        window.uploadVoucher = window.uploadVoucher || uploadVoucher;
+        window.bulkDeleteDisbursements = window.bulkDeleteDisbursements || bulkDeleteDisbursements;
+
 
