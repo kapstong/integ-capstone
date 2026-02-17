@@ -235,7 +235,7 @@ login_end:
 </style>
 </head>
 
-<body class="grid md:grid-cols-2 gap-0 place-items-center p-6 md:p-10">
+<body class="grid md:grid-cols-2 gap-0 place-items-center p-6 md:p-10 min-h-screen">
   <?php include_once 'includes/loading_screen.php'; ?>
 
   <div class="bg-watermark" aria-hidden="true">
@@ -251,7 +251,7 @@ login_end:
     </div>
   </section>
 
-  <main class="w-full max-w-lg md:ml-28 md:mr-0 md:pr-4">
+  <main class="w-full max-w-lg md:ml-28 md:mr-0 md:pr-4 self-center">
     <div id="card" class="card p-6 sm:p-8 reveal">
       <div class="flex items-center justify-between mb-4">
         <div class="md:hidden flex items-center gap-3">
