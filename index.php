@@ -214,6 +214,30 @@ login_end:
   .icon-right{ position:absolute; right:.6rem; top:50%; transform:translateY(-50%); color:#64748b; }
   html.dark .icon-right{ color:#94a3b8; }
 
+  .card-header-pill{
+    display:inline-flex; align-items:center; gap:.5rem; padding:.4rem .75rem;
+    border-radius:999px; border:1px solid rgba(15,23,42,.12); background:rgba(248,250,252,.9);
+    font-size:.75rem; font-weight:700; color:#1b2f73; letter-spacing:.04em;
+  }
+
+  .form-block{
+    border:1px solid rgba(226,232,240,.9);
+    border-radius:16px;
+    padding:1rem 1rem 1.1rem;
+    background:rgba(248,250,252,.6);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.8);
+  }
+
+  .recaptcha-wrap{
+    padding:.25rem 0;
+  }
+
+  .card-ornament{
+    position:absolute; right:16px; top:16px; width:46px; height:46px;
+    border-radius:14px; background:linear-gradient(135deg, rgba(212,175,55,.2), rgba(27,47,115,.15));
+    display:grid; place-items:center; box-shadow:inset 0 0 0 1px rgba(15,23,42,.08);
+  }
+
   .btn{
     width:100%; display:inline-flex; align-items:center; justify-content:center; gap:.6rem;
     background:linear-gradient(180deg, #1b2f73, #0f1c49);
@@ -252,7 +276,10 @@ login_end:
   </section>
 
   <main class="w-full max-w-lg md:ml-28 md:mr-0 md:pr-4 self-center">
-    <div id="card" class="card p-6 sm:p-8 reveal">
+    <div id="card" class="card p-6 sm:p-8 reveal relative">
+      <div class="card-ornament" aria-hidden="true">
+        <span class="text-sm font-extrabold" style="color:var(--gold)">A</span>
+      </div>
       <div class="flex items-center justify-between mb-4">
         <div class="md:hidden flex items-center gap-3">
           <img src="logo.png" alt="ATIERA" class="h-10 w-auto">
@@ -264,6 +291,7 @@ login_end:
         <button id="modeBtn" class="px-3 py-2 rounded-lg border border-slate-200 text-sm hover:bg-white/60 dark:hover:bg-slate-800" aria-pressed="false" title="Toggle dark mode">🌓</button>
       </div>
 
+      <div class="card-header-pill mb-3">SECURE ACCESS</div>
       <h3 class="text-lg sm:text-xl font-semibold mb-1">Sign in</h3>
       <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Use your credentials to continue.</p>
 
@@ -281,30 +309,31 @@ login_end:
 
       <form method="POST" class="space-y-4" novalidate <?php echo $isLocked ? 'onsubmit="return false;"' : ''; ?>>
         <?php csrf_input(); ?>
-        <div class="field">
-          <input id="username" name="username" type="text" autocomplete="username" class="input peer" placeholder=" " required value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>" <?php echo $isLocked ? 'disabled' : ''; ?>>
-          <label for="username" class="float-label">Username</label>
-          <span class="icon-right" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5.33 0-8 2.67-8 5v1h16v-1c0-2.33-2.67-5-8-5Z" fill="currentColor"/></svg>
-          </span>
-        </div>
-
-        <div>
-          <div class="flex items-center justify-between mb-1">
-            <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
-          </div>
+        <div class="form-block space-y-4">
           <div class="field">
-            <input id="password" name="password" type="password" autocomplete="current-password" class="input peer" placeholder=" " required <?php echo $isLocked ? 'disabled' : ''; ?>>
-            <label for="password" class="float-label">••••••••</label>
-            <button type="button" id="togglePassword" class="icon-right" aria-label="Show password" title="Show password">
-              <svg id="eyeOpen" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5c-5 0-9 4.5-10 7 1 2.5 5 7 10 7s9-4.5 10-7c-1-2.5-5-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z" fill="currentColor"/></svg>
-              <svg id="eyeClosed" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display:none;"><path d="M3 5.27 4.28 4 20 19.72 18.73 21l-3.1-3.1A10.66 10.66 0 0 1 12 19c-5 0-9-4.5-10-7a17.3 17.3 0 0 1 4.22-5.6L3 5.27ZM12 7c5 0 9 4.5 10 7a17.5 17.5 0 0 1-3.2 4.4l-2.2-2.2a4 4 0 0 0-5.8-5.8L8.7 8.1A8.8 8.8 0 0 1 12 7Z" fill="currentColor"/></svg>
-            </button>
+            <input id="username" name="username" type="text" autocomplete="username" class="input peer" placeholder=" " required value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>" <?php echo $isLocked ? 'disabled' : ''; ?>>
+            <label for="username" class="float-label">Username</label>
+            <span class="icon-right" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5.33 0-8 2.67-8 5v1h16v-1c0-2.33-2.67-5-8-5Z" fill="currentColor"/></svg>
+            </span>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
+            </div>
+            <div class="field">
+              <input id="password" name="password" type="password" autocomplete="current-password" class="input peer" placeholder=" " required <?php echo $isLocked ? 'disabled' : ''; ?>>
+              <label for="password" class="float-label">••••••••</label>
+              <button type="button" id="togglePassword" class="icon-right" aria-label="Show password" title="Show password">
+                <svg id="eyeOpen" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5c-5 0-9 4.5-10 7 1 2.5 5 7 10 7s9-4.5 10-7c-1-2.5-5-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z" fill="currentColor"/></svg>
+                <svg id="eyeClosed" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display:none;"><path d="M3 5.27 4.28 4 20 19.72 18.73 21l-3.1-3.1A10.66 10.66 0 0 1 12 19c-5 0-9-4.5-10-7a17.3 17.3 0 0 1 4.22-5.6L3 5.27ZM12 7c5 0 9 4.5 10 7a17.5 17.5 0 0 1-3.2 4.4l-2.2-2.2a4 4 0 0 0-5.8-5.8L8.7 8.1A8.8 8.8 0 0 1 12 7Z" fill="currentColor"/></svg>
+              </button>
+            </div>
           </div>
         </div>
 
-        <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Captcha</label>
+        <div class="recaptcha-wrap">
           <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars(RECAPTCHA_SITE_KEY); ?>"></div>
         </div>
 
