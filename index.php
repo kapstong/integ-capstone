@@ -44,19 +44,41 @@ $error = '';
 $lockout = $auth->checkLockout();
 $isLocked = $lockout['locked'];
 
+// Simple math captcha (session-based)
+if (empty($_SESSION['login_captcha'])) {
+    $a = random_int(1, 9);
+    $b = random_int(1, 9);
+    $_SESSION['login_captcha'] = [
+        'a' => $a,
+        'b' => $b,
+        'answer' => $a + $b
+    ];
+}
+
 if ($_POST) {
     if (!csrf_verify_request()) {
         $error = 'Invalid CSRF token. Please reload the page.';
     } else {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
+    $captchaAnswer = trim($_POST['captcha_answer'] ?? '');
     
     if (empty($username) || empty($password)) {
         $error = 'Please enter username and password.';
+    } elseif ($captchaAnswer === '' || !isset($_SESSION['login_captcha']['answer']) || (int)$captchaAnswer !== (int)$_SESSION['login_captcha']['answer']) {
+        $error = 'Captcha verification failed. Please try again.';
+        $a = random_int(1, 9);
+        $b = random_int(1, 9);
+        $_SESSION['login_captcha'] = [
+            'a' => $a,
+            'b' => $b,
+            'answer' => $a + $b
+        ];
     } else {
         $result = $auth->login($username, $password);
 
         if ($result['success']) {
+            unset($_SESSION['login_captcha']);
             // Check if user has 2FA enabled
             require_once 'includes/two_factor_auth.php';
             $twoFA = TwoFactorAuth::getInstance();
@@ -216,7 +238,7 @@ if ($_POST) {
     </div>
   </section>
 
-  <main class="w-full max-w-md md:ml-auto">
+  <main class="w-full max-w-lg md:ml-0 md:mr-auto md:pr-8">
     <div id="card" class="card p-6 sm:p-8 reveal">
       <div class="flex items-center justify-between mb-4">
         <div class="md:hidden flex items-center gap-3">
@@ -261,6 +283,20 @@ if ($_POST) {
           <div class="field">
             <input id="password" name="password" type="password" autocomplete="current-password" class="input peer" placeholder=" " required <?php echo $isLocked ? 'disabled' : ''; ?>>
             <label for="password" class="float-label">••••••••</label>
+            <button type="button" id="togglePassword" class="icon-right" aria-label="Show password" title="Show password">
+              <svg id="eyeOpen" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5c-5 0-9 4.5-10 7 1 2.5 5 7 10 7s9-4.5 10-7c-1-2.5-5-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z" fill="currentColor"/></svg>
+              <svg id="eyeClosed" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display:none;"><path d="M3 5.27 4.28 4 20 19.72 18.73 21l-3.1-3.1A10.66 10.66 0 0 1 12 19c-5 0-9-4.5-10-7a17.3 17.3 0 0 1 4.22-5.6L3 5.27ZM12 7c5 0 9 4.5 10 7a17.5 17.5 0 0 1-3.2 4.4l-2.2-2.2a4 4 0 0 0-5.8-5.8L8.7 8.1A8.8 8.8 0 0 1 12 7Z" fill="currentColor"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label for="captcha_answer" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Captcha</label>
+          <div class="field">
+            <input id="captcha_answer" name="captcha_answer" type="text" inputmode="numeric" pattern="[0-9]*" class="input peer" placeholder=" " required <?php echo $isLocked ? 'disabled' : ''; ?>>
+            <label for="captcha_answer" class="float-label">
+              Solve: <?php echo (int)($_SESSION['login_captcha']['a'] ?? 0); ?> + <?php echo (int)($_SESSION['login_captcha']['b'] ?? 0); ?>
+            </label>
           </div>
         </div>
 
@@ -278,6 +314,10 @@ if ($_POST) {
 
   const modeBtn = $('#modeBtn');
   const wmImg = $('#wm');
+  const togglePassword = $('#togglePassword');
+  const passwordInput = $('#password');
+  const eyeOpen = $('#eyeOpen');
+  const eyeClosed = $('#eyeClosed');
 
   modeBtn.addEventListener('click', ()=>{
     const root = document.documentElement;
@@ -285,6 +325,19 @@ if ($_POST) {
     modeBtn.setAttribute('aria-pressed', String(dark));
     wmImg.style.transform = 'scale(1.01)'; setTimeout(()=> wmImg.style.transform = '', 220);
   });
+
+  if (togglePassword && passwordInput) {
+    togglePassword.addEventListener('click', () => {
+      const isHidden = passwordInput.type === 'password';
+      passwordInput.type = isHidden ? 'text' : 'password';
+      togglePassword.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+      togglePassword.setAttribute('title', isHidden ? 'Hide password' : 'Show password');
+      if (eyeOpen && eyeClosed) {
+        eyeOpen.style.display = isHidden ? 'none' : 'inline';
+        eyeClosed.style.display = isHidden ? 'inline' : 'none';
+      }
+    });
+  }
 
   // Handle lockout countdown
   <?php if ($isLocked): ?>
