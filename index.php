@@ -63,30 +63,43 @@ if ($_POST) {
     
     if (empty($username) || empty($password)) {
         $error = 'Please enter username and password.';
-    } elseif (empty($recaptchaResponse)) {
-        $error = 'Captcha verification failed. Please try again.';
     } else {
-        // Verify reCAPTCHA
-        $verifyUrl = 'https://www.google.com/recaptcha/api/siteverify';
-        $verifyPayload = http_build_query([
-            'secret' => RECAPTCHA_SECRET_KEY,
-            'response' => $recaptchaResponse,
-            'remoteip' => $_SERVER['REMOTE_ADDR'] ?? ''
-        ]);
-        $verifyContext = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => "Content-type: application/x-www-form-urlencoded\r\n",
-                'content' => $verifyPayload,
-                'timeout' => 5
-            ]
-        ]);
-        $verifyResult = @file_get_contents($verifyUrl, false, $verifyContext);
-        $verifyData = $verifyResult ? json_decode($verifyResult, true) : null;
+        $recaptchaOk = false;
+        $recaptchaGraceUntil = $_SESSION['recaptcha_verified_until'] ?? 0;
+        if (!empty($recaptchaGraceUntil) && time() < $recaptchaGraceUntil) {
+            $recaptchaOk = true;
+        }
 
-        if (!$verifyData || empty($verifyData['success'])) {
-            $error = 'Captcha verification failed. Please try again.';
-            goto login_end;
+        if (!$recaptchaOk) {
+            if (empty($recaptchaResponse)) {
+                $error = 'Captcha verification failed. Please try again.';
+                goto login_end;
+            }
+
+            // Verify reCAPTCHA
+            $verifyUrl = 'https://www.google.com/recaptcha/api/siteverify';
+            $verifyPayload = http_build_query([
+                'secret' => RECAPTCHA_SECRET_KEY,
+                'response' => $recaptchaResponse,
+                'remoteip' => $_SERVER['REMOTE_ADDR'] ?? ''
+            ]);
+            $verifyContext = stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+                    'content' => $verifyPayload,
+                    'timeout' => 5
+                ]
+            ]);
+            $verifyResult = @file_get_contents($verifyUrl, false, $verifyContext);
+            $verifyData = $verifyResult ? json_decode($verifyResult, true) : null;
+
+            if (!$verifyData || empty($verifyData['success'])) {
+                $error = 'Captcha verification failed. Please try again.';
+                goto login_end;
+            }
+
+            $_SESSION['recaptcha_verified_until'] = time() + (30 * 60);
         }
 
         $result = $auth->login($username, $password);
