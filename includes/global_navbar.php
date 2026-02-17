@@ -19,8 +19,10 @@ if (!empty($firstName) || !empty($lastName)) {
 }
 
 $isSuperAdminArea = strpos($scriptName, '/superadmin/') !== false;
+$isAdminArea = strpos($scriptName, '/admin/') !== false;
 $profileLink = $isUserArea ? 'profile.php' : ($isSuperAdminArea ? 'superadmin-profile-settings.php' : 'admin-profile-settings.php');
 $settingsLink = $isUserArea ? 'settings.php' : 'settings.php';
+$searchLink = $isSuperAdminArea || $isAdminArea ? '/admin/search.php' : '/staff/search.php';
 
 // Get user role for display
 require_once '../includes/permissions.php';
@@ -66,12 +68,12 @@ $csrfToken = csrf_token();
             </div>
         </div>
         <div class="d-flex align-items-center flex-grow-1">
-            <div class="input-group mx-auto" style="width: 500px;">
-                <input type="text" class="form-control" placeholder="Search..." aria-label="Search">
-                <button class="btn btn-outline-secondary" type="button">
+            <form class="input-group mx-auto" style="width: 500px;" method="get" action="<?php echo htmlspecialchars($searchLink); ?>">
+                <input type="text" class="form-control" name="q" placeholder="Search..." aria-label="Search">
+                <button class="btn btn-outline-secondary" type="submit">
                     <i class="fas fa-search"></i>
                 </button>
-            </div>
+            </form>
         </div>
     </div>
 </nav>

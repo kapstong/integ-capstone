@@ -2069,7 +2069,7 @@ require_once '../includes/database.php';
             }
         }
 
-        // Export current active tab report as PDF (actually CSV)
+        // Export current active tab report as PDF
         function exportCurrentReportPDF() {
             const activeTab = document.querySelector('.nav-link.active');
             if (!activeTab) {
@@ -2081,13 +2081,13 @@ require_once '../includes/database.php';
 
             switch(tabId) {
                 case 'income-tab':
-                    exportIncomeStatement('csv');
+                    exportIncomeStatement('pdf');
                     break;
                 case 'balance-tab':
-                    exportBalanceSheet('csv');
+                    exportBalanceSheet('pdf');
                     break;
                 case 'cashflow-tab':
-                    exportCashFlow('csv');
+                    exportCashFlow('pdf');
                     break;
                 default:
                     showAlert('Please switch to a report tab (Income, Balance Sheet, or Cash Flow)', 'info');
