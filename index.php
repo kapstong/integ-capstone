@@ -181,15 +181,23 @@ login_end:
   @keyframes reveal { to { opacity:1; transform:none; } }
 
   .card{
-    background:var(--card-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-    border:1px solid var(--card-border); border-radius:18px; box-shadow:0 16px 48px rgba(2,6,23,.18);
+    background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.92));
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    border:1px solid rgba(226,232,240,.9);
+    border-radius:22px;
+    box-shadow:0 22px 60px rgba(2,6,23,.20), inset 0 1px 0 rgba(255,255,255,.7);
   }
   html.dark .card{ background:rgba(17,24,39,.92); border-color:rgba(71,85,105,.55); box-shadow:0 16px 48px rgba(0,0,0,.5); }
+
+  .card::before{
+    content:''; position:absolute; inset:0; border-radius:22px; pointer-events:none;
+    box-shadow:0 0 0 1px rgba(255,255,255,.5) inset;
+  }
 
   .field{ position:relative; }
   .input{
     width:100%; border:1px solid #e5e7eb; border-radius:12px; background:#fff;
-    padding:1rem 2.6rem 1rem .95rem; outline:none; color:#0f172a; transition:border-color .15s, box-shadow .15s, background .15s;
+    padding:1rem 2.8rem 1rem .95rem; outline:none; color:#0f172a; transition:border-color .15s, box-shadow .15s, background .15s;
   }
   .input:focus{ border-color:var(--blue-a); box-shadow:var(--ring) }
   html.dark .input{ background:#0b1220; border-color:#243041; color:#e5e7eb; }
@@ -208,9 +216,9 @@ login_end:
 
   .btn{
     width:100%; display:inline-flex; align-items:center; justify-content:center; gap:.6rem;
-    background:linear-gradient(180deg, var(--blue-600), var(--blue-800));
-    color:#fff; font-weight:800; border-radius:14px; padding:.95rem 1rem; border:1px solid rgba(255,255,255,.06);
-    transition:transform .08s ease, filter .15s ease, box-shadow .2s ease; box-shadow:0 8px 18px rgba(2,6,23,.18);
+    background:linear-gradient(180deg, #1b2f73, #0f1c49);
+    color:#fff; font-weight:800; border-radius:16px; padding:1rem 1.1rem; border:1px solid rgba(255,255,255,.08);
+    transition:transform .08s ease, filter .15s ease, box-shadow .2s ease; box-shadow:0 10px 22px rgba(2,6,23,.22);
   }
   .btn:hover{ filter:saturate(1.08); box-shadow:0 12px 26px rgba(2,6,23,.26); }
   .btn:active{ transform:translateY(1px) scale(.99); }
@@ -240,7 +248,6 @@ login_end:
       <h1 class="text-4xl font-extrabold leading-tight tracking-tight">
         ATIERA <span style="color:var(--gold)">HOTEL & RESTAURANT</span> Management
       </h1>
-      <p class="mt-4 text-white/90 text-lg">Secure • Fast • Intuitive</p>
     </div>
   </section>
 
