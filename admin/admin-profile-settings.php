@@ -26,7 +26,7 @@ try {
 $activityLogs = [];
 try {
     $stmt = $db->prepare("
-        SELECT action, ip_address, user_agent, created_at
+        SELECT action, ip_address, user_agent, new_values, created_at
         FROM audit_log
         WHERE user_id = ?
         ORDER BY created_at DESC
@@ -790,9 +790,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <tbody>
                                     <?php foreach ($activityLogs as $log): ?>
                                         <?php
+                                            $devicePayload = [];
+                                            if (!empty($log['new_values'])) {
+                                                $decoded = json_decode($log['new_values'], true);
+                                                if (is_array($decoded)) {
+                                                    $devicePayload = $decoded;
+                                                }
+                                            }
                                             $deviceInfo = detect_device_info($log['user_agent'] ?? '');
-                                            $deviceLabel = $deviceInfo['device_type'];
-                                            $deviceDetail = trim($deviceInfo['os'] . ' • ' . $deviceInfo['browser']);
+                                            $deviceLabel = $devicePayload['device_label'] ?? $deviceInfo['device_type'];
+                                            $deviceType = $devicePayload['device_type'] ?? $deviceInfo['device_type'];
+                                            $deviceOs = $devicePayload['os'] ?? $deviceInfo['os'];
+                                            $deviceBrowser = $devicePayload['browser'] ?? $deviceInfo['browser'];
+                                            $deviceDetail = trim($deviceType . ' • ' . $deviceOs . ' • ' . $deviceBrowser);
                                         ?>
                                         <tr>
                                             <td><?php echo htmlspecialchars(date('M j, Y g:i A', strtotime($log['created_at']))); ?></td>

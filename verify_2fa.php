@@ -65,18 +65,24 @@ if ($_POST) {
                     error_log("Error calling sp_log_login_session: " . $e->getMessage());
                 }
 
+                $devicePayload = $_SESSION['pending_device'] ?? [];
                 $deviceInfo = detect_device_info($_SERVER['HTTP_USER_AGENT'] ?? '');
+                $deviceLabel = build_device_label($devicePayload, $_SERVER['HTTP_USER_AGENT'] ?? '');
                 Logger::getInstance()->logUserAction(
                     'User Login',
                     'login_sessions',
                     null,
                     null,
                     [
-                        'device_type' => $deviceInfo['device_type'],
-                        'os' => $deviceInfo['os'],
-                        'browser' => $deviceInfo['browser']
+                        'device_label' => $deviceLabel,
+                        'device_type' => $devicePayload['device_type'] ?? $deviceInfo['device_type'],
+                        'os' => $devicePayload['device_os'] ?? $deviceInfo['os'],
+                        'browser' => $devicePayload['device_browser'] ?? $deviceInfo['browser'],
+                        'platform' => $devicePayload['device_platform'] ?? null,
+                        'model' => $devicePayload['device_model'] ?? null
                     ]
                 );
+                unset($_SESSION['pending_device']);
 
                 // Redirect based on role
                 $role = strtolower($user['role_name'] ?? '');

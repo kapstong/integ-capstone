@@ -36,6 +36,7 @@ if ($userId) {
 
             // Log to audit trail
             $deviceInfo = detect_device_info($_SERVER['HTTP_USER_AGENT'] ?? '');
+            $deviceLabel = build_device_label([], $_SERVER['HTTP_USER_AGENT'] ?? '');
             Logger::getInstance()->logUserAction(
                 'User Logout',
                 'login_sessions',
@@ -43,6 +44,7 @@ if ($userId) {
                 null,
                 [
                     'logout_type' => $logoutType,
+                    'device_label' => $deviceLabel,
                     'device_type' => $deviceInfo['device_type'],
                     'os' => $deviceInfo['os'],
                     'browser' => $deviceInfo['browser']

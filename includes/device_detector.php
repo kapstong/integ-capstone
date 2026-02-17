@@ -48,3 +48,41 @@ function detect_device_info($userAgent) {
     ];
 }
 
+function build_device_label($payload, $userAgent) {
+    $label = trim($payload['device_label'] ?? '');
+    if (!empty($label)) {
+        return $label;
+    }
+
+    $model = trim($payload['device_model'] ?? '');
+    $platform = trim($payload['device_platform'] ?? '');
+    if ($model && $platform) {
+        return $model . ' (' . $platform . ')';
+    }
+    if ($model) {
+        return $model;
+    }
+
+    $ua = strtolower($userAgent ?? '');
+    if (strpos($ua, 'iphone') !== false) {
+        return 'iPhone';
+    }
+    if (strpos($ua, 'ipad') !== false) {
+        return 'iPad';
+    }
+    if (strpos($ua, 'android') !== false) {
+        return 'Android Device';
+    }
+    if (strpos($ua, 'windows') !== false) {
+        return 'Windows PC';
+    }
+    if (strpos($ua, 'mac os x') !== false) {
+        return 'Mac';
+    }
+    if (strpos($ua, 'linux') !== false) {
+        return 'Linux PC';
+    }
+
+    return 'Unknown Device';
+}
+

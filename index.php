@@ -52,6 +52,14 @@ if ($_POST) {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
     $recaptchaResponse = trim($_POST['g-recaptcha-response'] ?? '');
+    $devicePayload = [
+        'device_label' => trim($_POST['device_label'] ?? ''),
+        'device_model' => trim($_POST['device_model'] ?? ''),
+        'device_platform' => trim($_POST['device_platform'] ?? ''),
+        'device_type' => trim($_POST['device_type'] ?? ''),
+        'device_os' => trim($_POST['device_os'] ?? ''),
+        'device_browser' => trim($_POST['device_browser'] ?? '')
+    ];
     
     if (empty($username) || empty($password)) {
         $error = 'Please enter username and password.';
@@ -92,6 +100,7 @@ if ($_POST) {
                 // Store pending 2FA verification in session
                 $_SESSION['pending_2fa_user_id'] = $result['user']['id'];
                 $_SESSION['pending_2fa_user'] = $result['user'];
+                $_SESSION['pending_device'] = $devicePayload;
 
                 // Clear the logged in session temporarily
                 unset($_SESSION['user']);
@@ -103,15 +112,19 @@ if ($_POST) {
 
             // No 2FA required, proceed with normal login
             $deviceInfo = detect_device_info($_SERVER['HTTP_USER_AGENT'] ?? '');
+            $deviceLabel = build_device_label($devicePayload, $_SERVER['HTTP_USER_AGENT'] ?? '');
             Logger::getInstance()->logUserAction(
                 'User Login',
                 'login_sessions',
                 null,
                 null,
                 [
-                    'device_type' => $deviceInfo['device_type'],
-                    'os' => $deviceInfo['os'],
-                    'browser' => $deviceInfo['browser']
+                    'device_label' => $deviceLabel,
+                    'device_type' => $devicePayload['device_type'] ?: $deviceInfo['device_type'],
+                    'os' => $devicePayload['device_os'] ?: $deviceInfo['os'],
+                    'browser' => $devicePayload['device_browser'] ?: $deviceInfo['browser'],
+                    'platform' => $devicePayload['device_platform'] ?: null,
+                    'model' => $devicePayload['device_model'] ?: null
                 ]
             );
 
@@ -322,6 +335,12 @@ login_end:
 
       <form method="POST" class="space-y-4" novalidate <?php echo $isLocked ? 'onsubmit="return false;"' : ''; ?>>
         <?php csrf_input(); ?>
+        <input type="hidden" name="device_label" id="device_label">
+        <input type="hidden" name="device_model" id="device_model">
+        <input type="hidden" name="device_platform" id="device_platform">
+        <input type="hidden" name="device_type" id="device_type">
+        <input type="hidden" name="device_os" id="device_os">
+        <input type="hidden" name="device_browser" id="device_browser">
         <div class="form-block space-y-4">
           <div class="field">
             <input id="username" name="username" type="text" autocomplete="username" class="input peer" placeholder=" " required value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>" <?php echo $isLocked ? 'disabled' : ''; ?>>
@@ -388,6 +407,114 @@ login_end:
       }
     });
   }
+
+  (function() {
+    const form = document.querySelector('form');
+    if (!form) return;
+
+    const labelInput = document.getElementById('device_label');
+    const modelInput = document.getElementById('device_model');
+    const platformInput = document.getElementById('device_platform');
+    const typeInput = document.getElementById('device_type');
+    const osInput = document.getElementById('device_os');
+    const browserInput = document.getElementById('device_browser');
+
+    function detectFromUA(ua) {
+      const lower = (ua || '').toLowerCase();
+      let deviceType = 'Desktop';
+      if (/bot|crawl|spider|slurp|bingpreview|facebookexternalhit|mediapartners-google/.test(lower)) {
+        deviceType = 'Bot';
+      } else if (/ipad|tablet|android(?!.*mobile)/.test(lower)) {
+        deviceType = 'Tablet';
+      } else if (/mobile|iphone|ipod|android.*mobile|windows phone/.test(lower)) {
+        deviceType = 'Mobile';
+      }
+
+      let os = 'Unknown';
+      if (/windows nt 11\.0/.test(lower)) os = 'Windows 11';
+      else if (/windows nt 10\.0/.test(lower)) os = 'Windows 10';
+      else if (/windows nt 6\.3/.test(lower)) os = 'Windows 8.1';
+      else if (/windows nt 6\.1/.test(lower)) os = 'Windows 7';
+      else if (/mac os x/.test(lower)) os = 'macOS';
+      else if (/android/.test(lower)) os = 'Android';
+      else if (/iphone|ipad|ipod/.test(lower)) os = 'iOS';
+      else if (/linux/.test(lower)) os = 'Linux';
+
+      let browser = 'Unknown';
+      if (/edg\//.test(lower)) browser = 'Edge';
+      else if (/chrome\/|crios\//.test(lower)) browser = 'Chrome';
+      else if (/firefox\//.test(lower)) browser = 'Firefox';
+      else if (/safari\//.test(lower) && !/chrome\/|crios\/|edg\//.test(lower)) browser = 'Safari';
+
+      let model = '';
+      const androidMatch = ua && ua.match(/Android\s[\d.]+;\s([^;]+)\sBuild/i);
+      if (androidMatch && androidMatch[1]) {
+        model = androidMatch[1].trim();
+      } else if (/iphone/.test(lower)) {
+        model = 'iPhone';
+      } else if (/ipad/.test(lower)) {
+        model = 'iPad';
+      }
+
+      return { deviceType, os, browser, model };
+    }
+
+    async function fillDeviceFields() {
+      const ua = navigator.userAgent || '';
+      const uaData = navigator.userAgentData;
+      let model = '';
+      let platform = '';
+      let deviceType = '';
+      let os = '';
+      let browser = '';
+
+      if (uaData && uaData.getHighEntropyValues) {
+        try {
+          const hints = await uaData.getHighEntropyValues(['model', 'platform', 'platformVersion', 'fullVersionList']);
+          model = hints.model || '';
+          platform = hints.platform || '';
+          if (hints.fullVersionList && hints.fullVersionList.length) {
+            const brand = hints.fullVersionList[0];
+            browser = brand.brand ? brand.brand.replace('Google ', '') : '';
+          }
+        } catch (e) {}
+      }
+
+      const fallback = detectFromUA(ua);
+      deviceType = deviceType || fallback.deviceType;
+      os = os || fallback.os;
+      browser = browser || fallback.browser;
+      model = model || fallback.model;
+      platform = platform || navigator.platform || '';
+
+      let label = '';
+      if (model && platform) {
+        label = `${model} (${platform})`;
+      } else if (model) {
+        label = model;
+      } else if (deviceType && os) {
+        label = `${deviceType} • ${os}`;
+      } else {
+        label = 'Unknown Device';
+      }
+
+      if (labelInput) labelInput.value = label;
+      if (modelInput) modelInput.value = model;
+      if (platformInput) platformInput.value = platform;
+      if (typeInput) typeInput.value = deviceType;
+      if (osInput) osInput.value = os;
+      if (browserInput) browserInput.value = browser;
+    }
+
+    form.addEventListener('submit', async function(e) {
+      if (form.dataset.deviceReady === '1') return;
+      e.preventDefault();
+      await fillDeviceFields();
+      form.dataset.deviceReady = '1';
+      form.submit();
+    });
+    fillDeviceFields();
+  })();
 
   // Handle lockout countdown
   <?php if ($isLocked): ?>

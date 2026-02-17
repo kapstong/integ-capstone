@@ -152,12 +152,14 @@ $_SESSION['user'] = [
 ];
 
 $deviceInfo = detect_device_info($_SERVER['HTTP_USER_AGENT'] ?? '');
+$deviceLabel = build_device_label([], $_SERVER['HTTP_USER_AGENT'] ?? '');
 Logger::getInstance()->logUserAction(
     'User Login',
     'login_sessions',
     null,
     null,
     [
+        'device_label' => $deviceLabel,
         'device_type' => $deviceInfo['device_type'],
         'os' => $deviceInfo['os'],
         'browser' => $deviceInfo['browser']
