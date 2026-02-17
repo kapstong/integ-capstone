@@ -229,7 +229,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function loadOutlets() {
-    fetch('../api/financials/outlets.php?action=list')
+    fetch('../../api/financials/outlets.php?action=list')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -243,7 +243,7 @@ function loadOutlets() {
 }
 
 function loadDepartments() {
-    fetch('../api/financials/departments.php?action=list')
+    fetch('../../api/financials/departments.php?action=list')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -257,7 +257,7 @@ function loadDepartments() {
 }
 
 function loadRevenueCenters() {
-    fetch('../api/financials/outlets.php?action=revenue_centers')
+    fetch('../../api/financials/outlets.php?action=revenue_centers')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -322,7 +322,7 @@ document.getElementById('addOutletForm').addEventListener('submit', function(e) 
     const data = Object.fromEntries(formData);
     data.action = 'create';
 
-    fetch('../api/financials/outlets.php', {
+    fetch('../../api/financials/outlets.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
@@ -348,7 +348,7 @@ document.getElementById('editOutletForm').addEventListener('submit', function(e)
     const data = Object.fromEntries(formData);
     data.is_active = document.getElementById('edit_is_active').checked ? 1 : 0;
 
-    fetch('../api/financials/outlets.php', {
+    fetch('../../api/financials/outlets.php', {
         method: 'PUT',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)

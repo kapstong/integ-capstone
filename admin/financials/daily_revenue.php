@@ -183,7 +183,7 @@ function setDefaultDates() {
 }
 
 function loadOutlets() {
-    fetch('../api/financials/outlets.php?action=list')
+    fetch('../../api/financials/outlets.php?action=list')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -214,7 +214,7 @@ function loadDailyRevenue() {
     if (dateTo) params.append('date_to', dateTo);
     if (outletId) params.append('outlet_id', outletId);
 
-    fetch(`../api/financials/daily_revenue.php?action=list&${params.toString()}`)
+    fetch(`../../api/financials/daily_revenue.php?action=list&${params.toString()}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -281,7 +281,7 @@ document.getElementById('dailyRevenueForm').addEventListener('submit', function(
     const data = Object.fromEntries(formData);
     data.action = 'save';
 
-    fetch('../api/financials/daily_revenue.php', {
+    fetch('../../api/financials/daily_revenue.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)

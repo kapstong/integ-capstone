@@ -22,7 +22,7 @@ header('Content-Type: application/javascript');
             }
 
             try {
-                const response = await fetch('../../api/disbursements.php', {
+                const response = await fetch('../api/disbursements.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -108,7 +108,7 @@ header('Content-Type: application/javascript');
         async function loadDisbursementReports() {
             try {
                 // Load disbursement summary
-                const response = await fetch('../../api/disbursements.php', {
+                const response = await fetch('../api/disbursements.php', {
                     credentials: 'include'
                 });
                 const disbursements = await response.json();

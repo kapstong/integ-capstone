@@ -1275,7 +1275,7 @@ $departments = [
 
         function editUser(userId) {
             // Fetch user data
-            fetch(`../superapi/users.php?action=get_user&user_id=${userId}`)
+            fetch(`../api/users.php?action=get_user&user_id=${userId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1309,14 +1309,14 @@ $departments = [
             container.innerHTML = '<div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading permissions...</div>';
 
             // Fetch all available permissions
-            fetch('../superapi/roles.php?action=permissions')
+            fetch('../api/roles.php?action=permissions')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         const allPermissions = data.permissions;
 
                         // Fetch user's current permissions
-                        fetch(`../superapi/roles.php?action=user_roles&user_id=${userId}`)
+                        fetch(`../api/roles.php?action=user_roles&user_id=${userId}`)
                             .then(response => response.json())
                             .then(userData => {
                                 const userPermissions = userData.success ? userData.permissions : [];
@@ -1371,7 +1371,7 @@ $departments = [
                 permissions: formData.getAll('permissions[]')
             };
 
-            fetch('../superapi/users.php', {
+            fetch('../api/users.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1400,7 +1400,7 @@ $departments = [
                 `Are you sure you want to delete user "${username}"? This action will soft delete the user.`,
                 async () => {
                     try {
-                        const response = await fetch('../superapi/users.php', {
+                        const response = await fetch('../api/users.php', {
                             method: 'DELETE',
                             headers: {
                                 'Content-Type': 'application/json',
