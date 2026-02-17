@@ -51,7 +51,7 @@ foreach ($manager->getAllIntegrations() as $name => $integration) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <?php include '../../includes/admin_navigation.php'; ?>
+    <?php include '../../includes/staff_navigation.php'; ?>
 
     <div class="content">
         <?php include '../../includes/global_navbar.php'; ?>

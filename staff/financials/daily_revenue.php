@@ -12,7 +12,7 @@ $auth->requireLogin();
 $auth->requirePermission('departments.view');
 
 $pageTitle = 'Daily Revenue';
-include '../../includes/admin_navigation.php';
+include '../../includes/staff_navigation.php';
 ?>
 
     <div class="content">

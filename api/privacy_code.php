@@ -30,20 +30,6 @@ set_exception_handler(function($exception) {
     exit(1);
 });
 
-// Start session safely
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-$auth = new Auth();
-ensure_api_auth($method, [
-    'GET' => 'reports.view',
-    'PUT' => 'reports.view',
-    'DELETE' => 'reports.view',
-    'POST' => 'reports.view',
-    'PATCH' => 'reports.view',
-]);
-
-}
-
 try {
     // Load required files
     if (file_exists(__DIR__ . '/../includes/auth.php')) {
@@ -55,6 +41,20 @@ try {
     if (file_exists(__DIR__ . '/../includes/mailer.php')) {
         require_once __DIR__ . '/../includes/mailer.php';
     }
+
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    $auth = new Auth();
+    ensure_api_auth($method, [
+        'GET' => 'dashboard.view',
+        'PUT' => 'dashboard.view',
+        'DELETE' => 'dashboard.view',
+        'POST' => 'dashboard.view',
+        'PATCH' => 'dashboard.view',
+    ]);
     
     // Check if user is logged in
     if (!isset($_SESSION['user'])) {

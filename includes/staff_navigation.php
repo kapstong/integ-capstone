@@ -1,12 +1,27 @@
 <?php
 /**
  * Staff Navigation Component
- * Limited sidebar navigation for staff users
+ * Permission-aware sidebar navigation for staff users
  */
+
+require_once __DIR__ . '/permissions.php';
 
 // Get current page for active state
 $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
 $currentPage = basename($scriptName);
+
+$permManager = PermissionManager::getInstance();
+if (!empty($_SESSION['user']['id'])) {
+    $permManager->loadUserPermissions($_SESSION['user']['id']);
+}
+
+function staffCan($permOrList) {
+    $pm = PermissionManager::getInstance();
+    if (is_array($permOrList)) {
+        return $pm->hasAnyPermission($permOrList);
+    }
+    return $pm->hasPermission($permOrList);
+}
 ?>
 
 <!-- Staff Sidebar Navigation -->
@@ -20,17 +35,60 @@ $currentPage = basename($scriptName);
             <i class="fas fa-tachometer-alt me-2"></i><span>Dashboard</span>
         </a>
 
-        <!-- Tasks -->
-        <a class="nav-link <?php echo ($currentPage === 'tasks.php') ? 'active' : ''; ?>" href="tasks.php">
-            <i class="fas fa-tasks me-2"></i><span>My Tasks</span>
-        </a>
+        <?php if (staffCan('tasks.view')): ?>
+            <a class="nav-link <?php echo ($currentPage === 'tasks.php') ? 'active' : ''; ?>" href="tasks.php">
+                <i class="fas fa-tasks me-2"></i><span>My Tasks</span>
+            </a>
+        <?php endif; ?>
 
-        <!-- Reports -->
-        <a class="nav-link <?php echo ($currentPage === 'reports.php') ? 'active' : ''; ?>" href="reports.php">
-            <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
-        </a>
+        <?php if (staffCan(['chart_of_accounts.view', 'bills.view', 'invoices.view'])): ?>
+            <div class="nav-item">
+                <a class="nav-link <?php echo ($currentPage === 'general_ledger.php') ? 'active' : ''; ?>" href="general_ledger.php">
+                    <i class="fas fa-book me-2"></i><span>General Ledger</span>
+                </a>
+                <i class="fas fa-chevron-right" data-bs-toggle="collapse" data-bs-target="#generalLedgerMenu"
+                   aria-expanded="false" style="cursor: pointer; color: white; padding: 5px 10px;"></i>
+                <div class="collapse" id="generalLedgerMenu">
+                    <div class="submenu">
+                        <?php if (staffCan('bills.view')): ?>
+                            <a class="nav-link <?php echo ($currentPage === 'accounts_payable.php') ? 'active' : ''; ?>" href="accounts_payable.php">
+                                <i class="fas fa-credit-card me-2"></i><span>Accounts Payable</span>
+                            </a>
+                        <?php endif; ?>
+                        <?php if (staffCan('invoices.view')): ?>
+                            <a class="nav-link <?php echo ($currentPage === 'accounts_receivable.php') ? 'active' : ''; ?>" href="accounts_receivable.php">
+                                <i class="fas fa-money-bill-wave me-2"></i><span>Accounts Receivable</span>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
 
-        <!-- Profile -->
+        <?php if (staffCan('reports.view')): ?>
+            <a class="nav-link <?php echo ($currentPage === 'reports.php') ? 'active' : ''; ?>" href="reports.php">
+                <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
+            </a>
+        <?php endif; ?>
+
+        <?php if (staffCan('disbursements.view')): ?>
+            <a class="nav-link <?php echo ($currentPage === 'disbursements.php') ? 'active' : ''; ?>" href="disbursements.php">
+                <i class="fas fa-money-check me-2"></i><span>Disbursements</span>
+            </a>
+        <?php endif; ?>
+
+        <?php if (staffCan('budgets.view')): ?>
+            <a class="nav-link <?php echo ($currentPage === 'budget_management.php') ? 'active' : ''; ?>" href="budget_management.php">
+                <i class="fas fa-chart-line me-2"></i><span>Budget Management</span>
+            </a>
+        <?php endif; ?>
+
+        <?php if (staffCan(['settings.edit', 'integrations.view'])): ?>
+            <a class="nav-link <?php echo ($currentPage === 'settings.php') ? 'active' : ''; ?>" href="settings.php">
+                <i class="fas fa-cog me-2"></i><span>Settings</span>
+            </a>
+        <?php endif; ?>
+
         <a class="nav-link <?php echo ($currentPage === 'profile.php') ? 'active' : ''; ?>" href="profile.php">
             <i class="fas fa-user me-2"></i><span>Profile</span>
         </a>

@@ -10,7 +10,7 @@ $auth->requireLogin();
 $auth->requirePermission('reports.view');
 
 $pageTitle = 'Financial Reports';
-include '../../includes/admin_navigation.php';
+include '../../includes/staff_navigation.php';
 ?>
 
 <div class="content">

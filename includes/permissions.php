@@ -35,6 +35,26 @@ class PermissionManager {
         $stmt->execute([$userId]);
         $this->userRoles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Fallback: if no roles assigned yet, derive from users.role and assign
+        if (empty($this->userRoles)) {
+            try {
+                $roleStmt = $this->db->prepare("SELECT role FROM users WHERE id = ? LIMIT 1");
+                $roleStmt->execute([$userId]);
+                $roleName = $roleStmt->fetchColumn();
+                if ($roleName) {
+                    $lookup = $this->db->prepare("SELECT id, name as role_name FROM roles WHERE name = ? LIMIT 1");
+                    $lookup->execute([$roleName]);
+                    $roleRow = $lookup->fetch(PDO::FETCH_ASSOC);
+                    if ($roleRow) {
+                        $this->assignRole($userId, $roleRow['id']);
+                        $this->userRoles = [$roleRow];
+                    }
+                }
+            } catch (Exception $e) {
+                // If fallback fails, continue without roles
+            }
+        }
+
         // Get all permissions for user's roles
         $roleIds = array_column($this->userRoles, 'role_id');
         $rolePermissions = [];

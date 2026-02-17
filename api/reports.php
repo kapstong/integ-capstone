@@ -32,6 +32,7 @@ require_once __DIR__ . '/../includes/database.php';
 require_once __DIR__ . '/../includes/logger.php';
 require_once __DIR__ . '/../includes/mailer.php';
 require_once __DIR__ . '/../includes/privacy_guard.php';
+require_once __DIR__ . '/../includes/auth.php';
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Failed to load required files: ' . $e->getMessage()]);
@@ -58,6 +59,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
+
+// Permission check for reports access
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'reports.view',
+    'POST' => 'reports.generate',
+    'PUT' => 'reports.generate',
+    'DELETE' => 'reports.generate',
+    'PATCH' => 'reports.generate',
+]);
 
 try {
     switch ($method) {
