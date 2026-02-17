@@ -44,41 +44,45 @@ $error = '';
 $lockout = $auth->checkLockout();
 $isLocked = $lockout['locked'];
 
-// Simple math captcha (session-based)
-if (empty($_SESSION['login_captcha'])) {
-    $a = random_int(1, 9);
-    $b = random_int(1, 9);
-    $_SESSION['login_captcha'] = [
-        'a' => $a,
-        'b' => $b,
-        'answer' => $a + $b
-    ];
-}
-
 if ($_POST) {
     if (!csrf_verify_request()) {
         $error = 'Invalid CSRF token. Please reload the page.';
     } else {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
-    $captchaAnswer = trim($_POST['captcha_answer'] ?? '');
+    $recaptchaResponse = trim($_POST['g-recaptcha-response'] ?? '');
     
     if (empty($username) || empty($password)) {
         $error = 'Please enter username and password.';
-    } elseif ($captchaAnswer === '' || !isset($_SESSION['login_captcha']['answer']) || (int)$captchaAnswer !== (int)$_SESSION['login_captcha']['answer']) {
+    } elseif (empty($recaptchaResponse)) {
         $error = 'Captcha verification failed. Please try again.';
-        $a = random_int(1, 9);
-        $b = random_int(1, 9);
-        $_SESSION['login_captcha'] = [
-            'a' => $a,
-            'b' => $b,
-            'answer' => $a + $b
-        ];
     } else {
+        // Verify reCAPTCHA
+        $verifyUrl = 'https://www.google.com/recaptcha/api/siteverify';
+        $verifyPayload = http_build_query([
+            'secret' => RECAPTCHA_SECRET_KEY,
+            'response' => $recaptchaResponse,
+            'remoteip' => $_SERVER['REMOTE_ADDR'] ?? ''
+        ]);
+        $verifyContext = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+                'content' => $verifyPayload,
+                'timeout' => 5
+            ]
+        ]);
+        $verifyResult = @file_get_contents($verifyUrl, false, $verifyContext);
+        $verifyData = $verifyResult ? json_decode($verifyResult, true) : null;
+
+        if (!$verifyData || empty($verifyData['success'])) {
+            $error = 'Captcha verification failed. Please try again.';
+            goto login_end;
+        }
+
         $result = $auth->login($username, $password);
 
         if ($result['success']) {
-            unset($_SESSION['login_captcha']);
             // Check if user has 2FA enabled
             require_once 'includes/two_factor_auth.php';
             $twoFA = TwoFactorAuth::getInstance();
@@ -123,6 +127,7 @@ if ($_POST) {
     }
     }
 }
+login_end:
 ?>
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
@@ -132,7 +137,8 @@ if ($_POST) {
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>ATIERA — Secure Login</title>
 <link rel="icon" href="logo2.png">
-<script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <link rel="stylesheet" href="responsive.css">
 
 <style>
@@ -291,13 +297,8 @@ if ($_POST) {
         </div>
 
         <div>
-          <label for="captcha_answer" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Captcha</label>
-          <div class="field">
-            <input id="captcha_answer" name="captcha_answer" type="text" inputmode="numeric" pattern="[0-9]*" class="input peer" placeholder=" " required <?php echo $isLocked ? 'disabled' : ''; ?>>
-            <label for="captcha_answer" class="float-label">
-              Solve: <?php echo (int)($_SESSION['login_captcha']['a'] ?? 0); ?> + <?php echo (int)($_SESSION['login_captcha']['b'] ?? 0); ?>
-            </label>
-          </div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Captcha</label>
+          <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars(RECAPTCHA_SITE_KEY); ?>"></div>
         </div>
 
         <button type="submit" class="btn" <?php echo $isLocked ? 'disabled' : ''; ?>>

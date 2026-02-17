@@ -193,10 +193,23 @@ if (getenv('CUSTOMER_SERVICE_URL')) {
     define('CUSTOMER_SERVICE_URL', '');
 }
 
-if (getenv('CUSTOMER_SERVICE_API_KEY')) {
-    define('CUSTOMER_SERVICE_API_KEY', getenv('CUSTOMER_SERVICE_API_KEY'));
+    if (getenv('CUSTOMER_SERVICE_API_KEY')) {
+        define('CUSTOMER_SERVICE_API_KEY', getenv('CUSTOMER_SERVICE_API_KEY'));
+    } else {
+        define('CUSTOMER_SERVICE_API_KEY', '');
+    }
+
+// reCAPTCHA configuration
+if (getenv('RECAPTCHA_SITE_KEY')) {
+    define('RECAPTCHA_SITE_KEY', getenv('RECAPTCHA_SITE_KEY'));
 } else {
-    define('CUSTOMER_SERVICE_API_KEY', '');
+    define('RECAPTCHA_SITE_KEY', '6LcCem4sAAAAAFLCUCDuYjF1KeD1brWJiWo3sGnI');
+}
+
+if (getenv('RECAPTCHA_SECRET_KEY')) {
+    define('RECAPTCHA_SECRET_KEY', getenv('RECAPTCHA_SECRET_KEY'));
+} else {
+    define('RECAPTCHA_SECRET_KEY', '6LcCem4sAAAAAILTWAMP9nnMMBX44oRgmKt-f3jZ');
 }
 
 // Set PHP configuration based on environment
