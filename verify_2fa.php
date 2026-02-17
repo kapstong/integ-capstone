@@ -3,6 +3,7 @@ require_once 'config.php';
 require_once 'includes/auth.php';
 require_once 'includes/csrf.php';
 require_once 'includes/two_factor_auth.php';
+require_once 'includes/device_detector.php';
 
 // Check if user is in pending 2FA verification state
 if (!isset($_SESSION['pending_2fa_user_id'])) {
@@ -63,6 +64,19 @@ if ($_POST) {
                     // Fallback if stored procedure doesn't exist yet
                     error_log("Error calling sp_log_login_session: " . $e->getMessage());
                 }
+
+                $deviceInfo = detect_device_info($_SERVER['HTTP_USER_AGENT'] ?? '');
+                Logger::getInstance()->logUserAction(
+                    'User Login',
+                    'login_sessions',
+                    null,
+                    null,
+                    [
+                        'device_type' => $deviceInfo['device_type'],
+                        'os' => $deviceInfo['os'],
+                        'browser' => $deviceInfo['browser']
+                    ]
+                );
 
                 // Redirect based on role
                 $role = strtolower($user['role_name'] ?? '');

@@ -2,6 +2,7 @@
 require_once 'config.php';
 require_once 'includes/database.php';
 require_once 'includes/logger.php';
+require_once 'includes/device_detector.php';
 
 session_start();
 
@@ -34,12 +35,18 @@ if ($userId) {
             $stmt->execute([$logoutType, $userId]);
 
             // Log to audit trail
+            $deviceInfo = detect_device_info($_SERVER['HTTP_USER_AGENT'] ?? '');
             Logger::getInstance()->logUserAction(
                 'User Logout',
                 'login_sessions',
                 null,
                 null,
-                ['logout_type' => $logoutType]
+                [
+                    'logout_type' => $logoutType,
+                    'device_type' => $deviceInfo['device_type'],
+                    'os' => $deviceInfo['os'],
+                    'browser' => $deviceInfo['browser']
+                ]
             );
         }
     } catch (Exception $e) {

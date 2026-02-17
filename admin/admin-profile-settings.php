@@ -2,6 +2,7 @@
 $pageTitle = 'Profile Settings';
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
+require_once '../includes/device_detector.php';
 
 if (!isset($_SESSION['user'])) {
     header('Location: ../index.php');
@@ -20,6 +21,21 @@ try {
 } catch (Exception $e) {
     error_log("Error fetching user data: " . $e->getMessage());
     $user = $_SESSION['user'];
+}
+
+$activityLogs = [];
+try {
+    $stmt = $db->prepare("
+        SELECT action, ip_address, user_agent, created_at
+        FROM audit_log
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT 50
+    ");
+    $stmt->execute([$user_id]);
+    $activityLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $activityLogs = [];
 }
 
 // Handle form submission for profile update
@@ -658,6 +674,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <button type="button" class="btn btn-outline-primary">
                                 <i class="fas fa-mobile-alt me-2"></i>Enable 2FA
                             </button>
+
+                            <hr class="my-4">
+
+                            <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3">
+                                <div>
+                                    <h6 class="text-primary fw-bold mb-1" style="color: #1b2f73 !important;">Activity Log</h6>
+                                    <small class="text-muted">View recent sign-ins and security-related activity.</small>
+                                </div>
+                                <button type="button" class="btn btn-outline-secondary ms-md-auto" data-bs-toggle="modal" data-bs-target="#activityLogModal">
+                                    <i class="fas fa-history me-2"></i>Activity Log
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -734,6 +762,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
 
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="activityLogModal" tabindex="-1" aria-labelledby="activityLogModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="activityLogModalLabel"><i class="fas fa-history me-2"></i>Activity Log</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <?php if (empty($activityLogs)): ?>
+                        <div class="alert alert-info mb-0">No activity logs found yet.</div>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Action</th>
+                                        <th>Device</th>
+                                        <th>IP Address</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($activityLogs as $log): ?>
+                                        <?php
+                                            $deviceInfo = detect_device_info($log['user_agent'] ?? '');
+                                            $deviceLabel = $deviceInfo['device_type'];
+                                            $deviceDetail = trim($deviceInfo['os'] . ' • ' . $deviceInfo['browser']);
+                                        ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars(date('M j, Y g:i A', strtotime($log['created_at']))); ?></td>
+                                            <td><?php echo htmlspecialchars($log['action']); ?></td>
+                                            <td>
+                                                <div class="fw-semibold"><?php echo htmlspecialchars($deviceLabel ?: 'Unknown'); ?></div>
+                                                <small class="text-muted"><?php echo htmlspecialchars($deviceDetail ?: 'Unknown'); ?></small>
+                                            </td>
+                                            <td><?php echo htmlspecialchars($log['ip_address'] ?? ''); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>

@@ -2,6 +2,7 @@
 require_once 'config.php';
 require_once 'includes/auth.php';
 require_once 'includes/csrf.php';
+require_once 'includes/device_detector.php';
 $auth = new Auth();
 
 // Initialize variables
@@ -101,6 +102,19 @@ if ($_POST) {
             }
 
             // No 2FA required, proceed with normal login
+            $deviceInfo = detect_device_info($_SERVER['HTTP_USER_AGENT'] ?? '');
+            Logger::getInstance()->logUserAction(
+                'User Login',
+                'login_sessions',
+                null,
+                null,
+                [
+                    'device_type' => $deviceInfo['device_type'],
+                    'os' => $deviceInfo['os'],
+                    'browser' => $deviceInfo['browser']
+                ]
+            );
+
             // Route users based on their role
             $role = strtolower($result['user']['role_name'] ?? '');
             if ($role === 'super_admin') {

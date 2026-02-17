@@ -6,6 +6,7 @@ require "connections.php";
 require_once '../includes/permissions.php';
 require_once '../includes/logger.php';
 require_once '../includes/cache.php';
+require_once '../includes/device_detector.php';
 session_start();
 
 if (!isset($_GET['token'])) die("Token missing");
@@ -149,6 +150,19 @@ $_SESSION['user'] = [
     'department' => $user['department'] ?? '',
     'phone' => $user['phone'] ?? ''
 ];
+
+$deviceInfo = detect_device_info($_SERVER['HTTP_USER_AGENT'] ?? '');
+Logger::getInstance()->logUserAction(
+    'User Login',
+    'login_sessions',
+    null,
+    null,
+    [
+        'device_type' => $deviceInfo['device_type'],
+        'os' => $deviceInfo['os'],
+        'browser' => $deviceInfo['browser']
+    ]
+);
 
 $permManager = PermissionManager::getInstance();
 $permManager->loadUserPermissions($user['id']);
