@@ -782,7 +782,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <thead>
                                     <tr>
                                         <th>Date</th>
-                                        <th>Action</th>
                                         <th>Device</th>
                                         <th>IP Address</th>
                                     </tr>
@@ -806,7 +805,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         ?>
                                         <tr>
                                             <td><?php echo htmlspecialchars(date('M j, Y g:i A', strtotime($log['created_at']))); ?></td>
-                                            <td><?php echo htmlspecialchars($log['action']); ?></td>
                                             <td>
                                                 <div class="fw-semibold"><?php echo htmlspecialchars($deviceLabel ?: 'Unknown'); ?></div>
                                                 <small class="text-muted"><?php echo htmlspecialchars($deviceDetail ?: 'Unknown'); ?></small>
