@@ -78,6 +78,7 @@ $csrfToken = csrf_token();
     </div>
 </nav>
 <meta name="csrf-token" content="<?php echo htmlspecialchars($csrfToken); ?>">
+<script src="../includes/inactivity_timeout.js?v=4"></script>
 <script>
     (function() {
         const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');

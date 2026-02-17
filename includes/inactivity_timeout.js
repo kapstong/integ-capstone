@@ -5,6 +5,10 @@
 
 (function() {
     'use strict';
+    if (window.__atieraInactivityTimeoutInit) {
+        return;
+    }
+    window.__atieraInactivityTimeoutInit = true;
 
     // Configuration
     const TIMEOUT_DURATION = 2 * 60 * 1000; // 2 minutes in milliseconds
