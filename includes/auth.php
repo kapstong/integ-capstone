@@ -175,7 +175,7 @@ class Auth {
         try {
             // Get user from database
             $stmt = $this->db->query(
-                "SELECT id, username, password_hash, email, full_name, role, status, last_login
+                "SELECT id, username, password_hash, email, first_name, last_name, full_name, role, status, last_login, department, phone
                  FROM users
                  WHERE username = ? AND status = 'active'",
                 [$username]
@@ -184,13 +184,22 @@ class Auth {
             $user = $stmt->fetch();
 
             if ($user && password_verify($password, $user['password_hash'])) {
+                $firstName = trim($user['first_name'] ?? '');
+                $lastName = trim($user['last_name'] ?? '');
+                $computedFullName = trim($firstName . ' ' . $lastName);
+                $fullName = $computedFullName ?: ($user['full_name'] ?? '');
+                $fullName = trim($fullName);
+
                 // Successful login
                 $_SESSION['user'] = [
                     'id' => $user['id'],
                     'username' => $user['username'],
                     'role_name' => $user['role'],
                     'role' => $user['role'],
-                    'name' => $user['full_name'],
+                    'name' => $fullName ?: $user['username'],
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'full_name' => $fullName,
                     'email' => $user['email'],
                     'department' => $user['department'] ?? '',
                     'phone' => $user['phone'] ?? ''

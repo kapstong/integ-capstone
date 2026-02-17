@@ -117,7 +117,7 @@ if (empty($payload['email'])) {
 }
 
 $stmt = $conn->prepare("
-    SELECT u.id, u.username, u.email, u.full_name, u.role,
+    SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.full_name, u.role,
            u.department, u.phone, u.status
     FROM users u
     WHERE u.email = ? AND u.status = 'active'
@@ -130,12 +130,21 @@ if (!$user) {
     die("User not found or inactive");
 }
 
+$firstName = trim($user['first_name'] ?? '');
+$lastName = trim($user['last_name'] ?? '');
+$computedFullName = trim($firstName . ' ' . $lastName);
+$fullName = $computedFullName ?: ($user['full_name'] ?? '');
+$fullName = trim($fullName);
+
 $_SESSION['user'] = [
     'id' => $user['id'],
     'username' => $user['username'],
     'role_name' => $user['role'],
     'role' => $user['role'],
-    'name' => $user['full_name'],
+    'name' => $fullName ?: $user['username'],
+    'first_name' => $firstName,
+    'last_name' => $lastName,
+    'full_name' => $fullName,
     'email' => $user['email'],
     'department' => $user['department'] ?? '',
     'phone' => $user['phone'] ?? ''
