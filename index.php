@@ -278,7 +278,7 @@ login_end:
   <main class="w-full max-w-lg md:ml-28 md:mr-0 md:pr-4 self-center">
     <div id="card" class="card p-6 sm:p-8 reveal relative">
       <div class="card-ornament" aria-hidden="true">
-        <span class="text-sm font-extrabold" style="color:var(--gold)">A</span>
+        <img src="atieralogo2.png" alt="" style="width:26px;height:26px;object-fit:contain;">
       </div>
       <div class="flex items-center justify-between mb-4">
         <div class="md:hidden flex items-center gap-3">
