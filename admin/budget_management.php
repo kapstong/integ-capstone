@@ -1350,6 +1350,116 @@ function getVarianceStatusBadge(variancePercent) {
         }
 
     let currentAllocations = [];
+    let currentAlerts = [];
+
+    function showAlert(message, type = 'info') {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        document.body.appendChild(alertDiv);
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+
+    async function loadAlerts() {
+        try {
+            const response = await fetch('../api/budgets.php?action=alerts');
+            const data = await response.json();
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            currentAlerts = data.alerts || [];
+            renderAlertsTable();
+            updateAlertsCards();
+            showThresholdToast();
+        } catch (error) {
+            console.error('Error loading alerts:', error);
+            showAlert('Error loading alerts: ' + error.message, 'danger');
+        }
+    }
+
+    function renderAlertsTable() {
+        const tbody = document.getElementById('alertsTableBody');
+        if (!tbody) {
+            return;
+        }
+        tbody.innerHTML = '';
+        if (currentAlerts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No budget alerts at this time.</td></tr>';
+            return;
+        }
+        const filterValue = document.getElementById('alertsFilter')?.value || 'all';
+        let filteredAlerts = currentAlerts;
+        if (filterValue !== 'all') {
+            filteredAlerts = currentAlerts.filter(alert => alert.severity === filterValue);
+        }
+        filteredAlerts.forEach(alert => {
+            const severityClass = {
+                'red': 'bg-danger text-white',
+                'orange': 'bg-warning text-dark',
+                'light_orange': 'bg-warning text-dark',
+                'yellow': 'bg-warning text-dark'
+            }[alert.severity] || 'bg-secondary';
+
+            const row = `
+                <tr>
+                    <td><strong>${alert.department}</strong></td>
+                    <td>${alert.budget_year}</td>
+                    <td>PHP ${parseFloat(alert.budgeted_amount).toLocaleString()}</td>
+                    <td>PHP ${parseFloat(alert.utilized_amount).toLocaleString()}</td>
+                    <td>${parseFloat(alert.utilization_percent).toFixed(1)}%</td>
+                    <td class="variance-positive">PHP ${parseFloat(alert.over_amount).toLocaleString()}</td>
+                    <td><span class="badge ${severityClass}">${alert.severity_label || alert.severity}</span></td>
+                    <td>${alert.alert_date}</td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    }
+
+    function updateAlertsCards() {
+        const redCount = currentAlerts.filter(a => a.severity === 'red').length;
+        const orangeCount = currentAlerts.filter(a => a.severity === 'orange').length;
+        const lightOrangeCount = currentAlerts.filter(a => a.severity === 'light_orange').length;
+        const yellowCount = currentAlerts.filter(a => a.severity === 'yellow').length;
+
+        const redEl = document.getElementById('redCount');
+        const orangeEl = document.getElementById('orangeCount');
+        const lightOrangeEl = document.getElementById('lightOrangeCount');
+        const yellowEl = document.getElementById('yellowCount');
+
+        if (redEl) redEl.textContent = redCount;
+        if (orangeEl) orangeEl.textContent = orangeCount;
+        if (lightOrangeEl) lightOrangeEl.textContent = lightOrangeCount;
+        if (yellowEl) yellowEl.textContent = yellowCount;
+    }
+
+    function showThresholdToast() {
+        if (!currentAlerts.length) {
+            return;
+        }
+        const severityPriority = { red: 4, orange: 3, light_orange: 2, yellow: 1 };
+        const topAlert = currentAlerts.reduce((best, alert) => {
+            if (!best) return alert;
+            return (severityPriority[alert.severity] || 0) > (severityPriority[best.severity] || 0) ? alert : best;
+        }, null);
+
+        if (!topAlert) {
+            return;
+        }
+
+        const message = `${topAlert.department} is at ${parseFloat(topAlert.utilization_percent).toFixed(1)}% of budget (${topAlert.severity_label || topAlert.severity}).`;
+        const alertType = topAlert.severity === 'red' ? 'danger' : (topAlert.severity === 'orange' ? 'warning' : 'info');
+        showAlert(message, alertType);
+    }
 
     function getAllocationStatusKey(progressPercent) {
         if (progressPercent >= 100) return 'red';
@@ -1596,10 +1706,15 @@ function getVarianceStatusBadge(variancePercent) {
     document.addEventListener('DOMContentLoaded', () => {
         loadAllocations();
         loadHr3Claims();
+        loadAlerts();
         const allocationSearch = document.getElementById('allocationSearch');
         if (allocationSearch) allocationSearch.addEventListener('input', () => { renderAllocationsTable(); updateAllocationSummary(); });
         const allocationStatusFilter = document.getElementById('allocationStatusFilter');
         if (allocationStatusFilter) allocationStatusFilter.addEventListener('change', () => { renderAllocationsTable(); updateAllocationSummary(); });
+        const alertsFilter = document.getElementById('alertsFilter');
+        if (alertsFilter) {
+            alertsFilter.addEventListener('change', () => { renderAlertsTable(); });
+        }
         loadTrackingData();
     });
 </script>
