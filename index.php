@@ -291,7 +291,6 @@ login_end:
         <button id="modeBtn" class="px-3 py-2 rounded-lg border border-slate-200 text-sm hover:bg-white/60 dark:hover:bg-slate-800" aria-pressed="false" title="Toggle dark mode">🌓</button>
       </div>
 
-      <div class="card-header-pill mb-3">SECURE ACCESS</div>
       <h3 class="text-lg sm:text-xl font-semibold mb-1">Sign in</h3>
       <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Use your credentials to continue.</p>
 
