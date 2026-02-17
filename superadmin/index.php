@@ -128,21 +128,6 @@ try {
         ];
     }
 
-    // Financial Health Score (improved calculation)
-    $healthScore = 0;
-    if ($totalIncome > 0) {
-        $profitMargin = ($netProfit / $totalIncome) * 100;
-        $liquidityRatio = $totalPayables > 0 ? ($cashBalance / $totalPayables) * 100 : 0;
-        $receivablesRatio = $totalReceivables > 0 ? ($totalIncome / $totalReceivables) : 0;
-
-        // Weighted score: 40% profit margin, 30% liquidity, 30% receivables turnover
-        $healthScore = min(100, max(0,
-            ($profitMargin * 0.4) +
-            (min(100, $liquidityRatio) * 0.3) +
-            (min(100, $receivablesRatio * 10) * 0.3)
-        ));
-    }
-
     // Invoice statistics
     $totalInvoices = $db->query("SELECT COUNT(*) as count FROM invoices")->fetch()['count'];
     $paidInvoices = $db->query("SELECT COUNT(*) as count FROM invoices WHERE status = 'paid'")->fetch()['count'];
@@ -243,7 +228,6 @@ try {
     $recentTransactions = [];
     $chartData = [];
     $cashFlowData = [];
-    $healthScore = 0;
     $totalInvoices = 0;
     $paidInvoices = 0;
     $overdueInvoices = 0;
@@ -870,14 +854,11 @@ body {
                                 </div>
                                 <p class="mb-4" style="color: #6c757d; font-size: 1.1rem; line-height: 1.6;">
                                     Your comprehensive financial management platform. Track income, monitor expenses,
-                                    generate reports, and make informed business decisions with real-time insights.
+                                    make informed business decisions with real-time insights.
                                 </p>
                                 <div class="d-flex flex-wrap gap-3 justify-content-center justify-content-lg-start">
                                     <button class="btn btn-primary btn-lg px-4" onclick="window.location.href='accounts_receivable.php'">
                                         <i class="fas fa-plus me-2"></i>Add Invoice
-                                    </button>
-                                    <button class="btn btn-outline-primary btn-lg px-4" onclick="window.location.href='reports.php'">
-                                        <i class="fas fa-chart-bar me-2"></i>View Reports
                                     </button>
                                     <button class="btn btn-outline-success btn-lg px-4" onclick="showQuickActionsModal()">
                                         <i class="fas fa-cog me-2"></i>Financial Setup
@@ -940,9 +921,6 @@ body {
                                 <a class="nav-link" id="analytics-tab" data-bs-toggle="tab" href="#analytics" role="tab" aria-controls="analytics" aria-selected="false"><i class="fas fa-chart-line me-1"></i>Analytics</a>
                             </li>
 
-                            <li class="nav-item">
-                                <a class="nav-link" id="reports-tab" data-bs-toggle="tab" href="#reports" role="tab" aria-controls="reports" aria-selected="false"><i class="fas fa-chart-bar me-1"></i>Reports</a>
-                            </li>
                         </ul>
                     </div>
                     <div class="card-body">
@@ -1055,42 +1033,6 @@ body {
                                     </div>
                                 </div>
 
-                                <!-- Financial Health Indicator -->
-                                <div class="row">
-                                    <div class="col-12">
-                                        <div class="card">
-                                            <div class="card-header d-flex align-items-center">
-                                                <i class="fas fa-heartbeat text-danger me-3 fa-lg"></i>
-                                                <div>
-                                                    <h6 class="mb-0">Financial Health</h6>
-                                                    <small class="text-muted">Overall business performance indicator</small>
-                                                </div>
-                                            </div>
-                                            <div class="card-body">
-                                                <div class="row align-items-center">
-                                                    <div class="col-md-8">
-                                                        <div class="progress" style="height: 20px;">
-                                                            <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $healthScore; ?>%" aria-valuenow="<?php echo $healthScore; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-                                                        </div>
-                                                        <small class="text-muted mt-1 d-block">Health Score: <?php echo round($healthScore, 1); ?>/100</small>
-                                                    </div>
-                                                    <div class="col-md-4 text-center">
-                                                        <h4 class="text-<?php echo $healthScore >= 70 ? 'success' : ($healthScore >= 40 ? 'warning' : 'danger'); ?> mb-0"><?php echo round($healthScore, 1); ?>%</h4>
-                                                        <small class="text-muted">
-                                                            <?php if ($healthScore >= 70): ?>
-                                                                Excellent Health
-                                                            <?php elseif ($healthScore >= 40): ?>
-                                                                Good Health
-                                                            <?php else: ?>
-                                                                Needs Attention
-                                                            <?php endif; ?>
-                                                        </small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                             <!-- Analytics Tab -->
                             <div class="tab-pane fade" id="analytics" role="tabpanel" aria-labelledby="analytics-tab" style="padding-bottom: 100px;">
@@ -1223,47 +1165,6 @@ body {
                                 </div>
                             </div>
 
-                                            <!-- Reports Tab -->
-                            <div class="tab-pane fade" id="reports" role="tabpanel" aria-labelledby="reports-tab" style="padding-bottom: 100px;">
-                                <div class="row g-3">
-                                    <div class="col-6">
-                                        <a href="accounts_receivable.php" class="btn btn-outline-primary btn-lg w-100 d-flex flex-column align-items-center justify-content-center p-3" style="height: 110px; border-radius: 12px;">
-                                            <i class="fas fa-money-bill-wave fa-2x mb-2"></i>
-                                            <span class="small fw-bold">Accounts<br>Receivable</span>
-                                        </a>
-                                    </div>
-                                    <div class="col-6">
-                                        <a href="accounts_payable.php" class="btn btn-outline-success btn-lg w-100 d-flex flex-column align-items-center justify-content-center p-3" style="height: 110px; border-radius: 12px;">
-                                            <i class="fas fa-credit-card fa-2x mb-2"></i>
-                                            <span class="small fw-bold">Accounts<br>Payable</span>
-                                        </a>
-                                    </div>
-                                    <div class="col-6">
-                                        <a href="disbursements.php" class="btn btn-outline-info btn-lg w-100 d-flex flex-column align-items-center justify-content-center p-3" style="height: 110px; border-radius: 12px;">
-                                            <i class="fas fa-money-check fa-2x mb-2"></i>
-                                            <span class="small fw-bold">Disbursements</span>
-                                        </a>
-                                    </div>
-                                    <div class="col-6">
-                                        <a href="budget_management.php" class="btn btn-outline-warning btn-lg w-100 d-flex flex-column align-items-center justify-content-center p-3" style="height: 110px; border-radius: 12px;">
-                                            <i class="fas fa-chart-line fa-2x mb-2"></i>
-                                            <span class="small fw-bold">Budget<br>Management</span>
-                                        </a>
-                                    </div>
-                                    <div class="col-6">
-                                        <a href="reports.php" class="btn btn-outline-secondary btn-lg w-100 d-flex flex-column align-items-center justify-content-center p-3" style="height: 110px; border-radius: 12px;">
-                                            <i class="fas fa-chart-bar fa-2x mb-2"></i>
-                                            <span class="small fw-bold">Reports</span>
-                                        </a>
-                                    </div>
-                                    <div class="col-6">
-                                        <a href="general_ledger.php" class="btn btn-outline-dark btn-lg w-100 d-flex flex-column align-items-center justify-content-center p-3" style="height: 110px; border-radius: 12px;">
-                                            <i class="fas fa-book fa-2x mb-2"></i>
-                                            <span class="small fw-bold">General<br>Ledger</span>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
