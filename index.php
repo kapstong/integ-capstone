@@ -238,7 +238,7 @@ if ($_POST) {
     </div>
   </section>
 
-  <main class="w-full max-w-lg md:ml-0 md:mr-auto md:pr-8">
+  <main class="w-full max-w-lg md:ml-28 md:mr-0 md:pr-4">
     <div id="card" class="card p-6 sm:p-8 reveal">
       <div class="flex items-center justify-between mb-4">
         <div class="md:hidden flex items-center gap-3">
