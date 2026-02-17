@@ -474,8 +474,9 @@ login_end:
           model = hints.model || '';
           platform = hints.platform || '';
           if (hints.fullVersionList && hints.fullVersionList.length) {
-            const brand = hints.fullVersionList[0];
-            browser = brand.brand ? brand.brand.replace('Google ', '') : '';
+            const preferred = hints.fullVersionList.find(item => item.brand && !/not.a.brand|not a brand/i.test(item.brand))
+              || hints.fullVersionList[0];
+            browser = preferred && preferred.brand ? preferred.brand.replace('Google ', '') : '';
           }
         } catch (e) {}
       }
@@ -483,7 +484,9 @@ login_end:
       const fallback = detectFromUA(ua);
       deviceType = deviceType || fallback.deviceType;
       os = os || fallback.os;
-      browser = browser || fallback.browser;
+      if (!browser || /not.a.brand|not a brand/i.test(browser)) {
+        browser = fallback.browser;
+      }
       model = model || fallback.model;
       platform = platform || navigator.platform || '';
 
