@@ -188,3 +188,6 @@ function handleDeleteCustomer($db, $id) {
 
 
 
+
+<?php include '../includes/csrf_auto_form.php'; ?>
+

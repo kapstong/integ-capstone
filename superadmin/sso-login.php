@@ -4,6 +4,8 @@ ini_set('display_errors', 1);
 
 require "connections.php";
 require_once '../includes/permissions.php';
+require_once '../includes/logger.php';
+require_once '../includes/cache.php';
 session_start();
 
 if (!isset($_GET['token'])) die("Token missing");
@@ -83,15 +85,28 @@ if (isset($payload['exp']) && is_numeric($payload['exp']) && (int)$payload['exp'
         $exp = (int)floor($exp / 1000);
     }
     $payload['exp'] = $exp;
-    if ($exp < time()) {
-        die("Token expired");
-    }
+if ($exp < time()) {
+    die("Token expired");
+}
 }
 
 // department validation
 if ($payload['dept'] !== 'FIN1') {
     die("Invalid department access");
 }
+
+// Prevent token replay (best-effort)
+$cache = CacheManager::getInstance();
+$tokenFingerprint = hash('sha256', $signature . '|' . $payloadJson);
+$cacheKey = 'sso_token:' . $tokenFingerprint;
+if ($cache->exists($cacheKey)) {
+    die("Token already used");
+}
+$ttl = 600;
+if (isset($payload['exp']) && is_numeric($payload['exp']) && (int)$payload['exp'] > 0) {
+    $ttl = max(60, (int)$payload['exp'] - time());
+}
+$cache->set($cacheKey, 1, $ttl);
 
 // create normal session (match login flow)
 session_regenerate_id(true);
@@ -119,6 +134,7 @@ $_SESSION['user'] = [
     'id' => $user['id'],
     'username' => $user['username'],
     'role_name' => $user['role'],
+    'role' => $user['role'],
     'name' => $user['full_name'],
     'email' => $user['email'],
     'department' => $user['department'] ?? '',

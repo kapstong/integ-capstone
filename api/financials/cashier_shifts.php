@@ -9,6 +9,15 @@ require_once '../../../includes/logger.php';
 
 header('Content-Type: application/json');
 session_start();
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => ['cashier.operate', 'cashier.view_all'],
+    'PUT' => 'cashier.operate',
+    'DELETE' => 'cashier.operate',
+    'POST' => 'cashier.operate',
+    'PATCH' => 'cashier.operate',
+]);
+
 
 if (!isset($_SESSION['user'])) {
     http_response_code(401);
@@ -155,4 +164,5 @@ function closeShift($db, $data) {
     echo json_encode(['success' => true, 'id' => $data['id']]);
 }
 ?>
+
 

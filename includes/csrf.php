@@ -13,6 +13,9 @@ function regenerate_csrf_token() {
 
 function csrf_verify_request() {
     $token = $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? '';
+    if (empty($token)) {
+        $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($_SERVER['HTTP_X_XSRF_TOKEN'] ?? '');
+    }
     $session_token = $_SESSION['csrf_token'] ?? '';
 
     if (empty($token) || empty($session_token)) {

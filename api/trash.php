@@ -42,6 +42,15 @@ require_once '../includes/logger.php';
 // Start session safely
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'settings.edit',
+    'PUT' => 'settings.edit',
+    'DELETE' => 'settings.edit',
+    'POST' => 'settings.edit',
+    'PATCH' => 'settings.edit',
+]);
+
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -312,3 +321,4 @@ try {
 
 ob_end_flush();
 ?>
+

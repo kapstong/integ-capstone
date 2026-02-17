@@ -495,3 +495,6 @@ setInterval(() => {
 <?php include 'legacy_footer.php'; ?>
 
 
+
+<?php include '../includes/csrf_auto_form.php'; ?>
+

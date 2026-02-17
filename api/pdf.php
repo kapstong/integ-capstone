@@ -11,6 +11,11 @@ require_once '../includes/privacy_guard.php';
 
 header('Content-Type: application/json');
 session_start();
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'reports.view',
+]);
+
 
 // Check if user is logged in
 if (!isset($_SESSION['user'])) {
@@ -249,4 +254,5 @@ function generateCustomReportPDF($pdfGenerator, $reportData) {
     }
 }
 ?>
+
 

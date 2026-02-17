@@ -9,6 +9,15 @@ require_once '../../../includes/logger.php';
 
 header('Content-Type: application/json');
 session_start();
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'departments.view',
+    'PUT' => 'departments.manage',
+    'DELETE' => 'departments.manage',
+    'POST' => 'departments.manage',
+    'PATCH' => 'departments.manage',
+]);
+
 
 if (!isset($_SESSION['user'])) {
     http_response_code(401);
@@ -252,4 +261,5 @@ function updateDailyRevenueSummary($db, $businessDate, $outletId) {
     ]);
 }
 ?>
+
 

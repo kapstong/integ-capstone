@@ -168,6 +168,14 @@ class PermissionManager {
      */
     public function createRole($name, $description = '') {
         try {
+            // Return existing role if already present
+            $stmt = $this->db->prepare("SELECT id FROM roles WHERE name = ? LIMIT 1");
+            $stmt->execute([$name]);
+            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($existing) {
+                return ['success' => true, 'role_id' => $existing['id'], 'message' => 'Role already exists'];
+            }
+
             $stmt = $this->db->prepare("
                 INSERT INTO roles (name, description, created_at) VALUES (?, ?, NOW())
             ");
@@ -186,6 +194,14 @@ class PermissionManager {
      */
     public function createPermission($name, $description = '') {
         try {
+            // Return existing permission if already present
+            $stmt = $this->db->prepare("SELECT id FROM permissions WHERE name = ? LIMIT 1");
+            $stmt->execute([$name]);
+            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($existing) {
+                return ['success' => true, 'permission_id' => $existing['id'], 'message' => 'Permission already exists'];
+            }
+
             $stmt = $this->db->prepare("
                 INSERT INTO permissions (name, description, created_at) VALUES (?, ?, NOW())
             ");
@@ -391,7 +407,58 @@ class PermissionManager {
 
                 // Role management
                 ['name' => 'roles.view', 'description' => 'View roles and permissions'],
-                ['name' => 'roles.manage', 'description' => 'Manage roles and permissions']
+                ['name' => 'roles.manage', 'description' => 'Manage roles and permissions'],
+
+                // Dashboard and admin utilities
+                ['name' => 'dashboard.view', 'description' => 'View dashboard'],
+                ['name' => 'admin.view', 'description' => 'View admin utilities'],
+                ['name' => 'admin.api_clients', 'description' => 'Manage API clients'],
+                ['name' => 'tasks.view', 'description' => 'View tasks'],
+
+                // Departments and cashier
+                ['name' => 'departments.view', 'description' => 'View departments'],
+                ['name' => 'departments.manage', 'description' => 'Manage departments'],
+                ['name' => 'cashier.operate', 'description' => 'Operate cashier'],
+                ['name' => 'cashier.view_all', 'description' => 'View all cashier shifts'],
+
+                // Financial records/journal aliases used by APIs
+                ['name' => 'view_financial_records', 'description' => 'View financial records'],
+                ['name' => 'create_journal_entries', 'description' => 'Create journal entries (alias)'],
+                ['name' => 'edit_journal_entries', 'description' => 'Edit journal entries (alias)'],
+                ['name' => 'delete_journal_entries', 'description' => 'Delete journal entries (alias)'],
+                ['name' => 'manage_users', 'description' => 'Manage users (alias)'],
+
+                // Additional core modules
+                ['name' => 'bank_accounts.view', 'description' => 'View bank accounts'],
+                ['name' => 'bank_accounts.create', 'description' => 'Create bank accounts'],
+                ['name' => 'bank_accounts.edit', 'description' => 'Edit bank accounts'],
+                ['name' => 'bank_accounts.delete', 'description' => 'Delete bank accounts'],
+                ['name' => 'budgets.view', 'description' => 'View budgets'],
+                ['name' => 'budgets.create', 'description' => 'Create budgets'],
+                ['name' => 'budgets.edit', 'description' => 'Edit budgets'],
+                ['name' => 'budgets.delete', 'description' => 'Delete budgets'],
+                ['name' => 'fixed_assets.view', 'description' => 'View fixed assets'],
+                ['name' => 'fixed_assets.create', 'description' => 'Create fixed assets'],
+                ['name' => 'fixed_assets.edit', 'description' => 'Edit fixed assets'],
+                ['name' => 'fixed_assets.delete', 'description' => 'Delete fixed assets'],
+                ['name' => 'disbursements.view', 'description' => 'View disbursements'],
+                ['name' => 'disbursements.create', 'description' => 'Create disbursements'],
+                ['name' => 'disbursements.edit', 'description' => 'Edit disbursements'],
+                ['name' => 'disbursements.delete', 'description' => 'Delete disbursements'],
+                ['name' => 'tax_codes.view', 'description' => 'View tax codes'],
+                ['name' => 'tax_codes.create', 'description' => 'Create tax codes'],
+                ['name' => 'tax_codes.edit', 'description' => 'Edit tax codes'],
+                ['name' => 'tax_codes.delete', 'description' => 'Delete tax codes'],
+                ['name' => 'currencies.view', 'description' => 'View currencies'],
+                ['name' => 'currencies.create', 'description' => 'Create currencies'],
+                ['name' => 'currencies.edit', 'description' => 'Edit currencies'],
+                ['name' => 'currencies.delete', 'description' => 'Delete currencies'],
+                ['name' => 'chart_of_accounts.view', 'description' => 'View chart of accounts'],
+                ['name' => 'chart_of_accounts.create', 'description' => 'Create chart of accounts'],
+                ['name' => 'chart_of_accounts.edit', 'description' => 'Edit chart of accounts'],
+                ['name' => 'chart_of_accounts.delete', 'description' => 'Delete chart of accounts'],
+                ['name' => 'integrations.view', 'description' => 'View integrations'],
+                ['name' => 'integrations.manage', 'description' => 'Manage integrations']
             ];
 
             $permissionIds = [];
@@ -413,7 +480,20 @@ class PermissionManager {
                     'bills.view', 'bills.create', 'bills.edit',
                     'payments.view', 'payments.create', 'payments.edit',
                     'reports.view', 'reports.generate',
-                    'files.view', 'files.upload', 'files.download'
+                    'files.view', 'files.upload', 'files.download',
+                    'dashboard.view',
+                    'tasks.view',
+                    'departments.view',
+                    'cashier.operate',
+                    'view_financial_records',
+                    'bank_accounts.view',
+                    'budgets.view', 'budgets.create', 'budgets.edit',
+                    'fixed_assets.view',
+                    'disbursements.view', 'disbursements.create',
+                    'tax_codes.view',
+                    'currencies.view',
+                    'chart_of_accounts.view',
+                    'integrations.view'
                 ]
             ];
 

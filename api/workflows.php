@@ -9,6 +9,15 @@ require_once '../includes/workflow.php';
 
 header('Content-Type: application/json');
 session_start();
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'settings.edit',
+    'PUT' => 'settings.edit',
+    'DELETE' => 'settings.edit',
+    'POST' => 'settings.edit',
+    'PATCH' => 'settings.edit',
+]);
+
 
 // Check if user is logged in
 if (!isset($_SESSION['user'])) {
@@ -396,4 +405,5 @@ try {
     echo json_encode(['success' => false, 'error' => 'Internal server error']);
 }
 ?>
+
 

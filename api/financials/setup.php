@@ -9,6 +9,15 @@ require_once '../../../includes/logger.php';
 
 header('Content-Type: application/json');
 session_start();
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'settings.edit',
+    'PUT' => 'settings.edit',
+    'DELETE' => 'settings.edit',
+    'POST' => 'settings.edit',
+    'PATCH' => 'settings.edit',
+]);
+
 
 if (!isset($_SESSION['user'])) {
     http_response_code(401);
@@ -98,4 +107,5 @@ function seedOutlets($db) {
     }
 }
 ?>
+
 

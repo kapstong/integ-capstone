@@ -42,25 +42,38 @@ require_once '../includes/logger.php';
 // Start session safely
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'users.view',
+    'PUT' => 'users.edit',
+    'DELETE' => 'users.delete',
+    'POST' => 'users.create',
+    'PATCH' => 'users.edit',
+]);
+
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
-if ($method !== 'GET') {
-    // Check if user is logged in and has admin privileges
-    if (!isset($_SESSION['user'])) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Unauthorized - Session not found']);
-        ob_end_flush();
-        exit;
-    }
+if (!isset($_SESSION['user'])) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Unauthorized - Session not found']);
+    ob_end_flush();
+    exit;
+}
 
-    // Check if user has admin role or permission to manage users
-    $auth = new Auth();
-    if (!$auth->hasRole('admin') && !$auth->hasRole('super_admin') && !$auth->hasPermission('manage_users')) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Forbidden - Insufficient privileges']);
-        exit;
-    }
+$auth = new Auth();
+$permissionMap = [
+    'GET' => 'users.view',
+    'POST' => 'users.create',
+    'PUT' => 'users.edit',
+    'PATCH' => 'users.edit',
+    'DELETE' => 'users.delete'
+];
+$requiredPermission = $permissionMap[$method] ?? null;
+if ($requiredPermission && !$auth->hasRole('admin') && !$auth->hasRole('super_admin') && !$auth->hasPermission($requiredPermission)) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Forbidden - Insufficient privileges']);
+    exit;
 }
 ?>
 
@@ -337,3 +350,4 @@ try {
 
 ob_end_flush();
 ?>
+

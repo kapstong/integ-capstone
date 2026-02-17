@@ -2,9 +2,12 @@
 require_once __DIR__ . '/database.php';
 require_once __DIR__ . '/permissions.php';
 require_once __DIR__ . '/logger.php';
+require_once __DIR__ . '/csrf.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+// Ensure CSRF token exists for the session.
+csrf_token();
 
 if (!isset($_SESSION['privacy_unlocked'])) {
     $_SESSION['privacy_unlocked'] = false;
@@ -13,11 +16,124 @@ if (!isset($_SESSION['privacy_visible'])) {
     $_SESSION['privacy_visible'] = false;
 }
 
+// Ensure RBAC defaults are present (idempotent).
+if (!isset($_SESSION['rbac_defaults_initialized'])) {
+    try {
+        PermissionManager::getInstance()->initializeDefaults();
+    } catch (Exception $e) {
+        // If initialization fails, continue without blocking requests.
+    }
+    $_SESSION['rbac_defaults_initialized'] = true;
+}
+
+// Enforce CSRF protection for state-changing web requests (non-API).
+$scriptPath = $_SERVER['PHP_SELF'] ?? '';
+$isApiRequest = strpos($scriptPath, '/api/') !== false || strpos($scriptPath, '\\api\\') !== false;
+$method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+$isStateChanging = in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true);
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+if (!$isApiRequest && $isStateChanging && !empty($_SESSION['user']['id'])) {
+    if (!csrf_verify_request()) {
+        if ($isAjax) {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'error' => 'Invalid CSRF token']);
+            exit;
+        }
+        header('Location: ' . $_SERVER['REQUEST_URI'] . '?error=csrf_invalid');
+        exit;
+    }
+}
+
+// Enforce API permissions for internal API endpoints.
+if ($isApiRequest && !empty($_SESSION['user']['id'])) {
+    $scriptPathLower = strtolower($scriptPath);
+    $isExternalApi = strpos($scriptPathLower, '/api/v1/') !== false || strpos($scriptPathLower, '\\api\\v1\\') !== false
+        || strpos($scriptPathLower, '/api/oauth/') !== false || strpos($scriptPathLower, '\\api\\oauth\\') !== false;
+
+    if (!$isExternalApi) {
+        $fileBase = strtolower(pathinfo($scriptPath, PATHINFO_FILENAME));
+
+        $methodToAction = [
+            'GET' => 'view',
+            'POST' => 'create',
+            'PUT' => 'edit',
+            'PATCH' => 'edit',
+            'DELETE' => 'delete'
+        ];
+
+        $specialPermissions = [
+            'financial_records' => [
+                'GET' => 'view_financial_records',
+                'POST' => 'create_journal_entries',
+                'PUT' => 'edit_journal_entries',
+                'PATCH' => 'edit_journal_entries',
+                'DELETE' => 'delete_journal_entries'
+            ],
+            'dashboard' => [
+                'GET' => 'dashboard.view',
+                'POST' => 'settings.edit',
+                'PUT' => 'settings.edit',
+                'PATCH' => 'settings.edit',
+                'DELETE' => 'settings.edit'
+            ]
+        ];
+
+        $resourceMap = [
+            'customers' => 'customers',
+            'vendors' => 'vendors',
+            'invoices' => 'invoices',
+            'bills' => 'bills',
+            'payments' => 'payments',
+            'journal_entries' => 'journal',
+            'reports' => 'reports',
+            'users' => 'users',
+            'roles' => 'roles',
+            'upload' => 'files',
+            'backups' => 'settings',
+            'workflows' => 'settings',
+            'currencies' => 'currencies',
+            'tax_codes' => 'tax_codes',
+            'bank_accounts' => 'bank_accounts',
+            'budgets' => 'budgets',
+            'fixed_assets' => 'fixed_assets',
+            'disbursements' => 'disbursements',
+            'chart_of_accounts' => 'chart_of_accounts',
+            'integrations' => 'integrations',
+            'audit' => 'audit'
+        ];
+
+        $requiredPermission = null;
+        if (isset($specialPermissions[$fileBase])) {
+            $requiredPermission = $specialPermissions[$fileBase][$method] ?? null;
+        } elseif (isset($resourceMap[$fileBase]) && isset($methodToAction[$method])) {
+            $requiredPermission = $resourceMap[$fileBase] . '.' . $methodToAction[$method];
+        }
+
+        if ($requiredPermission) {
+            $permManager = PermissionManager::getInstance();
+            if (empty($_SESSION['user']['permissions'])) {
+                $permManager->loadUserPermissions($_SESSION['user']['id']);
+                $_SESSION['user']['permissions'] = $permManager->getUserPermissions();
+                $_SESSION['user']['roles'] = $permManager->getUserRoles();
+            }
+            $roleName = $_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? '');
+            $isAdmin = in_array($roleName, ['admin', 'super_admin'], true) || $permManager->hasRole('admin') || $permManager->hasRole('super_admin');
+
+            if (!$isAdmin && !$permManager->hasPermission($requiredPermission)) {
+                http_response_code(403);
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'error' => 'Forbidden - insufficient permissions']);
+                exit;
+            }
+        }
+    }
+}
+
 // Log page views for authenticated users (non-API, non-AJAX requests)
 if (!empty($_SESSION['user']['id'])) {
-    $scriptPath = $_SERVER['PHP_SELF'] ?? '';
-    $isApi = strpos($scriptPath, '/api/') !== false || strpos($scriptPath, '\\api\\') !== false;
-    $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    $isApi = $isApiRequest;
 
     if (!$isApi && !$isAjax && stripos($scriptPath, '.php') !== false) {
         require_once __DIR__ . '/privacy_output_mask.php';
@@ -73,6 +189,7 @@ class Auth {
                     'id' => $user['id'],
                     'username' => $user['username'],
                     'role_name' => $user['role'],
+                    'role' => $user['role'],
                     'name' => $user['full_name'],
                     'email' => $user['email'],
                     'department' => $user['department'] ?? '',
@@ -360,7 +477,7 @@ class Auth {
     }
 
     private function isAdminUser() {
-        $roleName = $_SESSION['user']['role_name'] ?? '';
+        $roleName = $_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? '');
         if (in_array($roleName, ['admin', 'super_admin'], true)) {
             return true;
         }
@@ -368,7 +485,7 @@ class Auth {
     }
 
     private function getRoleBasedRedirectUrl($queryString = '') {
-        $roleName = $_SESSION['user']['role_name'] ?? '';
+        $roleName = $_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? '');
         switch ($roleName) {
             case 'super_admin':
                 return '/superadmin/index.php' . $queryString;
@@ -380,6 +497,38 @@ class Auth {
                 return '/staff/index.php' . $queryString;
         }
     }
+}
+
+function ensure_api_auth($method, array $permissionMap, Auth $auth = null) {
+    if (!isset($_SESSION['user'])) {
+        http_response_code(401);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Unauthorized']);
+        exit;
+    }
+
+    $auth = $auth ?? new Auth();
+    $permission = $permissionMap[$method] ?? null;
+    if (!$permission) {
+        return;
+    }
+
+    if ($auth->hasRole('admin') || $auth->hasRole('super_admin')) {
+        return;
+    }
+
+    if (is_array($permission)) {
+        if ($auth->hasAnyPermission($permission)) {
+            return;
+        }
+    } elseif ($auth->hasPermission($permission)) {
+        return;
+    }
+
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Forbidden - Insufficient privileges']);
+    exit;
 }
 ?>
 

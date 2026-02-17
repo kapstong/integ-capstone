@@ -88,7 +88,7 @@ class DashboardManager {
                 'description' => 'Budget vs actual spending comparison',
                 'category' => 'budget',
                 'size' => 'medium',
-                'permissions' => ['budget.view'],
+                'permissions' => ['budgets.view'],
                 'refresh_interval' => 3600, // 1 hour
                 'default_config' => ['show_variance' => true, 'period' => 'current_year']
             ],
@@ -382,9 +382,10 @@ class DashboardManager {
             $permissions = [$permissions];
         }
 
-        $auth = new Auth();
+        $permManager = PermissionManager::getInstance();
+        $permManager->loadUserPermissions($userId);
         foreach ($permissions as $permission) {
-            if ($auth->hasPermission($permission, $userId)) {
+            if ($permManager->hasPermission($permission)) {
                 return true;
             }
         }

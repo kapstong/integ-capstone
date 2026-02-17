@@ -716,7 +716,7 @@ try {
                         <h5 class="mb-0">Customer Records</h5>
                         <?php
                         $allowedRoles = ['core1', 'core2', 'customer_admin'];
-                        $userRole = $_SESSION['user']['role'] ?? null;
+                        $userRole = $_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? null);
                         $userDept = $_SESSION['user']['department'] ?? null;
                         if (in_array($userRole, $allowedRoles) || in_array($userDept, ['core1', 'core2'])): ?>
                             <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCustomerModal">

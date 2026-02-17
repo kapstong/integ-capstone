@@ -14,6 +14,15 @@ if (!isset($_SESSION['user'])) {
 
 $db = Database::getInstance();
 $method = $_SERVER['REQUEST_METHOD'];
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'currencies.view',
+    'PUT' => 'currencies.edit',
+    'DELETE' => 'currencies.delete',
+    'POST' => 'currencies.create',
+    'PATCH' => 'currencies.edit',
+]);
+
 $userId = $_SESSION['user']['id'];
 
 try {
@@ -156,3 +165,6 @@ try {
     echo json_encode(['success' => false, 'error' => 'Database error occurred']);
 }
 ?>
+
+
+

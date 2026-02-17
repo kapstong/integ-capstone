@@ -636,3 +636,6 @@ document.getElementById('workflowTrigger').addEventListener('change', function()
 <?php include 'legacy_footer.php'; ?>
 
 
+
+<?php include '../includes/csrf_auto_form.php'; ?>
+

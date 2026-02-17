@@ -38,6 +38,15 @@ require_once '../includes/logger.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'audit.view',
+    'PUT' => 'audit.view',
+    'DELETE' => 'audit.view',
+    'POST' => 'audit.view',
+    'PATCH' => 'audit.view',
+]);
+
 }
 
 if (!isset($_SESSION['user'])) {
@@ -466,4 +475,5 @@ try {
 
 ob_end_flush();
 ?>
+
 

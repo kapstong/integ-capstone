@@ -42,6 +42,15 @@ require_once '../includes/logger.php';
 // Start session safely
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'view_financial_records',
+    'PUT' => 'edit_journal_entries',
+    'DELETE' => 'delete_journal_entries',
+    'POST' => 'create_journal_entries',
+    'PATCH' => 'edit_journal_entries',
+]);
+
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -532,4 +541,5 @@ try {
 
 ob_end_flush();
 ?>
+
 

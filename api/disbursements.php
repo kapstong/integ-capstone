@@ -43,6 +43,15 @@ require_once '../includes/coa_validation.php';
 // Start session safely
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'disbursements.view',
+    'PUT' => 'disbursements.edit',
+    'DELETE' => 'disbursements.delete',
+    'POST' => 'disbursements.create',
+    'PATCH' => 'disbursements.edit',
+]);
+
 }
 
 // Check if user is logged in
@@ -894,3 +903,4 @@ function updateBillPaymentStatus($db, $billId, $paymentAmount) {
 
 ob_end_flush();
 ?>
+

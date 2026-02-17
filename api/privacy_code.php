@@ -33,6 +33,15 @@ set_exception_handler(function($exception) {
 // Start session safely
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'reports.view',
+    'PUT' => 'reports.view',
+    'DELETE' => 'reports.view',
+    'POST' => 'reports.view',
+    'PATCH' => 'reports.view',
+]);
+
 }
 
 try {
@@ -252,3 +261,4 @@ function maskEmail($email) {
 
 ob_end_flush();
 ?>
+

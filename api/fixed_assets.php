@@ -14,6 +14,15 @@ if (!isset($_SESSION['user'])) {
 
 $db = Database::getInstance();
 $method = $_SERVER['REQUEST_METHOD'];
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'fixed_assets.view',
+    'PUT' => 'fixed_assets.edit',
+    'DELETE' => 'fixed_assets.delete',
+    'POST' => 'fixed_assets.create',
+    'PATCH' => 'fixed_assets.edit',
+]);
+
 $userId = $_SESSION['user']['id'];
 
 try {
@@ -283,3 +292,6 @@ function generateDepreciationEntries($db) {
     }
 }
 ?>
+
+
+

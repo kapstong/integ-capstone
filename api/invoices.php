@@ -15,6 +15,15 @@ if (!isset($_SESSION['user'])) {
 
 $db = Database::getInstance();
 $method = $_SERVER['REQUEST_METHOD'];
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'invoices.view',
+    'PUT' => 'invoices.edit',
+    'DELETE' => 'invoices.delete',
+    'POST' => 'invoices.create',
+    'PATCH' => 'invoices.edit',
+]);
+
 $userId = $_SESSION['user']['id'];
 
 try {
@@ -558,4 +567,7 @@ function generateAgingReport($db) {
     }
 }
 ?>
+
+
+
 

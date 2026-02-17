@@ -15,6 +15,15 @@ if (!isset($_SESSION['user'])) {
 
 $db = Database::getInstance();
 $method = $_SERVER['REQUEST_METHOD'];
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'payments.view',
+    'PUT' => 'payments.edit',
+    'DELETE' => 'payments.delete',
+    'POST' => 'payments.create',
+    'PATCH' => 'payments.edit',
+]);
+
 $userId = $_SESSION['user']['id'];
 
 try {
@@ -531,3 +540,6 @@ function processPayment($db, $template, $description) {
     );
 }
 ?>
+
+
+

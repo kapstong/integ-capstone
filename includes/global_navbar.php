@@ -24,11 +24,13 @@ $settingsLink = $isUserArea ? 'settings.php' : 'settings.php';
 
 // Get user role for display
 require_once '../includes/permissions.php';
+require_once __DIR__ . '/csrf.php';
 $permManager = PermissionManager::getInstance();
 $permManager->loadUserPermissions($_SESSION['user']['id']);
 $userRoles = $permManager->getUserRoles();
 $userRoleDisplay = !empty($userRoles) ? $userRoles[0]['role_name'] : 'User';
 $userRoleDisplay = ucwords(str_replace('_', ' ', $userRoleDisplay));
+$csrfToken = csrf_token();
 ?>
 <style>
     .navbar-date-time {
@@ -73,3 +75,23 @@ $userRoleDisplay = ucwords(str_replace('_', ' ', $userRoleDisplay));
         </div>
     </div>
 </nav>
+<meta name="csrf-token" content="<?php echo htmlspecialchars($csrfToken); ?>">
+<script>
+    (function() {
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (!token) return;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('form').forEach(form => {
+                const method = (form.getAttribute('method') || 'GET').toUpperCase();
+                if (method === 'GET') return;
+                if (form.querySelector('input[name="csrf_token"]')) return;
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'csrf_token';
+                input.value = token;
+                form.appendChild(input);
+            });
+        });
+    })();
+</script>

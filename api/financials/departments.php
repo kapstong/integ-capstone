@@ -11,6 +11,15 @@ require_once '../../../includes/coa_validation.php';
 
 header('Content-Type: application/json');
 session_start();
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'departments.view',
+    'PUT' => 'departments.manage',
+    'DELETE' => 'departments.manage',
+    'POST' => 'departments.manage',
+    'PATCH' => 'departments.manage',
+]);
+
 
 // Check authentication
 if (!isset($_SESSION['user'])) {
@@ -475,4 +484,5 @@ function hasDepartmentEmailColumn($db) {
     }
 }
 ?>
+
 

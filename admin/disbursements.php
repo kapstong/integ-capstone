@@ -20,7 +20,8 @@ $deptPermissions = [
 
 // Department-based access control (permissive approach)
 $userPerms = isset($deptPermissions[$userDepartment]) ? $deptPermissions[$userDepartment] : ['view']; // Default view access
-$hasAdminRole = isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'admin';
+$roleName = $_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? '');
+$hasAdminRole = $roleName === 'admin';
 
 // Allow access by default - department restrictions should not block viewing
 // Only restrict very specific operations, not the entire module access

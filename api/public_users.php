@@ -1,9 +1,6 @@
 <?php
 /**
- * Public API - List Users
- * 
- * This is a public endpoint that returns a list of users with basic information.
- * No authentication is required for this endpoint.
+ * Users API - List Users (Authenticated)
  * 
  * @method GET
  * @response JSON array of users
@@ -12,7 +9,7 @@
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
 // Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -30,8 +27,29 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 try {
-    // Include database connection
+    require_once(__DIR__ . '/../includes/auth.php');
     require_once(__DIR__ . '/../includes/database.php');
+
+    if (!isset($_SESSION['user'])) {
+        http_response_code(401);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Unauthorized'
+        ]);
+        exit;
+    }
+
+    $auth = new Auth();
+    if (!$auth->hasRole('admin') && !$auth->hasRole('super_admin') && !$auth->hasPermission('users.view')) {
+        http_response_code(403);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Forbidden'
+        ]);
+        exit;
+    }
+
+    $db = Database::getInstance()->getConnection();
     
     // Optional: Get query parameters for filtering/pagination
     $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -61,7 +79,7 @@ try {
     $query .= " ORDER BY created_at DESC LIMIT ? OFFSET ?";
     
     // Get total count
-    $countStmt = $pdo->prepare($countQuery);
+    $countStmt = $db->prepare($countQuery);
     if (!empty($search)) {
         $countStmt->execute([$searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm]);
     } else {
@@ -71,7 +89,7 @@ try {
     $total = $totalResult['total'];
     
     // Get paginated results
-    $stmt = $pdo->prepare($query);
+    $stmt = $db->prepare($query);
     if (!empty($search)) {
         $stmt->execute([$searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm, $limit, $offset]);
     } else {
@@ -103,3 +121,6 @@ try {
     error_log('Public Users API Error: ' . $e->getMessage());
 }
 ?>
+
+
+

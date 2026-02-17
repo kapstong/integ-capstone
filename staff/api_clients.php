@@ -305,3 +305,6 @@ function deleteClient(clientId, clientName) {
 <?php require_once 'templates/footer.php'; ?>
 
 
+
+<?php include '../includes/csrf_auto_form.php'; ?>
+

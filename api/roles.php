@@ -27,6 +27,15 @@ if (!$auth->hasRole('admin') && !$auth->hasRole('super_admin') && !$auth->hasPer
 
 $userId = $auth->getCurrentUser()['id'];
 $method = $_SERVER['REQUEST_METHOD'];
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'roles.view',
+    'PUT' => 'roles.manage',
+    'DELETE' => 'roles.manage',
+    'POST' => 'roles.manage',
+    'PATCH' => 'roles.manage',
+]);
+
 
 $permManager = PermissionManager::getInstance();
 
@@ -399,3 +408,6 @@ try {
     echo json_encode(['success' => false, 'error' => 'Internal server error']);
 }
 ?>
+
+
+

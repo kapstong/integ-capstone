@@ -40,6 +40,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'journal.view',
+    'PUT' => 'journal.edit',
+    'DELETE' => 'journal.edit',
+    'POST' => 'journal.create',
+    'PATCH' => 'journal.edit',
+]);
+
 
 try {
     switch ($method) {
@@ -654,4 +663,7 @@ function applyAdjustmentToSource($db, $data, $isPayable, $reverse) {
     }
 }
 ?>
+
+
+
 

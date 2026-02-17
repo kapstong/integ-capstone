@@ -9,6 +9,15 @@ require_once '../includes/dashboard.php';
 
 header('Content-Type: application/json');
 session_start();
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'dashboard.view',
+    'PUT' => 'settings.edit',
+    'DELETE' => 'settings.edit',
+    'POST' => 'settings.edit',
+    'PATCH' => 'settings.edit',
+]);
+
 
 // Check if user is logged in
 if (!isset($_SESSION['user'])) {
@@ -330,4 +339,5 @@ function generateCheckboxField($name, $label, $checked = false) {
     return $html;
 }
 ?>
+
 

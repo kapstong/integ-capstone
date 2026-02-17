@@ -26,6 +26,15 @@ try {
 
     $db = Database::getInstance()->getConnection();
     $method = $_SERVER['REQUEST_METHOD'];
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'customers.view',
+    'POST' => 'customers.create',
+    'PUT' => 'customers.edit',
+    'PATCH' => 'customers.edit',
+    'DELETE' => 'customers.delete',
+]);
+
 } catch (Exception $e) {
     // Catch any errors from includes or database connection
     error_log("API initialization error: " . $e->getMessage());
@@ -121,7 +130,7 @@ try {
 
             // No central service configured: enforce role/department restriction
             $allowedRoles = ['core1', 'core2', 'customer_admin'];
-            $userRole = $_SESSION['user']['role'] ?? null;
+            $userRole = $_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? null);
             $userDept = $_SESSION['user']['department'] ?? null;
 
             if (!in_array($userRole, $allowedRoles) && !in_array($userDept, ['core1', 'core2'])) {
@@ -243,4 +252,5 @@ try {
     echo json_encode(['success' => false, 'error' => 'Database error occurred']);
 }
 ?>
+
 

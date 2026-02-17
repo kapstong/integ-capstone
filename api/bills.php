@@ -40,6 +40,15 @@ require_once '../includes/coa_validation.php';
 
 $db = Database::getInstance();
 $method = $_SERVER['REQUEST_METHOD'];
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'bills.view',
+    'PUT' => 'bills.edit',
+    'DELETE' => 'bills.delete',
+    'POST' => 'bills.create',
+    'PATCH' => 'bills.edit',
+]);
+
 $userId = $_SESSION['user']['id'];
 
 try {
@@ -794,4 +803,7 @@ function postBillJournalEntry($db, $billId, $subtotal, $taxAmount) {
         [$entryId, $totalAmount]
     );
 }
+
+
+
 

@@ -8,6 +8,15 @@ header('Content-Type: application/json');
 // Only start session if not already started (handles AJAX calls)
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'journal.view',
+    'PUT' => 'journal.edit',
+    'DELETE' => 'journal.edit',
+    'POST' => 'journal.create',
+    'PATCH' => 'journal.edit',
+]);
+
 }
 
 // Check if user is logged in
@@ -144,4 +153,5 @@ try {
     echo json_encode(['success' => false, 'error' => 'Database error occurred']);
 }
 ?>
+
 

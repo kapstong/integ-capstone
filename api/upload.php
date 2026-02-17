@@ -10,6 +10,15 @@ require_once '../includes/logger.php';
 
 header('Content-Type: application/json');
 session_start();
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'files.view',
+    'PUT' => 'files.upload',
+    'DELETE' => 'files.delete',
+    'POST' => 'files.upload',
+    'PATCH' => 'files.upload',
+]);
+
 
 // Check if user is logged in
 if (!isset($_SESSION['user'])) {
@@ -142,7 +151,8 @@ try {
                 echo json_encode(['success' => true, 'stats' => $stats]);
             } else {
                 // Get all files (admin only)
-                if (!in_array($_SESSION['user']['role'] ?? 'staff', ['admin', 'super_admin'], true)) {
+                $roleName = $_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? 'staff');
+                if (!in_array($roleName, ['admin', 'super_admin'], true)) {
                     http_response_code(403);
                     echo json_encode(['error' => 'Access denied']);
                     exit;
@@ -181,7 +191,8 @@ try {
             }
 
             // Check permissions (user can only delete their own files, admin can delete any)
-            if (!in_array($_SESSION['user']['role'] ?? 'staff', ['admin', 'super_admin'], true) && $file['uploaded_by'] != $userId) {
+            $roleName = $_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? 'staff');
+            if (!in_array($roleName, ['admin', 'super_admin'], true) && $file['uploaded_by'] != $userId) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'error' => 'Access denied']);
                 exit;
@@ -217,4 +228,5 @@ try {
     echo json_encode(['success' => false, 'error' => 'Internal server error']);
 }
 ?>
+
 
