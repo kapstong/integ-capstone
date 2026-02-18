@@ -4,6 +4,13 @@ require_once '../includes/auth.php';
 require_once '../includes/database.php';
 require_once '../includes/device_detector.php';
 
+$debugProfile = isset($_GET['debug']) && $_GET['debug'] === '1';
+if ($debugProfile) {
+    ini_set('display_errors', '1');
+    ini_set('display_startup_errors', '1');
+    error_reporting(E_ALL);
+}
+
 $qrFeatureAvailable = true;
 $qrCodesPath = __DIR__ . '/../includes/qr_codes.php';
 $mailerPath = __DIR__ . '/../includes/mailer.php';
