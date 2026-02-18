@@ -577,6 +577,17 @@ function ensure_api_auth($method, array $permissionMap, Auth $auth = null) {
         return;
     }
 
+    $roleName = strtolower((string) ($_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? '')));
+    if ($method === 'GET' && $roleName === 'staff') {
+        $viewPerms = is_array($permission) ? $permission : [$permission];
+        foreach ($viewPerms as $perm) {
+            $endsWithView = is_string($perm) && substr($perm, -5) === '.view';
+            if ($perm === 'dashboard.view' || $perm === 'view_financial_records' || $endsWithView) {
+                return;
+            }
+        }
+    }
+
     http_response_code(403);
     header('Content-Type: application/json');
     echo json_encode(['error' => 'Forbidden - Insufficient privileges']);
