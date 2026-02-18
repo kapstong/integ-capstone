@@ -83,16 +83,6 @@ function staffCan($permOrList) {
             </a>
         <?php endif; ?>
 
-        <?php if (staffCan(['settings.edit', 'integrations.view'])): ?>
-            <a class="nav-link <?php echo ($currentPage === 'settings.php') ? 'active' : ''; ?>" href="settings.php">
-                <i class="fas fa-cog me-2"></i><span>Settings</span>
-            </a>
-        <?php endif; ?>
-
-        <a class="nav-link <?php echo ($currentPage === 'profile.php') ? 'active' : ''; ?>" href="profile.php">
-            <i class="fas fa-user me-2"></i><span>Profile</span>
-        </a>
-
         <!-- Logout -->
         <a class="nav-link text-danger" href="../logout.php">
             <i class="fas fa-sign-out-alt me-2"></i><span>Logout</span>

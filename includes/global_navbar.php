@@ -32,6 +32,9 @@ $permManager->loadUserPermissions($_SESSION['user']['id']);
 $userRoles = $permManager->getUserRoles();
 $userRoleDisplay = !empty($userRoles) ? $userRoles[0]['role_name'] : 'User';
 $userRoleDisplay = ucwords(str_replace('_', ' ', $userRoleDisplay));
+$roleNames = array_column($userRoles, 'role_name');
+$isAdminRole = in_array('admin', $roleNames, true) || in_array('super_admin', $roleNames, true);
+$canViewSettings = $isAdminRole || $permManager->hasPermission('settings.view') || $permManager->hasPermission('roles.view');
 $csrfToken = csrf_token();
 ?>
 <style>
@@ -63,7 +66,9 @@ $csrfToken = csrf_token();
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                     <li><a class="dropdown-item" href="<?php echo htmlspecialchars($profileLink); ?>"><i class="fas fa-user me-2"></i>Profile Settings</a></li>
-                    <li><a class="dropdown-item" href="<?php echo htmlspecialchars($settingsLink); ?>"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                    <?php if ($canViewSettings): ?>
+                        <li><a class="dropdown-item" href="<?php echo htmlspecialchars($settingsLink); ?>"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>

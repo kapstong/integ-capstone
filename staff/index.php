@@ -1,5 +1,6 @@
 <?php
 require_once '../includes/auth.php';
+require_once '../includes/permissions.php';
 
 if (!isset($_SESSION['user'])) {
     header('Location: ../index.php');
@@ -8,6 +9,9 @@ if (!isset($_SESSION['user'])) {
 
 // Initialize database connection for staff-specific data
 $db = Database::getInstance()->getConnection();
+$permManager = PermissionManager::getInstance();
+$permManager->loadUserPermissions($_SESSION['user']['id']);
+$canViewBudgets = $permManager->hasPermission('budgets.view') || $permManager->hasRole('admin') || $permManager->hasRole('super_admin');
 
 // Fetch staff dashboard metrics
 try {
@@ -40,6 +44,111 @@ try {
     $stmt->execute();
     $annualBudgetTotal = (float)$stmt->fetch()['total'];
 
+    // Chart data - Revenue vs Expenses for last 6 months
+    $chartData = [];
+    for ($i = 5; $i >= 0; $i--) {
+        $month = date('Y-m', strtotime("-$i months"));
+        $monthStart = $month . '-01';
+        $monthEnd = date('Y-m-t', strtotime($monthStart));
+
+        $stmt = $db->prepare("SELECT COALESCE(SUM(amount), 0) as total FROM payments_received WHERE payment_date BETWEEN ? AND ?");
+        $stmt->execute([$monthStart, $monthEnd]);
+        $revenue = $stmt->fetch()['total'];
+        $stmt = $db->prepare("SELECT COALESCE(SUM(amount), 0) as total FROM payments_made WHERE payment_date BETWEEN ? AND ?");
+        $stmt->execute([$monthStart, $monthEnd]);
+        $expenses = $stmt->fetch()['total'];
+
+        $chartData[] = [
+            'month' => date('M Y', strtotime($monthStart)),
+            'revenue' => (float)$revenue,
+            'expenses' => (float)$expenses
+        ];
+    }
+
+    // Collections vs Disbursements (monthly for last 6 months)
+    $cashFlowData = [];
+    for ($i = 5; $i >= 0; $i--) {
+        $month = date('Y-m', strtotime("-$i months"));
+        $monthStart = $month . '-01';
+        $monthEnd = date('Y-m-t', strtotime($monthStart));
+
+        $stmt = $db->prepare("SELECT COALESCE(SUM(amount), 0) as total FROM payments_received WHERE payment_date BETWEEN ? AND ?");
+        $stmt->execute([$monthStart, $monthEnd]);
+        $collections = $stmt->fetch()['total'];
+        $stmt = $db->prepare("SELECT COALESCE(SUM(amount), 0) as total FROM payments_made WHERE payment_date BETWEEN ? AND ?");
+        $stmt->execute([$monthStart, $monthEnd]);
+        $disbursements = $stmt->fetch()['total'];
+
+        $cashFlowData[] = [
+            'month' => date('M Y', strtotime($monthStart)),
+            'collections' => (float)$collections,
+            'disbursements' => (float)$disbursements
+        ];
+    }
+
+    // Budget vs Actual data for last 6 months
+    $budgetActualData = [];
+    for ($i = 5; $i >= 0; $i--) {
+        $month = date('Y-m', strtotime("-$i months"));
+        $monthStart = $month . '-01';
+        $monthEnd = date('Y-m-t', strtotime($monthStart));
+
+        $stmt = $db->prepare("
+            SELECT COALESCE(SUM(bi.budgeted_amount / 12), 0) as budgeted
+            FROM budget_items bi
+            JOIN budgets b ON bi.budget_id = b.id
+            WHERE b.budget_year = YEAR(?) AND bi.category_id IN (
+                SELECT id FROM budget_categories WHERE category_type = 'expense'
+            )
+        ");
+        $stmt->execute([$monthStart]);
+        $budgetQuery = $stmt->fetch()['budgeted'];
+
+        $stmt = $db->prepare("
+            SELECT COALESCE(SUM(amount), 0) as actual
+            FROM payments_made
+            WHERE payment_date BETWEEN ? AND ?
+        ");
+        $stmt->execute([$monthStart, $monthEnd]);
+        $actualQuery = $stmt->fetch()['actual'];
+
+        $budgetActualData[] = [
+            'month' => date('M Y', strtotime($monthStart)),
+            'budgeted' => (float)$budgetQuery,
+            'actual' => (float)$actualQuery
+        ];
+    }
+
+    // Income source breakdown data (hotel/restaurant outlets)
+    $incomeSourceData = $db->query("
+        SELECT
+            CASE o.outlet_type
+                WHEN 'rooms' THEN 'Rooms'
+                WHEN 'restaurant' THEN 'Restaurant'
+                WHEN 'bar' THEN 'Bar'
+                WHEN 'banquet' THEN 'Banquet & Events'
+                WHEN 'spa' THEN 'Spa & Wellness'
+                ELSE 'Other Services'
+            END as source,
+            SUM(ods.net_sales) as amount
+        FROM outlet_daily_sales ods
+        JOIN outlets o ON ods.outlet_id = o.id
+        WHERE YEAR(ods.business_date) = YEAR(CURDATE())
+        GROUP BY o.outlet_type
+    ")->fetchAll();
+
+    $incomeLabels = [];
+    $incomeAmounts = [];
+    foreach ($incomeSourceData as $item) {
+        $incomeLabels[] = $item['source'];
+        $incomeAmounts[] = (float)$item['amount'];
+    }
+
+    if (empty($incomeLabels)) {
+        $incomeLabels = ['Rooms', 'Restaurant', 'Bar', 'Banquet & Events', 'Spa & Wellness', 'Other Services'];
+        $incomeAmounts = [0, 0, 0, 0, 0, 0];
+    }
+
 } catch (Exception $e) {
     Logger::getInstance()->logDatabaseError('Staff dashboard metrics calculation', $e->getMessage());
 
@@ -47,6 +156,11 @@ try {
     $completedThisWeekCount = 0;
     $recentTasks = [];
     $annualBudgetTotal = 0;
+    $chartData = [];
+    $cashFlowData = [];
+    $budgetActualData = [];
+    $incomeLabels = ['Rooms', 'Restaurant', 'Bar', 'Banquet & Events', 'Spa & Wellness', 'Other Services'];
+    $incomeAmounts = [0, 0, 0, 0, 0, 0];
 }
 
 ?>
@@ -1128,9 +1242,12 @@ body {
         }
 
         document.addEventListener('DOMContentLoaded', function(){
+            const canViewBudgets = <?php echo json_encode($canViewBudgets ?? false); ?>;
             const btn = document.getElementById('refreshForecastBtn');
-            if (btn) btn.addEventListener('click', loadDashboardForecast);
-            loadDashboardForecast();
+            if (btn && canViewBudgets) btn.addEventListener('click', loadDashboardForecast);
+            if (canViewBudgets) {
+                loadDashboardForecast();
+            }
         });
     </script>
     <script>
@@ -1188,12 +1305,18 @@ body {
             }
 
             // Chart data from PHP
-            const chartData = <?php echo json_encode($chartData); ?>;
-            const cashFlowData = <?php echo json_encode($cashFlowData); ?>;
-            const budgetActualData = <?php echo json_encode($budgetActualData); ?>;
-            const incomeLabels = <?php echo json_encode($incomeLabels); ?>;
-            const incomeAmounts = <?php echo json_encode($incomeAmounts); ?>;
+            const rawChartData = <?php echo json_encode($chartData ?? []); ?>;
+            const rawCashFlowData = <?php echo json_encode($cashFlowData ?? []); ?>;
+            const rawBudgetActualData = <?php echo json_encode($budgetActualData ?? []); ?>;
+            const rawIncomeLabels = <?php echo json_encode($incomeLabels ?? []); ?>;
+            const rawIncomeAmounts = <?php echo json_encode($incomeAmounts ?? []); ?>;
             const annualBudgetTotal = <?php echo json_encode($annualBudgetTotal ?? 0); ?>;
+
+            const chartData = Array.isArray(rawChartData) ? rawChartData : [];
+            const cashFlowData = Array.isArray(rawCashFlowData) ? rawCashFlowData : [];
+            const budgetActualData = Array.isArray(rawBudgetActualData) ? rawBudgetActualData : [];
+            const incomeLabels = Array.isArray(rawIncomeLabels) ? rawIncomeLabels : [];
+            const incomeAmounts = Array.isArray(rawIncomeAmounts) ? rawIncomeAmounts : [];
 
             // Initialize Revenue vs Expenses Chart
             const revenueExpensesCtx = document.getElementById('revenueExpensesChart').getContext('2d');

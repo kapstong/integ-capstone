@@ -517,6 +517,12 @@ function ensure_api_auth($method, array $permissionMap, Auth $auth = null) {
     }
 
     $auth = $auth ?? new Auth();
+    if (empty($_SESSION['user']['permissions'])) {
+        $permManager = PermissionManager::getInstance();
+        $permManager->loadUserPermissions($_SESSION['user']['id']);
+        $_SESSION['user']['permissions'] = $permManager->getUserPermissions();
+        $_SESSION['user']['roles'] = $permManager->getUserRoles();
+    }
     $permission = $permissionMap[$method] ?? null;
     if (!$permission) {
         return;
