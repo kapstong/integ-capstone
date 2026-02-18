@@ -121,6 +121,13 @@ if ($isApiRequest && !empty($_SESSION['user']['id'])) {
             $requiredPermission = $resourceMap[$fileBase] . '.' . $methodToAction[$method];
         }
 
+        if ($fileBase === 'integrations' && $method === 'POST') {
+            $action = $_POST['action'] ?? ($_GET['action'] ?? '');
+            if (in_array($action, ['execute', 'test'], true)) {
+                $requiredPermission = 'integrations.view';
+            }
+        }
+
         if ($fileBase === 'budgets' && $method === 'GET') {
             $action = $_GET['action'] ?? '';
             if ($action === 'forecast') {
