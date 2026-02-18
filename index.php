@@ -296,10 +296,18 @@ login_end:
   }
   .btn-ghost:hover{ background:rgba(27,47,115,.06); box-shadow:0 10px 20px rgba(2,6,23,.12); }
   .btn-ghost.qr-side{
-    width:auto;
-    padding:.7rem 1rem;
-    font-size:.85rem;
+    width:52px;
+    height:52px;
+    padding:0;
     border-style:solid;
+    border-radius:14px;
+    display:grid;
+    place-items:center;
+  }
+  .qr-icon{
+    width:28px;
+    height:28px;
+    object-fit:contain;
   }
 
   .divider{
@@ -415,8 +423,8 @@ login_end:
         <div class="recaptcha-wrap">
           <div class="flex items-center gap-3 flex-wrap">
             <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars(RECAPTCHA_SITE_KEY); ?>"></div>
-            <button type="button" id="qrScanBtn" class="btn-ghost qr-side">
-              <span>Fast QR Login</span>
+            <button type="button" id="qrScanBtn" class="btn-ghost qr-side" aria-label="Fast QR Login" title="Fast QR Login">
+              <img src="qricon.png" alt="" class="qr-icon">
             </button>
           </div>
         </div>
