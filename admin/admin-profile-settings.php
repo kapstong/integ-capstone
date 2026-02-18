@@ -4,6 +4,7 @@ require_once '../includes/auth.php';
 require_once '../includes/database.php';
 require_once '../includes/device_detector.php';
 require_once '../includes/qr_codes.php';
+require_once '../includes/mailer.php';
 
 if (!isset($_SESSION['user'])) {
     header('Location: ../index.php');
@@ -43,6 +44,9 @@ $qrAllowed = in_array(strtolower($user['role'] ?? ''), ['admin', 'staff'], true)
 $qrToken = null;
 $qrRecord = null;
 $qrLoginUrl = '';
+$qrCodeTtlSeconds = 600;
+$qrEmailVerified = false;
+$qrMaskedEmail = '';
 
 if ($qrAllowed) {
     $qrRecord = qr_login_get_active_code($user_id);
@@ -52,6 +56,12 @@ if ($qrAllowed) {
     if ($qrToken) {
         $qrLoginUrl = rtrim(Config::get('app.url'), '/') . '/qr-login.php?t=' . urlencode($qrToken);
     }
+
+    $qrMaskedEmail = maskEmail($user['email'] ?? '');
+    $verifiedUntil = $_SESSION['qr_email_verified_until'] ?? 0;
+    if ($verifiedUntil && time() < $verifiedUntil) {
+        $qrEmailVerified = true;
+    }
 }
 
 // Handle form submission for profile update
@@ -59,12 +69,88 @@ $message = '';
 $messageType = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['qr_send_code'])) {
+        if (!$qrAllowed) {
+            $message = 'QR fast login is not available for your role.';
+            $messageType = 'danger';
+        } else {
+            try {
+                $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+                $_SESSION['qr_email_code'] = $code;
+                $_SESSION['qr_email_code_time'] = time();
+                $_SESSION['qr_email_verified_until'] = 0;
+
+                $email = $user['email'] ?? '';
+                if (!$email) {
+                    throw new Exception('No email address on file.');
+                }
+
+                $mailer = Mailer::getInstance();
+                $firstName = $user['first_name'] ?? '';
+                $mailer->sendVerificationCode($email, $code, $firstName);
+
+                $qrMaskedEmail = maskEmail($email);
+                $message = 'Verification code sent to ' . $qrMaskedEmail . '.';
+                $messageType = 'success';
+            } catch (Exception $e) {
+                $message = 'Failed to send verification code: ' . $e->getMessage();
+                $messageType = 'danger';
+            }
+        }
+    }
+
+    if (isset($_POST['qr_verify_code'])) {
+        if (!$qrAllowed) {
+            $message = 'QR fast login is not available for your role.';
+            $messageType = 'danger';
+        } else {
+            $input = trim($_POST['qr_code'] ?? '');
+            $sent = $_SESSION['qr_email_code'] ?? '';
+            $sentAt = $_SESSION['qr_email_code_time'] ?? 0;
+            if (!$sent || !$sentAt) {
+                $message = 'No verification code found. Please send a new code.';
+                $messageType = 'danger';
+            } elseif ((time() - $sentAt) > $qrCodeTtlSeconds) {
+                unset($_SESSION['qr_email_code'], $_SESSION['qr_email_code_time']);
+                $message = 'Verification code expired. Please send a new code.';
+                $messageType = 'danger';
+            } elseif ($input !== $sent) {
+                $message = 'Invalid verification code.';
+                $messageType = 'danger';
+            } else {
+                unset($_SESSION['qr_email_code'], $_SESSION['qr_email_code_time']);
+                $_SESSION['qr_email_verified_until'] = time() + $qrCodeTtlSeconds;
+                $qrEmailVerified = true;
+                $message = 'Email verified. You can now generate your QR code.';
+                $messageType = 'success';
+            }
+        }
+    }
+
     if (isset($_POST['qr_action'])) {
         if (!$qrAllowed) {
             $message = 'QR fast login is not available for your role.';
             $messageType = 'danger';
         } else {
             try {
+                if (!$qrEmailVerified) {
+                    $message = 'Please verify your email before generating the QR code.';
+                    $messageType = 'warning';
+                    if (empty($_SESSION['qr_email_code'])) {
+                        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+                        $_SESSION['qr_email_code'] = $code;
+                        $_SESSION['qr_email_code_time'] = time();
+                        $email = $user['email'] ?? '';
+                        if ($email) {
+                            $mailer = Mailer::getInstance();
+                            $firstName = $user['first_name'] ?? '';
+                            $mailer->sendVerificationCode($email, $code, $firstName);
+                            $qrMaskedEmail = maskEmail($email);
+                            $message = 'Verification required. We sent a code to ' . $qrMaskedEmail . '.';
+                        }
+                    }
+                    goto qr_action_end;
+                }
                 $action = $_POST['qr_action'];
                 $rotate = $action === 'renew';
                 $result = qr_login_generate_code($user_id, $rotate);
@@ -81,6 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+    qr_action_end:
     if (isset($_POST['update_profile'])) {
         try {
             $first_name = trim($_POST['first_name'] ?? '');
@@ -804,6 +891,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="mb-3">
                                 <h6 class="text-primary fw-bold mb-2" style="color: #1b2f73 !important;">Fast QR Login</h6>
                                 <p class="text-muted mb-3">Generate a QR code for quick sign-in. You can print it as a card and renew it anytime.</p>
+                                <div class="mb-3">
+                                    <div class="d-flex flex-column flex-md-row align-items-md-center gap-3">
+                                        <form method="POST" action="" class="d-inline">
+                                            <?php csrf_input(); ?>
+                                            <input type="hidden" name="qr_send_code" value="1">
+                                            <button type="submit" class="btn btn-outline-primary">
+                                                <i class="fas fa-envelope me-2"></i>Send Email Code
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="" class="d-flex align-items-center gap-2">
+                                            <?php csrf_input(); ?>
+                                            <input type="hidden" name="qr_verify_code" value="1">
+                                            <input type="text" name="qr_code" class="form-control" placeholder="6-digit code" maxlength="6" style="max-width: 180px;">
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-check me-2"></i>Verify
+                                            </button>
+                                        </form>
+                                    </div>
+                                    <small class="text-muted d-block mt-2">
+                                        Code expires in 10 minutes. <?php echo $qrMaskedEmail ? 'Sent to ' . htmlspecialchars($qrMaskedEmail) . '.' : ''; ?>
+                                    </small>
+                                    <?php if ($qrEmailVerified): ?>
+                                        <small class="text-success d-block mt-1"><i class="fas fa-shield-check me-1"></i>Email verified.</small>
+                                    <?php endif; ?>
+                                </div>
                                 <div class="row g-4 align-items-start">
                                     <div class="col-lg-5">
                                         <?php if ($qrLoginUrl): ?>
@@ -848,7 +960,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <form method="POST" action="">
                                                 <?php csrf_input(); ?>
                                                 <input type="hidden" name="qr_action" value="<?php echo $qrLoginUrl ? 'renew' : 'generate'; ?>">
-                                                <button type="submit" class="btn btn-primary">
+                                                <button type="submit" class="btn btn-primary" <?php echo $qrEmailVerified ? '' : 'disabled'; ?>>
                                                     <i class="fas fa-qrcode me-2"></i><?php echo $qrLoginUrl ? 'Renew QR Code' : 'Generate QR Code'; ?>
                                                 </button>
                                             </form>
@@ -1007,9 +1119,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../includes/alert-modal.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
-    <script>
+<script src="../includes/alert-modal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script>
         const qrLoginUrl = <?php echo json_encode($qrLoginUrl); ?>;
         const qrImage = document.getElementById('qrImage');
         const qrCardImage = document.getElementById('qrCardImage');
@@ -1031,10 +1143,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 window.print();
             });
         }
-    </script>
-    <script src="../includes/privacy_mode.js?v=12"></script>
+</script>
+<script src="../includes/privacy_mode.js?v=12"></script>
 <script src="../includes/tab_persistence.js?v=1"></script>
 </body>
 </html>
 </html>
+<?php
+function maskEmail($email) {
+    if (!$email || !strpos($email, '@')) {
+        return '***@***.***';
+    }
+    $parts = explode('@', $email);
+    $name = $parts[0];
+    $domain = $parts[1];
+    $nameLength = strlen($name);
+    $maskedName = substr($name, 0, 1) . str_repeat('*', max(1, $nameLength - 2)) . substr($name, -1);
+    return $maskedName . '@' . $domain;
+}
+?>
 
