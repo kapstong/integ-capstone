@@ -444,8 +444,12 @@ login_end:
         <h4 class="text-lg font-semibold">Scan QR Code</h4>
         <button type="button" id="qrClose" class="px-3 py-1 rounded-lg border border-slate-200">Close</button>
       </div>
-      <p class="text-sm text-slate-500 mb-3">Point your camera at your ATIERA Fast Login QR card.</p>
+      <p class="text-sm text-slate-500 mb-3">Point your camera at your ATIERA Fast Login QR card. If camera scan fails, import a QR photo.</p>
       <div id="qrReader"></div>
+      <div class="mt-3 flex items-center gap-2 flex-wrap">
+        <button type="button" id="qrUploadBtn" class="px-3 py-2 rounded-lg border border-slate-300 text-sm">Import QR Photo</button>
+        <input type="file" id="qrImageInput" accept="image/*" capture="environment" style="display:none;">
+      </div>
       <div id="qrStatus" class="text-sm text-slate-500 mt-3"></div>
     </div>
   </div>
@@ -634,6 +638,8 @@ login_end:
   const qrScanBtn = document.getElementById("qrScanBtn");
   const qrModal = document.getElementById("qrModal");
   const qrClose = document.getElementById("qrClose");
+  const qrUploadBtn = document.getElementById("qrUploadBtn");
+  const qrImageInput = document.getElementById("qrImageInput");
   const qrStatus = document.getElementById("qrStatus");
   let qrScanner = null;
   let qrHandled = false;
@@ -700,12 +706,35 @@ login_end:
         }
       } catch (e) {}
 
-      await qrScanner.start(
-        cameraConfig,
-        { fps: 12, qrbox: { width: 260, height: 260 } },
-        (decodedText) => handleQrResult(decodedText),
-        () => {}
-      );
+      const qrConfig = {
+        fps: 14,
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+          const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.75);
+          return { width: Math.max(200, edge), height: Math.max(200, edge) };
+        },
+        aspectRatio: 1.0
+      };
+
+      if (window.Html5QrcodeSupportedFormats) {
+        qrConfig.formatsToSupport = [Html5QrcodeSupportedFormats.QR_CODE];
+      }
+
+      try {
+        await qrScanner.start(
+          cameraConfig,
+          qrConfig,
+          (decodedText) => handleQrResult(decodedText),
+          () => {}
+        );
+      } catch (firstStartError) {
+        // Retry with simple facingMode in case strict deviceId fails on some browsers.
+        await qrScanner.start(
+          { facingMode: "environment" },
+          qrConfig,
+          (decodedText) => handleQrResult(decodedText),
+          () => {}
+        );
+      }
 
       if (qrStatus) qrStatus.textContent = "Scanner ready. Point your camera at the QR card.";
     } catch (err) {
@@ -770,8 +799,39 @@ login_end:
     window.location.href = "qr-login.php?t=" + encodeURIComponent(token);
   }
 
+  async function scanQrFromImageFile(file) {
+    if (!file) return;
+
+    const hasLib = await ensureQrLibrary();
+    if (!hasLib) {
+      if (qrStatus) qrStatus.textContent = "QR scanner library failed to load.";
+      return;
+    }
+
+    if (qrStatus) qrStatus.textContent = "Reading QR from image...";
+    try {
+      await stopQrScanner();
+      const scanner = new Html5Qrcode("qrReader");
+      const decodedText = await scanner.scanFile(file, true);
+      scanner.clear();
+      if (qrStatus) qrStatus.textContent = "QR image detected. Signing in...";
+      handleQrResult(decodedText);
+    } catch (err) {
+      if (qrStatus) qrStatus.textContent = "Could not detect QR from that image. Try a clearer photo.";
+    } finally {
+      if (qrImageInput) qrImageInput.value = "";
+    }
+  }
+
   if (qrScanBtn) qrScanBtn.addEventListener("click", openQrModal);
   if (qrClose) qrClose.addEventListener("click", closeQrModal);
+  if (qrUploadBtn && qrImageInput) {
+    qrUploadBtn.addEventListener("click", () => qrImageInput.click());
+    qrImageInput.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      scanQrFromImageFile(file);
+    });
+  }
   if (qrModal) {
     qrModal.addEventListener("click", (e) => {
       if (e.target === qrModal) closeQrModal();
