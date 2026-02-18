@@ -2,8 +2,20 @@
 require_once '../includes/auth.php';
 require_once '../includes/database.php';
 require_once '../includes/device_detector.php';
-require_once '../includes/qr_codes.php';
-require_once '../includes/mailer.php';
+
+$qrFeatureAvailable = true;
+$qrCodesPath = __DIR__ . '/../includes/qr_codes.php';
+$mailerPath = __DIR__ . '/../includes/mailer.php';
+if (file_exists($qrCodesPath)) {
+    require_once $qrCodesPath;
+} else {
+    $qrFeatureAvailable = false;
+}
+if (file_exists($mailerPath)) {
+    require_once $mailerPath;
+} else {
+    $qrFeatureAvailable = false;
+}
 
 if (!isset($_SESSION['user'])) {
     header('Location: ../index.php');
@@ -51,7 +63,7 @@ function maskEmail($email) {
     return $maskedName . '@' . $domain;
 }
 
-$qrAllowed = in_array(strtolower($user['role'] ?? ''), ['admin', 'staff'], true);
+$qrAllowed = $qrFeatureAvailable && in_array(strtolower($user['role'] ?? ''), ['admin', 'staff'], true);
 $qrToken = null;
 $qrRecord = null;
 $qrLoginUrl = '';
