@@ -87,18 +87,26 @@ $qrEmailVerified = false;
 $qrMaskedEmail = '';
 
 if ($qrAllowed) {
-    $qrRecord = qr_login_get_active_code($user_id);
-    if ($qrRecord) {
-        $qrToken = qr_login_decrypt_token($qrRecord['token_cipher'] ?? '', $qrRecord['token_iv'] ?? '');
-    }
-    if ($qrToken) {
-        $qrLoginUrl = rtrim(Config::get('app.url'), '/') . '/qr-login.php?t=' . urlencode($qrToken);
-    }
+    try {
+        $qrRecord = qr_login_get_active_code($user_id);
+        if ($qrRecord) {
+            $qrToken = qr_login_decrypt_token($qrRecord['token_cipher'] ?? '', $qrRecord['token_iv'] ?? '');
+        }
+        if ($qrToken) {
+            $qrLoginUrl = rtrim(Config::get('app.url'), '/') . '/qr-login.php?t=' . urlencode($qrToken);
+        }
 
-    $qrMaskedEmail = maskEmail($user['email'] ?? '');
-    $verifiedUntil = $_SESSION['qr_email_verified_until'] ?? 0;
-    if ($verifiedUntil && time() < $verifiedUntil) {
-        $qrEmailVerified = true;
+        $qrMaskedEmail = maskEmail($user['email'] ?? '');
+        $verifiedUntil = $_SESSION['qr_email_verified_until'] ?? 0;
+        if ($verifiedUntil && time() < $verifiedUntil) {
+            $qrEmailVerified = true;
+        }
+    } catch (Throwable $e) {
+        error_log('QR login disabled on admin profile settings: ' . $e->getMessage());
+        $qrAllowed = false;
+        $qrToken = null;
+        $qrRecord = null;
+        $qrLoginUrl = '';
     }
 }
 
