@@ -154,6 +154,12 @@ if ($isApiRequest && !empty($_SESSION['user']['id'])) {
 
             if (!$isAdmin && !$hasPermission) {
                 $roleName = strtolower((string) ($roleName ?? ($_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? ''))));
+                if ($fileBase === 'integrations' && $method === 'POST' && $roleName === 'staff') {
+                    $action = $_POST['action'] ?? ($_GET['action'] ?? '');
+                    if (in_array($action, ['execute', 'test'], true)) {
+                        $hasPermission = true;
+                    }
+                }
                 if ($method === 'GET' && $roleName === 'staff') {
                     $viewPerms = [];
                     if (is_array($requiredPermission)) {
