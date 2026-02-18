@@ -1610,7 +1610,7 @@ $db = Database::getInstance()->getConnection();
                 const trackingPeriodSelect = document.querySelector('#tracking select');
                 const period = trackingPeriodSelect ? trackingPeriodSelect.value : 'year_to_date';
                 const trackingParams = new URLSearchParams({ action: 'tracking', period });
-                const response = await fetch(`api/budgets.php?${trackingParams.toString()}`);
+                const response = await fetch(`../api/budgets.php?${trackingParams.toString()}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2655,7 +2655,7 @@ $db = Database::getInstance()->getConnection();
                     'budget_categories',
                     'hr3_integrations'
                 ];
-                const response = await fetch(`api/audit.php?table_name=${encodeURIComponent(tables.join(','))}`);
+                const response = await fetch(`../api/audit.php?table_name=${encodeURIComponent(tables.join(','))}`);
                 const logs = await response.json();
 
                 if (!Array.isArray(logs) || logs.length === 0) {
