@@ -47,14 +47,6 @@ try {
     }
 
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-    $auth = new Auth();
-    ensure_api_auth($method, [
-        'GET' => 'dashboard.view',
-        'PUT' => 'dashboard.view',
-        'DELETE' => 'dashboard.view',
-        'POST' => 'dashboard.view',
-        'PATCH' => 'dashboard.view',
-    ]);
     
     // Check if user is logged in
     if (!isset($_SESSION['user'])) {

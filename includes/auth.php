@@ -77,6 +77,9 @@ if ($isApiRequest && !empty($_SESSION['user']['id'])) {
                 'PUT' => 'settings.edit',
                 'PATCH' => 'settings.edit',
                 'DELETE' => 'settings.edit'
+            ],
+            'budgets' => [
+                'GET' => 'budgets.view'
             ]
         ];
 
@@ -111,6 +114,13 @@ if ($isApiRequest && !empty($_SESSION['user']['id'])) {
             $requiredPermission = $resourceMap[$fileBase] . '.' . $methodToAction[$method];
         }
 
+        if ($fileBase === 'budgets' && $method === 'GET') {
+            $action = $_GET['action'] ?? '';
+            if ($action === 'forecast') {
+                $requiredPermission = ['budgets.view', 'dashboard.view'];
+            }
+        }
+
         if ($requiredPermission) {
             $permManager = PermissionManager::getInstance();
             if (empty($_SESSION['user']['permissions'])) {
@@ -121,7 +131,14 @@ if ($isApiRequest && !empty($_SESSION['user']['id'])) {
             $roleName = $_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? '');
             $isAdmin = in_array($roleName, ['admin', 'super_admin'], true) || $permManager->hasRole('admin') || $permManager->hasRole('super_admin');
 
-            if (!$isAdmin && !$permManager->hasPermission($requiredPermission)) {
+            $hasPermission = false;
+            if (is_array($requiredPermission)) {
+                $hasPermission = $permManager->hasAnyPermission($requiredPermission);
+            } else {
+                $hasPermission = $permManager->hasPermission($requiredPermission);
+            }
+
+            if (!$isAdmin && !$hasPermission) {
                 http_response_code(403);
                 header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'error' => 'Forbidden - insufficient permissions']);
