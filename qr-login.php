@@ -15,6 +15,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = trim($_GET['t'] ?? '');
 }
 
+// Accept QR payloads that may contain the full qr-login.php URL.
+if ($token !== '' && stripos($token, 'qr-login.php') !== false) {
+    $parsed = parse_url($token);
+    if (is_array($parsed) && !empty($parsed['query'])) {
+        parse_str($parsed['query'], $queryParams);
+        $embeddedToken = trim((string) ($queryParams['t'] ?? ''));
+        if ($embeddedToken !== '') {
+            $token = $embeddedToken;
+        }
+    } elseif (preg_match('/[?&]t=([^&#\s]+)/i', $token, $matches)) {
+        $token = trim(urldecode($matches[1]));
+    }
+}
+
 $error = '';
 if ($token === '') {
     $error = 'Missing QR token.';
