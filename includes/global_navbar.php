@@ -20,7 +20,8 @@ if (!empty($firstName) || !empty($lastName)) {
 
 $isSuperAdminArea = strpos($scriptName, '/superadmin/') !== false;
 $isAdminArea = strpos($scriptName, '/admin/') !== false;
-$profileLink = $isUserArea ? 'profile.php' : ($isSuperAdminArea ? 'superadmin-profile-settings.php' : 'admin-profile-settings.php');
+$isStaffArea = strpos($scriptName, '/staff/') !== false;
+$profileLink = $isUserArea ? 'profile.php' : ($isSuperAdminArea ? 'superadmin-profile-settings.php' : ($isStaffArea ? 'profile-settings.php' : 'admin-profile-settings.php'));
 $settingsLink = $isUserArea ? 'settings.php' : 'settings.php';
 $searchLink = $isSuperAdminArea || $isAdminArea ? '/admin/search.php' : '/staff/search.php';
 

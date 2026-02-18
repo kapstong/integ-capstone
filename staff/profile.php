@@ -6,5 +6,5 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
-header('Location: admin-profile-settings.php');
+header('Location: profile-settings.php');
 exit;
