@@ -206,11 +206,11 @@ header('Content-Type: application/javascript');
             }
         }
 
-        function refreshVouchers() {
+        window.refreshVouchers = window.refreshVouchers || function() {
             const select = document.getElementById('voucherDisbursementId');
             const disbursementId = select && select.value ? select.value : null;
             loadVouchers(disbursementId);
-        }
+        };
 
     // Additional functions for disbursements module
 
@@ -944,7 +944,11 @@ header('Content-Type: application/javascript');
         window.clearFilters = window.clearFilters || clearFilters;
         window.showAddDisbursementModal = window.showAddDisbursementModal || showAddDisbursementModal;
         window.saveDisbursement = window.saveDisbursement || saveDisbursement;
-        window.refreshVouchers = window.refreshVouchers || refreshVouchers;
+        window.refreshVouchers = window.refreshVouchers || function() {
+            const select = document.getElementById('voucherDisbursementId');
+            const disbursementId = select && select.value ? select.value : null;
+            loadVouchers(disbursementId);
+        };
         window.uploadVoucher = window.uploadVoucher || uploadVoucher;
         window.bulkDeleteDisbursements = window.bulkDeleteDisbursements || bulkDeleteDisbursements;
 

@@ -36,17 +36,17 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/api_integrations.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
+// Determine the action to align permission checks (execute/test should be view-level)
+$action = ($method === 'POST') ? ($_POST['action'] ?? ($_GET['action'] ?? '')) : ($_GET['action'] ?? '');
+$authMethod = ($method === 'POST' && in_array($action, ['execute', 'test'], true)) ? 'GET' : $method;
 $auth = new Auth();
-ensure_api_auth($method, [
+ensure_api_auth($authMethod, [
     'GET' => 'integrations.view',
     'POST' => 'integrations.view',
     'PUT' => 'integrations.manage',
     'DELETE' => 'integrations.manage',
     'PATCH' => 'integrations.manage',
 ]);
-
-// Get the action to determine permission requirements
-$action = ($method === 'POST') ? ($_POST['action'] ?? ($_GET['action'] ?? '')) : ($_GET['action'] ?? '');
 
 function buildIntegrationParams(array $source) {
     $params = $source;
