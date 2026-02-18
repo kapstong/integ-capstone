@@ -728,15 +728,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: #f8f9fa;
         }
         @media print {
+            @page { margin: 10mm; }
             body * { visibility: hidden; }
             #qrPrintArea, #qrPrintArea * { visibility: visible; }
             #qrPrintArea {
-                position: fixed;
-                inset: 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: #fff;
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                margin: 0 auto;
+                max-width: 360px;
+                page-break-inside: avoid;
+                break-inside: avoid;
+                background: #fff !important;
+                color: #111 !important;
+                border: 1px solid #d0d7de;
+                box-shadow: none !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            #qrPrintArea::after { display: none !important; }
+            #qrPrintArea .qr-card-header img { filter: none !important; }
+            #qrPrintArea .qr-meta h4,
+            #qrPrintArea .qr-meta small,
+            #qrPrintArea .qr-card-title,
+            #qrPrintArea .qr-card-header small {
+                color: #111 !important;
+            }
+            #qrPrintArea .qr-code-wrap {
+                background: #fff !important;
+                box-shadow: none !important;
+                border: 1px solid #d0d7de;
             }
         }
         @media (max-width: 768px) {
