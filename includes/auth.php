@@ -78,6 +78,13 @@ if ($isApiRequest && !empty($_SESSION['user']['id'])) {
                 'PATCH' => 'settings.edit',
                 'DELETE' => 'settings.edit'
             ],
+            'integrations' => [
+                'GET' => 'integrations.view',
+                'POST' => 'integrations.view',
+                'PUT' => 'integrations.manage',
+                'PATCH' => 'integrations.manage',
+                'DELETE' => 'integrations.manage'
+            ],
             'budgets' => [
                 'GET' => 'budgets.view'
             ]

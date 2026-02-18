@@ -931,6 +931,12 @@ header('Content-Type: application/javascript');
         );
         }
 
+        function refreshVouchers() {
+            const select = document.getElementById('voucherDisbursementId');
+            const disbursementId = select && select.value ? select.value : null;
+            loadVouchers(disbursementId);
+        }
+
         // Ensure key handlers are available on window for inline onclick usage
         window.processPayment = window.processPayment || processPayment;
         window.showFilters = window.showFilters || showFilters;

@@ -194,6 +194,9 @@ function statusBadge($status) {
             transition: all 0.2s ease;
             text-decoration: none !important;
         }
+        .navbar .dropdown-toggle:focus {
+            box-shadow: none;
+        }
         .navbar .dropdown-toggle:hover {
             background-color: rgba(0,0,0,0.05);
         }
@@ -209,6 +212,9 @@ function statusBadge($status) {
             transition: all 0.2s ease;
             color: #6c757d;
             text-decoration: none !important;
+        }
+        .navbar .btn-link:focus {
+            box-shadow: none;
         }
         .navbar .btn-link:hover {
             background-color: rgba(0,0,0,0.05);
@@ -261,6 +267,10 @@ function statusBadge($status) {
         .navbar .dropdown-item:hover {
             background-color: #f8f9fa;
             color: #495057;
+        }
+        .hover-link:hover {
+            color: #007bff !important;
+            transition: color 0.2s ease;
         }
         .card {
             border: none;
