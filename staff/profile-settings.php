@@ -1300,7 +1300,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (printBtn) {
         printBtn.addEventListener('click', () => {
-            window.print();
+            const printWindow = window.open('../qr-card-print.php', '_blank', 'noopener,noreferrer');
+            if (!printWindow) {
+                alert('Popup blocked. Please allow popups for this site to print your QR card.');
+            }
         });
     }
 </script>
