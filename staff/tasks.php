@@ -173,6 +173,95 @@ function statusBadge($status) {
         .toggle-btn {
             display: none;
         }
+        .navbar {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e3e6ea;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 10000;
+        }
+        .navbar-brand {
+            font-weight: 700;
+            color: #2c3e50 !important;
+            font-size: 1.4rem;
+            letter-spacing: -0.02em;
+        }
+        .navbar .dropdown-toggle {
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            transition: all 0.2s ease;
+            text-decoration: none !important;
+        }
+        .navbar .dropdown-toggle:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        .navbar .dropdown-toggle span {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #495057;
+        }
+        .navbar .btn-link {
+            font-size: 1.1rem;
+            border-radius: 8px;
+            padding: 0.5rem;
+            transition: all 0.2s ease;
+            color: #6c757d;
+            text-decoration: none !important;
+        }
+        .navbar .btn-link:hover {
+            background-color: rgba(0,0,0,0.05);
+            color: #495057;
+        }
+        .navbar .input-group {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
+            transition: all 0.2s ease;
+        }
+        .navbar .input-group:focus-within {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            border-color: #007bff;
+        }
+        .navbar .form-control {
+            border: none;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            background-color: #ffffff;
+        }
+        .navbar .form-control:focus {
+            box-shadow: none;
+            border-color: transparent;
+            background-color: #ffffff;
+        }
+        .navbar .btn-outline-secondary {
+            border: none;
+            background-color: #f8f9fa;
+            color: #6c757d;
+            border-left: 1px solid #e9ecef;
+            padding: 0.75rem 1rem;
+        }
+        .navbar .btn-outline-secondary:hover {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        .navbar .dropdown-menu {
+            z-index: 9999;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            border: none;
+            border-radius: 8px;
+            margin-top: 0.5rem;
+        }
+        .navbar .dropdown-item {
+            padding: 0.75rem 1rem;
+            transition: all 0.2s ease;
+        }
+        .navbar .dropdown-item:hover {
+            background-color: #f8f9fa;
+            color: #495057;
+        }
         .card {
             border: none;
             border-radius: 12px;

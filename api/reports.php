@@ -948,6 +948,9 @@ function outputReport($report, $format, $filename) {
             break;
         case 'json':
         default:
+            if (!isset($report['success'])) {
+                $report['success'] = empty($report['error']);
+            }
             echo json_encode($report);
             break;
     }
