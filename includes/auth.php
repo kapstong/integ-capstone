@@ -290,6 +290,55 @@ class Auth {
         return isset($_SESSION['user']);
     }
 
+    public function loginByUserId($userId) {
+        try {
+            $stmt = $this->db->query(
+                "SELECT id, username, password_hash, email, first_name, last_name, full_name, role, status, last_login, department, phone
+                 FROM users
+                 WHERE id = ? AND status = 'active'",
+                [$userId]
+            );
+            $user = $stmt->fetch();
+            if (!$user) {
+                return ['success' => false, 'error' => 'Invalid user'];
+            }
+
+            $firstName = trim($user['first_name'] ?? '');
+            $lastName = trim($user['last_name'] ?? '');
+            $computedFullName = trim($firstName . ' ' . $lastName);
+            $fullName = $computedFullName ?: ($user['full_name'] ?? '');
+            $fullName = trim($fullName);
+
+            $_SESSION['user'] = [
+                'id' => $user['id'],
+                'username' => $user['username'],
+                'role_name' => $user['role'],
+                'role' => $user['role'],
+                'name' => $fullName ?: $user['username'],
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'full_name' => $fullName,
+                'email' => $user['email'],
+                'department' => $user['department'] ?? '',
+                'phone' => $user['phone'] ?? ''
+            ];
+
+            $this->permManager->loadUserPermissions($user['id']);
+            $_SESSION['user']['permissions'] = $this->permManager->getUserPermissions();
+            $_SESSION['user']['roles'] = $this->permManager->getUserRoles();
+
+            $this->db->query(
+                "UPDATE users SET last_login = NOW() WHERE id = ?",
+                [$user['id']]
+            );
+
+            return ['success' => true, 'user' => $_SESSION['user']];
+        } catch (Exception $e) {
+            error_log("Login by user ID error: " . $e->getMessage());
+            return ['success' => false, 'error' => 'Database error occurred'];
+        }
+    }
+
     public function logout() {
         // Clear all session variables
         $_SESSION = array();
@@ -605,55 +654,6 @@ function ensure_api_auth($method, array $permissionMap, Auth $auth = null) {
             if ($perm === 'dashboard.view' || $perm === 'view_financial_records' || $endsWithView) {
                 return;
             }
-        }
-    }
-
-    public function loginByUserId($userId) {
-        try {
-            $stmt = $this->db->query(
-                "SELECT id, username, password_hash, email, first_name, last_name, full_name, role, status, last_login, department, phone
-                 FROM users
-                 WHERE id = ? AND status = 'active'",
-                [$userId]
-            );
-            $user = $stmt->fetch();
-            if (!$user) {
-                return ['success' => false, 'error' => 'Invalid user'];
-            }
-
-            $firstName = trim($user['first_name'] ?? '');
-            $lastName = trim($user['last_name'] ?? '');
-            $computedFullName = trim($firstName . ' ' . $lastName);
-            $fullName = $computedFullName ?: ($user['full_name'] ?? '');
-            $fullName = trim($fullName);
-
-            $_SESSION['user'] = [
-                'id' => $user['id'],
-                'username' => $user['username'],
-                'role_name' => $user['role'],
-                'role' => $user['role'],
-                'name' => $fullName ?: $user['username'],
-                'first_name' => $firstName,
-                'last_name' => $lastName,
-                'full_name' => $fullName,
-                'email' => $user['email'],
-                'department' => $user['department'] ?? '',
-                'phone' => $user['phone'] ?? ''
-            ];
-
-            $this->permManager->loadUserPermissions($user['id']);
-            $_SESSION['user']['permissions'] = $this->permManager->getUserPermissions();
-            $_SESSION['user']['roles'] = $this->permManager->getUserRoles();
-
-            $this->db->query(
-                "UPDATE users SET last_login = NOW() WHERE id = ?",
-                [$user['id']]
-            );
-
-            return ['success' => true, 'user' => $_SESSION['user']];
-        } catch (Exception $e) {
-            error_log("Login by user ID error: " . $e->getMessage());
-            return ['success' => false, 'error' => 'Database error occurred'];
         }
     }
 
