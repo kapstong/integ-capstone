@@ -1928,6 +1928,14 @@ try {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../includes/alert-modal.js"></script>
     <script>
+        function number_format(value, decimals = 2) {
+            const num = Number(value || 0);
+            return num.toLocaleString('en-US', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+        }
+
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('show');
         }
