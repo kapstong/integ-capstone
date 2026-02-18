@@ -296,8 +296,8 @@ login_end:
   }
   .btn-ghost:hover{ background:rgba(27,47,115,.06); box-shadow:0 10px 20px rgba(2,6,23,.12); }
   .btn-ghost.qr-side{
-    width:52px;
-    height:52px;
+    width:74px;
+    height:78px;
     padding:0;
     border-style:solid;
     border-radius:14px;
@@ -305,8 +305,8 @@ login_end:
     place-items:center;
   }
   .qr-icon{
-    width:28px;
-    height:28px;
+    width:34px;
+    height:34px;
     object-fit:contain;
   }
 
