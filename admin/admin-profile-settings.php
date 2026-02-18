@@ -40,6 +40,18 @@ try {
     $activityLogs = [];
 }
 
+function maskEmail($email) {
+    if (!$email || !strpos($email, '@')) {
+        return '***@***.***';
+    }
+    $parts = explode('@', $email);
+    $name = $parts[0];
+    $domain = $parts[1];
+    $nameLength = strlen($name);
+    $maskedName = substr($name, 0, 1) . str_repeat('*', max(1, $nameLength - 2)) . substr($name, -1);
+    return $maskedName . '@' . $domain;
+}
+
 $qrAllowed = in_array(strtolower($user['role'] ?? ''), ['admin', 'staff'], true);
 $qrToken = null;
 $qrRecord = null;
@@ -1148,18 +1160,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <script src="../includes/tab_persistence.js?v=1"></script>
 </body>
 </html>
-</html>
-<?php
-function maskEmail($email) {
-    if (!$email || !strpos($email, '@')) {
-        return '***@***.***';
-    }
-    $parts = explode('@', $email);
-    $name = $parts[0];
-    $domain = $parts[1];
-    $nameLength = strlen($name);
-    $maskedName = substr($name, 0, 1) . str_repeat('*', max(1, $nameLength - 2)) . substr($name, -1);
-    return $maskedName . '@' . $domain;
-}
-?>
 
