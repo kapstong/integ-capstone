@@ -26,7 +26,7 @@ try {
     $stmt = $db->prepare("
         SELECT action, ip_address, user_agent, new_values, created_at
         FROM audit_log
-        WHERE user_id = ? AND action = 'User Login'
+        WHERE user_id = ? AND action IN ('User Login', 'QR Login')
         ORDER BY created_at DESC
         LIMIT 50
     ");

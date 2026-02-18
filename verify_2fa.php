@@ -66,14 +66,16 @@ if ($_POST) {
                 }
 
                 $devicePayload = $_SESSION['pending_device'] ?? [];
+                $loginMethod = $_SESSION['pending_login_method'] ?? 'password';
                 $deviceInfo = detect_device_info($_SERVER['HTTP_USER_AGENT'] ?? '');
                 $deviceLabel = build_device_label($devicePayload, $_SERVER['HTTP_USER_AGENT'] ?? '');
                 Logger::getInstance()->logUserAction(
-                    'User Login',
+                    $loginMethod === 'qr' ? 'QR Login' : 'User Login',
                     'login_sessions',
                     null,
                     null,
                     [
+                        'login_method' => $loginMethod,
                         'device_label' => $deviceLabel,
                         'device_type' => $devicePayload['device_type'] ?? $deviceInfo['device_type'],
                         'os' => $devicePayload['device_os'] ?? $deviceInfo['os'],
@@ -83,6 +85,7 @@ if ($_POST) {
                     ]
                 );
                 unset($_SESSION['pending_device']);
+                unset($_SESSION['pending_login_method']);
 
                 // Redirect based on role
                 $role = strtolower($user['role_name'] ?? '');
