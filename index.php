@@ -630,7 +630,6 @@ login_end:
   }, 5000);
   <?php endif; ?>
 </script>
-<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
   const qrScanBtn = document.getElementById("qrScanBtn");
   const qrModal = document.getElementById("qrModal");
@@ -653,20 +652,64 @@ login_end:
     stopQrScanner();
   }
 
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.async = true;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  async function ensureQrLibrary() {
+    if (window.Html5Qrcode) return true;
+    try {
+      await loadScript("https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js");
+      return !!window.Html5Qrcode;
+    } catch (e1) {
+      try {
+        await loadScript("https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js");
+        return !!window.Html5Qrcode;
+      } catch (e2) {
+        return false;
+      }
+    }
+  }
+
   async function startQrScanner() {
-    if (!window.Html5Qrcode) {
-      if (qrStatus) qrStatus.textContent = "QR scanner is unavailable in this browser.";
+    const hasLib = await ensureQrLibrary();
+    if (!hasLib) {
+      if (qrStatus) qrStatus.textContent = "QR scanner library failed to load.";
       return;
     }
+
     qrHandled = false;
+    if (qrStatus) qrStatus.textContent = "Starting camera...";
+
     try {
       qrScanner = new Html5Qrcode("qrReader");
-      await qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 240, height: 240 } },
+      let cameraConfig = { facingMode: "environment" };
+
+      try {
+        const cameras = await Html5Qrcode.getCameras();
+        if (Array.isArray(cameras) && cameras.length > 0) {
+          const rear = cameras.find(c => /back|rear|environment/i.test((c.label || "")));
+          cameraConfig = { deviceId: { exact: (rear || cameras[0]).id } };
+        }
+      } catch (e) {}
+
+      await qrScanner.start(
+        cameraConfig,
+        { fps: 12, qrbox: { width: 260, height: 260 } },
         (decodedText) => handleQrResult(decodedText),
         () => {}
       );
+
+      if (qrStatus) qrStatus.textContent = "Scanner ready. Point your camera at the QR card.";
     } catch (err) {
-      if (qrStatus) qrStatus.textContent = "Unable to access the camera. Please allow permissions.";
+      if (qrStatus) qrStatus.textContent = "Unable to access the camera. Please allow camera permission, then retry.";
     }
   }
 
@@ -724,16 +767,7 @@ login_end:
       return;
     }
 
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = "qr-login.php";
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = "token";
-    input.value = token;
-    form.appendChild(input);
-    document.body.appendChild(form);
-    form.submit();
+    window.location.href = "qr-login.php?t=" + encodeURIComponent(token);
   }
 
   if (qrScanBtn) qrScanBtn.addEventListener("click", openQrModal);
