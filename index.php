@@ -453,7 +453,7 @@ login_end:
       <p class="text-sm text-slate-500 mb-3">Point your camera at your ATIERA Fast Login QR card. If camera scan fails, import a QR photo.</p>
       <div id="qrReader"></div>
       <div class="mt-3 flex items-center gap-2 flex-wrap">
-        <button type="button" id="qrUploadBtn" class="px-3 py-2 rounded-lg border border-slate-300 text-sm">Import QR Photo</button>
+        <button type="button" id="qrUploadBtn" class="px-3 py-2 rounded-lg border border-slate-300 text-sm text-black hover:bg-slate-100">Import QR Photo</button>
         <input type="file" id="qrImageInput" accept="image/*" capture="environment" style="display:none;">
       </div>
       <div id="qrStatus" class="text-sm text-slate-500 mt-3"></div>
