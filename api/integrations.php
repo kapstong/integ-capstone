@@ -32,11 +32,18 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/api_integrations.php';
 
-// Temporarily disable auth checks to isolate the issue
-$userId = $_SESSION['user']['id'] ?? 1;
 $method = $_SERVER['REQUEST_METHOD'];
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'integrations.view',
+    'POST' => 'integrations.view',
+    'PUT' => 'integrations.manage',
+    'DELETE' => 'integrations.manage',
+    'PATCH' => 'integrations.manage',
+]);
 
 // Get the action to determine permission requirements
 $action = ($method === 'POST') ? ($_POST['action'] ?? ($_GET['action'] ?? '')) : ($_GET['action'] ?? '');

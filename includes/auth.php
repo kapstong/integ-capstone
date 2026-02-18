@@ -139,6 +139,26 @@ if ($isApiRequest && !empty($_SESSION['user']['id'])) {
             }
 
             if (!$isAdmin && !$hasPermission) {
+                $roleName = strtolower((string) ($roleName ?? ($_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? ''))));
+                if ($method === 'GET' && $roleName === 'staff') {
+                    $viewPerms = [];
+                    if (is_array($requiredPermission)) {
+                        $viewPerms = $requiredPermission;
+                    } elseif (is_string($requiredPermission)) {
+                        $viewPerms = [$requiredPermission];
+                    }
+
+                    foreach ($viewPerms as $perm) {
+                        $endsWithView = is_string($perm) && substr($perm, -5) === '.view';
+                        if ($perm === 'dashboard.view' || $perm === 'view_financial_records' || $endsWithView) {
+                            $hasPermission = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!$isAdmin && !$hasPermission) {
                 http_response_code(403);
                 header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'error' => 'Forbidden - insufficient permissions']);

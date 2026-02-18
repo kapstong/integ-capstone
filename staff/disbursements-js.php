@@ -206,6 +206,12 @@ header('Content-Type: application/javascript');
             }
         }
 
+        function refreshVouchers() {
+            const select = document.getElementById('voucherDisbursementId');
+            const disbursementId = select && select.value ? select.value : null;
+            loadVouchers(disbursementId);
+        }
+
     // Additional functions for disbursements module
 
     function showFilters() {

@@ -42,15 +42,6 @@ try {
 // Start session safely
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
-$auth = new Auth();
-ensure_api_auth($method, [
-    'GET' => 'vendors.view',
-    'PUT' => 'vendors.edit',
-    'DELETE' => 'vendors.delete',
-    'POST' => 'vendors.create',
-    'PATCH' => 'vendors.edit',
-]);
-
 }
 
 // Check if user is logged in
@@ -65,6 +56,14 @@ if (!isset($_SESSION['user'])) {
 <?php
 $db = null;
 $method = $_SERVER['REQUEST_METHOD'];
+$auth = new Auth();
+ensure_api_auth($method, [
+    'GET' => 'vendors.view',
+    'PUT' => 'vendors.edit',
+    'DELETE' => 'vendors.delete',
+    'POST' => 'vendors.create',
+    'PATCH' => 'vendors.edit',
+]);
 
 try {
     $db = Database::getInstance();
