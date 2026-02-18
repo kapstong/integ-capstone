@@ -323,11 +323,17 @@ login_end:
   }
   .qr-modal.show{ display:flex; }
   .qr-panel{
-    background:var(--card-bg); border-radius:18px; padding:1.25rem; width:min(520px,92vw);
+    background:var(--card-bg); border-radius:18px; padding:1.25rem; width:min(760px,96vw);
     box-shadow:0 20px 50px rgba(2,6,23,.28);
   }
   .qr-panel h4{ margin:.2rem 0 .6rem; }
-  #qrReader{ width:100%; }
+  #qrReader{
+    width:100%;
+    min-height:380px;
+    border-radius:14px;
+    overflow:hidden;
+    background:#0b1220;
+  }
 
   .alert{ border-radius:12px; padding:.65rem .8rem; font-size:.9rem; transition:opacity 0.5s ease }
   .alert-error{ border:1px solid #fecaca; background:#fef2f2; color:#b91c1c }
@@ -709,8 +715,9 @@ login_end:
       const qrConfig = {
         fps: 14,
         qrbox: function(viewfinderWidth, viewfinderHeight) {
-          const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.75);
-          return { width: Math.max(200, edge), height: Math.max(200, edge) };
+          const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.9);
+          const size = Math.max(260, Math.min(edge, 420));
+          return { width: size, height: size };
         },
         aspectRatio: 1.0
       };
