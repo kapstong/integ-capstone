@@ -68,12 +68,6 @@ try {
  * Handle GET requests
  */
 function handleGet($auth, $db) {
-    if (!$auth->hasPermission('departments.view')) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'error' => 'Access denied']);
-        return;
-    }
-
     $action = $_GET['action'] ?? 'list';
 
     switch ($action) {
