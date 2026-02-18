@@ -59,11 +59,6 @@ $currentPage = basename($scriptName);
             <i class="fas fa-chart-line me-2"></i><span>Budget Management</span>
         </a>
 
-        <!-- Settings -->
-        <a class="nav-link <?php echo ($currentPage === 'settings.php') ? 'active' : ''; ?>" href="settings.php">
-            <i class="fas fa-cog me-2"></i><span>Settings</span>
-        </a>
-
         <!-- Logout -->
         <a class="nav-link text-danger" href="../logout.php">
             <i class="fas fa-sign-out-alt me-2"></i><span>Logout</span>
