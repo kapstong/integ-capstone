@@ -949,7 +949,30 @@ header('Content-Type: application/javascript');
             const disbursementId = select && select.value ? select.value : null;
             loadVouchers(disbursementId);
         };
-        window.uploadVoucher = window.uploadVoucher || uploadVoucher;
+        window.uploadVoucher = window.uploadVoucher || async function() {
+            const form = document.getElementById('voucherUploadForm');
+            if (!form) {
+                return;
+            }
+            const formData = new FormData(form);
+            try {
+                const response = await fetch('../api/disbursements.php?action=upload_voucher', {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('Voucher uploaded successfully', 'success');
+                    form.reset();
+                    window.refreshVouchers();
+                } else {
+                    showAlert(result.error || 'Failed to upload voucher', 'danger');
+                }
+            } catch (error) {
+                showAlert('Failed to upload voucher', 'danger');
+            }
+        };
         window.bulkDeleteDisbursements = window.bulkDeleteDisbursements || bulkDeleteDisbursements;
 
 

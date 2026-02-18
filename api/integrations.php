@@ -39,14 +39,17 @@ $method = $_SERVER['REQUEST_METHOD'];
 // Determine the action to align permission checks (execute/test should be view-level)
 $action = ($method === 'POST') ? ($_POST['action'] ?? ($_GET['action'] ?? '')) : ($_GET['action'] ?? '');
 $authMethod = ($method === 'POST' && in_array($action, ['execute', 'test'], true)) ? 'GET' : $method;
+$roleName = strtolower((string) ($_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? '')));
 $auth = new Auth();
-ensure_api_auth($authMethod, [
-    'GET' => 'integrations.view',
-    'POST' => 'integrations.view',
-    'PUT' => 'integrations.manage',
-    'DELETE' => 'integrations.manage',
-    'PATCH' => 'integrations.manage',
-]);
+if (!($roleName === 'staff' && in_array($action, ['execute', 'test'], true))) {
+    ensure_api_auth($authMethod, [
+        'GET' => 'integrations.view',
+        'POST' => 'integrations.view',
+        'PUT' => 'integrations.manage',
+        'DELETE' => 'integrations.manage',
+        'PATCH' => 'integrations.manage',
+    ]);
+}
 
 function buildIntegrationParams(array $source) {
     $params = $source;
