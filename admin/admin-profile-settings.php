@@ -161,25 +161,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $message = 'Verification required. We sent a code to ' . $qrMaskedEmail . '.';
                         }
                     }
-                    goto qr_action_end;
+                } else {
+                    $action = $_POST['qr_action'];
+                    $rotate = $action === 'renew';
+                    $result = qr_login_generate_code($user_id, $rotate);
+                    $qrToken = $result['token'];
+                    $qrRecord = qr_login_get_active_code($user_id);
+                    if ($qrToken) {
+                        $qrLoginUrl = rtrim(Config::get('app.url'), '/') . '/qr-login.php?t=' . urlencode($qrToken);
+                    }
+                    $message = $rotate ? 'QR code renewed successfully.' : 'QR code generated successfully.';
+                    $messageType = 'success';
                 }
-                $action = $_POST['qr_action'];
-                $rotate = $action === 'renew';
-                $result = qr_login_generate_code($user_id, $rotate);
-                $qrToken = $result['token'];
-                $qrRecord = qr_login_get_active_code($user_id);
-                if ($qrToken) {
-                    $qrLoginUrl = rtrim(Config::get('app.url'), '/') . '/qr-login.php?t=' . urlencode($qrToken);
-                }
-                $message = $rotate ? 'QR code renewed successfully.' : 'QR code generated successfully.';
-                $messageType = 'success';
             } catch (Exception $e) {
                 $message = 'Error generating QR code: ' . $e->getMessage();
                 $messageType = 'danger';
             }
         }
     }
-    qr_action_end:
     if (isset($_POST['update_profile'])) {
         try {
             $first_name = trim($_POST['first_name'] ?? '');
