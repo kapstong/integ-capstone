@@ -798,45 +798,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-    <!-- Sidebar -->
-    <div class="sidebar sidebar-collapsed" id="sidebar">
-        <div class="p-3">
-            <h5 class="navbar-brand"><img src="atieralogo.png" alt="Atiera Logo" style="height: 100px;"></h5>
-            <hr style="border-top: 2px solid white; margin: 10px 0;">
-        </div>
-        <nav class="nav flex-column">
-            <a class="nav-link" href="index.php">
-                <i class="fas fa-tachometer-alt me-2"></i><span>Dashboard</span>
-            </a>
-            <div class="nav-item">
-                <a class="nav-link" href="general_ledger.php">
-                    <i class="fas fa-book me-2"></i><span>General Ledger</span>
-                </a>
-                <i class="fas fa-chevron-right" data-bs-toggle="collapse" data-bs-target="#generalLedgerMenu" aria-expanded="false" style="cursor: pointer; color: white; padding: 5px 10px;"></i>
-                <div class="collapse" id="generalLedgerMenu">
-                    <div class="submenu">
-                        <a class="nav-link" href="accounts_payable.php">
-                            <i class="fas fa-credit-card me-2"></i><span>Accounts Payable</span>
-                        </a>
-                        <a class="nav-link" href="accounts_receivable.php">
-                            <i class="fas fa-money-bill-wave me-2"></i><span>Accounts Receivable</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <a class="nav-link" href="disbursements.php">
-                <i class="fas fa-money-check me-2"></i><span>Disbursements</span>
-            </a>
-              <a class="nav-link" href="reports.php">
-                  <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
-              </a>
-              <hr class="my-3">
-          </nav>
-    </div>
-    <div class="sidebar-toggle" onclick="toggleSidebarDesktop()">
-        <i class="fas fa-chevron-right" id="sidebarArrow"></i>
-    </div>
+    <?php include '../includes/staff_navigation.php'; ?>
 
     <div class="content">
         <?php include '../includes/global_navbar.php'; ?>
@@ -1169,61 +1131,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../includes/alert-modal.js"></script>
     <script src="../includes/privacy_mode.js?v=12"></script>
-    <script>
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('show');
-        }
-
-        function toggleSidebarDesktop() {
-            const sidebar = document.getElementById('sidebar');
-            const content = document.querySelector('.content');
-            const arrow = document.getElementById('sidebarArrow');
-            const toggle = document.querySelector('.sidebar-toggle');
-            const logoImg = document.querySelector('.navbar-brand img');
-            sidebar.classList.toggle('sidebar-collapsed');
-            const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
-            if (isCollapsed) {
-                logoImg.src = 'atieralogo2.png';
-                content.style.marginLeft = '120px';
-                arrow.classList.remove('fa-chevron-left');
-                arrow.classList.add('fa-chevron-right');
-                toggle.style.left = '110px';
-            } else {
-                logoImg.src = 'atieralogo.png';
-                content.style.marginLeft = '300px';
-                arrow.classList.remove('fa-chevron-right');
-                arrow.classList.add('fa-chevron-left');
-                toggle.style.left = '290px';
-            }
-        }
-
-        // Initialize sidebar state on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            const sidebar = document.getElementById('sidebar');
-            const content = document.querySelector('.content');
-            const arrow = document.getElementById('sidebarArrow');
-            const toggle = document.querySelector('.sidebar-toggle');
-            const logoImg = document.querySelector('.navbar-brand img');
-            // Default state is collapsed (consistent with other admin pages)
-            const isCollapsed = localStorage.getItem('sidebarCollapsed') !== 'false';
-            if (isCollapsed) {
-                sidebar.classList.add('sidebar-collapsed');
-                logoImg.src = 'atieralogo2.png';
-                content.style.marginLeft = '120px';
-                arrow.classList.remove('fa-chevron-left');
-                arrow.classList.add('fa-chevron-right');
-                toggle.style.left = '110px';
-            } else {
-                sidebar.classList.remove('sidebar-collapsed');
-                logoImg.src = 'atieralogo.png';
-                content.style.marginLeft = '300px';
-                arrow.classList.remove('fa-chevron-right');
-                arrow.classList.add('fa-chevron-left');
-                toggle.style.left = '290px';
-            }
-        });
-    </script>
 
     <div class="modal fade" id="activityLogModal" tabindex="-1" aria-labelledby="activityLogModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
