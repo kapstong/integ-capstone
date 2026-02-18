@@ -10,6 +10,88 @@ if (!isset($_SESSION['user'])) {
 $db = Database::getInstance()->getConnection();
 $userId = $_SESSION['user']['id'];
 
+$flashMessage = null;
+$flashType = 'success';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'submit_budget_approval') {
+    $taskId = isset($_POST['task_id']) ? (int) $_POST['task_id'] : 0;
+
+    if ($taskId <= 0) {
+        $flashMessage = 'Invalid task.';
+        $flashType = 'danger';
+    } else {
+        $stmt = $db->prepare("SELECT * FROM tasks WHERE id = ? AND assigned_to = ? AND category = 'budget' LIMIT 1");
+        $stmt->execute([$taskId, $userId]);
+        $taskRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$taskRow) {
+            $flashMessage = 'Task not found or not eligible for budget approval.';
+            $flashType = 'danger';
+        } else {
+            $stmt = $db->prepare("
+                SELECT id FROM users
+                WHERE status = 'active' AND role IN ('admin', 'superadmin')
+                ORDER BY FIELD(role, 'admin', 'superadmin'), last_login DESC
+                LIMIT 1
+            ");
+            $stmt->execute();
+            $manager = $stmt->fetch(PDO::FETCH_ASSOC);
+            $managerId = $manager['id'] ?? null;
+
+            if (!$managerId) {
+                $flashMessage = 'No available manager to approve the budget request.';
+                $flashType = 'danger';
+            } else {
+                $approvalTitle = "Budget Approval Required: Task #{$taskId}";
+                $stmt = $db->prepare("SELECT id FROM tasks WHERE title = ? AND assigned_to = ? LIMIT 1");
+                $stmt->execute([$approvalTitle, $managerId]);
+                $already = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($already) {
+                    $flashMessage = 'Approval task already sent to the manager.';
+                    $flashType = 'warning';
+                } else {
+                    $original = json_decode($taskRow['description'], true);
+                    $details = [
+                        'source_task_id' => $taskId,
+                        'submitted_by' => $userId,
+                        'submitted_at' => date('c'),
+                        'budget_details' => $original ?: $taskRow['description']
+                    ];
+
+                    try {
+                        $db->beginTransaction();
+
+                        $stmt = $db->prepare("
+                            INSERT INTO tasks (title, description, priority, status, assigned_to, created_by, category, created_at)
+                            VALUES (?, ?, 'high', 'pending', ?, ?, 'budget_approval', NOW())
+                        ");
+                        $stmt->execute([
+                            $approvalTitle,
+                            json_encode($details),
+                            $managerId,
+                            $userId
+                        ]);
+
+                        $stmt = $db->prepare("UPDATE tasks SET status = 'completed' WHERE id = ? AND assigned_to = ?");
+                        $stmt->execute([$taskId, $userId]);
+
+                        $db->commit();
+                        $flashMessage = 'Sent to manager for approval.';
+                        $flashType = 'success';
+                    } catch (Exception $e) {
+                        if ($db->inTransaction()) {
+                            $db->rollBack();
+                        }
+                        $flashMessage = 'Failed to submit approval task.';
+                        $flashType = 'danger';
+                    }
+                }
+            }
+        }
+    }
+}
+
 $task = null;
 if (!empty($_GET['id'])) {
     $stmt = $db->prepare("SELECT * FROM tasks WHERE id = ? AND assigned_to = ? LIMIT 1");
@@ -330,6 +412,11 @@ function statusBadge($status) {
         <?php include '../includes/global_navbar.php'; ?>
 
         <div class="container-fluid">
+            <?php if ($flashMessage): ?>
+                <div class="alert alert-<?php echo $flashType; ?>">
+                    <?php echo htmlspecialchars($flashMessage); ?>
+                </div>
+            <?php endif; ?>
             <div class="d-flex align-items-center justify-content-between mb-4">
                 <div>
                     <h3 class="mb-1">My Tasks</h3>
@@ -351,6 +438,15 @@ function statusBadge($status) {
                             <div><strong>Priority:</strong> <?php echo htmlspecialchars(ucfirst($task['priority'] ?? 'medium')); ?></div>
                             <div><strong>Due:</strong> <?php echo htmlspecialchars($task['due_date'] ?: 'N/A'); ?></div>
                         </div>
+                        <?php if (($task['category'] ?? '') === 'budget' && $task['status'] !== 'completed'): ?>
+                            <form method="post" class="mt-3">
+                                <input type="hidden" name="action" value="submit_budget_approval">
+                                <input type="hidden" name="task_id" value="<?php echo (int) $task['id']; ?>">
+                                <button type="submit" class="btn btn-primary">
+                                    Submit to Manager for Approval
+                                </button>
+                            </form>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endif; ?>

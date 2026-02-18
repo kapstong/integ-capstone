@@ -20,6 +20,11 @@ $currentPage = basename($scriptName);
             <i class="fas fa-tachometer-alt me-2"></i><span>Dashboard</span>
         </a>
 
+        <!-- Tasks -->
+        <a class="nav-link <?php echo ($currentPage === 'tasks.php') ? 'active' : ''; ?>" href="tasks.php">
+            <i class="fas fa-tasks me-2"></i><span>Tasks</span>
+        </a>
+
         <!-- General Ledger Section -->
         <div class="nav-item">
             <a class="nav-link <?php echo ($currentPage === 'general_ledger.php') ? 'active' : ''; ?>" href="general_ledger.php">

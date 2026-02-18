@@ -88,7 +88,7 @@ class WorkflowEngine {
                         'type' => 'action',
                         'action' => 'create_task',
                         'delay_days' => 7,
-                        'assignee_role' => 'admin',
+                        'assignee_role' => 'staff',
                         'task_title' => 'Follow up on overdue invoice',
                         'task_priority' => 'high'
                     ]
@@ -123,7 +123,7 @@ class WorkflowEngine {
                         'name' => 'Create Credit Application',
                         'type' => 'action',
                         'action' => 'create_task',
-                        'assignee_role' => 'admin',
+                        'assignee_role' => 'staff',
                         'task_title' => 'Review credit application',
                         'task_priority' => 'medium'
                     ],
