@@ -4,13 +4,16 @@
  * Manages financial departments and cost/revenue centers
  */
 
-require_once '../../../includes/auth.php';
-require_once '../../../includes/database.php';
-require_once '../../../includes/logger.php';
-require_once '../../../includes/coa_validation.php';
+require_once '../../includes/auth.php';
+require_once '../../includes/database.php';
+require_once '../../includes/logger.php';
+require_once '../../includes/coa_validation.php';
 
 header('Content-Type: application/json');
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+$method = $_SERVER['REQUEST_METHOD'];
 $auth = new Auth();
 ensure_api_auth($method, [
     'GET' => 'departments.view',
@@ -28,9 +31,7 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
-$auth = new Auth();
 $db = Database::getInstance()->getConnection();
-$method = $_SERVER['REQUEST_METHOD'];
 $hasDeptEmail = hasDepartmentEmailColumn($db);
 
 try {
