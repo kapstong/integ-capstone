@@ -636,11 +636,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             <hr class="my-4">
 
-                            <div class="alert alert-warning">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Fast QR Login is not available for Super Admin accounts. Admin and Staff users can enable it in their Security settings.
-                            </div>
-
                             <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3">
                                 <div>
                                     <h6 class="text-primary fw-bold mb-1" style="color: #1b2f73 !important;">Activity Log</h6>

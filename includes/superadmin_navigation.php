@@ -630,6 +630,11 @@ $glExpanded = in_array($currentPage, ['general_ledger.php', 'accounts_payable.ph
         <a class="nav-link <?php echo ($currentPage === 'reports.php') ? 'active' : ''; ?>" href="reports.php">
             <i class="fas fa-chart-bar me-2"></i><span>Reports</span>
         </a>
+        <?php if ($canFinancialSetup): ?>
+        <a class="nav-link <?php echo ($currentPage === 'settings.php') ? 'active' : ''; ?>" href="settings.php">
+            <i class="fas fa-cogs me-2"></i><span>System Settings</span>
+        </a>
+        <?php endif; ?>
         <hr class="my-3">
         <a class="nav-link" href="../logout.php">
             <i class="fas fa-sign-out-alt me-2"></i><span>Logout</span>
