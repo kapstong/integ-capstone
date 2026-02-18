@@ -52,14 +52,203 @@ function statusBadge($status) {
             margin: 0;
             padding: 0;
         }
+        .sidebar {
+            height: 100vh;
+            max-height: 100vh;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 2rem;
+            background-color: #1e2936;
+            color: white;
+            min-height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 300px;
+            z-index: 1000;
+            transition: transform 0.3s ease, width 0.3s ease;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar.sidebar-collapsed {
+            width: 120px;
+        }
+        .sidebar.sidebar-collapsed span {
+            display: none;
+        }
+        .sidebar.sidebar-collapsed .nav-link {
+            padding: 10px;
+            text-align: center;
+        }
+        .sidebar.sidebar-collapsed .navbar-brand {
+            text-align: center;
+        }
+        .sidebar.sidebar-collapsed .nav-item .dropdown-toggle {
+            display: none;
+        }
+        .sidebar.sidebar-collapsed .submenu {
+            display: none;
+        }
+        .sidebar .nav-link {
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .sidebar .nav-link i {
+            font-size: 1.4em;
+        }
+        .sidebar .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        .sidebar .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        .sidebar .submenu {
+            padding-left: 20px;
+        }
+        .sidebar .submenu .nav-link {
+            padding: 5px 20px;
+            font-size: 0.9em;
+        }
+        .sidebar .nav-item {
+            position: relative;
+        }
+        .sidebar .navbar-brand {
+            color: white !important;
+            font-weight: bold;
+        }
+        .sidebar .nav-item i[data-bs-toggle="collapse"] {
+            position: absolute;
+            right: 20px;
+            top: 10px;
+            transition: transform 0.3s ease;
+        }
+        .sidebar .nav-item i[aria-expanded="true"] {
+            transform: rotate(90deg);
+        }
+        .sidebar .nav-item i[aria-expanded="false"] {
+            transform: rotate(0deg);
+        }
         .content {
             margin-left: 300px;
             padding: 20px;
             transition: margin-left 0.3s ease;
+            position: relative;
+            z-index: 1;
         }
-        @media (max-width: 992px) {
+        .sidebar-toggle {
+            position: fixed;
+            left: 290px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: white;
+            font-size: 1.5em;
+            width: 40px;
+            height: 40px;
+            background-color: #1e2936;
+            border: 2px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: left 0.3s ease, background-color 0.3s ease;
+            z-index: 1001;
+        }
+        .sidebar-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .toggle-btn {
+            display: none;
+        }
+        .navbar .dropdown-toggle {
+            text-decoration: none !important;
+        }
+        .navbar .dropdown-toggle:focus {
+            box-shadow: none;
+        }
+        .navbar .btn-link {
+            text-decoration: none !important;
+        }
+        .navbar .btn-link:focus {
+            box-shadow: none;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e3e6ea;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 10000;
+        }
+        .navbar-brand {
+            font-weight: 700;
+            color: #2c3e50 !important;
+            font-size: 1.4rem;
+            letter-spacing: -0.02em;
+        }
+        .navbar .dropdown-toggle {
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            transition: all 0.2s ease;
+        }
+        .navbar .dropdown-toggle:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        .navbar .dropdown-toggle span {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #495057;
+        }
+        .navbar .btn-link {
+            font-size: 1.1rem;
+            border-radius: 8px;
+            padding: 0.5rem;
+            transition: all 0.2s ease;
+            color: #6c757d;
+        }
+        .navbar .btn-link:hover {
+            background-color: rgba(0,0,0,0.05);
+            color: #495057;
+        }
+        .navbar .input-group {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .navbar .form-control {
+            border: 1px solid #dee2e6;
+            padding: 0.5rem 1rem;
+        }
+        .navbar .btn-outline-secondary {
+            border: 1px solid #dee2e6;
+        }
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(30, 41, 54, 0.08);
+        }
+        .table thead th {
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
             .content {
                 margin-left: 0;
+                padding: 20px;
+            }
+            .toggle-btn {
+                display: block;
             }
         }
     </style>
