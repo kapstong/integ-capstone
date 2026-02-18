@@ -1484,13 +1484,25 @@ body {
                     credentials: 'include'
                 });
 
-                const result = await response.json();
+                const rawText = await response.text();
+                let result = null;
+                try {
+                    result = rawText ? JSON.parse(rawText) : null;
+                } catch (parseError) {
+                    // Keep rawText for diagnostics.
+                }
 
-                if (result.success && result.result) {
+                if (!response.ok) {
+                    const errorMessage = result?.error || rawText || `HTTP ${response.status}`;
+                    window.showAlert('Error loading payroll: ' + errorMessage, 'danger');
+                    return;
+                }
+
+                if (result && result.success && result.result) {
                     window.displayHR4Payroll(result.result);
                     // No success notifications.
                 } else {
-                    window.showAlert('Error loading payroll: ' + (result.error || 'No payroll data found'), 'danger');
+                    window.showAlert('Error loading payroll: ' + (result?.error || 'No payroll data found'), 'danger');
                 }
             } catch (error) {
                 console.error('HR4 Payroll loading error:', error);
