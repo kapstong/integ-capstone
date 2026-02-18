@@ -689,7 +689,7 @@ login_end:
 
     try {
       let url = raw;
-      if (!/^https?:\\/\\//i.test(raw) && raw.includes("qr-login.php")) {
+      if (!/^https?:\/\//i.test(raw) && raw.includes("qr-login.php")) {
         url = new URL(raw, window.location.origin).toString();
       }
       if (/qr-login\\.php/i.test(url)) {
