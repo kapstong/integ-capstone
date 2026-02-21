@@ -179,6 +179,9 @@ login_end:
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>ATIERA — Secure Login</title>
 <link rel="icon" href="logo2.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 <script>
   (function() {
     try {
@@ -206,6 +209,8 @@ login_end:
 
   body{
     min-height:100svh; margin:0; color:var(--ink);
+    font-family:"Plus Jakarta Sans","Segoe UI",Tahoma,Geneva,Verdana,sans-serif;
+    letter-spacing:.01em;
     background:
       radial-gradient(70% 60% at 8% 10%, rgba(255,255,255,.18) 0, transparent 60%),
       radial-gradient(40% 40% at 100% 0%, rgba(212,175,55,.08) 0, transparent 40%),
@@ -231,14 +236,49 @@ login_end:
   }
 
   .reveal { opacity:0; transform:translateY(8px); animation:reveal .45s .05s both; }
+  .reveal-2{ animation-delay:.14s; }
+  .reveal-3{ animation-delay:.22s; }
   @keyframes reveal { to { opacity:1; transform:none; } }
+
+  .hero-shell{
+    position:relative;
+    width:min(620px,90%);
+    border-radius:28px;
+    padding:2rem 2.2rem;
+    background:linear-gradient(145deg, rgba(15,28,73,.48), rgba(15,28,73,.18));
+    border:1px solid rgba(255,255,255,.16);
+    box-shadow:0 26px 56px rgba(2,6,23,.28);
+    backdrop-filter: blur(4px);
+  }
+  .hero-shell::before{
+    content:'';
+    position:absolute;
+    width:250px; height:250px;
+    right:-50px; top:-70px;
+    background:radial-gradient(circle, rgba(212,175,55,.24) 0, rgba(212,175,55,0) 72%);
+    pointer-events:none;
+  }
+  .hero-kicker{
+    display:inline-flex; align-items:center; gap:.45rem;
+    color:#dbeafe; text-transform:uppercase;
+    font-weight:700; letter-spacing:.16em; font-size:.68rem; margin-bottom:1.1rem;
+  }
+  .hero-title{
+    margin:0;
+    font-family:"Sora","Plus Jakarta Sans","Segoe UI",sans-serif;
+    font-size:2.85rem; font-weight:800; line-height:1.12; letter-spacing:-.02em;
+  }
+  .hero-sub{
+    margin:.9rem 0 0;
+    color:#c7d2fe; font-size:1rem; max-width:42ch;
+  }
 
   .card{
     background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.92));
     -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
     border:1px solid rgba(226,232,240,.9);
-    border-radius:22px;
-    box-shadow:0 22px 60px rgba(2,6,23,.20), inset 0 1px 0 rgba(255,255,255,.7);
+    border-radius:24px;
+    box-shadow:0 24px 62px rgba(2,6,23,.20), inset 0 1px 0 rgba(255,255,255,.75);
     transition:transform .18s ease, box-shadow .2s ease;
   }
   @media (hover: hover) and (pointer: fine) {
@@ -250,16 +290,27 @@ login_end:
   html.dark .card{ background:rgba(17,24,39,.92); border-color:rgba(71,85,105,.55); box-shadow:0 16px 48px rgba(0,0,0,.5); }
 
   .card::before{
-    content:''; position:absolute; inset:0; border-radius:22px; pointer-events:none;
+    content:''; position:absolute; inset:0; border-radius:24px; pointer-events:none;
     box-shadow:0 0 0 1px rgba(255,255,255,.5) inset;
+  }
+  .card::after{
+    content:'';
+    position:absolute;
+    left:22px; right:22px; top:0;
+    height:5px;
+    border-radius:0 0 999px 999px;
+    background:linear-gradient(90deg, rgba(27,47,115,.95), rgba(212,175,55,.9));
+    opacity:.85;
+    pointer-events:none;
   }
 
   .field{ position:relative; }
   .input{
-    width:100%; border:1px solid #e5e7eb; border-radius:12px; background:#fff;
-    padding:1rem 2.8rem 1rem .95rem; outline:none; color:#0f172a; transition:border-color .15s, box-shadow .15s, background .15s;
+    width:100%; border:1px solid #d6dfef; border-radius:14px; background:linear-gradient(180deg,#ffffff,#f8fbff);
+    padding:1.05rem 2.8rem 1.05rem .95rem; outline:none; color:#0f172a; transition:border-color .16s, box-shadow .16s, background .16s, transform .16s;
   }
-  .input:focus{ border-color:var(--blue-a); box-shadow:var(--ring) }
+  .input:hover{ border-color:#c2d1f2; }
+  .input:focus{ border-color:var(--blue-a); box-shadow:var(--ring); transform:translateY(-1px); }
   html.dark .input{ background:#0b1220; border-color:#243041; color:#e5e7eb; }
   .float-label{
     position:absolute; left:.9rem; top:50%; transform:translateY(-50%); padding:0 .25rem; color:#94a3b8;
@@ -281,15 +332,29 @@ login_end:
   }
 
   .form-block{
-    border:1px solid rgba(226,232,240,.9);
-    border-radius:16px;
-    padding:1rem 1rem 1.1rem;
-    background:rgba(248,250,252,.6);
+    border:1px solid rgba(210,223,243,.88);
+    border-radius:18px;
+    padding:1.12rem 1.12rem 1.2rem;
+    background:linear-gradient(180deg, rgba(249,251,255,.88), rgba(244,248,255,.7));
     box-shadow:inset 0 1px 0 rgba(255,255,255,.8);
+  }
+  html.dark .form-block{
+    border-color:rgba(71,85,105,.6);
+    background:linear-gradient(180deg, rgba(14,24,42,.82), rgba(12,21,37,.75));
   }
 
   .recaptcha-wrap{
     padding:.25rem 0;
+  }
+  .captcha-panel{
+    border:1px solid rgba(210,223,243,.9);
+    border-radius:16px;
+    padding:.72rem .78rem;
+    background:rgba(248,250,252,.7);
+  }
+  html.dark .captcha-panel{
+    border-color:rgba(71,85,105,.55);
+    background:rgba(15,23,42,.65);
   }
   #recaptchaMount{ min-height:78px; }
   @media (max-width: 430px) {
@@ -308,7 +373,7 @@ login_end:
   .btn{
     width:100%; display:inline-flex; align-items:center; justify-content:center; gap:.6rem;
     background:linear-gradient(180deg, #1b2f73, #0f1c49);
-    color:#fff; font-weight:800; border-radius:16px; padding:1rem 1.1rem; border:1px solid rgba(255,255,255,.08);
+    color:#fff; font-weight:800; font-size:1.05rem; border-radius:16px; padding:1.08rem 1.1rem; border:1px solid rgba(255,255,255,.08);
     transition:transform .08s ease, filter .15s ease, box-shadow .2s ease; box-shadow:0 10px 22px rgba(2,6,23,.22);
     position:relative; overflow:hidden;
   }
@@ -407,7 +472,7 @@ login_end:
   .secure-chip{
     display:inline-flex; align-items:center; gap:.4rem;
     border:1px solid rgba(27,47,115,.18); background:rgba(255,255,255,.75); color:#1e3a8a;
-    border-radius:999px; padding:.28rem .62rem; font-size:.7rem; font-weight:800;
+    border-radius:999px; padding:.24rem .58rem; font-size:.66rem; font-weight:700;
     letter-spacing:.05em; text-transform:uppercase;
   }
   html.dark .secure-chip{
@@ -419,6 +484,21 @@ login_end:
   }
   html.dark .caps-hint{ border-color:#854d0e; background:#2a1f0f; color:#fcd34d; }
   .caps-hint.show{ display:block; }
+  .form-title{
+    margin:0 0 .35rem;
+    font-family:"Sora","Plus Jakarta Sans","Segoe UI",sans-serif;
+    font-size:1.9rem;
+    line-height:1.1;
+    letter-spacing:-.02em;
+    color:#0f172a;
+  }
+  html.dark .form-title{ color:#e5e7eb; }
+  .form-sub{
+    margin:0 0 1rem;
+    color:#64748b;
+    font-size:.95rem;
+  }
+  html.dark .form-sub{ color:#94a3b8; }
 </style>
 </head>
 
@@ -430,16 +510,21 @@ login_end:
   </div>
 
   <section class="hidden md:flex w-full h-full items-center justify-center">
-    <div class="max-w-lg text-white px-6 reveal">
+    <div class="hero-shell text-white reveal">
       <img src="logo.png" alt="ATIERA" class="w-56 mb-6 drop-shadow-xl select-none" draggable="false">
-      <h1 class="text-4xl font-extrabold leading-tight tracking-tight">
-        ATIERA <span style="color:var(--gold)">HOTEL & RESTAURANT</span> Management
+      <div class="hero-kicker">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:var(--gold);"></span>
+        Integrated Financial Platform
+      </div>
+      <h1 class="hero-title">
+        ATIERA <span style="color:var(--gold)">HOTEL &amp; RESTAURANT</span> Management
       </h1>
+      <p class="hero-sub">Secure access to accounting, operations, and reporting workflows in one controlled workspace.</p>
     </div>
   </section>
 
-  <main class="w-full max-w-lg md:ml-28 md:mr-0 md:pr-4 self-center">
-    <div id="card" class="card p-6 sm:p-8 reveal relative">
+  <main class="w-full max-w-xl md:ml-28 md:mr-0 md:pr-4 self-center">
+    <div id="card" class="card p-7 sm:p-9 reveal reveal-2 relative">
       <div class="card-ornament" aria-hidden="true">
         <img src="atieralogo2.png" alt="" style="width:26px;height:26px;object-fit:contain;">
       </div>
@@ -467,8 +552,8 @@ login_end:
           Secure Access
         </span>
       </div>
-      <h3 class="text-lg sm:text-xl font-semibold mb-1">Sign in</h3>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Use your credentials to continue.</p>
+      <h3 class="form-title">Sign in</h3>
+      <p class="form-sub">Use your credentials to continue.</p>
 
       <?php if ($error || $info || (!$isLocked && isset($_SESSION['login_attempts']) && $_SESSION['login_attempts'] > 0)): ?>
         <div id="formStatus" class="alert <?php echo $error ? 'alert-error' : 'alert-info'; ?> mb-4" role="alert" aria-live="polite">
@@ -482,7 +567,7 @@ login_end:
         </div>
       <?php endif; ?>
 
-      <form method="POST" class="space-y-4" novalidate <?php echo $isLocked ? 'onsubmit="return false;"' : ''; ?> aria-describedby="formStatus">
+      <form method="POST" class="space-y-5 reveal reveal-3" novalidate <?php echo $isLocked ? 'onsubmit="return false;"' : ''; ?> aria-describedby="formStatus">
         <?php csrf_input(); ?>
         <input type="hidden" name="device_label" id="device_label">
         <input type="hidden" name="device_model" id="device_model">
@@ -515,7 +600,7 @@ login_end:
           </div>
         </div>
 
-        <div class="recaptcha-wrap">
+        <div class="recaptcha-wrap captcha-panel">
           <div class="flex items-center gap-3 flex-wrap">
             <div id="recaptchaMount" data-sitekey="<?php echo htmlspecialchars(RECAPTCHA_SITE_KEY); ?>"></div>
             <button type="button" id="qrScanBtn" class="btn-ghost qr-side" aria-label="Fast QR Login" title="Fast QR Login">
