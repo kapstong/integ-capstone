@@ -239,6 +239,13 @@ login_end:
     border:1px solid rgba(226,232,240,.9);
     border-radius:22px;
     box-shadow:0 22px 60px rgba(2,6,23,.20), inset 0 1px 0 rgba(255,255,255,.7);
+    transition:transform .18s ease, box-shadow .2s ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .card:hover{
+      transform:translateY(-2px);
+      box-shadow:0 28px 68px rgba(2,6,23,.24), inset 0 1px 0 rgba(255,255,255,.7);
+    }
   }
   html.dark .card{ background:rgba(17,24,39,.92); border-color:rgba(71,85,105,.55); box-shadow:0 16px 48px rgba(0,0,0,.5); }
 
@@ -302,7 +309,15 @@ login_end:
     background:linear-gradient(180deg, #1b2f73, #0f1c49);
     color:#fff; font-weight:800; border-radius:16px; padding:1rem 1.1rem; border:1px solid rgba(255,255,255,.08);
     transition:transform .08s ease, filter .15s ease, box-shadow .2s ease; box-shadow:0 10px 22px rgba(2,6,23,.22);
+    position:relative; overflow:hidden;
   }
+  .btn::after{
+    content:''; position:absolute; top:0; left:-110%;
+    width:60%; height:100%;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+    transition:left .45s ease;
+  }
+  .btn:hover::after{ left:120%; }
   .btn:hover{ filter:saturate(1.08); box-shadow:0 12px 26px rgba(2,6,23,.26); }
   .btn:active{ transform:translateY(1px) scale(.99); }
   .btn[disabled]{ opacity:.85; cursor:not-allowed; }
@@ -388,6 +403,21 @@ login_end:
 
   .typing::after{ content:'|'; margin-left:2px; opacity:.6; animation: blink 1s steps(1) infinite; }
   @keyframes blink { 50%{opacity:0} }
+  .secure-chip{
+    display:inline-flex; align-items:center; gap:.4rem;
+    border:1px solid rgba(27,47,115,.18); background:rgba(255,255,255,.75); color:#1e3a8a;
+    border-radius:999px; padding:.28rem .62rem; font-size:.7rem; font-weight:800;
+    letter-spacing:.05em; text-transform:uppercase;
+  }
+  html.dark .secure-chip{
+    color:#cbd5e1; border-color:rgba(148,163,184,.35); background:rgba(15,23,42,.6);
+  }
+  .caps-hint{
+    display:none; margin-top:.45rem; border-radius:10px; border:1px solid #fde68a;
+    background:#fffbeb; color:#92400e; font-size:.78rem; padding:.42rem .6rem;
+  }
+  html.dark .caps-hint{ border-color:#854d0e; background:#2a1f0f; color:#fcd34d; }
+  .caps-hint.show{ display:block; }
 </style>
 </head>
 
@@ -430,6 +460,12 @@ login_end:
         </button>
       </div>
 
+      <div class="mb-2">
+        <span class="secure-chip">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Zm0 5a3 3 0 0 1 3 3v1h1a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h1v-1a3 3 0 0 1 3-3Zm-1 4h2v-1a1 1 0 1 0-2 0v1Z" fill="currentColor"/></svg>
+          Secure Access
+        </span>
+      </div>
       <h3 class="text-lg sm:text-xl font-semibold mb-1">Sign in</h3>
       <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Use your credentials to continue.</p>
 
@@ -455,7 +491,7 @@ login_end:
         <input type="hidden" name="device_browser" id="device_browser">
         <div class="form-block space-y-4">
           <div class="field">
-            <input id="username" name="username" type="text" autocomplete="username" class="input peer" placeholder=" " required value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>" <?php echo $isLocked ? 'disabled' : ''; ?>>
+            <input id="username" name="username" type="text" autocomplete="username" class="input peer" placeholder=" " required value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>" <?php echo $isLocked ? 'disabled' : ''; ?> autofocus>
             <label for="username" class="float-label">Username</label>
             <span class="icon-right" aria-hidden="true">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5.33 0-8 2.67-8 5v1h16v-1c0-2.33-2.67-5-8-5Z" fill="currentColor"/></svg>
@@ -474,6 +510,7 @@ login_end:
                 <svg id="eyeClosed" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display:none;"><path d="M3 5.27 4.28 4 20 19.72 18.73 21l-3.1-3.1A10.66 10.66 0 0 1 12 19c-5 0-9-4.5-10-7a17.3 17.3 0 0 1 4.22-5.6L3 5.27ZM12 7c5 0 9 4.5 10 7a17.5 17.5 0 0 1-3.2 4.4l-2.2-2.2a4 4 0 0 0-5.8-5.8L8.7 8.1A8.8 8.8 0 0 1 12 7Z" fill="currentColor"/></svg>
               </button>
             </div>
+            <div id="capsHint" class="caps-hint" role="status" aria-live="polite">Caps Lock is ON.</div>
           </div>
         </div>
 
@@ -525,6 +562,7 @@ login_end:
   const eyeClosed = $('#eyeClosed');
   const modeIconLight = $('#modeIconLight');
   const modeIconDark = $('#modeIconDark');
+  const capsHint = $('#capsHint');
   const form = document.querySelector('form');
   const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
   const submitLabel = $('#submitLabel');
@@ -558,6 +596,16 @@ login_end:
         eyeOpen.style.display = isHidden ? 'none' : 'inline';
         eyeClosed.style.display = isHidden ? 'inline' : 'none';
       }
+    });
+
+    const updateCapsState = (event) => {
+      if (!capsHint || !event || typeof event.getModifierState !== 'function') return;
+      capsHint.classList.toggle('show', event.getModifierState('CapsLock'));
+    };
+    passwordInput.addEventListener('keydown', updateCapsState);
+    passwordInput.addEventListener('keyup', updateCapsState);
+    passwordInput.addEventListener('blur', () => {
+      if (capsHint) capsHint.classList.remove('show');
     });
   }
 
