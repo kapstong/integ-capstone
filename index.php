@@ -179,6 +179,17 @@ login_end:
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>ATIERA — Secure Login</title>
 <link rel="icon" href="logo2.png">
+<script>
+  (function() {
+    try {
+      var saved = localStorage.getItem('atiera-theme');
+      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (saved === 'dark' || (!saved && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      }
+    } catch (e) {}
+  })();
+</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <link rel="stylesheet" href="responsive.css">
@@ -272,6 +283,12 @@ login_end:
 
   .recaptcha-wrap{
     padding:.25rem 0;
+  }
+  @media (max-width: 430px) {
+    .recaptcha-wrap .g-recaptcha{
+      transform:scale(.90);
+      transform-origin:left top;
+    }
   }
 
   .card-ornament{
@@ -403,15 +420,21 @@ login_end:
             <div class="text-[10px] text-[color:var(--muted)]">Blue • White • <span class="font-medium" style="color:var(--gold)">Gold</span></div>
           </div>
         </div>
-        <button id="modeBtn" class="px-3 py-2 rounded-lg border border-slate-200 text-sm hover:bg-white/60 dark:hover:bg-slate-800" aria-pressed="false" title="Toggle dark mode">🌓</button>
-
+        <button id="modeBtn" class="px-3 py-2 rounded-lg border border-slate-200 text-sm hover:bg-white/60 dark:hover:bg-slate-800" aria-pressed="false" title="Toggle dark mode" aria-label="Toggle dark mode">
+          <span id="modeIconLight" aria-hidden="true" style="display:inline;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 4a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V5a1 1 0 0 1 1-1Zm0 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8-5a1 1 0 0 1-1 1h-1a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1ZM7 12a1 1 0 0 1-1 1H5a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1Zm9.66 5.25a1 1 0 0 1 1.41 0l.7.71a1 1 0 0 1-1.41 1.41l-.7-.7a1 1 0 0 1 0-1.42Zm-11.43 0a1 1 0 0 1 0 1.42l-.7.7a1 1 0 1 1-1.42-1.4l.71-.72a1 1 0 0 1 1.41 0ZM18.77 5.52a1 1 0 0 1 0 1.41l-.7.7a1 1 0 1 1-1.42-1.41l.7-.7a1 1 0 0 1 1.42 0ZM6.64 6.93a1 1 0 0 1-1.41 1.41l-.71-.7A1 1 0 0 1 5.93 6.2l.71.72Z" fill="currentColor"/></svg>
+          </span>
+          <span id="modeIconDark" aria-hidden="true" style="display:none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1 1 11.2 3a1 1 0 0 1 1.08 1.28A7 7 0 0 0 19.72 11.7 1 1 0 0 1 21 12.8Z" fill="currentColor"/></svg>
+          </span>
+        </button>
       </div>
 
       <h3 class="text-lg sm:text-xl font-semibold mb-1">Sign in</h3>
       <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Use your credentials to continue.</p>
 
       <?php if ($error || $info || (!$isLocked && isset($_SESSION['login_attempts']) && $_SESSION['login_attempts'] > 0)): ?>
-        <div class="alert <?php echo $error ? 'alert-error' : 'alert-info'; ?> mb-4" role="alert">
+        <div id="formStatus" class="alert <?php echo $error ? 'alert-error' : 'alert-info'; ?> mb-4" role="alert" aria-live="polite">
           <?php if ($error): ?>
             <?php echo htmlspecialchars($error); ?>
           <?php elseif ($info): ?>
@@ -422,7 +445,7 @@ login_end:
         </div>
       <?php endif; ?>
 
-      <form method="POST" class="space-y-4" novalidate <?php echo $isLocked ? 'onsubmit="return false;"' : ''; ?>>
+      <form method="POST" class="space-y-4" novalidate <?php echo $isLocked ? 'onsubmit="return false;"' : ''; ?> aria-describedby="formStatus">
         <?php csrf_input(); ?>
         <input type="hidden" name="device_label" id="device_label">
         <input type="hidden" name="device_model" id="device_model">
@@ -463,8 +486,8 @@ login_end:
           </div>
         </div>
 
-        <button type="submit" class="btn" <?php echo $isLocked ? 'disabled' : ''; ?>>
-          <span><?php echo $isLocked ? 'Account Locked' : 'Sign In'; ?></span>
+        <button type="submit" class="btn" <?php echo $isLocked ? 'disabled' : ''; ?> aria-busy="false">
+          <span id="submitLabel"><?php echo $isLocked ? 'Account Locked' : 'Sign In'; ?></span>
         </button>
 
         <div class="text-center">
@@ -500,11 +523,28 @@ login_end:
   const passwordInput = $('#password');
   const eyeOpen = $('#eyeOpen');
   const eyeClosed = $('#eyeClosed');
+  const modeIconLight = $('#modeIconLight');
+  const modeIconDark = $('#modeIconDark');
+  const form = document.querySelector('form');
+  const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+  const submitLabel = $('#submitLabel');
+
+  function syncThemeToggle() {
+    const isDark = document.documentElement.classList.contains('dark');
+    modeBtn.setAttribute('aria-pressed', String(isDark));
+    if (modeIconLight && modeIconDark) {
+      modeIconLight.style.display = isDark ? 'none' : 'inline';
+      modeIconDark.style.display = isDark ? 'inline' : 'none';
+    }
+  }
+
+  syncThemeToggle();
 
   modeBtn.addEventListener('click', ()=>{
     const root = document.documentElement;
     const dark = root.classList.toggle('dark');
-    modeBtn.setAttribute('aria-pressed', String(dark));
+    try { localStorage.setItem('atiera-theme', dark ? 'dark' : 'light'); } catch (e) {}
+    syncThemeToggle();
     wmImg.style.transform = 'scale(1.01)'; setTimeout(()=> wmImg.style.transform = '', 220);
   });
 
@@ -522,7 +562,6 @@ login_end:
   }
 
   (function() {
-    const form = document.querySelector('form');
     if (!form) return;
 
     const labelInput = document.getElementById('device_label');
@@ -627,6 +666,11 @@ login_end:
       e.preventDefault();
       await fillDeviceFields();
       form.dataset.deviceReady = '1';
+      if (submitBtn && submitLabel && !submitBtn.disabled) {
+        submitBtn.disabled = true;
+        submitBtn.setAttribute('aria-busy', 'true');
+        submitLabel.textContent = 'Signing in...';
+      }
       form.submit();
     });
     fillDeviceFields();
@@ -685,6 +729,7 @@ login_end:
     if (!qrModal) return;
     qrModal.classList.add("show");
     qrModal.setAttribute("aria-hidden", "false");
+    if (qrClose) qrClose.focus();
     startQrScanner();
   }
 
@@ -875,6 +920,11 @@ login_end:
       if (e.target === qrModal) closeQrModal();
     });
   }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && qrModal && qrModal.classList.contains("show")) {
+      closeQrModal();
+    }
+  });
 </script>
 <script src="includes/tab_persistence.js?v=1"></script>
 </body>
