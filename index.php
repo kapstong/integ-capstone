@@ -341,6 +341,34 @@ login_end:
   html.dark .alert-error{ background:#3f1b1b; border-color:#7f1d1d; color:#fecaca }
   html.dark .alert-info{ background:#1e1b4b; border-color:#3730a3; color:#c7d2fe }
 
+  .tos-link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    margin-top:.45rem;
+    padding:.48rem .85rem;
+    border-radius:10px;
+    border:1px solid rgba(27,47,115,.25);
+    background:rgba(255,255,255,.7);
+    color:var(--blue-700);
+    font-size:.72rem;
+    font-weight:700;
+    text-decoration:none;
+    transition:all .15s ease;
+  }
+  .tos-link:hover{
+    background:rgba(27,47,115,.06);
+    border-color:rgba(27,47,115,.45);
+  }
+  html.dark .tos-link{
+    background:rgba(15,23,42,.65);
+    border-color:rgba(148,163,184,.35);
+    color:#cbd5e1;
+  }
+  html.dark .tos-link:hover{
+    background:rgba(30,41,59,.8);
+  }
+
   .typing::after{ content:'|'; margin-left:2px; opacity:.6; animation: blink 1s steps(1) infinite; }
   @keyframes blink { 50%{opacity:0} }
 </style>
@@ -439,7 +467,10 @@ login_end:
           <span><?php echo $isLocked ? 'Account Locked' : 'Sign In'; ?></span>
         </button>
 
-        <p class="text-xs text-center text-slate-500 dark:text-slate-400">© 2025 ATIERA</p>
+        <div class="text-center">
+          <p class="text-xs text-center text-slate-500 dark:text-slate-400">© 2025 ATIERA</p>
+          <a class="tos-link" href="tos.php">Terms of Service / Terms &amp; Conditions</a>
+        </div>
       </form>
     </div>
   </main>
