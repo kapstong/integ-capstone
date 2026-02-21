@@ -512,10 +512,6 @@ login_end:
   <section class="hidden md:flex w-full h-full items-center justify-center">
     <div class="hero-shell text-white reveal">
       <img src="logo.png" alt="ATIERA" class="w-56 mb-6 drop-shadow-xl select-none" draggable="false">
-      <div class="hero-kicker">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:var(--gold);"></span>
-        Integrated Financial Platform
-      </div>
       <h1 class="hero-title">
         ATIERA <span style="color:var(--gold)">HOTEL &amp; RESTAURANT</span> Management
       </h1>
