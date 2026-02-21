@@ -191,7 +191,7 @@ login_end:
   })();
 </script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <script src="https://www.google.com/recaptcha/api.js?render=explicit" async defer></script>
 <link rel="stylesheet" href="responsive.css">
 
 <style>
@@ -291,6 +291,7 @@ login_end:
   .recaptcha-wrap{
     padding:.25rem 0;
   }
+  #recaptchaMount{ min-height:78px; }
   @media (max-width: 430px) {
     .recaptcha-wrap .g-recaptcha{
       transform:scale(.90);
@@ -516,7 +517,7 @@ login_end:
 
         <div class="recaptcha-wrap">
           <div class="flex items-center gap-3 flex-wrap">
-            <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars(RECAPTCHA_SITE_KEY); ?>"></div>
+            <div id="recaptchaMount" data-sitekey="<?php echo htmlspecialchars(RECAPTCHA_SITE_KEY); ?>"></div>
             <button type="button" id="qrScanBtn" class="btn-ghost qr-side" aria-label="Fast QR Login" title="Fast QR Login">
               <img src="qricon.png" alt="" class="qr-icon">
             </button>
@@ -563,9 +564,31 @@ login_end:
   const modeIconLight = $('#modeIconLight');
   const modeIconDark = $('#modeIconDark');
   const capsHint = $('#capsHint');
+  const recaptchaMount = document.getElementById('recaptchaMount');
   const form = document.querySelector('form');
   const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
   const submitLabel = $('#submitLabel');
+  let recaptchaWidgetId = null;
+
+  function renderRecaptchaForTheme(force) {
+    if (!recaptchaMount || !window.grecaptcha || typeof window.grecaptcha.render !== 'function') return false;
+    if (recaptchaWidgetId !== null && !force) return true;
+
+    const sitekey = recaptchaMount.getAttribute('data-sitekey');
+    if (!sitekey) return false;
+    recaptchaMount.innerHTML = '';
+    recaptchaWidgetId = window.grecaptcha.render('recaptchaMount', {
+      sitekey: sitekey,
+      theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+    });
+    return true;
+  }
+
+  function ensureRecaptchaRendered(retries) {
+    const remaining = typeof retries === 'number' ? retries : 50;
+    if (renderRecaptchaForTheme(false) || remaining <= 0) return;
+    setTimeout(() => ensureRecaptchaRendered(remaining - 1), 120);
+  }
 
   function syncThemeToggle() {
     const isDark = document.documentElement.classList.contains('dark');
@@ -577,12 +600,14 @@ login_end:
   }
 
   syncThemeToggle();
+  ensureRecaptchaRendered();
 
   modeBtn.addEventListener('click', ()=>{
     const root = document.documentElement;
     const dark = root.classList.toggle('dark');
     try { localStorage.setItem('atiera-theme', dark ? 'dark' : 'light'); } catch (e) {}
     syncThemeToggle();
+    renderRecaptchaForTheme(true);
     wmImg.style.transform = 'scale(1.01)'; setTimeout(()=> wmImg.style.transform = '', 220);
   });
 
