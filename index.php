@@ -569,6 +569,7 @@ login_end:
   const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
   const submitLabel = $('#submitLabel');
   let recaptchaWidgetId = null;
+  let recaptchaRenderSeq = 0;
 
   function renderRecaptchaForTheme(force) {
     if (!recaptchaMount || !window.grecaptcha || typeof window.grecaptcha.render !== 'function') return false;
@@ -576,12 +577,20 @@ login_end:
 
     const sitekey = recaptchaMount.getAttribute('data-sitekey');
     if (!sitekey) return false;
-    recaptchaMount.innerHTML = '';
-    recaptchaWidgetId = window.grecaptcha.render('recaptchaMount', {
-      sitekey: sitekey,
-      theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-    });
-    return true;
+    try {
+      recaptchaRenderSeq += 1;
+      recaptchaMount.innerHTML = '';
+      const slot = document.createElement('div');
+      slot.id = 'recaptchaSlot' + recaptchaRenderSeq;
+      recaptchaMount.appendChild(slot);
+      recaptchaWidgetId = window.grecaptcha.render(slot, {
+        sitekey: sitekey,
+        theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   function ensureRecaptchaRendered(retries) {
@@ -607,7 +616,9 @@ login_end:
     const dark = root.classList.toggle('dark');
     try { localStorage.setItem('atiera-theme', dark ? 'dark' : 'light'); } catch (e) {}
     syncThemeToggle();
-    renderRecaptchaForTheme(true);
+    if (!renderRecaptchaForTheme(true)) {
+      setTimeout(() => renderRecaptchaForTheme(true), 120);
+    }
     wmImg.style.transform = 'scale(1.01)'; setTimeout(()=> wmImg.style.transform = '', 220);
   });
 
