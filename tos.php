@@ -194,7 +194,7 @@ require_once 'includes/csrf.php';
 
         <div class="actions">
           <a class="btn btn-primary" href="index.php">Back to Login</a>
-          <a class="btn btn-ghost" href="tos-print.html" target="_blank" rel="noopener">Open Print-Friendly Version</a>
+          <a class="btn btn-ghost" href="tos-print.html" target="_blank" rel="noopener">Print</a>
         </div>
         <p class="footer">For policy questions, contact your system administrator or compliance officer.</p>
       </div>
