@@ -142,6 +142,7 @@ if (!$error && $qr) {
     </style>
 </head>
 <body>
+    <?php include_once __DIR__ . '/includes/loading_screen.php'; ?>
     <div class="card">
         <img src="logo.png" alt="ATIERA" style="height:60px;margin-bottom:1rem;">
         <h2>QR Login Failed</h2>

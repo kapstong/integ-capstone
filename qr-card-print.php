@@ -354,6 +354,7 @@ $issuedAt = date('M j, Y g:i A');
     </style>
 </head>
 <body>
+    <?php include_once __DIR__ . '/includes/loading_screen.php'; ?>
     <div class="stage">
         <?php if ($errorMessage): ?>
             <div class="notice"><?php echo htmlspecialchars($errorMessage); ?></div>

@@ -373,6 +373,7 @@ if ($autoPrint) {
     </style>
 </head>
 <body>
+    <?php include_once __DIR__ . '/../includes/loading_screen.php'; ?>
     <div class="page">
         <img src="../logo2.png" class="watermark" alt="ATIERA Watermark">
         <div class="report-header">

@@ -181,6 +181,7 @@ $printedAt = date('M d, Y h:i A');
 </style>
 </head>
 <body>
+<?php include_once __DIR__ . '/../includes/loading_screen.php'; ?>
 <div class="page">
     <img src="../logo2.png" class="watermark" alt="ATIERA Watermark">
     <h1>Financial Statements</h1>

@@ -38,6 +38,7 @@ $isAdminRole = in_array('admin', $roleNames, true) || in_array('super_admin', $r
 $canViewSettings = $isAdminRole || $permManager->hasPermission('settings.view') || $permManager->hasPermission('roles.view');
 $csrfToken = csrf_token();
 ?>
+<?php include_once __DIR__ . '/loading_screen.php'; ?>
 <style>
     .navbar-date-time {
         font-size: 0.95rem;

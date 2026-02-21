@@ -169,6 +169,7 @@ if (isset($_GET['cancel'])) {
 </head>
 
 <body class="grid place-items-center p-6 md:p-10">
+  <?php include_once __DIR__ . '/includes/loading_screen.php'; ?>
   <main class="w-full max-w-md">
     <div class="card p-6 sm:p-8">
       <div class="text-center mb-6">

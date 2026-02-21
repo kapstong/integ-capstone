@@ -1,365 +1,391 @@
 <?php
-/**
- * ATIERA Financial Management System - Loading Screen Component
- * Premium branded loading screen matching system color palette
- */
+if (defined('ATIERA_LOADING_SCREEN_INCLUDED')) {
+    return;
+}
+define('ATIERA_LOADING_SCREEN_INCLUDED', true);
 ?>
 <style>
-/* ATIERA Loading Screen - Matches System Color Palette */
-.loading-screen {
+.atiera-transition-loader {
+    --atiera-navy-900: #0f1c49;
+    --atiera-navy-800: #162439;
+    --atiera-navy-700: #1e2936;
+    --atiera-gold-500: #d4af37;
+    --atiera-gold-300: #f3d67f;
+    --atiera-text: #edf2fb;
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #F1F7EE;
-    z-index: 10000;
-    display: none;
+    inset: 0;
+    z-index: 2147483640;
+    display: grid;
+    place-items: center;
     opacity: 0;
-    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    backdrop-filter: blur(8px);
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 220ms ease, visibility 220ms ease;
+    background:
+        radial-gradient(circle at 22% 18%, rgba(212, 175, 55, 0.18), transparent 42%),
+        radial-gradient(circle at 84% 80%, rgba(35, 66, 166, 0.22), transparent 38%),
+        linear-gradient(135deg, var(--atiera-navy-900), var(--atiera-navy-800) 48%, var(--atiera-navy-700));
 }
 
-.loading-screen.show {
-    display: block;
+.atiera-transition-loader.active {
     opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
-.loading-screen-content {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    padding: 3rem 2.5rem;
-    background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
-    border-radius: 20px;
+.atiera-transition-loader * {
+    box-sizing: border-box;
+}
+
+.atiera-loader-shell {
+    width: min(92vw, 380px);
+    border-radius: 18px;
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+    border: 1px solid rgba(243, 214, 127, 0.35);
     box-shadow:
-        0 25px 50px rgba(30, 41, 54, 0.15),
-        0 15px 35px rgba(30, 41, 54, 0.1),
-        0 0 0 1px rgba(30, 41, 54, 0.05);
-    border: 1px solid rgba(30, 41, 54, 0.08);
-    max-width: 420px;
-    width: 90%;
-}
-
-.loading-header {
-    margin-bottom: 2rem;
-}
-
-.loading-logo {
-    width: 140px;
-    height: auto;
-    margin-bottom: 1.5rem;
-    filter: drop-shadow(0 4px 12px rgba(30, 41, 54, 0.15));
-}
-
-.loading-title {
-    color: #1e2936;
-    font-size: 1.75rem;
-    font-weight: 800;
-    margin: 0 0 0.5rem 0;
-    letter-spacing: -0.025em;
-    line-height: 1.2;
-    text-shadow: 0 1px 2px rgba(30, 41, 54, 0.1);
-}
-
-.loading-subtitle {
-    color: #6c757d;
-    font-size: 0.95rem;
-    font-weight: 500;
-    margin: 0;
-    opacity: 0.8;
-}
-
-.loading-animation {
-    margin: 2rem 0;
-}
-
-.loading-spinner {
-    width: 64px;
-    height: 64px;
-    margin: 0 auto 1.5rem auto;
+        0 24px 50px rgba(5, 8, 20, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    padding: 24px 22px 18px;
+    text-align: center;
+    color: var(--atiera-text);
     position: relative;
-}
-
-.loading-spinner::before,
-.loading-spinner::after {
-    content: '';
-    position: absolute;
-    border-radius: 50%;
-    animation: pulse 2s ease-in-out infinite;
-}
-
-.loading-spinner::before {
-    width: 100%;
-    height: 100%;
-    border: 3px solid rgba(30, 41, 54, 0.1);
-    border-top: 3px solid #1e2936;
-    animation: spin 1.5s linear infinite;
-}
-
-.loading-spinner::after {
-    width: 80%;
-    height: 80%;
-    background: linear-gradient(135deg, #1e2936 0%, #2342a6 100%);
-    top: 10%;
-    left: 10%;
-    opacity: 0.15;
-    filter: blur(8px);
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-@keyframes pulse {
-    0%, 100% {
-        transform: scale(1);
-        opacity: 0.8;
-    }
-    50% {
-        transform: scale(1.05);
-        opacity: 1;
-    }
-}
-
-.loading-progress-container {
-    position: relative;
-    margin-top: 1rem;
-}
-
-.loading-progress-bg {
-    width: 100%;
-    height: 3px;
-    background: #e9ecef;
-    border-radius: 2px;
     overflow: hidden;
-    position: relative;
 }
 
-.loading-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #1e2936 0%, #2342a6 50%, #1e2936 100%);
-    border-radius: 2px;
-    width: 0%;
-    animation: progress 2.5s ease-in-out infinite;
-    position: relative;
-}
-
-.loading-progress-fill::after {
-    content: '';
+.atiera-loader-shell::before {
+    content: "";
     position: absolute;
-    right: 0;
-    top: 0;
-    width: 20px;
-    height: 100%;
-    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 100%);
-    animation: shimmer 2.5s ease-in-out infinite;
+    inset: 0;
+    background: linear-gradient(112deg, transparent 0%, rgba(243, 214, 127, 0.18) 50%, transparent 100%);
+    transform: translateX(-120%);
+    animation: atieraLoaderSweep 1.6s linear infinite;
+    pointer-events: none;
 }
 
-@keyframes progress {
-    0% { width: 0%; }
-    50% { width: 85%; }
-    100% { width: 100%; }
+.atiera-loader-brand {
+    margin: 0;
+    letter-spacing: 0.24em;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--atiera-gold-300);
+    text-shadow: 0 0 14px rgba(212, 175, 55, 0.38);
 }
 
-@keyframes shimmer {
-    0% { transform: translateX(-20px); }
-    100% { transform: translateX(40px); }
+.atiera-loader-title {
+    margin: 6px 0 16px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #f8fbff;
 }
 
-.loading-accent {
+.atiera-loader-orbit {
+    width: 92px;
+    height: 92px;
+    border-radius: 999px;
+    margin: 0 auto;
+    position: relative;
+    display: grid;
+    place-items: center;
+    border: 2px solid rgba(243, 214, 127, 0.24);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+.atiera-loader-orbit::before,
+.atiera-loader-orbit::after {
+    content: "";
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #1e2936 0%, #d4af37 50%, #1e2936 100%);
-    border-radius: 20px 20px 0 0;
+    border-radius: inherit;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    .loading-screen-content {
-        padding: 2.5rem 2rem;
-        margin: 1rem;
-        width: calc(100% - 2rem);
-    }
-
-    .loading-title {
-        font-size: 1.5rem;
-    }
-
-    .loading-subtitle {
-        font-size: 0.9rem;
-    }
-
-    .loading-spinner {
-        width: 56px;
-        height: 56px;
-    }
-
-    .loading-logo {
-        width: 120px;
-    }
+.atiera-loader-orbit::before {
+    inset: -8px;
+    border: 2px solid transparent;
+    border-top-color: rgba(243, 214, 127, 0.95);
+    border-right-color: rgba(243, 214, 127, 0.4);
+    animation: atieraLoaderSpin 900ms linear infinite;
 }
 
-@media (max-width: 480px) {
-    .loading-screen-content {
-        padding: 2rem 1.5rem;
-    }
+.atiera-loader-orbit::after {
+    inset: 8px;
+    border: 2px solid transparent;
+    border-bottom-color: rgba(115, 156, 255, 0.78);
+    border-left-color: rgba(115, 156, 255, 0.35);
+    animation: atieraLoaderSpinReverse 1200ms linear infinite;
+}
 
-    .loading-title {
-        font-size: 1.4rem;
-    }
+.atiera-loader-core {
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    background:
+        radial-gradient(circle at 34% 28%, #fff1c3 0%, #e7c763 40%, #d4af37 75%, #a37719 100%);
+    box-shadow:
+        0 0 20px rgba(212, 175, 55, 0.44),
+        inset 0 2px 5px rgba(255, 255, 255, 0.4),
+        inset 0 -7px 8px rgba(93, 66, 16, 0.38);
+    animation: atieraLoaderPulse 1200ms ease-in-out infinite;
+}
 
-    .loading-logo {
-        width: 100px;
+.atiera-loader-status {
+    margin: 14px 0 10px;
+    min-height: 1.3em;
+    font-size: 0.92rem;
+    color: rgba(237, 242, 251, 0.95);
+}
+
+.atiera-loader-progress-track {
+    width: 100%;
+    height: 7px;
+    border-radius: 999px;
+    background: rgba(10, 17, 36, 0.55);
+    border: 1px solid rgba(243, 214, 127, 0.24);
+    overflow: hidden;
+}
+
+.atiera-loader-progress-fill {
+    width: 12%;
+    height: 100%;
+    border-radius: inherit;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.34), transparent 65%),
+        linear-gradient(90deg, #9f7a1f, #d4af37 55%, #f3d67f);
+    transition: width 220ms linear;
+}
+
+.atiera-loader-progress-label {
+    margin-top: 8px;
+    font-size: 0.8rem;
+    letter-spacing: 0.09em;
+    color: rgba(243, 214, 127, 0.96);
+    font-variant-numeric: tabular-nums;
+}
+
+@keyframes atieraLoaderSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes atieraLoaderSpinReverse {
+    from { transform: rotate(360deg); }
+    to { transform: rotate(0deg); }
+}
+
+@keyframes atieraLoaderPulse {
+    0%, 100% { transform: scale(0.96); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes atieraLoaderSweep {
+    from { transform: translateX(-120%); }
+    to { transform: translateX(120%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .atiera-transition-loader,
+    .atiera-transition-loader * {
+        animation: none !important;
+        transition: none !important;
     }
 }
 </style>
 
-<!-- Loading Screen HTML -->
-<div id="loading-screen" class="loading-screen">
-    <div class="loading-screen-content">
-        <div class="loading-accent"></div>
-        <div class="loading-header">
-            <img src="../logo.png" alt="ATIERA" class="loading-logo" onerror="this.src='../logo2.png'">
-            <h2 class="loading-title">Loading ATIERA</h2>
-            <p class="loading-subtitle">Securing your financial data...</p>
+<div class="atiera-transition-loader" id="atieraTransitionLoader" role="status" aria-live="polite" aria-hidden="true">
+    <section class="atiera-loader-shell">
+        <p class="atiera-loader-brand">ATIERA</p>
+        <p class="atiera-loader-title">Financial Management Hub</p>
+        <div class="atiera-loader-orbit" aria-hidden="true">
+            <div class="atiera-loader-core"></div>
         </div>
-
-        <div class="loading-animation">
-            <div class="loading-spinner"></div>
-            <div class="loading-progress-container">
-                <div class="loading-progress-bg">
-                    <div class="loading-progress-fill"></div>
-                </div>
-            </div>
+        <p class="atiera-loader-status" data-loader-status>Preparing workspace...</p>
+        <div class="atiera-loader-progress-track" aria-hidden="true">
+            <div class="atiera-loader-progress-fill" data-loader-progress></div>
         </div>
-    </div>
+        <div class="atiera-loader-progress-label" data-loader-percent>12%</div>
+    </section>
 </div>
 
 <script>
-/**
- * Loading Screen Controller
- */
-(function() {
-    'use strict';
+(function () {
+    "use strict";
 
-    const loadingScreen = document.getElementById('loading-screen');
-    let hideTimeout = null;
+    const loader = document.getElementById("atieraTransitionLoader");
+    if (!loader) {
+        return;
+    }
 
-    /**
-     * Show loading screen
-     */
-    function showLoading() {
-        if (hideTimeout) {
-            clearTimeout(hideTimeout);
+    const progressFill = loader.querySelector("[data-loader-progress]");
+    const percentLabel = loader.querySelector("[data-loader-percent]");
+    const statusLabel = loader.querySelector("[data-loader-status]");
+
+    const statusSteps = [
+        "Preparing workspace...",
+        "Reconciling financial records...",
+        "Opening selected module..."
+    ];
+
+    let progressTimer = null;
+    let statusTimer = null;
+    let fallbackTimer = null;
+    let progress = 12;
+    let visible = false;
+    let phase = 0;
+
+    function clearTimers() {
+        if (progressTimer) {
+            window.clearInterval(progressTimer);
+            progressTimer = null;
         }
-        loadingScreen.classList.add('show');
-
-        // Auto-hide after 10 seconds as fallback
-        setTimeout(() => {
-            hideLoading();
-        }, 10000);
+        if (statusTimer) {
+            window.clearInterval(statusTimer);
+            statusTimer = null;
+        }
+        if (fallbackTimer) {
+            window.clearTimeout(fallbackTimer);
+            fallbackTimer = null;
+        }
     }
 
-    /**
-     * Hide loading screen
-     */
-    function hideLoading() {
-        loadingScreen.classList.remove('show');
-        hideTimeout = setTimeout(() => {
-            loadingScreen.style.display = 'none';
-        }, 300);
+    function renderProgress(value) {
+        const bounded = Math.max(0, Math.min(100, Math.round(value)));
+        progressFill.style.width = bounded + "%";
+        percentLabel.textContent = bounded + "%";
     }
 
-    /**
-     * Intercept all link clicks for smooth navigation
-     */
-    function interceptLinks() {
-        document.addEventListener('click', function(e) {
-            const link = e.target.closest('a[href]');
-            if (link &&
-                link.href &&
-                link.host === window.location.host && // Same domain
-                !link.hasAttribute('download') && // Not download links
-                !link.hasAttribute('target') && // Not external links
-                !link.href.includes('#') && // Not anchor links
-                !link.classList.contains('dropdown-item') && // Not dropdown items (handled differently)
-                !link.classList.contains('no-loading')) { // Allow opting out
+    function runProgressAnimation() {
+        progressTimer = window.setInterval(function () {
+            const step = progress < 55 ? 8 : (progress < 82 ? 4 : 2);
+            progress = Math.min(96, progress + step);
+            renderProgress(progress);
+        }, 210);
 
-                // Show loading screen
-                showLoading();
+        statusTimer = window.setInterval(function () {
+            phase = (phase + 1) % statusSteps.length;
+            statusLabel.textContent = statusSteps[phase];
+        }, 760);
+    }
+
+    function showLoader(customStatus) {
+        if (visible) {
+            return;
+        }
+        visible = true;
+        clearTimers();
+        progress = 12;
+        phase = 0;
+        statusLabel.textContent = customStatus || statusSteps[phase];
+        renderProgress(progress);
+        loader.classList.add("active");
+        loader.setAttribute("aria-hidden", "false");
+        runProgressAnimation();
+
+        fallbackTimer = window.setTimeout(function () {
+            if (document.visibilityState === "visible") {
+                hideLoader();
             }
-        });
+        }, 4200);
     }
 
-    /**
-     * Show loading during form submissions
-     */
-    function interceptForms() {
-        document.addEventListener('submit', function(e) {
-            if (!e.target.classList.contains('no-loading')) {
-                showLoading();
+    function hideLoader() {
+        if (!visible) {
+            return;
+        }
+        visible = false;
+        clearTimers();
+        loader.classList.remove("active");
+        loader.setAttribute("aria-hidden", "true");
+    }
+
+    function isNavigableLink(link, event) {
+        if (!link || !link.href) {
+            return false;
+        }
+        if (event.defaultPrevented || event.button !== 0) {
+            return false;
+        }
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            return false;
+        }
+        if (link.classList.contains("no-loading") || link.dataset.noLoading === "true") {
+            return false;
+        }
+        if (link.hasAttribute("download")) {
+            return false;
+        }
+        const target = (link.getAttribute("target") || "").toLowerCase();
+        if (target && target !== "_self") {
+            return false;
+        }
+        const href = (link.getAttribute("href") || "").trim();
+        if (!href || href.charAt(0) === "#") {
+            return false;
+        }
+
+        let nextUrl;
+        try {
+            nextUrl = new URL(link.href, window.location.href);
+        } catch (error) {
+            return false;
+        }
+
+        if (nextUrl.origin !== window.location.origin) {
+            return false;
+        }
+        if (nextUrl.protocol !== "http:" && nextUrl.protocol !== "https:") {
+            return false;
+        }
+
+        const currentUrl = new URL(window.location.href);
+        const isInPageAnchor = nextUrl.pathname === currentUrl.pathname
+            && nextUrl.search === currentUrl.search
+            && nextUrl.hash !== ""
+            && nextUrl.hash !== currentUrl.hash;
+
+        return !isInPageAnchor;
+    }
+
+    function initNavigationHooks() {
+        document.addEventListener("click", function (event) {
+            const link = event.target.closest("a[href]");
+            if (!isNavigableLink(link, event)) {
+                return;
             }
-        });
+            showLoader();
+        }, true);
+
+        document.addEventListener("submit", function (event) {
+            const form = event.target;
+            if (!(form instanceof HTMLFormElement)) {
+                return;
+            }
+            if (form.classList.contains("no-loading") || form.dataset.noLoading === "true") {
+                return;
+            }
+            const target = (form.getAttribute("target") || "").toLowerCase();
+            if (target && target !== "_self") {
+                return;
+            }
+            const status = (form.dataset.loadingText || "").trim();
+            showLoader(status || "Submitting request...");
+        }, true);
     }
 
-    /**
-     * Hide loading on page load
-     */
-    function handlePageLoad() {
-        // Hide loading screen when page is fully loaded
-        window.addEventListener('load', function() {
-            setTimeout(() => {
-                hideLoading();
-            }, 500); // Small delay for smooth transition
-        });
-
-        // Also hide on DOM ready as fallback
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(() => {
-                hideLoading();
-            }, 100);
-        });
-    }
-
-    /**
-     * Hide loading when navigating away (page unload)
-     */
-    function handleNavigation() {
-        window.addEventListener('beforeunload', function() {
-            showLoading();
-        });
-    }
-
-    /**
-     * Public API
-     */
-    window.LoadingScreen = {
-        show: showLoading,
-        hide: hideLoading
+    window.AtieraLoader = {
+        show: showLoader,
+        hide: hideLoader
     };
 
-    // Initialize
-    function init() {
-        interceptLinks();
-        interceptForms();
-        handlePageLoad();
-        handleNavigation();
-    }
+    initNavigationHooks();
 
-    // Start when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
+    window.addEventListener("beforeunload", function () {
+        showLoader("Opening next page...");
+    });
 
+    window.addEventListener("load", function () {
+        window.setTimeout(hideLoader, 120);
+    });
+
+    window.addEventListener("pageshow", function () {
+        hideLoader();
+    });
 })();
 </script>
-

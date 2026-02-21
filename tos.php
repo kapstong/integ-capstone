@@ -135,6 +135,7 @@ require_once 'includes/csrf.php';
 </style>
 </head>
 <body>
+  <?php include_once __DIR__ . '/includes/loading_screen.php'; ?>
   <main class="wrap">
     <section class="card">
       <header class="head">
