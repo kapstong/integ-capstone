@@ -89,10 +89,12 @@ if ($_POST) {
 
                 // Redirect based on role
                 $role = strtolower($user['role_name'] ?? '');
-                if (in_array($role, ['admin', 'super_admin'], true)) {
+                if ($role === 'super_admin') {
+                    $target = 'superadmin/index.php';
+                } elseif ($role === 'admin') {
                     $target = 'admin/index.php';
                 } else {
-                    $target = 'user/index.php';
+                    $target = 'staff/index.php';
                 }
 
                 header('Location: ' . $target);

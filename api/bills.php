@@ -678,8 +678,8 @@ function applyBudgetActual($db, $accountId, $amount) {
 function findApproverId($db) {
     $stmt = $db->prepare("
         SELECT id FROM users
-        WHERE status = 'active' AND role IN ('staff', 'admin', 'superadmin')
-        ORDER BY FIELD(role, 'staff', 'admin', 'superadmin'), last_login DESC
+        WHERE status = 'active' AND role IN ('staff', 'admin', 'super_admin', 'superadmin')
+        ORDER BY FIELD(role, 'staff', 'admin', 'super_admin', 'superadmin'), last_login DESC
         LIMIT 1
     ");
     $stmt->execute();

@@ -23,7 +23,7 @@ $stmt = $db->query("
 $revenueAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $pageTitle = 'Outlet Management';
-include '../../includes/admin_navigation.php';
+include '../../includes/superadmin_navigation.php';
 ?>
 
     <div class="content">

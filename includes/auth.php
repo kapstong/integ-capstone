@@ -33,6 +33,38 @@ $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 $isStateChanging = in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true);
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
+// Enforce folder-level role boundaries for authenticated web requests.
+if (!$isApiRequest && !empty($_SESSION['user']['id'])) {
+    $normalizedPath = strtolower(str_replace('\\', '/', (string) $scriptPath));
+    $roleName = strtolower((string) ($_SESSION['user']['role_name'] ?? ($_SESSION['user']['role'] ?? '')));
+    $isAllowed = true;
+
+    if (strpos($normalizedPath, '/superadmin/') !== false) {
+        $isAllowed = ($roleName === 'super_admin');
+    } elseif (strpos($normalizedPath, '/admin/') !== false) {
+        $isAllowed = in_array($roleName, ['admin', 'super_admin'], true);
+    } elseif (strpos($normalizedPath, '/staff/') !== false) {
+        $isAllowed = in_array($roleName, ['staff', 'admin', 'super_admin'], true);
+    }
+
+    if (!$isAllowed) {
+        if ($isAjax) {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'error' => 'Forbidden - invalid role for this area']);
+            exit;
+        }
+        $target = '/staff/index.php?error=access_denied';
+        if ($roleName === 'super_admin') {
+            $target = '/superadmin/index.php?error=access_denied';
+        } elseif ($roleName === 'admin') {
+            $target = '/admin/index.php?error=access_denied';
+        }
+        header('Location: ' . $target);
+        exit;
+    }
+}
+
 if (!$isApiRequest && $isStateChanging && !empty($_SESSION['user']['id'])) {
     if (!csrf_verify_request()) {
         if ($isAjax) {

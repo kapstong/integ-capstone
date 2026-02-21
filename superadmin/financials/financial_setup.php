@@ -10,7 +10,7 @@ $auth->requireLogin();
 $auth->requirePermission('settings.edit');
 
 $pageTitle = 'Financial Setup';
-include '../../includes/admin_navigation.php';
+include '../../includes/superadmin_navigation.php';
 ?>
 
     <div class="content">

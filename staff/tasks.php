@@ -30,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'submi
         } else {
             $stmt = $db->prepare("
                 SELECT id FROM users
-                WHERE status = 'active' AND role IN ('admin', 'superadmin')
-                ORDER BY FIELD(role, 'admin', 'superadmin'), last_login DESC
+                WHERE status = 'active' AND role IN ('admin', 'super_admin', 'superadmin')
+                ORDER BY FIELD(role, 'admin', 'super_admin', 'superadmin'), last_login DESC
                 LIMIT 1
             ");
             $stmt->execute();
