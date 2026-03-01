@@ -937,7 +937,7 @@ body {
             if (!tbody) return;
             const table = tbody.closest('table');
             const thCount = table ? table.querySelectorAll('thead th').length : 1;
-            tbody.innerHTML = `<tr><td colspan="${thCount}" class="text-center"><div class="loading"><i class="fas fa-spinner fa-spin me-2"></i>${loadingText}</div></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${thCount}" class="text-center"><div class="d-inline-flex align-items-center gap-2"><i class="fas fa-spinner fa-spin"></i><span>${loadingText}</span></div></td></tr>`;
         };
 
         // Helper function to show error in table
