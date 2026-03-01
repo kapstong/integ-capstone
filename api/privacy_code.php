@@ -91,19 +91,25 @@ try {
  */
 function handleSendCode($user) {
     try {
+        // Send code via email
+        $email = trim((string) ($user['email'] ?? ''));
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'No valid email address is associated with this account']);
+            return;
+        }
+
         $code = generateVerificationCode();
-        
-        // Store code in session with timestamp
+        $mailer = Mailer::getInstance();
+        $firstName = $user['first_name'] ?? '';
+        $sent = $mailer->sendVerificationCode($email, $code, $firstName);
+        if (!$sent) {
+            throw new Exception('Unable to send verification email at this time');
+        }
+
+        // Store code in session with timestamp only after successful email delivery attempt
         $_SESSION['privacy_code'] = $code;
         $_SESSION['privacy_code_time'] = time();
-        
-        // Send code via email
-        $email = $user['email'] ?? '';
-        if ($email) {
-            $mailer = Mailer::getInstance();
-            $firstName = $user['first_name'] ?? '';
-            $mailer->sendVerificationCode($email, $code, $firstName);
-        }
         
         // Return masked email
         $masked_email = maskEmail($email);

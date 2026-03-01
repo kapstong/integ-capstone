@@ -16,7 +16,7 @@ class Mailer {
     private $smtpEncryption;
 
     private function __construct() {
-        $this->fromEmail = Config::get('mail.from_address') ?: 'noreply@atiera.com';
+        $configuredFromEmail = Config::get('mail.from_address') ?: 'noreply@atiera.com';
         $this->fromName = Config::get('mail.from_name') ?: 'ATIERA Finance';
 
         $this->smtpHost = Config::get('mail.host');
@@ -30,6 +30,8 @@ class Mailer {
             && !empty($this->smtpHost)
             && !empty($this->smtpUser)
             && !empty($this->smtpPass);
+
+        $this->fromEmail = $this->resolveFromEmail($configuredFromEmail);
     }
 
     public static function getInstance() {
@@ -75,6 +77,9 @@ class Mailer {
             $sent = false;
             if ($this->smtpEnabled) {
                 $sent = $this->sendSmtp($to, $subject, $message, $headers);
+                if (!$sent) {
+                    error_log("Mailer Warning: SMTP send failed, falling back to PHP mail()");
+                }
             }
             if (!$sent) {
                 $sent = @mail($to, $subject, $message, $headers);
@@ -179,7 +184,7 @@ class Mailer {
 
             <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
                 <p style="margin: 0; color: #856404; font-size: 13px;">
-                    <strong>Important:</strong> This code will expire in <strong>5 minutes</strong>.
+                    <strong>Important:</strong> This code will expire in <strong>2 minutes</strong>.
                 </p>
             </div>
 
@@ -208,6 +213,8 @@ class Mailer {
         $host = $this->smtpHost;
         $port = $this->smtpPort;
         $encryption = strtolower($this->smtpEncryption);
+        $ehloHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $envelopeFrom = $this->getEnvelopeFromEmail();
 
         $remote = ($encryption === 'ssl') ? "ssl://{$host}" : $host;
         $fp = @fsockopen($remote, $port, $errno, $errstr, 10);
@@ -221,35 +228,91 @@ class Mailer {
             return false;
         }
 
-        $this->smtpCommand($fp, "EHLO " . ($_SERVER['HTTP_HOST'] ?? 'localhost'), 250);
+        if (!$this->smtpCommand($fp, "EHLO {$ehloHost}", 250)) {
+            fclose($fp);
+            return false;
+        }
 
         if ($encryption === 'tls') {
-            $this->smtpCommand($fp, "STARTTLS", 220);
+            if (!$this->smtpCommand($fp, "STARTTLS", 220)) {
+                fclose($fp);
+                return false;
+            }
             if (!stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
                 error_log("SMTP Error: Failed to start TLS");
                 fclose($fp);
                 return false;
             }
-            $this->smtpCommand($fp, "EHLO " . ($_SERVER['HTTP_HOST'] ?? 'localhost'), 250);
+            if (!$this->smtpCommand($fp, "EHLO {$ehloHost}", 250)) {
+                fclose($fp);
+                return false;
+            }
         }
 
         if (!empty($this->smtpUser)) {
-            $this->smtpCommand($fp, "AUTH LOGIN", 334);
-            $this->smtpCommand($fp, base64_encode($this->smtpUser), 334);
-            $this->smtpCommand($fp, base64_encode($this->smtpPass), 235);
+            if (
+                !$this->smtpCommand($fp, "AUTH LOGIN", 334)
+                || !$this->smtpCommand($fp, base64_encode($this->smtpUser), 334)
+                || !$this->smtpCommand($fp, base64_encode($this->smtpPass), 235)
+            ) {
+                fclose($fp);
+                return false;
+            }
         }
 
-        $this->smtpCommand($fp, "MAIL FROM:<{$this->fromEmail}>", 250);
-        $this->smtpCommand($fp, "RCPT TO:<{$to}>", [250, 251]);
-        $this->smtpCommand($fp, "DATA", 354);
+        if (
+            !$this->smtpCommand($fp, "MAIL FROM:<{$envelopeFrom}>", 250)
+            || !$this->smtpCommand($fp, "RCPT TO:<{$to}>", [250, 251])
+            || !$this->smtpCommand($fp, "DATA", 354)
+        ) {
+            fclose($fp);
+            return false;
+        }
 
-        $smtpHeaders = "To: {$to}\r\nSubject: {$subject}\r\n" . $headers;
+        $safeSubject = str_replace(["\r", "\n"], '', (string) $subject);
+        $smtpHeaders = "To: {$to}\r\nSubject: {$safeSubject}\r\n" . $headers;
         $data = $smtpHeaders . "\r\n" . $message . "\r\n.";
-        $this->smtpCommand($fp, $data, 250);
+        if (!$this->smtpCommand($fp, $data, 250)) {
+            fclose($fp);
+            return false;
+        }
 
         $this->smtpCommand($fp, "QUIT", 221);
         fclose($fp);
         return true;
+    }
+
+    private function resolveFromEmail($configuredFromEmail) {
+        $configuredFromEmail = trim((string) $configuredFromEmail);
+        $smtpUserEmail = trim((string) $this->smtpUser);
+        $smtpHost = strtolower((string) $this->smtpHost);
+
+        if (!filter_var($configuredFromEmail, FILTER_VALIDATE_EMAIL)) {
+            return filter_var($smtpUserEmail, FILTER_VALIDATE_EMAIL) ? $smtpUserEmail : 'noreply@atiera.com';
+        }
+
+        // Gmail commonly rejects unauthenticated From addresses that are not the logged-in sender.
+        if (
+            $this->smtpEnabled
+            && strpos($smtpHost, 'gmail.com') !== false
+            && filter_var($smtpUserEmail, FILTER_VALIDATE_EMAIL)
+        ) {
+            $fromDomain = strtolower(substr(strrchr($configuredFromEmail, '@') ?: '', 1));
+            $smtpDomain = strtolower(substr(strrchr($smtpUserEmail, '@') ?: '', 1));
+            if ($fromDomain !== $smtpDomain) {
+                error_log("Mailer Notice: Overriding mail.from_address with SMTP username for Gmail compatibility.");
+                return $smtpUserEmail;
+            }
+        }
+
+        return $configuredFromEmail;
+    }
+
+    private function getEnvelopeFromEmail() {
+        if ($this->smtpEnabled && filter_var($this->smtpUser, FILTER_VALIDATE_EMAIL)) {
+            return $this->smtpUser;
+        }
+        return $this->fromEmail;
     }
 
     private function smtpCommand($fp, $command, $expect) {
