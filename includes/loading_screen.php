@@ -33,6 +33,15 @@ define('ATIERA_LOADING_SCREEN_INCLUDED', true);
     pointer-events: auto;
 }
 
+html.atiera-loading-active .sidebar,
+body.atiera-loading-active .sidebar,
+html.atiera-loading-active .sidebar-toggle,
+body.atiera-loading-active .sidebar-toggle {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
 .atiera-transition-loader * {
     box-sizing: border-box;
 }
@@ -230,6 +239,15 @@ define('ATIERA_LOADING_SCREEN_INCLUDED', true);
     let visible = false;
     let phase = 0;
 
+    function setLoadingUiState(isActive) {
+        const root = document.documentElement;
+        const body = document.body;
+        root.classList.toggle("atiera-loading-active", isActive);
+        if (body) {
+            body.classList.toggle("atiera-loading-active", isActive);
+        }
+    }
+
     function clearTimers() {
         if (progressTimer) {
             window.clearInterval(progressTimer);
@@ -274,6 +292,7 @@ define('ATIERA_LOADING_SCREEN_INCLUDED', true);
         phase = 0;
         statusLabel.textContent = customStatus || statusSteps[phase];
         renderProgress(progress);
+        setLoadingUiState(true);
         loader.classList.add("active");
         loader.setAttribute("aria-hidden", "false");
         runProgressAnimation();
@@ -291,6 +310,7 @@ define('ATIERA_LOADING_SCREEN_INCLUDED', true);
         }
         visible = false;
         clearTimers();
+        setLoadingUiState(false);
         loader.classList.remove("active");
         loader.setAttribute("aria-hidden", "true");
     }
