@@ -756,66 +756,7 @@ $db = Database::getInstance()->getConnection();
                         </div>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Planning Checklist</h6>
-                            </div>
-                            <div class="card-body">
-                                <ul class="list-unstyled mb-0">
-                                    <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Confirm revenue assumptions</li>
-                                    <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Lock baseline payroll costs</li>
-                                    <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Review vendor pricing updates</li>
-                                    <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Align department targets</li>
-                                    <li><i class="fas fa-check-circle text-success me-2"></i>Finalize approval workflow</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Category Mix</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <h6 class="text-muted">Revenue Focus</h6>
-                                    <ul class="list-unstyled">
-                                        <li><i class="fas fa-circle text-success me-2"></i>Rooms & Suites</li>
-                                        <li><i class="fas fa-circle text-success me-2"></i>Dining & Beverage</li>
-                                        <li><i class="fas fa-circle text-success me-2"></i>Events & Catering</li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h6 class="text-muted">Expense Focus</h6>
-                                    <ul class="list-unstyled">
-                                        <li><i class="fas fa-circle text-danger me-2"></i>Payroll & Benefits</li>
-                                        <li><i class="fas fa-circle text-danger me-2"></i>Supplies & Inventory</li>
-                                        <li><i class="fas fa-circle text-danger me-2"></i>Utilities & Maintenance</li>
-                                        <li><i class="fas fa-circle text-danger me-2"></i>Marketing & Promotions</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6>Budget Calendar</h6>
-                            </div>
-                            <div class="card-body">
-                                <ul class="list-unstyled mb-0">
-                                    <li class="mb-2"><strong>Week 1:</strong> Collect department drafts</li>
-                                    <li class="mb-2"><strong>Week 2:</strong> Finance review and revisions</li>
-                                    <li class="mb-2"><strong>Week 3:</strong> Leadership alignment</li>
-                                    <li class="mb-2"><strong>Week 4:</strong> Final approval and lock</li>
-                                    <li><strong>Monthly:</strong> Variance checkpoint</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Removed informational cards (Planning Checklist, Category Mix, Budget Calendar) per request -->
             </div>
             <!-- Budget Allocation Tab -->
             <div class="tab-pane fade" id="allocation" role="tabpanel" aria-labelledby="allocation-tab" data-privacy-exempt>
