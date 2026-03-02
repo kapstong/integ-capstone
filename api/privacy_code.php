@@ -104,6 +104,7 @@ function handleSendCode($user) {
         $firstName = $user['first_name'] ?? '';
         $sent = $mailer->sendVerificationCode($email, $code, $firstName);
         if (!$sent) {
+            error_log('Privacy OTP mail send failed for user ' . ($user['id'] ?? 'unknown') . ': ' . ($mailer->getLastError() ?: 'unknown mailer error'));
             throw new Exception('Unable to send verification email at this time');
         }
 

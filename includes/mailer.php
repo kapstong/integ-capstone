@@ -14,16 +14,19 @@ class Mailer {
     private $smtpUser;
     private $smtpPass;
     private $smtpEncryption;
+    private $lastError = '';
 
     private function __construct() {
         $configuredFromEmail = Config::get('mail.from_address') ?: 'noreply@atiera.com';
         $this->fromName = Config::get('mail.from_name') ?: 'ATIERA Finance';
 
-        $this->smtpHost = Config::get('mail.host');
+        $this->smtpHost = trim((string) Config::get('mail.host'));
         $this->smtpPort = (int) Config::get('mail.port', 587);
-        $this->smtpUser = Config::get('mail.username');
-        $this->smtpPass = Config::get('mail.password');
-        $this->smtpEncryption = Config::get('mail.encryption', 'tls');
+        $this->smtpUser = trim((string) Config::get('mail.username'));
+        $rawSmtpPass = (string) Config::get('mail.password');
+        // Gmail app passwords are often copied with spaces every 4 chars.
+        $this->smtpPass = preg_replace('/\s+/', '', $rawSmtpPass);
+        $this->smtpEncryption = trim((string) Config::get('mail.encryption', 'tls'));
 
         $mailer = Config::get('mail.mailer', 'smtp');
         $this->smtpEnabled = ($mailer === 'smtp')
@@ -51,8 +54,11 @@ class Mailer {
      * @return bool Success status
      */
     public function send($to, $subject, $message, $options = []) {
+        $this->lastError = '';
+
         try {
             if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+                $this->lastError = "Invalid recipient email address";
                 error_log("Mailer Error: Invalid email address: $to");
                 return false;
             }
@@ -78,17 +84,23 @@ class Mailer {
             if ($this->smtpEnabled) {
                 $sent = $this->sendSmtp($to, $subject, $message, $headers);
                 if (!$sent) {
-                    error_log("Mailer Warning: SMTP send failed, falling back to PHP mail()");
+                    $detail = $this->lastError ? " | {$this->lastError}" : '';
+                    error_log("Mailer Error: SMTP send failed{$detail}");
+                    // Do not silently fallback when SMTP is configured; this avoids false-success sends.
+                    return false;
                 }
-            }
-            if (!$sent) {
+            } else {
                 $sent = @mail($to, $subject, $message, $headers);
             }
 
             if (!$sent) {
                 $lastError = error_get_last();
+                if (!$this->lastError) {
+                    $this->lastError = "PHP mail() returned false";
+                }
                 error_log("Mailer Error: Failed to send email to $to");
                 if ($lastError) {
+                    $this->lastError .= " | PHP: " . $lastError['message'];
                     error_log("PHP Error: " . $lastError['message']);
                 }
                 return false;
@@ -98,10 +110,15 @@ class Mailer {
             return true;
 
         } catch (Exception $e) {
+            $this->lastError = $e->getMessage();
             error_log("Mailer Exception: " . $e->getMessage());
             error_log("Stack trace: " . $e->getTraceAsString());
             return false;
         }
+    }
+
+    public function getLastError() {
+        return $this->lastError;
     }
 
     private function buildHeaders($options = []) {
@@ -219,6 +236,7 @@ class Mailer {
         $remote = ($encryption === 'ssl') ? "ssl://{$host}" : $host;
         $fp = @fsockopen($remote, $port, $errno, $errstr, 10);
         if (!$fp) {
+            $this->lastError = "SMTP connect failed: $errstr ($errno)";
             error_log("SMTP Error: $errstr ($errno)");
             return false;
         }
@@ -239,6 +257,7 @@ class Mailer {
                 return false;
             }
             if (!stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+                $this->lastError = "Failed to start TLS encryption";
                 error_log("SMTP Error: Failed to start TLS");
                 fclose($fp);
                 return false;
@@ -333,11 +352,13 @@ class Mailer {
         if (is_array($expect)) {
             if (!in_array($code, $expect, true)) {
                 error_log("SMTP Error: Unexpected response {$response}");
+                $this->lastError = "SMTP unexpected response: " . trim($response);
                 return false;
             }
         } else {
             if ($code !== $expect) {
                 error_log("SMTP Error: Unexpected response {$response}");
+                $this->lastError = "SMTP unexpected response: " . trim($response);
                 return false;
             }
         }

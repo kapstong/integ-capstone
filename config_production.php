@@ -73,10 +73,10 @@ class Config {
                 'mailer' => 'smtp',
                 'host' => 'smtp.gmail.com',
                 'port' => 587,
-                'username' => 'catalan.jereckopaul@gmail.com',
-                'password' => 'osxu sami rpji qiai',
+                'username' => 'atierafinance@gmail.com',
+                'password' => 'osxusamirpjiqiai',
                 'encryption' => 'tls',
-                'from_address' => 'noreply@atierahotelandrestaurant.com',
+                'from_address' => 'atierafinance@gmail.com',
                 'from_name' => 'ATIERA Finance',
             ],
 
