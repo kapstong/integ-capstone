@@ -1408,7 +1408,7 @@ try {
             }
 
             const method = isEditMode ? 'PUT' : 'POST';
-            const apiUrl = isEditMode ? `api/bills.php?id=${editBillId}` : 'api/bills.php';
+            const apiUrl = isEditMode ? `../api/bills.php?id=${editBillId}` : '../api/bills.php';
 
             try {
                 const response = await fetch(apiUrl, {
@@ -1531,7 +1531,7 @@ try {
                 description: description
             };
 
-            const apiUrl = isEditMode ? `api/adjustments.php?id=${this.dataset.adjustmentId}` : 'api/adjustments.php';
+            const apiUrl = isEditMode ? `../api/adjustments.php?id=${this.dataset.adjustmentId}` : '../api/adjustments.php';
             const method = isEditMode ? 'PUT' : 'POST';
 
             try {
@@ -1953,7 +1953,7 @@ try {
 
         // Filter bills
         function filterBills() {
-            let apiUrl = 'api/bills.php';
+            let apiUrl = '../api/bills.php';
             const params = [];
 
             // Get status filter
@@ -2129,16 +2129,16 @@ try {
 
                 switch(type) {
                     case 'payables':
-                        apiUrl = 'api/bills.php';
+                        apiUrl = '../api/bills.php';
                         filename = `payables_report_${new Date().toISOString().split('T')[0]}.csv`;
                         break;
                     case 'payments':
-                        apiUrl = 'api/payments.php?type=made';
+                        apiUrl = '../api/payments.php?type=made';
                         filename = `payments_report_${new Date().toISOString().split('T')[0]}.csv`;
                         break;
                     case 'aging':
                         // Get aging data with 120+ days period to get all data
-                        apiUrl = 'api/bills.php?action=aging&period=120';
+                        apiUrl = '../api/bills.php?action=aging&period=120';
                         filename = `aging_report_${new Date().toISOString().split('T')[0]}.csv`;
                         break;
                     default:
@@ -2344,7 +2344,7 @@ try {
         // Load bills for a specific vendor (for payment dropdown)
         async function loadBillsForVendor(vendorId) {
             try {
-                const response = await fetch(`api/bills.php?vendor_id=${vendorId}&status=draft,approved,overdue`);
+                const response = await fetch(`../api/bills.php?vendor_id=${vendorId}&status=draft,approved,overdue`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2372,7 +2372,7 @@ try {
         // View bill details
         async function viewBill(billId) {
             try {
-                const response = await fetch(`api/bills.php?id=${billId}`);
+                const response = await fetch(`../api/bills.php?id=${billId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2490,7 +2490,7 @@ try {
         // Edit bill
         async function editBill(billId) {
             try {
-                const response = await fetch(`api/bills.php?id=${billId}`);
+                const response = await fetch(`../api/bills.php?id=${billId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2550,7 +2550,7 @@ try {
                 'Are you sure you want to delete this bill? This action cannot be undone.',
                 async () => {
             try {
-                const response = await fetch(`api/bills.php?id=${billId}`, {
+                const response = await fetch(`../api/bills.php?id=${billId}`, {
                     method: 'DELETE'
                 });
 
@@ -2577,7 +2577,7 @@ try {
         // View payment details
         async function viewPayment(paymentId) {
             try {
-                const response = await fetch(`api/payments.php?id=${paymentId}`);
+                const response = await fetch(`../api/payments.php?id=${paymentId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2699,7 +2699,7 @@ try {
                 'Are you sure you want to delete this payment? This action cannot be undone.',
                 async () => {
             try {
-                const response = await fetch(`api/payments.php?id=${paymentId}&type=made`, {
+                const response = await fetch(`../api/payments.php?id=${paymentId}&type=made`, {
                     method: 'DELETE'
                 });
 
@@ -2720,7 +2720,7 @@ try {
         async function viewAdjustment(adjustmentId) {
             try {
                 // Fetch adjustment details from API
-                const response = await fetch(`api/adjustments.php?id=${adjustmentId}`);
+                const response = await fetch(`../api/adjustments.php?id=${adjustmentId}`);
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -2849,7 +2849,7 @@ try {
                 'Are you sure you want to delete this adjustment? This action cannot be undone.',
                 async () => {
             try {
-                const response = await fetch(`api/adjustments.php?id=${adjustmentId}`, {
+                const response = await fetch(`../api/adjustments.php?id=${adjustmentId}`, {
                     method: 'DELETE'
                 });
 

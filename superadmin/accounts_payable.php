@@ -1571,7 +1571,7 @@ try {
                 description: description
             };
 
-            const apiUrl = isEditMode ? `api/adjustments.php?id=${this.dataset.adjustmentId}` : 'api/adjustments.php';
+            const apiUrl = isEditMode ? `../api/adjustments.php?id=${this.dataset.adjustmentId}` : '../api/adjustments.php';
             const method = isEditMode ? 'PUT' : 'POST';
 
             try {
@@ -2380,7 +2380,7 @@ try {
         // Load bills for a specific vendor (for payment dropdown)
         async function loadBillsForVendor(vendorId) {
             try {
-                const response = await fetch(`api/bills.php?vendor_id=${vendorId}&status=draft,approved,overdue`);
+                const response = await fetch(`../api/bills.php?vendor_id=${vendorId}&status=draft,approved,overdue`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2536,7 +2536,7 @@ try {
                 'Are you sure you want to delete this bill? This action cannot be undone.',
                 async () => {
             try {
-                const response = await fetch(`api/bills.php?id=${billId}`, {
+                const response = await fetch(`../api/bills.php?id=${billId}`, {
                     method: 'DELETE'
                 });
 
@@ -2563,7 +2563,7 @@ try {
         // View payment details
         async function viewPayment(paymentId) {
             try {
-                const response = await fetch(`api/payments.php?id=${paymentId}`);
+                const response = await fetch(`../api/payments.php?id=${paymentId}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -2685,7 +2685,7 @@ try {
                 'Are you sure you want to delete this payment? This action cannot be undone.',
                 async () => {
             try {
-                const response = await fetch(`api/payments.php?id=${paymentId}&type=made`, {
+                const response = await fetch(`../api/payments.php?id=${paymentId}&type=made`, {
                     method: 'DELETE'
                 });
 
@@ -2708,7 +2708,7 @@ try {
         async function viewAdjustment(adjustmentId) {
             try {
                 // Fetch adjustment details from API
-                const response = await fetch(`api/adjustments.php?id=${adjustmentId}`);
+                const response = await fetch(`../api/adjustments.php?id=${adjustmentId}`);
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -2837,7 +2837,7 @@ try {
                 'Are you sure you want to delete this adjustment? This action cannot be undone.',
                 async () => {
             try {
-                const response = await fetch(`api/adjustments.php?id=${adjustmentId}`, {
+                const response = await fetch(`../api/adjustments.php?id=${adjustmentId}`, {
                     method: 'DELETE'
                 });
 
