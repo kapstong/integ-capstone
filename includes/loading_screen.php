@@ -231,6 +231,8 @@ body.atiera-loading-active .sidebar-toggle {
         "Reconciling financial records...",
         "Opening selected module..."
     ];
+    const LINK_NAVIGATION_DELAY_MS = 1800;
+    const LOADER_FALLBACK_HIDE_MS = 6200;
 
     let progressTimer = null;
     let statusTimer = null;
@@ -238,6 +240,7 @@ body.atiera-loading-active .sidebar-toggle {
     let progress = 12;
     let visible = false;
     let phase = 0;
+    let navigationLocked = false;
 
     function setLoadingUiState(isActive) {
         const root = document.documentElement;
@@ -301,7 +304,7 @@ body.atiera-loading-active .sidebar-toggle {
             if (document.visibilityState === "visible") {
                 hideLoader();
             }
-        }, 4200);
+        }, LOADER_FALLBACK_HIDE_MS);
     }
 
     function hideLoader() {
@@ -369,7 +372,16 @@ body.atiera-loading-active .sidebar-toggle {
             if (!isNavigableLink(link, event)) {
                 return;
             }
-            showLoader();
+            event.preventDefault();
+            if (navigationLocked) {
+                return;
+            }
+            navigationLocked = true;
+            const status = (link.dataset.loadingText || "").trim();
+            showLoader(status || "Opening next page...");
+            window.setTimeout(function () {
+                window.location.assign(link.href);
+            }, LINK_NAVIGATION_DELAY_MS);
         }, true);
 
         document.addEventListener("submit", function (event) {
@@ -395,10 +407,6 @@ body.atiera-loading-active .sidebar-toggle {
     };
 
     initNavigationHooks();
-
-    window.addEventListener("beforeunload", function () {
-        showLoader("Opening next page...");
-    });
 
     window.addEventListener("load", function () {
         window.setTimeout(hideLoader, 120);
